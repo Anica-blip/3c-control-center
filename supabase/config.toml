@@ -1,0 +1,10 @@
+project_id = "uqyqpwhkzlhqxcqajhkn"
+
+[functions.scheduled-posts-cron]
+verify_jwt = false
+
+[functions.telegram-bot]
+verify_jwt = false
+
+[functions.telegram-webhook-setup]
+verify_jwt = false
