@@ -1,7 +1,49 @@
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 
-// Admin subsections
+// Simple Settings component for now
+function Settings() {
+  return (
+    <div style={{ padding: '20px' }}>
+      <h1>⚙️ Settings</h1>
+      <p>Configure social platforms and character profiles for your content system</p>
+      
+      <div style={{ marginTop: '30px' }}>
+        <div style={{ 
+          padding: '30px', 
+          border: '2px dashed #d1d5db', 
+          borderRadius: '8px', 
+          background: '#fafafa',
+          textAlign: 'center'
+        }}>
+          <h3 style={{ color: '#6b7280', marginBottom: '10px' }}>⚙️ Settings Configuration</h3>
+          <p style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '20px' }}>
+            Social platform management and character profile settings coming soon
+          </p>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+            gap: '15px',
+            opacity: 0.6
+          }}>
+            <div style={{ padding: '15px', border: '1px solid #e5e7eb', borderRadius: '6px', background: '#f9fafb' }}>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#6b7280' }}>Social Platforms</div>
+              <div style={{ fontSize: '12px', color: '#9ca3af' }}>Instagram, Twitter, etc.</div>
+            </div>
+            <div style={{ padding: '15px', border: '1px solid #e5e7eb', borderRadius: '6px', background: '#f9fafb' }}>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#6b7280' }}>Character Profiles</div>
+              <div style={{ fontSize: '12px', color: '#9ca3af' }}>Aurion, Caelum, Anica</div>
+            </div>
+            <div style={{ padding: '15px', border: '1px solid #e5e7eb', borderRadius: '6px', background: '#f9fafb' }}>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#6b7280' }}>Error Logs</div>
+              <div style={{ fontSize: '12px', color: '#9ca3af' }}>System diagnostics</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 function AdminTemplates() {
   return (
     <div style={{ padding: '20px' }}>
@@ -531,6 +573,37 @@ function App() {
           >
             📊 Overview
           </Link>
+          
+          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
+            📝 Content Manager (Soon)
+          </div>
+          
+          <Link 
+            to="/3c-control-center/settings" 
+            style={{ 
+              display: 'block',
+              padding: '12px 20px', 
+              color: location.pathname.includes('/settings') ? '#f9fafb' : '#d1d5db', 
+              textDecoration: 'none',
+              backgroundColor: location.pathname.includes('/settings') ? '#374151' : 'transparent',
+              borderLeft: location.pathname.includes('/settings') ? '3px solid #3b82f6' : '3px solid transparent'
+            }}
+          >
+            ⚙️ Settings
+          </Link>
+          
+          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
+            🧠 Marketing Center (Soon)
+          </div>
+          
+          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
+            📅 Scheduler (Soon)
+          </div>
+          
+          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
+            💬 Chat Manager (Soon)
+          </div>
+          
           <Link 
             to="/3c-control-center/admin" 
             style={{ 
@@ -542,22 +615,8 @@ function App() {
               borderLeft: location.pathname.includes('/admin') ? '3px solid #3b82f6' : '3px solid transparent'
             }}
           >
-            ⚙️ Admin Center
+            🔧 Admin Center
           </Link>
-          
-          {/* Future Navigation Items */}
-          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
-            📝 Content Manager (Soon)
-          </div>
-          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
-            📅 Scheduler (Soon)
-          </div>
-          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
-            🧠 Marketing Center (Soon)
-          </div>
-          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
-            💬 Chat Manager (Soon)
-          </div>
         </nav>
       </div>
 
@@ -565,6 +624,7 @@ function App() {
       <div style={{ flex: '1', backgroundColor: '#ffffff', overflow: 'auto' }}>
         <Routes>
           <Route path="/3c-control-center/" element={<Dashboard />} />
+          <Route path="/3c-control-center/settings" element={<Settings />} />
           <Route path="/3c-control-center/admin/*" element={<AdminCenter />} />
           <Route path="/*" element={<Dashboard />} />
         </Routes>
