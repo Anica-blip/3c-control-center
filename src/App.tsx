@@ -578,6 +578,18 @@ function App() {
             📝 Content Manager (Soon)
           </div>
           
+          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
+            💬 Chat Manager - Public (Soon)
+          </div>
+          
+          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
+            📅 Scheduler (Soon)
+          </div>
+          
+          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
+            🧠 Marketing Center (Soon)
+          </div>
+          
           <Link 
             to="/3c-control-center/settings" 
             style={{ 
@@ -591,18 +603,6 @@ function App() {
           >
             ⚙️ Settings
           </Link>
-          
-          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
-            🧠 Marketing Center (Soon)
-          </div>
-          
-          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
-            📅 Scheduler (Soon)
-          </div>
-          
-          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
-            💬 Chat Manager (Soon)
-          </div>
           
           <Link 
             to="/3c-control-center/admin" 
@@ -618,6 +618,16 @@ function App() {
             🔧 Admin Center
           </Link>
         </nav>
+        
+        {/* Bottom Section - AI Chat */}
+        <div style={{ padding: '20px', borderTop: '1px solid #374151' }}>
+          <div style={{ padding: '12px 0', color: '#6b7280', fontSize: '14px' }}>
+            🤖 AI Chat Manager (Soon)
+          </div>
+          <p style={{ fontSize: '11px', color: '#6b7280', fontStyle: 'italic' }}>
+            Could be added to Admin/Brand
+          </p>
+        </div>
       </div>
 
       {/* Main Content Area */}
