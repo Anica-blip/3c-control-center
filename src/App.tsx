@@ -621,10 +621,10 @@ function App() {
         
         {/* Bottom Section - AI Chat */}
         <div style={{ padding: '20px', borderTop: '1px solid #374151' }}>
-          <div style={{ padding: '12px 0', color: '#6b7280', fontSize: '14px' }}>
+          <div style={{ padding: '8px 0', color: '#6b7280', fontSize: '13px' }}>
             🤖 AI Chat Manager (Soon)
           </div>
-          <p style={{ fontSize: '11px', color: '#6b7280', fontStyle: 'italic' }}>
+          <p style={{ fontSize: '10px', color: '#6b7280', fontStyle: 'italic', margin: '0' }}>
             Could be added to Admin/Brand
           </p>
         </div>
