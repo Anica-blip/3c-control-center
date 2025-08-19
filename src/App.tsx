@@ -1,22 +1,24 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 
-// Simple Admin component for now
-function Admin() {
+// Admin subsections
+function AdminTemplates() {
   return (
     <div style={{ padding: '20px' }}>
-      <h1>⚙️ Admin Center</h1>
+      <h2>🏗️ Manage Templates</h2>
       <p>Manage templates, libraries, and brand assets</p>
       
-      <div style={{ display: 'grid', gap: '20px', marginTop: '30px' }}>
-        {/* Builder Admin Section */}
+      {/* Two Column Layout: Building (Left) + 3C Brand Products (Right) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginTop: '30px' }}>
+        
+        {/* LEFT SIDE: Builder Admin */}
         <div style={{ 
           padding: '20px', 
           border: '2px solid #3b82f6', 
           borderRadius: '8px', 
           background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)' 
         }}>
-          <h2 style={{ color: '#1e40af', marginBottom: '10px' }}>🏗️ Builder Admin</h2>
+          <h3 style={{ color: '#1e40af', marginBottom: '10px' }}>🏗️ Builder Admin</h3>
           <p style={{ color: '#1e40af', fontSize: '14px', marginBottom: '15px' }}>
             External integration for automated generation
           </p>
@@ -116,14 +118,14 @@ function Admin() {
           </div>
         </div>
 
-        {/* Community Brand Products Section */}
+        {/* RIGHT SIDE: 3C Brand Products */}
         <div style={{ 
           padding: '20px', 
           border: '2px solid #10b981', 
           borderRadius: '8px', 
           background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)' 
         }}>
-          <h2 style={{ color: '#047857', marginBottom: '10px' }}>🎮 Community Brand Products</h2>
+          <h3 style={{ color: '#047857', marginBottom: '10px' }}>🎮 3C Brand Products</h3>
           <p style={{ color: '#047857', fontSize: '14px', marginBottom: '15px' }}>
             External app editors for interactive app loaders
           </p>
@@ -199,7 +201,122 @@ function Admin() {
             </a>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
 
+function AdminLibraries() {
+  return (
+    <div style={{ padding: '20px' }}>
+      <h2>📚 Libraries</h2>
+      <p>External service integrations and storage</p>
+      
+      {/* Three blocks in a row: Notion, Wasabi, Canva */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(3, 1fr)', 
+        gap: '20px', 
+        marginTop: '30px' 
+      }}>
+        <div style={{ 
+          padding: '20px', 
+          border: '1px solid #d1d5db', 
+          borderRadius: '8px', 
+          background: '#f9fafb',
+          textAlign: 'center'
+        }}>
+          <h3 style={{ marginBottom: '10px', fontSize: '18px' }}>📝 Notion</h3>
+          <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '15px' }}>
+            Content management integration
+          </p>
+          <button 
+            style={{ 
+              width: '100%', 
+              padding: '12px', 
+              backgroundColor: '#f3f4f6', 
+              border: '1px solid #d1d5db', 
+              borderRadius: '6px', 
+              cursor: 'not-allowed',
+              color: '#6b7280',
+              fontSize: '14px'
+            }}
+            disabled
+          >
+            🔗 Connect Notion
+            <div style={{ fontSize: '12px', marginTop: '5px' }}>Coming Soon</div>
+          </button>
+        </div>
+        
+        <div style={{ 
+          padding: '20px', 
+          border: '1px solid #d1d5db', 
+          borderRadius: '8px', 
+          background: '#f9fafb',
+          textAlign: 'center'
+        }}>
+          <h3 style={{ marginBottom: '10px', fontSize: '18px' }}>📦 Wasabi</h3>
+          <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '15px' }}>
+            Cloud storage integration
+          </p>
+          <button 
+            style={{ 
+              width: '100%', 
+              padding: '12px', 
+              backgroundColor: '#f3f4f6', 
+              border: '1px solid #d1d5db', 
+              borderRadius: '6px', 
+              cursor: 'not-allowed',
+              color: '#6b7280',
+              fontSize: '14px'
+            }}
+            disabled
+          >
+            🔗 Connect Wasabi
+            <div style={{ fontSize: '12px', marginTop: '5px' }}>Coming Soon</div>
+          </button>
+        </div>
+        
+        <div style={{ 
+          padding: '20px', 
+          border: '1px solid #d1d5db', 
+          borderRadius: '8px', 
+          background: '#f9fafb',
+          textAlign: 'center'
+        }}>
+          <h3 style={{ marginBottom: '10px', fontSize: '18px' }}>🎨 Canva</h3>
+          <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '15px' }}>
+            Design platform integration
+          </p>
+          <button 
+            style={{ 
+              width: '100%', 
+              padding: '12px', 
+              backgroundColor: '#f3f4f6', 
+              border: '1px solid #d1d5db', 
+              borderRadius: '6px', 
+              cursor: 'not-allowed',
+              color: '#6b7280',
+              fontSize: '14px'
+            }}
+            disabled
+          >
+            🔗 Connect Canva
+            <div style={{ fontSize: '12px', marginTop: '5px' }}>Coming Soon</div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminBrand() {
+  return (
+    <div style={{ padding: '20px' }}>
+      <h2>🏢 Brand</h2>
+      <p>Brand assets, AI tools, and system configuration</p>
+      
+      <div style={{ display: 'grid', gap: '20px', marginTop: '20px' }}>
         {/* System Status */}
         <div style={{ 
           padding: '20px', 
@@ -207,7 +324,8 @@ function Admin() {
           borderRadius: '8px', 
           background: '#f9fafb' 
         }}>
-          <h2 style={{ marginBottom: '15px' }}>📊 System Status</h2>
+          <h3 style={{ marginBottom: '15px' }}>📊 System Status</h3>
+          <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '15px' }}>Current system health and integrations</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ width: '12px', height: '12px', backgroundColor: '#10b981', borderRadius: '50%' }}></div>
@@ -227,7 +345,135 @@ function Admin() {
             </div>
           </div>
         </div>
+
+        {/* Future Brand Tools */}
+        <div style={{ display: 'grid', gap: '15px', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+          <div style={{ padding: '20px', border: '1px solid #d1d5db', borderRadius: '8px', background: '#f9fafb' }}>
+            <h4 style={{ marginBottom: '10px' }}>🎨 Brand Library</h4>
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '15px' }}>Brand assets and guidelines</p>
+            <button style={{ 
+              width: '100%', 
+              padding: '10px', 
+              backgroundColor: '#f3f4f6', 
+              border: '1px solid #d1d5db', 
+              borderRadius: '6px', 
+              cursor: 'not-allowed',
+              color: '#6b7280'
+            }} disabled>
+              Manage Brand Assets (Soon)
+            </button>
+          </div>
+          
+          <div style={{ padding: '20px', border: '1px solid #d1d5db', borderRadius: '8px', background: '#f9fafb' }}>
+            <h4 style={{ marginBottom: '10px' }}>🤖 AI Internal Tools</h4>
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '15px' }}>Internal AI capabilities</p>
+            <button style={{ 
+              width: '100%', 
+              padding: '10px', 
+              backgroundColor: '#f3f4f6', 
+              border: '1px solid #d1d5db', 
+              borderRadius: '6px', 
+              cursor: 'not-allowed',
+              color: '#6b7280'
+            }} disabled>
+              Configure AI Tools (Soon)
+            </button>
+          </div>
+          
+          <div style={{ padding: '20px', border: '1px solid #d1d5db', borderRadius: '8px', background: '#f9fafb' }}>
+            <h4 style={{ marginBottom: '10px' }}>🌐 AI External Tools</h4>
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '15px' }}>External AI service integrations</p>
+            <button style={{ 
+              width: '100%', 
+              padding: '10px', 
+              backgroundColor: '#f3f4f6', 
+              border: '1px solid #d1d5db', 
+              borderRadius: '6px', 
+              cursor: 'not-allowed',
+              color: '#6b7280'
+            }} disabled>
+              Manage External APIs (Soon)
+            </button>
+          </div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function AdminCenter() {
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState('templates');
+  
+  // Get active tab from URL or default to templates
+  React.useEffect(() => {
+    const path = location.pathname;
+    if (path.includes('/admin/libraries')) setActiveTab('libraries');
+    else if (path.includes('/admin/brand')) setActiveTab('brand');
+    else setActiveTab('templates');
+  }, [location]);
+
+  return (
+    <div>
+      {/* Top Tab Navigation */}
+      <div style={{ 
+        borderBottom: '1px solid #e5e7eb', 
+        backgroundColor: '#f9fafb', 
+        padding: '0 20px' 
+      }}>
+        <div style={{ display: 'flex', gap: '0' }}>
+          <Link
+            to="/3c-control-center/admin/templates"
+            style={{
+              padding: '12px 24px',
+              textDecoration: 'none',
+              color: activeTab === 'templates' ? '#1f2937' : '#6b7280',
+              backgroundColor: activeTab === 'templates' ? '#ffffff' : 'transparent',
+              borderBottom: activeTab === 'templates' ? '2px solid #3b82f6' : '2px solid transparent',
+              fontWeight: activeTab === 'templates' ? 'bold' : 'normal'
+            }}
+            onClick={() => setActiveTab('templates')}
+          >
+            🏗️ Templates
+          </Link>
+          <Link
+            to="/3c-control-center/admin/libraries"
+            style={{
+              padding: '12px 24px',
+              textDecoration: 'none',
+              color: activeTab === 'libraries' ? '#1f2937' : '#6b7280',
+              backgroundColor: activeTab === 'libraries' ? '#ffffff' : 'transparent',
+              borderBottom: activeTab === 'libraries' ? '2px solid #3b82f6' : '2px solid transparent',
+              fontWeight: activeTab === 'libraries' ? 'bold' : 'normal'
+            }}
+            onClick={() => setActiveTab('libraries')}
+          >
+            📚 Libraries
+          </Link>
+          <Link
+            to="/3c-control-center/admin/brand"
+            style={{
+              padding: '12px 24px',
+              textDecoration: 'none',
+              color: activeTab === 'brand' ? '#1f2937' : '#6b7280',
+              backgroundColor: activeTab === 'brand' ? '#ffffff' : 'transparent',
+              borderBottom: activeTab === 'brand' ? '2px solid #3b82f6' : '2px solid transparent',
+              fontWeight: activeTab === 'brand' ? 'bold' : 'normal'
+            }}
+            onClick={() => setActiveTab('brand')}
+          >
+            🏢 Brand
+          </Link>
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <Routes>
+        <Route path="/admin/templates" element={<AdminTemplates />} />
+        <Route path="/admin/libraries" element={<AdminLibraries />} />
+        <Route path="/admin/brand" element={<AdminBrand />} />
+        <Route path="/admin" element={<AdminTemplates />} />
+      </Routes>
     </div>
   );
 }
@@ -244,6 +490,7 @@ function Dashboard() {
           <li>✅ TypeScript Support</li>
           <li>✅ GitHub Pages Deployment</li>
           <li>✅ Supabase Integration Ready</li>
+          <li>✅ Admin Center Operational</li>
         </ul>
       </div>
     </div>
@@ -251,39 +498,85 @@ function Dashboard() {
 }
 
 function App() {
+  const location = useLocation();
+  
   return (
-    <BrowserRouter>
-      <div>
-        {/* Simple Navigation */}
-        <nav style={{ 
-          padding: '10px 20px', 
-          backgroundColor: '#1f2937', 
-          borderBottom: '1px solid #374151' 
-        }}>
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-            <Link 
-              to="/3c-control-center/" 
-              style={{ color: '#f9fafb', textDecoration: 'none', fontWeight: 'bold' }}
-            >
-              3C Control Center
-            </Link>
-            <Link 
-              to="/3c-control-center/admin" 
-              style={{ color: '#d1d5db', textDecoration: 'none' }}
-            >
-              Admin Center
-            </Link>
+    <div style={{ display: 'flex', height: '100vh' }}>
+      {/* Left Sidebar */}
+      <div style={{ 
+        width: '250px', 
+        backgroundColor: '#1f2937', 
+        color: '#f9fafb',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        {/* Logo/Header */}
+        <div style={{ padding: '20px', borderBottom: '1px solid #374151' }}>
+          <h2 style={{ margin: '0', fontSize: '18px', fontWeight: 'bold' }}>3C Control Center</h2>
+          <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#9ca3af' }}>Thread To Success</p>
+        </div>
+        
+        {/* Navigation Links */}
+        <nav style={{ flex: '1', padding: '20px 0' }}>
+          <Link 
+            to="/3c-control-center/" 
+            style={{ 
+              display: 'block',
+              padding: '12px 20px', 
+              color: location.pathname === '/3c-control-center/' ? '#f9fafb' : '#d1d5db', 
+              textDecoration: 'none',
+              backgroundColor: location.pathname === '/3c-control-center/' ? '#374151' : 'transparent',
+              borderLeft: location.pathname === '/3c-control-center/' ? '3px solid #3b82f6' : '3px solid transparent'
+            }}
+          >
+            📊 Overview
+          </Link>
+          <Link 
+            to="/3c-control-center/admin" 
+            style={{ 
+              display: 'block',
+              padding: '12px 20px', 
+              color: location.pathname.includes('/admin') ? '#f9fafb' : '#d1d5db', 
+              textDecoration: 'none',
+              backgroundColor: location.pathname.includes('/admin') ? '#374151' : 'transparent',
+              borderLeft: location.pathname.includes('/admin') ? '3px solid #3b82f6' : '3px solid transparent'
+            }}
+          >
+            ⚙️ Admin Center
+          </Link>
+          
+          {/* Future Navigation Items */}
+          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
+            📝 Content Manager (Soon)
+          </div>
+          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
+            📅 Scheduler (Soon)
+          </div>
+          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
+            🧠 Marketing Center (Soon)
+          </div>
+          <div style={{ padding: '12px 20px', color: '#6b7280', fontSize: '14px' }}>
+            💬 Chat Manager (Soon)
           </div>
         </nav>
+      </div>
 
+      {/* Main Content Area */}
+      <div style={{ flex: '1', backgroundColor: '#ffffff', overflow: 'auto' }}>
         <Routes>
           <Route path="/3c-control-center/" element={<Dashboard />} />
-          <Route path="/3c-control-center/admin" element={<Admin />} />
+          <Route path="/3c-control-center/admin/*" element={<AdminCenter />} />
           <Route path="/*" element={<Dashboard />} />
         </Routes>
       </div>
-    </BrowserRouter>
+    </div>
   );
 }
 
-export default App;
+export default function AppWithRouter() {
+  return (
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  );
+}
