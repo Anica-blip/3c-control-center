@@ -434,7 +434,7 @@ function AdminCenter() {
             }}
             onClick={() => setActiveTab('templates')}
           >
-            🏗️ Templates
+            🏗️ Manage Templates
           </Link>
           <Link
             to="/3c-control-center/admin/libraries"
@@ -462,7 +462,7 @@ function AdminCenter() {
             }}
             onClick={() => setActiveTab('brand')}
           >
-            🏢 Brand
+            🏢 Brand Assets
           </Link>
         </div>
       </div>
