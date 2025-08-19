@@ -1,84 +1,127 @@
-import { NavLink, useLocation } from "react-router-dom";
-import { BarChart3, MessageSquare, Calendar, Settings, Bot, FileText, Brain, MessageCircle, Globe, Shield } from "lucide-react";
+import { NavLink } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  useSidebar,
-} from "@/components/ui/sidebar";
+  LayoutDashboard,
+  FileText,
+  MessageSquare,
+  MessageCircle,
+  Calendar,
+  Brain,
+  Settings,
+  Shield,
+  Bot
+} from "lucide-react";
 
-const menuItems = [
-  { title: "Overview", url: "/dashboard", icon: BarChart3 },
-  { title: "Content Manager", url: "/dashboard/content", icon: FileText },
-  { title: "Messages", url: "/dashboard/messages", icon: MessageSquare },
-  { title: "Live Chat", url: "/dashboard/chat", icon: MessageCircle },
-  { title: "Public WebChat", url: "/dashboard/webchat", icon: Globe },
-  { title: "Scheduled", url: "/dashboard/scheduled", icon: Calendar },
-  { title: "Caelum's Control Center", url: "/dashboard/caelum", icon: Brain },
-  { title: "Admin Center", url: "/dashboard/admin", icon: Shield },
-  { title: "Settings", url: "/dashboard/settings", icon: Settings },
+const navigation = [
+  {
+    name: "Overview",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+    end: true
+  },
+  {
+    name: "Content Manager",
+    href: "/dashboard/content",
+    icon: FileText
+  },
+  {
+    name: "Message Monitor",
+    href: "/dashboard/messages",
+    icon: MessageSquare
+  },
+  {
+    name: "Chat Manager",
+    href: "/dashboard/chat",
+    icon: MessageCircle
+  },
+  {
+    name: "Scheduled Content",
+    href: "/dashboard/scheduled",
+    icon: Calendar
+  },
+  {
+    name: "Marketing Center",
+    href: "/dashboard/caelum",
+    icon: Brain
+  },
+  {
+    name: "Admin",
+    href: "/dashboard/admin",
+    icon: Shield
+  },
+  {
+    name: "Settings",
+    href: "/dashboard/settings",
+    icon: Settings
+  }
 ];
 
-export function DashboardSidebar() {
-  const { state } = useSidebar();
-  const location = useLocation();
-  const isCollapsed = state === "collapsed";
+const bottomNavigation = [
+  {
+    name: "Web Chat",
+    href: "/dashboard/webchat",
+    icon: Bot
+  }
+];
 
-  const isActive = (path: string) => {
-    if (path === "/dashboard") {
-      return location.pathname === path;
-    }
-    return location.pathname.startsWith(path);
-  };
-
+export function Sidebar() {
   return (
-    <Sidebar className={isCollapsed ? "w-14" : "w-64"} collapsible="icon">
-      <SidebarHeader className="p-4">
+    <div className="flex flex-col w-64 bg-sidebar border-r border-sidebar-border">
+      {/* Header */}
+      <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-2">
-          <Bot className="h-8 w-8 text-primary" />
-          {!isCollapsed && (
-            <div>
-              <h2 className="font-bold text-lg">3C Control Center</h2>
-              <p className="text-sm text-muted-foreground">3C Thread To Success</p>
-            </div>
-          )}
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-sm">3C</span>
+          </div>
+          <div>
+            <h1 className="font-semibold text-sidebar-foreground">Control Center</h1>
+            <p className="text-xs text-sidebar-foreground/60">Thread To Success</p>
+          </div>
         </div>
-      </SidebarHeader>
-      
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Bot Management</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={({ isActive: navActive }) =>
-                        `flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
-                          isActive(item.url) || navActive
-                            ? "bg-primary text-primary-foreground"
-                            : "hover:bg-muted"
-                        }`
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!isCollapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-1">
+        {navigation.map((item) => (
+          <NavLink
+            key={item.name}
+            to={item.href}
+            end={item.end}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              )
+            }
+          >
+            <item.icon className="w-4 h-4" />
+            {item.name}
+          </NavLink>
+        ))}
+      </nav>
+
+      {/* Bottom Navigation */}
+      <div className="p-4 border-t border-sidebar-border space-y-1">
+        {bottomNavigation.map((item) => (
+          <NavLink
+            key={item.name}
+            to={item.href}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              )
+            }
+          >
+            <item.icon className="w-4 h-4" />
+            {item.name}
+          </NavLink>
+        ))}
+      </div>
+    </div>
   );
 }
