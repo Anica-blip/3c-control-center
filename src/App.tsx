@@ -592,14 +592,15 @@ function AdminLibraries() {
   const [canvaSearchQuery, setCanvaSearchQuery] = useState('');
   const [selectedDesign, setSelectedDesign] = useState(null);
 
-  // Wasabi Configuration - Using process.env for compatibility
+  // Wasabi Configuration - Demo setup for artifact environment
+  // In your actual environment, replace these with your real credentials
   const wasabiConfig = {
-    accessKeyId: process.env.VITE_WASABI_ACCESS_KEY || 'demo-access-key',
-    secretAccessKey: process.env.VITE_WASABI_SECRET_KEY || 'demo-secret-key',
-    endpoint: process.env.VITE_WASABI_ENDPOINT || 'https://s3.eu-west-1.wasabisys.com',
-    region: process.env.VITE_WASABI_REGION || 'eu-west-1',
-    internalBucket: process.env.VITE_WASABI_INTERNAL_BUCKET || '3c-internal-assets',
-    publicBucket: process.env.VITE_WASABI_PUBLIC_BUCKET || '3c-public-content'
+    accessKeyId: 'YOUR_ACCESS_KEY_HERE', // Replace with actual key
+    secretAccessKey: 'YOUR_SECRET_KEY_HERE', // Replace with actual key
+    endpoint: 'https://s3.eu-west-1.wasabisys.com',
+    region: 'eu-west-1',
+    internalBucket: '3c-internal-assets',
+    publicBucket: '3c-public-content'
   };
 
   // Real Wasabi Functions
