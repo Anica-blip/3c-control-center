@@ -570,13 +570,6 @@ function AdminTemplates() {
 
 // Enhanced AdminLibraries Component
 function AdminLibraries() {
-  // Canva Integration State
-  const [canvaDesigns, setCanvaDesigns] = useState([]);
-  const [canvaLoading, setCanvaLoading] = useState(false);
-  const [canvaConnected, setCanvaConnected] = useState(false);
-  const [canvaSearchQuery, setCanvaSearchQuery] = useState('');
-  const [selectedDesign, setSelectedDesign] = useState(null);
-
   // Notion Integration State
   const [notionConnected, setNotionConnected] = useState(false);
   const [notionPages, setNotionPages] = useState([
@@ -593,8 +586,39 @@ function AdminLibraries() {
     { id: 3, name: "templates/", size: "156 MB", type: "Folder", lastModified: "2025-01-11" }
   ]);
 
-  // Canva Functions
-  const connectCanva = async () => {
+  // Canva Integration State - Simplified without external API calls
+  const [canvaConnected, setCanvaConnected] = useState(false);
+  const [canvaLoading, setCanvaLoading] = useState(false);
+  const [canvaDesigns, setCanvaDesigns] = useState([]);
+  const [canvaSearchQuery, setCanvaSearchQuery] = useState('');
+  const [selectedDesign, setSelectedDesign] = useState(null);
+
+  // Wasabi Placeholder Functions
+  const connectWasabi = () => {
+    setTimeout(() => {
+      setWasabiConnected(true);
+      console.log('Wasabi Connected - Ready for real API integration');
+    }, 1000);
+  };
+
+  const uploadToWasabi = (file, isPublic = false) => {
+    const bucket = isPublic ? 'public-member-content' : 'internal-assets';
+    console.log(`Uploading ${file.name} to ${bucket} bucket`);
+    
+    return {
+      success: true,
+      url: `https://wasabi-bucket.com/${bucket}/${file.name}`,
+      isPublic: isPublic
+    };
+  };
+
+  const generateShareableLink = (fileName) => {
+    console.log(`Generating shareable link for: ${fileName}`);
+    return `https://members.3ccontent.com/access/${fileName}`;
+  };
+
+  // Simplified Canva Functions - No external API calls
+  const connectCanva = () => {
     setCanvaLoading(true);
     setTimeout(() => {
       setCanvaConnected(true);
@@ -605,7 +629,7 @@ function AdminLibraries() {
           name: 'Instagram Post - Summer Campaign',
           type: 'instagram_post',
           thumbnail: 'https://via.placeholder.com/200x200/3b82f6/ffffff?text=IG+Post',
-          url: 'https://canva.com/design/sample1',
+          url: '#',
           lastModified: '2025-01-15'
         },
         {
@@ -613,7 +637,7 @@ function AdminLibraries() {
           name: 'YouTube Thumbnail - Tutorial',
           type: 'youtube_thumbnail',
           thumbnail: 'https://via.placeholder.com/200x112/10b981/ffffff?text=YT+Thumb',
-          url: 'https://canva.com/design/sample2',
+          url: '#',
           lastModified: '2025-01-14'
         },
         {
@@ -621,14 +645,14 @@ function AdminLibraries() {
           name: 'Business Presentation Q1',
           type: 'presentation',
           thumbnail: 'https://via.placeholder.com/200x150/f59e0b/ffffff?text=Presentation',
-          url: 'https://canva.com/design/sample3',
+          url: '#',
           lastModified: '2025-01-13'
         }
       ]);
     }, 2000);
   };
 
-  const searchCanvaDesigns = async () => {
+  const searchCanvaDesigns = () => {
     if (!canvaSearchQuery.trim()) return;
     
     setCanvaLoading(true);
@@ -641,7 +665,7 @@ function AdminLibraries() {
     }, 1000);
   };
 
-  const refreshCanvaDesigns = async () => {
+  const refreshCanvaDesigns = () => {
     setCanvaLoading(true);
     setTimeout(() => {
       setCanvaDesigns([
@@ -650,7 +674,7 @@ function AdminLibraries() {
           name: 'Instagram Post - Summer Campaign',
           type: 'instagram_post',
           thumbnail: 'https://via.placeholder.com/200x200/3b82f6/ffffff?text=IG+Post',
-          url: 'https://canva.com/design/sample1',
+          url: '#',
           lastModified: '2025-01-15'
         },
         {
@@ -658,7 +682,7 @@ function AdminLibraries() {
           name: 'YouTube Thumbnail - Tutorial',
           type: 'youtube_thumbnail',
           thumbnail: 'https://via.placeholder.com/200x112/10b981/ffffff?text=YT+Thumb',
-          url: 'https://canva.com/design/sample2',
+          url: '#',
           lastModified: '2025-01-14'
         },
         {
@@ -666,7 +690,7 @@ function AdminLibraries() {
           name: 'Business Presentation Q1',
           type: 'presentation',
           thumbnail: 'https://via.placeholder.com/200x150/f59e0b/ffffff?text=Presentation',
-          url: 'https://canva.com/design/sample3',
+          url: '#',
           lastModified: '2025-01-13'
         }
       ]);
@@ -792,7 +816,7 @@ function AdminLibraries() {
           )}
         </div>
 
-        {/* WASABI INTEGRATION */}
+        {/* WASABI INTEGRATION - Enhanced with Internal/Public Storage */}
         <div style={{ 
           padding: '25px', 
           border: '2px solid #dc2626', 
@@ -803,7 +827,7 @@ function AdminLibraries() {
             <div>
               <h3 style={{ margin: '0', color: '#dc2626', fontSize: '20px' }}>📦 Wasabi Cloud Storage</h3>
               <p style={{ margin: '5px 0 0 0', color: '#dc2626', fontSize: '14px' }}>
-                High-performance cloud storage for assets
+                Internal assets & public member content storage
               </p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -818,7 +842,7 @@ function AdminLibraries() {
                 {wasabiConnected ? 'Connected' : 'Ready to Connect'}
               </span>
               <button
-                onClick={() => setWasabiConnected(!wasabiConnected)}
+                onClick={wasabiConnected ? () => setWasabiConnected(false) : connectWasabi}
                 style={{
                   padding: '10px 20px',
                   backgroundColor: wasabiConnected ? '#ef4444' : '#dc2626',
@@ -837,39 +861,41 @@ function AdminLibraries() {
 
           {wasabiConnected ? (
             <div>
-              <h4 style={{ color: '#dc2626', marginBottom: '15px' }}>📁 Storage Overview</h4>
+              {/* Storage Type Tabs */}
               <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+                gridTemplateColumns: '1fr 1fr', 
                 gap: '15px',
-                marginBottom: '20px'
+                marginBottom: '25px'
               }}>
                 <div style={{ 
                   padding: '15px', 
                   backgroundColor: 'rgba(255,255,255,0.8)', 
+                  border: '2px solid #fbbf24',
                   borderRadius: '8px',
                   textAlign: 'center'
                 }}>
-                  <div style={{ fontSize: '24px', color: '#dc2626', fontWeight: 'bold' }}>2.1 GB</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>Used Storage</div>
+                  <h4 style={{ color: '#92400e', margin: '0 0 8px 0' }}>🔒 Internal Storage</h4>
+                  <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 10px 0' }}>
+                    Private assets, templates, work files
+                  </p>
+                  <div style={{ fontSize: '20px', color: '#dc2626', fontWeight: 'bold' }}>1.2 GB</div>
+                  <div style={{ fontSize: '10px', color: '#9ca3af' }}>Used of 25 GB</div>
                 </div>
+                
                 <div style={{ 
                   padding: '15px', 
                   backgroundColor: 'rgba(255,255,255,0.8)', 
+                  border: '2px solid #34d399',
                   borderRadius: '8px',
                   textAlign: 'center'
                 }}>
-                  <div style={{ fontSize: '24px', color: '#dc2626', fontWeight: 'bold' }}>47.9 GB</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>Available</div>
-                </div>
-                <div style={{ 
-                  padding: '15px', 
-                  backgroundColor: 'rgba(255,255,255,0.8)', 
-                  borderRadius: '8px',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '24px', color: '#dc2626', fontWeight: 'bold' }}>156</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>Files</div>
+                  <h4 style={{ color: '#065f46', margin: '0 0 8px 0' }}>🌐 Public Storage</h4>
+                  <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 10px 0' }}>
+                    Member quizzes, games, shareable content
+                  </p>
+                  <div style={{ fontSize: '20px', color: '#dc2626', fontWeight: 'bold' }}>0.9 GB</div>
+                  <div style={{ fontSize: '10px', color: '#9ca3af' }}>Used of 25 GB</div>
                 </div>
               </div>
 
@@ -897,6 +923,20 @@ function AdminLibraries() {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        onClick={() => generateShareableLink(file.name)}
+                        style={{ 
+                          padding: '6px 12px', 
+                          backgroundColor: '#10b981', 
+                          color: 'white', 
+                          border: 'none', 
+                          borderRadius: '4px', 
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🔗 Share
+                      </button>
                       <button style={{ 
                         padding: '6px 12px', 
                         backgroundColor: '#dc2626', 
@@ -908,20 +948,42 @@ function AdminLibraries() {
                       }}>
                         ⬇️ Download
                       </button>
-                      <button style={{ 
-                        padding: '6px 12px', 
-                        backgroundColor: '#10b981', 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '4px', 
-                        fontSize: '12px',
-                        cursor: 'pointer'
-                      }}>
-                        🔗 Share
-                      </button>
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* Upload Buttons */}
+              <div style={{ 
+                display: 'flex', 
+                gap: '10px', 
+                marginTop: '20px',
+                justifyContent: 'center'
+              }}>
+                <button style={{ 
+                  padding: '12px 20px', 
+                  backgroundColor: '#f59e0b', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '6px', 
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold'
+                }}>
+                  📁 Upload to Internal
+                </button>
+                <button style={{ 
+                  padding: '12px 20px', 
+                  backgroundColor: '#10b981', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '6px', 
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold'
+                }}>
+                  🌐 Upload to Public
+                </button>
               </div>
             </div>
           ) : (
@@ -931,13 +993,13 @@ function AdminLibraries() {
                 Connect your Wasabi storage
               </p>
               <p style={{ color: '#6b7280', fontSize: '14px' }}>
-                High-performance cloud storage for your brand assets and media files
+                Dual storage: Internal assets & public member content
               </p>
             </div>
           )}
         </div>
 
-        {/* CANVA INTEGRATION - FUNCTIONAL */}
+        {/* CANVA INTEGRATION - SIMPLIFIED */}
         <div style={{ 
           padding: '25px', 
           border: '2px solid #7c3aed', 
@@ -1100,7 +1162,7 @@ function AdminLibraries() {
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            window.open(design.url, '_blank');
+                            alert('Edit functionality will connect to real Canva when API is integrated');
                           }}
                           style={{ 
                             flex: '1',
@@ -1670,7 +1732,361 @@ function AdminBrand() {
   );
 }
 
-// Main AdminCenter Component with Internal Navigation
+// Coming Soon Component
+function ComingSoon({ title, description, icon = "🚧" }) {
+  return (
+    <div style={{ 
+      padding: '60px 40px', 
+      textAlign: 'center',
+      background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
+      borderRadius: '12px',
+      border: '2px dashed #d1d5db'
+    }}>
+      <div style={{ fontSize: '64px', marginBottom: '20px' }}>{icon}</div>
+      <h2 style={{ color: '#6b7280', marginBottom: '15px', fontSize: '28px' }}>
+        {title}
+      </h2>
+      <p style={{ fontSize: '16px', color: '#9ca3af', marginBottom: '25px', maxWidth: '500px', margin: '0 auto 25px' }}>
+        {description}
+      </p>
+      <button style={{ 
+        padding: '15px 30px', 
+        backgroundColor: '#f3f4f6', 
+        border: '2px solid #d1d5db', 
+        borderRadius: '8px', 
+        cursor: 'not-allowed',
+        color: '#6b7280',
+        fontSize: '16px',
+        fontWeight: 'bold'
+      }} disabled>
+        🚧 Coming Soon
+      </button>
+    </div>
+  );
+}
+
+// Main App Component with Complete Navigation
+function App() {
+  const [activeSection, setActiveSection] = useState('overview');
+
+  const navigationItems = [
+    { id: 'overview', icon: '📊', label: 'Overview', available: true },
+    { id: 'content-manager', icon: '📝', label: 'Content Manager', available: false },
+    { id: 'chat-manager-public', icon: '💬', label: 'Chat Manager - Public', available: false },
+    { id: 'scheduler', icon: '📅', label: 'Scheduler', available: false },
+    { id: 'marketing-center', icon: '🧠', label: 'Marketing Center', available: false },
+    { id: 'settings', icon: '⚙️', label: 'Settings', available: false },
+    { id: 'admin-center', icon: '🔧', label: 'Admin Center', available: true }
+  ];
+
+  const bottomNavItem = { 
+    id: 'ai-chat-manager', 
+    icon: '🤖', 
+    label: 'AI Chat Manager', 
+    available: false,
+    note: 'Admin/Brand feature'
+  };
+
+  const renderContent = () => {
+    switch (activeSection) {
+      case 'overview':
+        return (
+          <div style={{ padding: '20px' }}>
+            <h1>📊 3C Content Center</h1>
+            <p>Welcome to your comprehensive content management dashboard</p>
+            
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+              gap: '20px',
+              marginTop: '30px'
+            }}>
+              <div style={{ 
+                padding: '25px', 
+                border: '2px solid #3b82f6', 
+                borderRadius: '12px', 
+                background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)'
+              }}>
+                <h3 style={{ color: '#1e40af', marginBottom: '15px' }}>🏗️ Template Management</h3>
+                <p style={{ color: '#1e40af', fontSize: '14px', marginBottom: '20px' }}>
+                  Create and manage content templates with external tool integrations
+                </p>
+                <button 
+                  onClick={() => setActiveSection('admin-center')}
+                  style={{ 
+                    padding: '10px 20px', 
+                    backgroundColor: '#3b82f6', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '6px', 
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  🔗 Access Templates
+                </button>
+              </div>
+              
+              <div style={{ 
+                padding: '25px', 
+                border: '2px solid #10b981', 
+                borderRadius: '12px', 
+                background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)'
+              }}>
+                <h3 style={{ color: '#047857', marginBottom: '15px' }}>📚 External Integrations</h3>
+                <p style={{ color: '#047857', fontSize: '14px', marginBottom: '20px' }}>
+                  Connect with Notion, Canva, and Wasabi for seamless workflow
+                </p>
+                <button 
+                  onClick={() => setActiveSection('admin-center')}
+                  style={{ 
+                    padding: '10px 20px', 
+                    backgroundColor: '#10b981', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '6px', 
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  🔗 Manage Libraries
+                </button>
+              </div>
+              
+              <div style={{ 
+                padding: '25px', 
+                border: '2px solid #7c3aed', 
+                borderRadius: '12px', 
+                background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)'
+              }}>
+                <h3 style={{ color: '#7c3aed', marginBottom: '15px' }}>🏢 Brand Management</h3>
+                <p style={{ color: '#7c3aed', fontSize: '14px', marginBottom: '20px' }}>
+                  Configure brand assets, guidelines, and system settings
+                </p>
+                <button 
+                  onClick={() => setActiveSection('admin-center')}
+                  style={{ 
+                    padding: '10px 20px', 
+                    backgroundColor: '#7c3aed', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '6px', 
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  🔗 Brand Kit
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'admin-center':
+        return <AdminCenter />;
+
+      case 'content-manager':
+        return (
+          <ComingSoon 
+            title="Content Manager"
+            description="Advanced content creation and management tools with AI assistance and template integration. This section will provide comprehensive content workflow management."
+            icon="📝"
+          />
+        );
+
+      case 'chat-manager-public':
+        return (
+          <ComingSoon 
+            title="Chat Manager - Public"
+            description="Public-facing chat management system for customer interactions, automated responses, and community engagement. This will handle all external communication flows."
+            icon="💬"
+          />
+        );
+
+      case 'scheduler':
+        return (
+          <ComingSoon 
+            title="Content Scheduler"
+            description="Schedule and automate content publishing across multiple platforms. Plan your content calendar with intelligent scheduling and cross-platform synchronization."
+            icon="📅"
+          />
+        );
+
+      case 'marketing-center':
+        return (
+          <ComingSoon 
+            title="Marketing Center"
+            description="Comprehensive marketing automation, campaign management, and analytics dashboard. Track performance, manage campaigns, and optimize your marketing efforts."
+            icon="🧠"
+          />
+        );
+
+      case 'settings':
+        return (
+          <ComingSoon 
+            title="System Settings"
+            description="Configure system preferences, user permissions, integrations, and general application settings. Customize your dashboard experience and manage team access."
+            icon="⚙️"
+          />
+        );
+
+      case 'ai-chat-manager':
+        return (
+          <ComingSoon 
+            title="AI Chat Manager"
+            description="Advanced AI-powered chat management for internal team communication and automated workflows. This premium feature includes intelligent routing and AI assistance."
+            icon="🤖"
+          />
+        );
+
+      default:
+        return <div>Section not found</div>;
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+      {/* Sidebar Navigation */}
+      <div style={{ 
+        width: '280px', 
+        backgroundColor: '#ffffff', 
+        borderRight: '1px solid #e5e7eb',
+        padding: '20px 0',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        {/* Logo/Header */}
+        <div style={{ 
+          padding: '0 20px 30px 20px', 
+          borderBottom: '1px solid #e5e7eb',
+          marginBottom: '20px'
+        }}>
+          <h2 style={{ 
+            margin: '0', 
+            color: '#1f2937', 
+            fontSize: '20px',
+            fontWeight: 'bold'
+          }}>
+            3C Content Center
+          </h2>
+          <p style={{ 
+            margin: '5px 0 0 0', 
+            color: '#6b7280', 
+            fontSize: '14px' 
+          }}>
+            Admin Dashboard
+          </p>
+        </div>
+
+        {/* Main Navigation */}
+        <div style={{ flex: '1', padding: '0 10px' }}>
+          {navigationItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => item.available && setActiveSection(item.id)}
+              style={{
+                width: '100%',
+                padding: '12px 15px',
+                marginBottom: '5px',
+                backgroundColor: activeSection === item.id ? '#3b82f6' : 'transparent',
+                color: activeSection === item.id ? '#ffffff' : (item.available ? '#374151' : '#9ca3af'),
+                border: 'none',
+                borderRadius: '8px',
+                textAlign: 'left',
+                cursor: item.available ? 'pointer' : 'not-allowed',
+                fontSize: '14px',
+                fontWeight: activeSection === item.id ? 'bold' : 'normal',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                transition: 'all 0.2s',
+                opacity: item.available ? 1 : 0.6
+              }}
+              onMouseEnter={(e) => {
+                if (item.available && activeSection !== item.id) {
+                  e.target.style.backgroundColor = '#f3f4f6';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeSection !== item.id) {
+                  e.target.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <span style={{ fontSize: '16px' }}>{item.icon}</span>
+              <span style={{ flex: '1' }}>{item.label}</span>
+              {!item.available && (
+                <span style={{ 
+                  fontSize: '10px', 
+                  backgroundColor: '#f59e0b', 
+                  color: 'white', 
+                  padding: '2px 6px', 
+                  borderRadius: '8px',
+                  fontWeight: 'bold'
+                }}>
+                  Soon
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Bottom Navigation Item */}
+        <div style={{ 
+          padding: '20px 10px 0 10px', 
+          borderTop: '1px solid #e5e7eb',
+          marginTop: '20px'
+        }}>
+          <button
+            onClick={() => bottomNavItem.available && setActiveSection(bottomNavItem.id)}
+            style={{
+              width: '100%',
+              padding: '12px 15px',
+              backgroundColor: activeSection === bottomNavItem.id ? '#3b82f6' : 'transparent',
+              color: activeSection === bottomNavItem.id ? '#ffffff' : '#9ca3af',
+              border: 'none',
+              borderRadius: '8px',
+              textAlign: 'left',
+              cursor: 'not-allowed',
+              fontSize: '14px',
+              fontWeight: activeSection === bottomNavItem.id ? 'bold' : 'normal',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              opacity: 0.6
+            }}
+          >
+            <span style={{ fontSize: '16px' }}>{bottomNavItem.icon}</span>
+            <div style={{ flex: '1' }}>
+              <div>{bottomNavItem.label}</div>
+              <div style={{ fontSize: '10px', opacity: 0.8 }}>{bottomNavItem.note}</div>
+            </div>
+            <span style={{ 
+              fontSize: '10px', 
+              backgroundColor: '#f59e0b', 
+              color: 'white', 
+              padding: '2px 6px', 
+              borderRadius: '8px',
+              fontWeight: 'bold'
+            }}>
+              Soon
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div style={{ flex: '1', backgroundColor: '#ffffff' }}>
+        {renderContent()}
+      </div>
+    </div>
+  );
+}
+
+// AdminCenter Component with Internal Navigation
 function AdminCenter() {
   const [activeTab, setActiveTab] = useState('templates');
 
@@ -1736,4 +2152,4 @@ function AdminCenter() {
   );
 }
 
-export default AdminCenter;
+export default App;
