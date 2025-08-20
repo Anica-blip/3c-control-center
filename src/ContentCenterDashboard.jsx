@@ -123,7 +123,7 @@ function AurionWebchat({
         React.createElement('div', null,
           React.createElement('h3', { 
             style: { color: 'white', fontWeight: 'bold', margin: '0', fontSize: '16px' } 
-          }, 'Aurion Assistant'),
+          }, 'Aurion 3C Mascot'),
           React.createElement('p', { 
             style: { color: '#a5f3fc', fontSize: '12px', margin: '0' } 
           }, isLoading ? 'Typing...' : 'Online')
@@ -322,6 +322,7 @@ function ChatManagerPublic() {
           border: 'none',
           borderBottom: activeTab === 'chat' ? '3px solid #3b82f6' : '3px solid transparent',
           cursor: 'pointer',
+          fontSize: '12px',
           fontWeight: activeTab === 'chat' ? 'bold' : 'normal'
         }
       }, '💬 Live Chat'),
@@ -334,6 +335,7 @@ function ChatManagerPublic() {
           border: 'none',
           borderBottom: activeTab === 'email' ? '3px solid #3b82f6' : '3px solid transparent',
           cursor: 'pointer',
+          fontSize: '12px',
           fontWeight: activeTab === 'email' ? 'bold' : 'normal'
         }
       }, '📧 Email Config'),
@@ -346,6 +348,7 @@ function ChatManagerPublic() {
           border: 'none',
           borderBottom: activeTab === 'ai' ? '3px solid #3b82f6' : '3px solid transparent',
           cursor: 'pointer',
+          fontSize: '12px',
           fontWeight: activeTab === 'ai' ? 'bold' : 'normal'
         }
       }, '🤖 AI Setup'),
@@ -358,6 +361,7 @@ function ChatManagerPublic() {
           border: 'none',
           borderBottom: activeTab === 'notifications' ? '3px solid #3b82f6' : '3px solid transparent',
           cursor: 'pointer',
+          fontSize: '12px',
           fontWeight: activeTab === 'notifications' ? 'bold' : 'normal'
         }
       }, '🔔 Notifications')
@@ -366,7 +370,7 @@ function ChatManagerPublic() {
     // Live Chat Tab
     activeTab === 'chat' && React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 400px', gap: '30px' } },
       React.createElement('div', null,
-        React.createElement('h3', { style: { marginBottom: '20px' } }, '💬 Aurion Chat Interface'),
+        React.createElement('h3', { style: { marginBottom: '20px', fontSize: '18px' } }, '💬 Aurion Chat Interface'),
         React.createElement('p', { style: { color: '#6b7280', marginBottom: '20px' } }, 'This is your integrated Aurion webchat system for customer support'),
         React.createElement('div', {
           style: { 
