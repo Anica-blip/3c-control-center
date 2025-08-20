@@ -1,3 +1,4 @@
+import React from 'react';
 
 function AdminTemplates() {
   const [selectedTemplate, setSelectedTemplate] = React.useState(null);
