@@ -1488,7 +1488,7 @@ function App() {
     { id: 'chat-manager-public', icon: '💬', label: 'Chat Manager - Public', available: true },
     { id: 'scheduler', icon: '📅', label: 'Scheduler', available: false },
     { id: 'marketing-center', icon: '🧠', label: 'Marketing Center', available: false },
-    { id: 'settings', icon: '⚙️', label: 'Settings', available: false },
+    { id: 'settings', icon: '⚙️', label: 'Settings', available: true },
     { id: 'admin-center', icon: '🔧', label: 'Admin Center', available: true }
   ];
 
@@ -1641,12 +1641,568 @@ function App() {
           icon: "🧠"
         });
 
-      case 'settings':
-        return React.createElement(ComingSoon, {
-          title: "System Settings",
-          description: "Configure system preferences, user permissions, and integrations.",
-          icon: "⚙️"
-        });
+function Settings() {
+  const [activeTab, setActiveTab] = React.useState('platforms');
+  
+  // Social Platforms State
+  const [platforms, setPlatforms] = React.useState([
+    { id: 1, name: 'Instagram', url: 'https://instagram.com/yourhandle', type: 'social' },
+    { id: 2, name: 'Twitter/X', url: 'https://x.com/yourhandle', type: 'social' }
+  ]);
+  const [newPlatform, setNewPlatform] = React.useState({ name: '', url: '', type: 'social' });
+  
+  // Telegram Channels/Groups State
+  const [telegramChannels, setTelegramChannels] = React.useState([
+    { id: 1, name: 'group2', channel_group: '-1002377255109', thread_id: 'https://t.me/100237725510910', type: 'group' }
+  ]);
+  const [newTelegram, setNewTelegram] = React.useState({ name: '', channel_group: '', thread_id: '', type: 'channel' });
+  
+  // Character Profiles State
+  const [characters, setCharacters] = React.useState([
+    { 
+      id: 1, 
+      name: 'Dr. Sarah Chen', 
+      bio: 'Wellness expert and mindfulness coach specializing in stress management and mental health.',
+      image: 'https://via.placeholder.com/80x80/3b82f6/ffffff?text=SC',
+      active: true 
+    },
+    { 
+      id: 2, 
+      name: 'Alex Rivera', 
+      bio: 'Content creator focused on productivity tips and personal development strategies.',
+      image: 'https://via.placeholder.com/80x80/10b981/ffffff?text=AR',
+      active: true 
+    }
+  ]);
+  const [newCharacter, setNewCharacter] = React.useState({ name: '', bio: '', image: '', active: true });
+  
+  // Error Logs State
+  const [errorLogs, setErrorLogs] = React.useState([
+    { id: 1, timestamp: '2025-01-20 14:30:25', type: 'API Error', message: 'Failed to post to Instagram - Rate limit exceeded', severity: 'warning' },
+    { id: 2, timestamp: '2025-01-20 13:15:10', type: 'System Error', message: 'Character profile image failed to upload', severity: 'error' },
+    { id: 3, timestamp: '2025-01-20 12:05:42', type: 'Info', message: 'Successfully posted to 3 platforms', severity: 'info' }
+  ]);
+
+  // Platform Functions
+  const addPlatform = () => {
+    if (!newPlatform.name.trim()) return;
+    const platform = {
+      ...newPlatform,
+      id: Math.max(...platforms.map(p => p.id), 0) + 1
+    };
+    setPlatforms(prev => [...prev, platform]);
+    setNewPlatform({ name: '', url: '', type: 'social' });
+  };
+
+  const removePlatform = (id) => {
+    setPlatforms(prev => prev.filter(p => p.id !== id));
+  };
+
+  // Telegram Functions
+  const addTelegram = () => {
+    if (!newTelegram.name.trim() || !newTelegram.channel_group.trim()) return;
+    const telegram = {
+      ...newTelegram,
+      id: Math.max(...telegramChannels.map(t => t.id), 0) + 1
+    };
+    setTelegramChannels(prev => [...prev, telegram]);
+    setNewTelegram({ name: '', channel_group: '', thread_id: '', type: 'channel' });
+  };
+
+  const removeTelegram = (id) => {
+    setTelegramChannels(prev => prev.filter(t => t.id !== id));
+  };
+
+  // Character Functions
+  const addCharacter = () => {
+    if (!newCharacter.name.trim() || !newCharacter.bio.trim()) return;
+    const character = {
+      ...newCharacter,
+      id: Math.max(...characters.map(c => c.id), 0) + 1,
+      image: newCharacter.image || `https://via.placeholder.com/80x80/7c3aed/ffffff?text=${newCharacter.name.charAt(0)}`
+    };
+    setCharacters(prev => [...prev, character]);
+    setNewCharacter({ name: '', bio: '', image: '', active: true });
+  };
+
+  const removeCharacter = (id) => {
+    setCharacters(prev => prev.filter(c => c.id !== id));
+  };
+
+  const toggleCharacter = (id) => {
+    setCharacters(prev => prev.map(c => 
+      c.id === id ? { ...c, active: !c.active } : c
+    ));
+  };
+
+  return React.createElement('div', { style: { padding: '20px' } },
+    React.createElement('h2', null, '⚙️ Settings'),
+    React.createElement('p', null, 'Configure social platforms and character profiles for your content system'),
+    
+    React.createElement('div', {
+      style: { 
+        display: 'flex', 
+        gap: '0', 
+        marginTop: '20px', 
+        marginBottom: '30px',
+        borderBottom: '2px solid #e5e7eb'
+      }
+    },
+      React.createElement('button', {
+        onClick: () => setActiveTab('platforms'),
+        style: {
+          padding: '12px 20px',
+          backgroundColor: activeTab === 'platforms' ? '#3b82f6' : 'transparent',
+          color: activeTab === 'platforms' ? 'white' : '#6b7280',
+          border: 'none',
+          borderBottom: activeTab === 'platforms' ? '3px solid #3b82f6' : '3px solid transparent',
+          cursor: 'pointer',
+          fontSize: '12px',
+          fontWeight: activeTab === 'platforms' ? 'bold' : 'normal'
+        }
+      }, '📱 Social Platforms'),
+      React.createElement('button', {
+        onClick: () => setActiveTab('characters'),
+        style: {
+          padding: '12px 20px',
+          backgroundColor: activeTab === 'characters' ? '#3b82f6' : 'transparent',
+          color: activeTab === 'characters' ? 'white' : '#6b7280',
+          border: 'none',
+          borderBottom: activeTab === 'characters' ? '3px solid #3b82f6' : '3px solid transparent',
+          cursor: 'pointer',
+          fontSize: '12px',
+          fontWeight: activeTab === 'characters' ? 'bold' : 'normal'
+        }
+      }, '👥 Character Profiles'),
+      React.createElement('button', {
+        onClick: () => setActiveTab('logs'),
+        style: {
+          padding: '12px 20px',
+          backgroundColor: activeTab === 'logs' ? '#3b82f6' : 'transparent',
+          color: activeTab === 'logs' ? 'white' : '#6b7280',
+          border: 'none',
+          borderBottom: activeTab === 'logs' ? '3px solid #3b82f6' : '3px solid transparent',
+          cursor: 'pointer',
+          fontSize: '12px',
+          fontWeight: activeTab === 'logs' ? 'bold' : 'normal'
+        }
+      }, '📋 Error Logs')
+    ),
+
+    // Social Platforms Tab
+    activeTab === 'platforms' && React.createElement('div', { style: { display: 'grid', gap: '30px' } },
+      // Regular Social Platforms
+      React.createElement('div', {
+        style: { 
+          padding: '25px', 
+          border: '2px solid #3b82f6', 
+          borderRadius: '12px', 
+          background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)' 
+        }
+      },
+        React.createElement('h3', { style: { color: '#1e40af', marginBottom: '20px', fontSize: '18px' } }, '📱 Social Media Platforms'),
+        React.createElement('p', { style: { color: '#1e40af', fontSize: '14px', marginBottom: '20px' } }, 'Manage platforms where your characters can share content'),
+        
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '15px', marginBottom: '20px' } },
+          React.createElement('input', {
+            type: 'text',
+            value: newPlatform.name,
+            onChange: (e) => setNewPlatform(prev => ({ ...prev, name: e.target.value })),
+            placeholder: 'e.g., Instagram, YouTube, Pinterest',
+            style: {
+              padding: '12px',
+              border: '1px solid #93c5fd',
+              borderRadius: '6px',
+              fontSize: '14px'
+            }
+          }),
+          React.createElement('input', {
+            type: 'url',
+            value: newPlatform.url,
+            onChange: (e) => setNewPlatform(prev => ({ ...prev, url: e.target.value })),
+            placeholder: 'https://platform.com/yourhandle',
+            style: {
+              padding: '12px',
+              border: '1px solid #93c5fd',
+              borderRadius: '6px',
+              fontSize: '14px'
+            }
+          }),
+          React.createElement('button', {
+            onClick: addPlatform,
+            style: {
+              padding: '12px 20px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }
+          }, '➕ Add')
+        ),
+        
+        React.createElement('div', { style: { display: 'grid', gap: '10px' } },
+          ...platforms.map(platform =>
+            React.createElement('div', {
+              key: platform.id,
+              style: { 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                padding: '15px',
+                backgroundColor: 'rgba(255,255,255,0.8)',
+                borderRadius: '8px',
+                border: '1px solid #93c5fd'
+              }
+            },
+              React.createElement('div', null,
+                React.createElement('div', { style: { fontWeight: 'bold', color: '#1e40af' } }, platform.name),
+                React.createElement('div', { style: { fontSize: '12px', color: '#6b7280' } }, platform.url)
+              ),
+              React.createElement('button', {
+                onClick: () => removePlatform(platform.id),
+                style: {
+                  padding: '8px 12px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }
+              }, '🗑️ Remove')
+            )
+          )
+        )
+      ),
+
+      // Telegram Channels/Groups
+      React.createElement('div', {
+        style: { 
+          padding: '25px', 
+          border: '2px solid #0891b2', 
+          borderRadius: '12px', 
+          background: 'linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%)' 
+        }
+      },
+        React.createElement('h3', { style: { color: '#0e7490', marginBottom: '20px', fontSize: '18px' } }, '📡 Telegram Channels & Groups'),
+        React.createElement('p', { style: { color: '#0e7490', fontSize: '14px', marginBottom: '20px' } }, 'Configure Telegram channels and groups with topic/thread support'),
+        
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr auto auto auto', gap: '15px', marginBottom: '20px' } },
+          React.createElement('input', {
+            type: 'text',
+            value: newTelegram.name,
+            onChange: (e) => setNewTelegram(prev => ({ ...prev, name: e.target.value })),
+            placeholder: 'Name (e.g., group2)',
+            style: {
+              padding: '12px',
+              border: '1px solid #67e8f9',
+              borderRadius: '6px',
+              fontSize: '14px'
+            }
+          }),
+          React.createElement('input', {
+            type: 'text',
+            value: newTelegram.channel_group,
+            onChange: (e) => setNewTelegram(prev => ({ ...prev, channel_group: e.target.value })),
+            placeholder: 'Channel/Group ID (e.g., -1002377255109)',
+            style: {
+              padding: '12px',
+              border: '1px solid #67e8f9',
+              borderRadius: '6px',
+              fontSize: '14px'
+            }
+          }),
+          React.createElement('select', {
+            value: newTelegram.type,
+            onChange: (e) => setNewTelegram(prev => ({ ...prev, type: e.target.value })),
+            style: {
+              padding: '12px',
+              border: '1px solid #67e8f9',
+              borderRadius: '6px',
+              fontSize: '14px'
+            }
+          },
+            React.createElement('option', { value: 'channel' }, 'Channel'),
+            React.createElement('option', { value: 'group' }, 'Group')
+          ),
+          React.createElement('input', {
+            type: 'text',
+            value: newTelegram.thread_id,
+            onChange: (e) => setNewTelegram(prev => ({ ...prev, thread_id: e.target.value })),
+            placeholder: 'Thread/Topic ID (optional)',
+            style: {
+              padding: '12px',
+              border: '1px solid #67e8f9',
+              borderRadius: '6px',
+              fontSize: '14px'
+            }
+          }),
+          React.createElement('button', {
+            onClick: addTelegram,
+            style: {
+              padding: '12px 20px',
+              backgroundColor: '#0891b2',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }
+          }, '➕ Add')
+        ),
+        
+        React.createElement('div', { style: { display: 'grid', gap: '10px' } },
+          ...telegramChannels.map(telegram =>
+            React.createElement('div', {
+              key: telegram.id,
+              style: { 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                padding: '15px',
+                backgroundColor: 'rgba(255,255,255,0.8)',
+                borderRadius: '8px',
+                border: '1px solid #67e8f9'
+              }
+            },
+              React.createElement('div', null,
+                React.createElement('div', { style: { fontWeight: 'bold', color: '#0e7490' } }, 
+                  telegram.name + ' (' + telegram.type + ')'
+                ),
+                React.createElement('div', { style: { fontSize: '12px', color: '#6b7280' } }, 
+                  'ID: ' + telegram.channel_group + (telegram.thread_id ? ' • Thread: ' + telegram.thread_id : '')
+                )
+              ),
+              React.createElement('button', {
+                onClick: () => removeTelegram(telegram.id),
+                style: {
+                  padding: '8px 12px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }
+              }, '🗑️ Remove')
+            )
+          )
+        )
+      )
+    ),
+
+    // Character Profiles Tab
+    activeTab === 'characters' && React.createElement('div', { style: { display: 'grid', gap: '30px' } },
+      React.createElement('div', {
+        style: { 
+          padding: '25px', 
+          border: '2px solid #7c3aed', 
+          borderRadius: '12px', 
+          background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)' 
+        }
+      },
+        React.createElement('h3', { style: { color: '#7c3aed', marginBottom: '20px', fontSize: '18px' } }, '👥 Character Profiles'),
+        React.createElement('p', { style: { color: '#7c3aed', fontSize: '14px', marginBottom: '20px' } }, 'Manage character personas for content creation and posting'),
+        
+        React.createElement('div', { style: { display: 'grid', gap: '20px', marginBottom: '30px' } },
+          React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' } },
+            React.createElement('input', {
+              type: 'text',
+              value: newCharacter.name,
+              onChange: (e) => setNewCharacter(prev => ({ ...prev, name: e.target.value })),
+              placeholder: 'Character Name (e.g., Dr. Sarah Chen)',
+              style: {
+                padding: '12px',
+                border: '1px solid #c4b5fd',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }
+            }),
+            React.createElement('input', {
+              type: 'url',
+              value: newCharacter.image,
+              onChange: (e) => setNewCharacter(prev => ({ ...prev, image: e.target.value })),
+              placeholder: 'Profile Image URL (optional)',
+              style: {
+                padding: '12px',
+                border: '1px solid #c4b5fd',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }
+            })
+          ),
+          React.createElement('textarea', {
+            value: newCharacter.bio,
+            onChange: (e) => setNewCharacter(prev => ({ ...prev, bio: e.target.value })),
+            placeholder: 'Character bio and expertise (e.g., Wellness expert and mindfulness coach...)',
+            style: {
+              padding: '12px',
+              border: '1px solid #c4b5fd',
+              borderRadius: '6px',
+              fontSize: '14px',
+              minHeight: '80px',
+              resize: 'vertical'
+            }
+          }),
+          React.createElement('div', { style: { display: 'flex', justifyContent: 'flex-end' } },
+            React.createElement('button', {
+              onClick: addCharacter,
+              style: {
+                padding: '12px 24px',
+                backgroundColor: '#7c3aed',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }
+            }, '➕ Add Character')
+          )
+        ),
+        
+        React.createElement('div', { style: { display: 'grid', gap: '15px' } },
+          ...characters.map(character =>
+            React.createElement('div', {
+              key: character.id,
+              style: { 
+                display: 'flex', 
+                gap: '15px',
+                padding: '20px',
+                backgroundColor: 'rgba(255,255,255,0.8)',
+                borderRadius: '12px',
+                border: '1px solid #c4b5fd',
+                opacity: character.active ? 1 : 0.6
+              }
+            },
+              React.createElement('img', {
+                src: character.image,
+                alt: character.name,
+                style: {
+                  width: '60px',
+                  height: '60px',
+                  borderRadius: '50%',
+                  objectFit: 'cover'
+                }
+              }),
+              React.createElement('div', { style: { flex: '1' } },
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' } },
+                  React.createElement('h4', { style: { margin: '0', color: '#7c3aed', fontSize: '16px' } }, character.name),
+                  React.createElement('span', {
+                    style: { 
+                      padding: '2px 8px', 
+                      backgroundColor: character.active ? '#10b981' : '#6b7280', 
+                      color: 'white', 
+                      borderRadius: '12px', 
+                      fontSize: '10px',
+                      fontWeight: 'bold'
+                    }
+                  }, character.active ? 'Active' : 'Inactive')
+                ),
+                React.createElement('p', { style: { margin: '0', color: '#6b7280', fontSize: '14px', lineHeight: '1.4' } }, character.bio)
+              ),
+              React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+                React.createElement('button', {
+                  onClick: () => toggleCharacter(character.id),
+                  style: {
+                    padding: '8px 12px',
+                    backgroundColor: character.active ? '#f59e0b' : '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }
+                }, character.active ? '⏸️ Deactivate' : '▶️ Activate'),
+                React.createElement('button', {
+                  onClick: () => removeCharacter(character.id),
+                  style: {
+                    padding: '8px 12px',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }
+                }, '🗑️ Remove')
+              )
+            )
+          )
+        )
+      )
+    ),
+
+    // Error Logs Tab
+    activeTab === 'logs' && React.createElement('div', { style: { display: 'grid', gap: '30px' } },
+      React.createElement('div', {
+        style: { 
+          padding: '25px', 
+          border: '2px solid #ef4444', 
+          borderRadius: '12px', 
+          background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' 
+        }
+      },
+        React.createElement('h3', { style: { color: '#dc2626', marginBottom: '20px', fontSize: '18px' } }, '📋 System Error Logs'),
+        React.createElement('p', { style: { color: '#dc2626', fontSize: '14px', marginBottom: '20px' } }, 'Monitor system errors and posting issues'),
+        
+        React.createElement('div', { style: { display: 'grid', gap: '10px' } },
+          ...errorLogs.map(log =>
+            React.createElement('div', {
+              key: log.id,
+              style: { 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'flex-start',
+                padding: '15px',
+                backgroundColor: 'rgba(255,255,255,0.8)',
+                borderRadius: '8px',
+                borderLeft: `4px solid ${log.severity === 'error' ? '#ef4444' : log.severity === 'warning' ? '#f59e0b' : '#10b981'}`
+              }
+            },
+              React.createElement('div', { style: { flex: '1' } },
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' } },
+                  React.createElement('span', { style: { fontWeight: 'bold', color: '#dc2626' } }, log.type),
+                  React.createElement('span', {
+                    style: { 
+                      padding: '2px 6px', 
+                      backgroundColor: log.severity === 'error' ? '#ef4444' : log.severity === 'warning' ? '#f59e0b' : '#10b981', 
+                      color: 'white', 
+                      borderRadius: '8px', 
+                      fontSize: '10px',
+                      fontWeight: 'bold'
+                    }
+                  }, log.severity.toUpperCase())
+                ),
+                React.createElement('div', { style: { color: '#6b7280', fontSize: '14px', marginBottom: '4px' } }, log.message),
+                React.createElement('div', { style: { color: '#9ca3af', fontSize: '12px' } }, log.timestamp)
+              )
+            )
+          )
+        ),
+        
+        React.createElement('div', { style: { marginTop: '20px', textAlign: 'center' } },
+          React.createElement('button', {
+            style: {
+              padding: '10px 20px',
+              backgroundColor: '#dc2626',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }
+          }, '🗑️ Clear All Logs')
+        )
+      )
+    )
+  );
+}
 
       case 'ai-chat-manager':
         return React.createElement(ComingSoon, {
