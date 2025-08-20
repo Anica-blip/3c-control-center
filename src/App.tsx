@@ -1,3 +1,20 @@
+import React from 'react';
+import ContentCenterDashboard from './ContentCenterDashboard';
+// ... your other existing imports
+
+function App() {
+  return (
+    <div className="App">
+      {/* Any existing content you want to keep */}
+      
+      {/* Your new dashboard */}
+      <ContentCenterDashboard />
+    </div>
+  );
+}
+
+export default App;
+
 function AdminTemplates() {
   const [selectedTemplate, setSelectedTemplate] = React.useState(null);
   const [templates, setTemplates] = React.useState([
