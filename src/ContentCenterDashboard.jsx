@@ -1016,36 +1016,327 @@ function AdminTemplates() {
   );
 }
 
-function AdminLibraries() {
-  const [notionConnected, setNotionConnected] = React.useState(false);
-  const [wasabiConnected, setWasabiConnected] = React.useState(false);
-  const [canvaConnected, setCanvaConnected] = React.useState(false);
-  const [canvaLoading, setCanvaLoading] = React.useState(false);
-  const [canvaDesigns, setCanvaDesigns] = React.useState([]);
+function AdminTemplates() {
+  const [selectedTemplate, setSelectedTemplate] = React.useState(null);
+  const [templates, setTemplates] = React.useState([
+    {
+      id: 1,
+      name: "Social Media Post",
+      category: "Social",
+      description: "Instagram/Facebook post template",
+      fields: ["title", "description", "hashtags", "image"],
+      lastModified: "2025-01-15"
+    },
+    {
+      id: 2,
+      name: "Blog Article",
+      category: "Content",
+      description: "Standard blog post structure",
+      fields: ["headline", "introduction", "body", "conclusion", "tags"],
+      lastModified: "2025-01-10"
+    }
+  ]);
 
-  const connectCanva = () => {
-    setCanvaLoading(true);
-    setTimeout(() => {
-      setCanvaConnected(true);
-      setCanvaLoading(false);
-      setCanvaDesigns([
-        {
-          id: 'design1',
-          name: 'Instagram Post - Summer Campaign',
-          type: 'instagram_post',
-          thumbnail: 'https://via.placeholder.com/200x200/3b82f6/ffffff?text=IG+Post',
-          lastModified: '2025-01-15'
-        },
-        {
-          id: 'design2',
-          name: 'YouTube Thumbnail - Tutorial',
-          type: 'youtube_thumbnail',
-          thumbnail: 'https://via.placeholder.com/200x112/10b981/ffffff?text=YT+Thumb',
-          lastModified: '2025-01-14'
-        }
-      ]);
-    }, 2000);
+  const [showBuilder, setShowBuilder] = React.useState(false);
+  const [newTemplate, setNewTemplate] = React.useState({
+    name: '',
+    category: 'Social',
+    description: '',
+    fields: ['']
+  });
+
+  const addField = () => {
+    setNewTemplate(prev => ({
+      ...prev,
+      fields: [...prev.fields, '']
+    }));
   };
+
+  const updateField = (index, value) => {
+    setNewTemplate(prev => ({
+      ...prev,
+      fields: prev.fields.map((field, i) => i === index ? value : field)
+    }));
+  };
+
+  const removeField = (index) => {
+    setNewTemplate(prev => ({
+      ...prev,
+      fields: prev.fields.filter((_, i) => i !== index)
+    }));
+  };
+
+  const saveTemplate = () => {
+    const newId = Math.max(...templates.map(t => t.id)) + 1;
+    const template = {
+      ...newTemplate,
+      id: newId,
+      lastModified: new Date().toISOString().split('T')[0],
+      fields: newTemplate.fields.filter(f => f.trim() !== '')
+    };
+    
+    setTemplates(prev => [...prev, template]);
+    setNewTemplate({ name: '', category: 'Social', description: '', fields: [''] });
+    setShowBuilder(false);
+  };
+
+  return React.createElement('div', { style: { padding: '20px' } },
+    React.createElement('h2', null, '🏗️ Manage Templates'),
+    React.createElement('p', null, 'Create, edit, and manage your content templates'),
+    
+    React.createElement('div', { style: { marginBottom: '30px' } },
+      React.createElement('button', {
+        onClick: () => setShowBuilder(!showBuilder),
+        style: {
+          padding: '12px 24px',
+          backgroundColor: '#3b82f6',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontSize: '14px',
+          fontWeight: 'bold'
+        }
+      }, showBuilder ? '📋 View Templates' : '➕ Create New Template')
+    ),
+
+    showBuilder ? 
+      React.createElement('div', {
+        style: { 
+          padding: '30px', 
+          border: '2px solid #3b82f6', 
+          borderRadius: '8px', 
+          background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)' 
+        }
+      },
+        React.createElement('h3', { style: { color: '#1e40af', marginBottom: '20px' } }, '🏗️ Template Builder'),
+        React.createElement('div', { style: { display: 'grid', gap: '20px' } },
+          React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' } },
+            React.createElement('div', null,
+              React.createElement('label', { style: { display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#1e40af' } }, 'Template Name'),
+              React.createElement('input', {
+                type: 'text',
+                value: newTemplate.name,
+                onChange: (e) => setNewTemplate(prev => ({ ...prev, name: e.target.value })),
+                style: {
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #93c5fd',
+                  borderRadius: '6px',
+                  fontSize: '14px'
+                },
+                placeholder: 'e.g., Instagram Story Template'
+              })
+            ),
+            React.createElement('div', null,
+              React.createElement('label', { style: { display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#1e40af' } }, 'Category'),
+              React.createElement('select', {
+                value: newTemplate.category,
+                onChange: (e) => setNewTemplate(prev => ({ ...prev, category: e.target.value })),
+                style: {
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #93c5fd',
+                  borderRadius: '6px',
+                  fontSize: '14px'
+                }
+              },
+                React.createElement('option', { value: 'Social' }, 'Social Media'),
+                React.createElement('option', { value: 'Content' }, 'Blog Content'),
+                React.createElement('option', { value: 'Email' }, 'Email Marketing'),
+                React.createElement('option', { value: 'Video' }, 'Video Content'),
+                React.createElement('option', { value: 'Other' }, 'Other')
+              )
+            )
+          ),
+          React.createElement('div', null,
+            React.createElement('label', { style: { display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#1e40af' } }, 'Description'),
+            React.createElement('textarea', {
+              value: newTemplate.description,
+              onChange: (e) => setNewTemplate(prev => ({ ...prev, description: e.target.value })),
+              style: {
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #93c5fd',
+                borderRadius: '6px',
+                fontSize: '14px',
+                minHeight: '80px',
+                resize: 'vertical'
+              },
+              placeholder: 'Describe what this template is used for...'
+            })
+          ),
+          React.createElement('div', null,
+            React.createElement('label', { style: { display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#1e40af' } }, 'Template Fields'),
+            ...newTemplate.fields.map((field, index) =>
+              React.createElement('div', { key: index, style: { display: 'flex', gap: '10px', marginBottom: '10px' } },
+                React.createElement('input', {
+                  type: 'text',
+                  value: field,
+                  onChange: (e) => updateField(index, e.target.value),
+                  style: {
+                    flex: '1',
+                    padding: '10px',
+                    border: '1px solid #93c5fd',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  },
+                  placeholder: 'Field ' + (index + 1) + ' (e.g., headline, image, cta)'
+                }),
+                newTemplate.fields.length > 1 && React.createElement('button', {
+                  onClick: () => removeField(index),
+                  style: {
+                    padding: '10px',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer'
+                  }
+                }, '❌')
+              )
+            ),
+            React.createElement('button', {
+              onClick: addField,
+              style: {
+                padding: '10px 20px',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }
+            }, '➕ Add Field')
+          ),
+          React.createElement('div', { style: { display: 'flex', gap: '10px', justifyContent: 'flex-end' } },
+            React.createElement('button', {
+              onClick: () => setShowBuilder(false),
+              style: {
+                padding: '12px 24px',
+                backgroundColor: '#6b7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }
+            }, 'Cancel'),
+            React.createElement('button', {
+              onClick: saveTemplate,
+              disabled: !newTemplate.name.trim(),
+              style: {
+                padding: '12px 24px',
+                backgroundColor: newTemplate.name.trim() ? '#10b981' : '#9ca3af',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: newTemplate.name.trim() ? 'pointer' : 'not-allowed'
+              }
+            }, '💾 Save Template')
+          )
+        )
+      ) :
+      React.createElement('div', null,
+        React.createElement('div', {
+          style: { 
+            padding: '20px', 
+            border: '1px solid #d1d5db', 
+            borderRadius: '8px', 
+            background: '#f9fafb',
+            marginBottom: '30px'
+          }
+        },
+          React.createElement('h3', { style: { marginBottom: '20px' } }, '📚 Template Library'),
+          React.createElement('div', { style: { display: 'grid', gap: '15px' } },
+            ...templates.map(template =>
+              React.createElement('div', {
+                key: template.id,
+                style: { 
+                  padding: '20px', 
+                  border: '1px solid #e5e7eb', 
+                  borderRadius: '6px', 
+                  background: '#ffffff',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                },
+                onClick: () => setSelectedTemplate(selectedTemplate === template.id ? null : template.id)
+              },
+                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' } },
+                  React.createElement('div', { style: { flex: '1' } },
+                    React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' } },
+                      React.createElement('h4', { style: { margin: '0', color: '#1f2937' } }, template.name),
+                      React.createElement('span', {
+                        style: { 
+                          padding: '4px 8px', 
+                          backgroundColor: '#dbeafe', 
+                          color: '#1e40af', 
+                          borderRadius: '12px', 
+                          fontSize: '12px',
+                          fontWeight: 'bold'
+                        }
+                      }, template.category)
+                    ),
+                    React.createElement('p', { style: { margin: '0 0 10px 0', color: '#6b7280', fontSize: '14px' } }, template.description),
+                    React.createElement('div', { style: { fontSize: '12px', color: '#9ca3af' } }, 
+                      'Last modified: ' + template.lastModified + ' • ' + template.fields.length + ' fields'
+                    )
+                  ),
+                  React.createElement('div', { style: { display: 'flex', gap: '8px' } },
+                    React.createElement('button', {
+                      style: { 
+                        padding: '6px 12px', 
+                        backgroundColor: '#3b82f6', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '4px', 
+                        fontSize: '12px',
+                        cursor: 'pointer'
+                      }
+                    }, '✏️ Edit'),
+                    React.createElement('button', {
+                      style: { 
+                        padding: '6px 12px', 
+                        backgroundColor: '#10b981', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '4px', 
+                        fontSize: '12px',
+                        cursor: 'pointer'
+                      }
+                    }, '📋 Use')
+                  )
+                ),
+                selectedTemplate === template.id && React.createElement('div', {
+                  style: { 
+                    marginTop: '15px', 
+                    padding: '15px', 
+                    backgroundColor: '#f3f4f6', 
+                    borderRadius: '6px' 
+                  }
+                },
+                  React.createElement('h5', { style: { margin: '0 0 10px 0', color: '#374151' } }, 'Template Fields:'),
+                  React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
+                    ...template.fields.map((field, index) =>
+                      React.createElement('span', {
+                        key: index,
+                        style: { 
+                          padding: '4px 8px', 
+                          backgroundColor: '#e5e7eb', 
+                          color: '#374151', 
+                          borderRadius: '8px', 
+                          fontSize: '12px' 
+                        }
+                      }, field)
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+  );
+}
 
   return React.createElement('div', { style: { padding: '20px' } },
     React.createElement('h2', null, '📚 Libraries'),
