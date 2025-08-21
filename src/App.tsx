@@ -1,32 +1,12 @@
 import React, { useState } from 'react';
 
-// IMPORT YOUR REAL COMPONENTS - Only the ones with proper exports
-// import OverviewComponent from './overviewcomponent';  // No default export
+// IMPORT YOUR REAL COMPONENTS
 import ContentComponent from './contentcomponent';
 import WebChatComponent from './webchat';
 import ScheduleComponent from './schedulecomponent';
 import MarketingComponent from './marketingcomponent';
 import SettingsComponent from './settingscomponent';
 import AdminComponents from './admincomponents';
-// import AIChatComponent from './aichatcomponent';  // Check if it has default export
-
-// =============================================================================
-// PLACEHOLDER COMPONENTS - DEFINED FIRST
-// =============================================================================
-
-const OverviewComponent = () => (
-  <div style={{ padding: '20px' }}>
-    <h2>📊 Overview</h2>
-    <p>Add "export default OverviewComponent;" to overviewcomponent.tsx</p>
-  </div>
-);
-
-const AIChatComponent = () => (
-  <div style={{ padding: '20px' }}>
-    <h2>🤖 AI Chat Manager</h2>
-    <p>Add "export default AIChatComponent;" to aichatcomponent.tsx</p>
-  </div>
-);
 
 // =============================================================================
 // MAIN DASHBOARD - NAVIGATION WORKING
@@ -56,7 +36,7 @@ function App() {
   const renderContent = () => {
     switch (activeSection) {
       case 'overview':
-        return <OverviewComponent />;
+        return <ComingSoonComponent title="Overview" />;
       case 'content-manager':
         return <ContentComponent />;
       case 'webchat-public':
@@ -70,7 +50,7 @@ function App() {
       case 'admin-center':
         return <AdminComponents />;
       case 'ai-chat-manager':
-        return <AIChatComponent />;
+        return <ComingSoonComponent title="AI Chat Manager" />;
       default:
         return <ComingSoonComponent title={activeSection} />;
     }
