@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 
-// IMPORT YOUR REAL COMPONENTS FROM GITHUB FILES
-import OverviewComponent from './overviewcomponent';
-import ContentComponent from './contentcomponent';
-import WebChatComponent from './webchat';
-import ScheduleComponent from './schedulecomponent';
-import MarketingComponent from './marketingcomponent';
-import SettingsComponent from './settingscomponent';
-import AdminComponents from './admincomponents';
-import AIChatComponent from './aichatcomponent';
+// IMPORT YOUR REAL COMPONENTS - Uncomment as you create the files
+// import OverviewComponent from './overviewcomponent';
+// import ContentComponent from './contentcomponent';
+// import WebChatComponent from './webchat';
+// import ScheduleComponent from './schedulecomponent';
+// import MarketingComponent from './marketingcomponent';
+// import SettingsComponent from './settingscomponent';
+// import AdminComponents from './admincomponents';
+// import AIChatComponent from './aichatcomponent';
 
 // =============================================================================
 // MAIN DASHBOARD - CONNECTS TO YOUR REAL COMPONENT FILES
@@ -38,21 +38,29 @@ function App() {
   const renderContent = () => {
     switch (activeSection) {
       case 'overview':
-        return <OverviewComponent />;
+        // return <OverviewComponent />; // Uncomment when overviewcomponent.tsx exists
+        return <ComingSoonComponent title="Overview" note="Create overviewcomponent.tsx" />;
       case 'content-manager':
-        return <ContentComponent />;
+        // return <ContentComponent />; // Uncomment when contentcomponent.tsx exists
+        return <ComingSoonComponent title="Content Manager" note="Create contentcomponent.tsx" />;
       case 'webchat-public':
-        return <WebChatComponent />;
+        // return <WebChatComponent />; // Uncomment when webchat.tsx exists
+        return <ComingSoonComponent title="WebChat Public" note="Create webchat.tsx" />;
       case 'schedule-manager':
-        return <ScheduleComponent />;
+        // return <ScheduleComponent />; // Uncomment when schedulecomponent.tsx exists
+        return <ComingSoonComponent title="Schedule Manager" note="Create schedulecomponent.tsx" />;
       case 'marketing-center':
-        return <MarketingComponent />;
+        // return <MarketingComponent />; // Uncomment when marketingcomponent.tsx exists
+        return <ComingSoonComponent title="Marketing Center" note="Create marketingcomponent.tsx" />;
       case 'settings':
-        return <SettingsComponent />;
+        // return <SettingsComponent />; // Uncomment when settingscomponent.tsx exists
+        return <ComingSoonComponent title="Dashboard Settings" note="Create settingscomponent.tsx" />;
       case 'admin-center':
-        return <AdminComponents />;
+        // return <AdminComponents />; // Uncomment when admincomponents.tsx exists
+        return <ComingSoonComponent title="Admin Center" note="Create admincomponents.tsx" />;
       case 'ai-chat-manager':
-        return <AIChatComponent />;
+        // return <AIChatComponent />; // Uncomment when aichatcomponent.tsx exists
+        return <ComingSoonComponent title="AI Chat Manager" note="Create aichatcomponent.tsx" />;
       default:
         return <ComingSoonComponent title={activeSection} />;
     }
@@ -192,7 +200,7 @@ function App() {
 // SIMPLE FALLBACK COMPONENT
 // =============================================================================
 
-function ComingSoonComponent({ title }: { title: string }) {
+function ComingSoonComponent({ title, note }: { title: string; note?: string }) {
   return (
     <div style={{ padding: '20px' }}>
       <div style={{ 
@@ -206,9 +214,20 @@ function ComingSoonComponent({ title }: { title: string }) {
         <h2 style={{ color: '#6b7280', marginBottom: '15px', fontSize: '28px' }}>
           {title.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
         </h2>
-        <p style={{ fontSize: '16px', color: '#9ca3af' }}>
-          This section is coming soon
+        <p style={{ fontSize: '16px', color: '#9ca3af', marginBottom: '15px' }}>
+          This section is ready for your component
         </p>
+        {note && (
+          <div style={{ 
+            padding: '15px', 
+            backgroundColor: '#ffffff',
+            borderRadius: '8px',
+            fontSize: '14px',
+            color: '#374151'
+          }}>
+            📝 Next Step: {note}
+          </div>
+        )}
       </div>
     </div>
   );
