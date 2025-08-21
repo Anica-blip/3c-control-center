@@ -1,14 +1,28 @@
 import React, { useState } from 'react';
 
-// YOUR EXISTING COMPONENT FILES - Using named imports
-import { OverviewComponent } from './overviewcomponent';
-import { ContentComponent } from './contentcomponent';
-import { WebChatComponent } from './webchat';
-import { ScheduleComponent } from './schedulecomponent';
-import { MarketingComponent } from './marketingcomponent';
-import { SettingsComponent } from './settingscomponent';
-import { AdminComponents } from './admincomponents';
-import { AIChatComponent } from './aichatcomponent';
+// YOUR COMPONENT FILES EXIST BUT NEED PROPER EXPORTS
+// Add this line to the END of each component file:
+// export default YourComponentName;
+
+// Uncomment these imports after adding export default to each file:
+// import OverviewComponent from './overviewcomponent';
+// import ContentComponent from './contentcomponent';
+// import WebChatComponent from './webchat';
+// import ScheduleComponent from './schedulecomponent';
+// import MarketingComponent from './marketingcomponent';
+// import SettingsComponent from './settingscomponent';
+// import AdminComponents from './admincomponents';
+// import AIChatComponent from './aichatcomponent';
+
+// Temporary placeholder components - remove after fixing exports
+const OverviewComponent = () => <div style={{ padding: '20px' }}><h2>📊 Overview</h2><p>Add "export default OverviewComponent;" to overviewcomponent.tsx</p></div>;
+const ContentComponent = () => <div style={{ padding: '20px' }}><h2>📝 Content Manager</h2><p>Add "export default ContentComponent;" to contentcomponent.tsx</p></div>;
+const WebChatComponent = () => <div style={{ padding: '20px' }}><h2>💬 WebChat Public</h2><p>Add "export default WebChatComponent;" to webchat.tsx</p></div>;
+const ScheduleComponent = () => <div style={{ padding: '20px' }}><h2>📅 Schedule Manager</h2><p>Add "export default ScheduleComponent;" to schedulecomponent.tsx</p></div>;
+const MarketingComponent = () => <div style={{ padding: '20px' }}><h2>🧠 Marketing Center</h2><p>Add "export default MarketingComponent;" to marketingcomponent.tsx</p></div>;
+const SettingsComponent = () => <div style={{ padding: '20px' }}><h2>⚙️ Dashboard Settings</h2><p>Add "export default SettingsComponent;" to settingscomponent.tsx</p></div>;
+const AdminComponents = () => <div style={{ padding: '20px' }}><h2>🔧 Admin Center</h2><p>Add "export default AdminComponents;" to admincomponents.tsx</p></div>;
+const AIChatComponent = () => <div style={{ padding: '20px' }}><h2>🤖 AI Chat Manager</h2><p>Add "export default AIChatComponent;" to aichatcomponent.tsx</p></div>;
 
 // =============================================================================
 // MAIN DASHBOARD - CONNECTS TO YOUR REAL COMPONENT FILES
