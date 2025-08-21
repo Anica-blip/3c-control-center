@@ -1414,5 +1414,3 @@ export default function ScheduleComponent() {
     </div>
   );
 }
-
-export default ScheduleComponent;
