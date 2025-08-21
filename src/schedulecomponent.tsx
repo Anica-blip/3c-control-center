@@ -216,6 +216,82 @@ export default function ScheduleComponent() {
     });
   };
 
+  const getHourlyPostsForDay = (date: Date) => {
+    const dayPosts = getPostsForDate(date);
+    const hourlyPosts: { [key: number]: ScheduledPost[] } = {};
+    
+    for (let hour = 0; hour < 24; hour++) {
+      hourlyPosts[hour] = dayPosts.filter(post => new Date(post.scheduledDate).getHours() === hour);
+    }
+    
+    return hourlyPosts;
+  };
+
+  const getWeekDates = (date: Date) => {
+    const week = [];
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(date.getDate() - date.getDay());
+    
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      week.push(day);
+    }
+    
+    return week;
+  };
+
+  const getMonthDates = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
+    
+    const dates = [];
+    const current = new Date(startDate);
+    
+    for (let i = 0; i < 42; i++) { // 6 weeks * 7 days
+      dates.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+    
+    return dates;
+  };
+
+  const navigateCalendar = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentDate);
+    
+    if (calendarView === 'day') {
+      newDate.setDate(newDate.getDate() + (direction === 'next' ? 1 : -1));
+    } else if (calendarView === 'week') {
+      newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
+    } else if (calendarView === 'month') {
+      newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
+    }
+    
+    setCurrentDate(newDate);
+  };
+
+  const formatCalendarTitle = () => {
+    if (calendarView === 'day') {
+      return currentDate.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } else if (calendarView === 'week') {
+      const weekDates = getWeekDates(currentDate);
+      const start = weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const end = weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return `${start} - ${end}, ${weekDates[0].getFullYear()}`;
+    } else {
+      return currentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+    }
+  };
+
   // Modal handlers
   const handleSchedulePost = (post: PendingPost) => {
     setSelectedPendingPost(post);
@@ -358,6 +434,326 @@ export default function ScheduleComponent() {
     ));
     setActiveTab('pending');
     alert('Template added to Pending Scheduling!');
+  };
+
+  const renderDayView = () => {
+    const hourlyPosts = getHourlyPostsForDay(currentDate);
+    
+    return (
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '80px 1fr',
+        gap: '1px',
+        backgroundColor: '#e5e7eb',
+        borderRadius: '8px',
+        overflow: 'hidden'
+      }}>
+        {Array.from({ length: 24 }, (_, hour) => (
+          <React.Fragment key={hour}>
+            <div style={{
+              padding: '12px 8px',
+              backgroundColor: '#f9fafb',
+              fontSize: '12px',
+              color: '#6b7280',
+              textAlign: 'right',
+              fontWeight: '500'
+            }}>
+              {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
+            </div>
+            <div style={{
+              minHeight: '60px',
+              backgroundColor: 'white',
+              padding: '8px',
+              position: 'relative'
+            }}>
+              {hourlyPosts[hour]?.map((post, idx) => (
+                <div
+                  key={post.id}
+                  style={{
+                    padding: '6px 8px',
+                    marginBottom: idx < hourlyPosts[hour].length - 1 ? '4px' : '0',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    ...getStatusColor(post.status)
+                  }}
+                  title={`${post.description} - ${post.characterProfile}`}
+                  onClick={() => handleEditPost(post)}
+                >
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginBottom: '2px'
+                  }}>
+                    {getStatusIcon(post.status)}
+                    <span style={{ fontSize: '10px', color: '#6b7280' }}>
+                      {new Date(post.scheduledDate).toLocaleTimeString('en-US', { 
+                        hour: 'numeric', 
+                        minute: '2-digit' 
+                      })}
+                    </span>
+                  </div>
+                  <div style={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {post.description}
+                  </div>
+                  <div style={{
+                    fontSize: '9px',
+                    color: '#6b7280',
+                    marginTop: '2px'
+                  }}>
+                    {post.characterProfile}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
+
+  const renderWeekView = () => {
+    const weekDates = getWeekDates(currentDate);
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    return (
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(7, 1fr)',
+        gap: '1px',
+        backgroundColor: '#e5e7eb',
+        borderRadius: '8px',
+        overflow: 'hidden'
+      }}>
+        {weekDates.map((date, idx) => {
+          const dayPosts = getPostsForDate(date);
+          const isToday = date.toDateString() === new Date().toDateString();
+          const isCurrentMonth = date.getMonth() === currentDate.getMonth();
+          
+          return (
+            <div
+              key={date.toISOString()}
+              style={{
+                backgroundColor: 'white',
+                minHeight: '200px',
+                padding: '8px'
+              }}
+            >
+              <div style={{
+                textAlign: 'center',
+                marginBottom: '8px',
+                padding: '4px'
+              }}>
+                <div style={{
+                  fontSize: '11px',
+                  color: '#6b7280',
+                  fontWeight: '500'
+                }}>
+                  {dayNames[idx]}
+                </div>
+                <div style={{
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: isToday ? '#2563eb' : isCurrentMonth ? '#111827' : '#9ca3af',
+                  backgroundColor: isToday ? '#dbeafe' : 'transparent',
+                  borderRadius: '50%',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto'
+                }}>
+                  {date.getDate()}
+                </div>
+              </div>
+              
+              <div style={{ display: 'grid', gap: '4px' }}>
+                {dayPosts.slice(0, 3).map((post) => (
+                  <div
+                    key={post.id}
+                    style={{
+                      padding: '4px 6px',
+                      borderRadius: '3px',
+                      fontSize: '10px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      ...getStatusColor(post.status)
+                    }}
+                    title={`${post.description} - ${new Date(post.scheduledDate).toLocaleTimeString('en-US', { 
+                      hour: 'numeric', 
+                      minute: '2-digit' 
+                    })}`}
+                    onClick={() => handleEditPost(post)}
+                  >
+                    <div style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {post.description.length > 20 ? 
+                        post.description.substring(0, 20) + '...' : 
+                        post.description
+                      }
+                    </div>
+                  </div>
+                ))}
+                {dayPosts.length > 3 && (
+                  <div style={{
+                    padding: '4px 6px',
+                    fontSize: '10px',
+                    color: '#6b7280',
+                    textAlign: 'center',
+                    fontWeight: '500'
+                  }}>
+                    +{dayPosts.length - 3} more
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderMonthView = () => {
+    const monthDates = getMonthDates(currentDate);
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    return (
+      <div>
+        {/* Day headers */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(7, 1fr)',
+          gap: '1px',
+          backgroundColor: '#e5e7eb',
+          borderRadius: '8px 8px 0 0',
+          overflow: 'hidden'
+        }}>
+          {dayNames.map((day) => (
+            <div
+              key={day}
+              style={{
+                backgroundColor: '#f3f4f6',
+                padding: '12px 8px',
+                textAlign: 'center',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#374151'
+              }}
+            >
+              {day}
+            </div>
+          ))}
+        </div>
+        
+        {/* Calendar grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(7, 1fr)',
+          gap: '1px',
+          backgroundColor: '#e5e7eb'
+        }}>
+          {monthDates.map((date) => {
+            const dayPosts = getPostsForDate(date);
+            const isToday = date.toDateString() === new Date().toDateString();
+            const isCurrentMonth = date.getMonth() === currentDate.getMonth();
+            
+            return (
+              <div
+                key={date.toISOString()}
+                style={{
+                  backgroundColor: 'white',
+                  minHeight: '120px',
+                  padding: '6px',
+                  cursor: 'pointer'
+                }}
+                onClick={() => setCurrentDate(new Date(date))}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
+                }}
+              >
+                <div style={{
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: isToday ? '#2563eb' : isCurrentMonth ? '#111827' : '#9ca3af',
+                  marginBottom: '4px',
+                  textAlign: 'right'
+                }}>
+                  {isToday && (
+                    <div style={{
+                      width: '6px',
+                      height: '6px',
+                      backgroundColor: '#2563eb',
+                      borderRadius: '50%',
+                      display: 'inline-block',
+                      marginRight: '4px'
+                    }} />
+                  )}
+                  {date.getDate()}
+                </div>
+                
+                <div style={{ display: 'grid', gap: '2px' }}>
+                  {dayPosts.slice(0, 2).map((post) => (
+                    <div
+                      key={post.id}
+                      style={{
+                        padding: '2px 4px',
+                        borderRadius: '2px',
+                        fontSize: '9px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        ...getStatusColor(post.status)
+                      }}
+                      title={`${post.description} - ${new Date(post.scheduledDate).toLocaleTimeString('en-US', { 
+                        hour: 'numeric', 
+                        minute: '2-digit' 
+                      })}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditPost(post);
+                      }}
+                    >
+                      <div style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {post.description.length > 15 ? 
+                          post.description.substring(0, 15) + '...' : 
+                          post.description
+                        }
+                      </div>
+                    </div>
+                  ))}
+                  {dayPosts.length > 2 && (
+                    <div style={{
+                      padding: '2px 4px',
+                      fontSize: '8px',
+                      color: '#6b7280',
+                      fontWeight: '500'
+                    }}>
+                      +{dayPosts.length - 2}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   const renderStatusManagement = () => {
@@ -1388,31 +1784,188 @@ export default function ScheduleComponent() {
           <div style={{
             backgroundColor: 'white',
             borderRadius: '8px',
-            padding: '24px',
-            textAlign: 'center',
-            color: '#6b7280'
+            padding: '24px'
           }}>
-            <Calendar style={{
-              height: '64px',
-              width: '64px',
-              color: '#d1d5db',
-              margin: '0 auto 16px auto'
-            }} />
-            <h3 style={{
-              fontSize: '18px',
-              fontWeight: '500',
-              color: '#111827',
-              margin: '0 0 8px 0'
+            {/* Calendar Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '24px'
             }}>
-              Calendar View Coming Soon
-            </h3>
-            <p style={{
-              color: '#6b7280',
-              fontSize: '14px',
-              margin: '0'
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px'
+              }}>
+                <button
+                  onClick={() => navigateCalendar('prev')}
+                  style={{
+                    padding: '8px',
+                    color: '#6b7280',
+                    backgroundColor: 'transparent',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    cursor: 'pointer'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <ChevronLeft style={{ height: '16px', width: '16px' }} />
+                </button>
+                
+                <h2 style={{
+                  fontSize: '20px',
+                  fontWeight: '600',
+                  color: '#111827',
+                  margin: '0',
+                  minWidth: '300px'
+                }}>
+                  {formatCalendarTitle()}
+                </h2>
+                
+                <button
+                  onClick={() => navigateCalendar('next')}
+                  style={{
+                    padding: '8px',
+                    color: '#6b7280',
+                    backgroundColor: 'transparent',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    cursor: 'pointer'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <ChevronRight style={{ height: '16px', width: '16px' }} />
+                </button>
+              </div>
+              
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <button
+                  onClick={() => setCurrentDate(new Date())}
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: '12px',
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#e5e7eb';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                  }}
+                >
+                  Today
+                </button>
+                
+                <div style={{
+                  display: 'flex',
+                  backgroundColor: '#f3f4f6',
+                  borderRadius: '6px',
+                  padding: '2px'
+                }}>
+                  {(['day', 'week', 'month'] as const).map((view) => (
+                    <button
+                      key={view}
+                      onClick={() => setCalendarView(view)}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        borderRadius: '4px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        backgroundColor: calendarView === view ? 'white' : 'transparent',
+                        color: calendarView === view ? '#111827' : '#6b7280',
+                        boxShadow: calendarView === view ? '0 1px 2px 0 rgba(0, 0, 0, 0.05)' : 'none'
+                      }}
+                    >
+                      {view.charAt(0).toUpperCase() + view.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Calendar Content */}
+            <div style={{ marginBottom: '16px' }}>
+              {calendarView === 'day' && renderDayView()}
+              {calendarView === 'week' && renderWeekView()}
+              {calendarView === 'month' && renderMonthView()}
+            </div>
+            
+            {/* Legend */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              padding: '12px',
+              backgroundColor: '#f9fafb',
+              borderRadius: '6px',
+              fontSize: '12px'
             }}>
-              Advanced calendar functionality will be available in the next update
-            </p>
+              <span style={{ color: '#6b7280', fontWeight: '500' }}>Status:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ width: '12px', height: '3px', backgroundColor: '#f59e0b', borderRadius: '2px' }} />
+                <span style={{ color: '#6b7280' }}>Pending</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ width: '12px', height: '3px', backgroundColor: '#3b82f6', borderRadius: '2px' }} />
+                <span style={{ color: '#6b7280' }}>Processing</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ width: '12px', height: '3px', backgroundColor: '#10b981', borderRadius: '2px' }} />
+                <span style={{ color: '#6b7280' }}>Complete</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ width: '12px', height: '3px', backgroundColor: '#ef4444', borderRadius: '2px' }} />
+                <span style={{ color: '#6b7280' }}>Failed</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ width: '12px', height: '3px', backgroundColor: '#f97316', borderRadius: '2px' }} />
+                <span style={{ color: '#6b7280' }}>Resending</span>
+              </div>
+            </div>
+            
+            {scheduledPosts.length === 0 && (
+              <div style={{
+                textAlign: 'center',
+                padding: '32px',
+                color: '#6b7280'
+              }}>
+                <Calendar style={{
+                  height: '48px',
+                  width: '48px',
+                  color: '#d1d5db',
+                  margin: '0 auto 16px auto'
+                }} />
+                <p style={{
+                  color: '#6b7280',
+                  fontSize: '14px',
+                  margin: '0'
+                }}>
+                  No scheduled posts to display. Schedule some posts to see them on the calendar.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
