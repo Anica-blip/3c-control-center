@@ -158,29 +158,29 @@ const ContentCreationForm = ({
   return (
     <div style={{
       backgroundColor: 'white',
-      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-      border: '2px solid #3b82f6',
-      borderRadius: '12px',
-      padding: '32px',
-      marginBottom: '32px'
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      border: '1px solid #3b82f6',
+      borderRadius: '8px',
+      padding: '20px',
+      marginBottom: '20px'
     }}>
       {/* Header */}
       <div style={{
-        borderBottom: '2px solid #e5e7eb',
-        paddingBottom: '24px',
-        marginBottom: '32px'
+        borderBottom: '1px solid #e5e7eb',
+        paddingBottom: '16px',
+        marginBottom: '20px'
       }}>
         <h2 style={{
-          fontSize: '28px',
+          fontSize: '20px',
           fontWeight: 'bold',
           color: '#3b82f6',
-          margin: '0 0 12px 0'
+          margin: '0 0 8px 0'
         }}>
           🎨 Create New Content
         </h2>
         <p style={{
           color: '#6b7280',
-          fontSize: '18px',
+          fontSize: '14px',
           margin: '0'
         }}>
           Design and prepare your social media content for publishing
@@ -191,20 +191,20 @@ const ContentCreationForm = ({
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '24px',
-        padding: '24px',
+        gap: '16px',
+        padding: '16px',
         background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-        borderRadius: '12px',
-        border: '2px solid #3b82f6',
-        marginBottom: '32px'
+        borderRadius: '8px',
+        border: '1px solid #3b82f6',
+        marginBottom: '20px'
       }}>
         <div>
           <label style={{
             display: 'block',
-            fontSize: '14px',
+            fontSize: '12px',
             fontWeight: 'bold',
             color: '#1e40af',
-            marginBottom: '8px',
+            marginBottom: '6px',
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
           }}>
@@ -215,12 +215,12 @@ const ContentCreationForm = ({
             onChange={(e) => setFormData(prev => ({ ...prev, characterProfile: e.target.value }))}
             style={{
               width: '100%',
-              padding: '16px',
-              border: '2px solid #d1d5db',
-              borderRadius: '8px',
+              padding: '10px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
               fontSize: '14px',
               backgroundColor: 'white',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
             }}
           >
             <option value="">Select profile...</option>
@@ -233,10 +233,10 @@ const ContentCreationForm = ({
         <div>
           <label style={{
             display: 'block',
-            fontSize: '14px',
+            fontSize: '12px',
             fontWeight: 'bold',
             color: '#1e40af',
-            marginBottom: '8px',
+            marginBottom: '6px',
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
           }}>
@@ -247,12 +247,12 @@ const ContentCreationForm = ({
             onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
             style={{
               width: '100%',
-              padding: '16px',
-              border: '2px solid #d1d5db',
-              borderRadius: '8px',
+              padding: '10px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
               fontSize: '14px',
               backgroundColor: 'white',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
             }}
           >
             <option value="">Select type...</option>
@@ -265,10 +265,10 @@ const ContentCreationForm = ({
         <div>
           <label style={{
             display: 'block',
-            fontSize: '14px',
+            fontSize: '12px',
             fontWeight: 'bold',
             color: '#1e40af',
-            marginBottom: '8px',
+            marginBottom: '6px',
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
           }}>
@@ -279,12 +279,12 @@ const ContentCreationForm = ({
             onChange={(e) => setFormData(prev => ({ ...prev, template: e.target.value }))}
             style={{
               width: '100%',
-              padding: '16px',
-              border: '2px solid #d1d5db',
-              borderRadius: '8px',
+              padding: '10px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
               fontSize: '14px',
               backgroundColor: 'white',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
             }}
           >
             <option value="">Select template...</option>
@@ -296,22 +296,22 @@ const ContentCreationForm = ({
       </div>
 
       {/* Media Upload */}
-      <div style={{ marginBottom: '32px' }}>
+      <div style={{ marginBottom: '20px' }}>
         <label style={{
           display: 'block',
-          fontSize: '20px',
+          fontSize: '16px',
           fontWeight: 'bold',
           color: '#111827',
-          marginBottom: '16px'
+          marginBottom: '12px'
         }}>
           📁 Media Upload
         </label>
         <div
           onClick={() => fileInputRef.current?.click()}
           style={{
-            border: '4px dashed #3b82f6',
-            borderRadius: '12px',
-            padding: '48px',
+            border: '2px dashed #3b82f6',
+            borderRadius: '8px',
+            padding: '24px',
             textAlign: 'center',
             cursor: 'pointer',
             backgroundColor: '#f8fafc',
@@ -327,29 +327,29 @@ const ContentCreationForm = ({
           }}
         >
           <Upload style={{
-            height: '64px',
-            width: '64px',
+            height: '32px',
+            width: '32px',
             color: '#3b82f6',
-            margin: '0 auto 16px auto',
+            margin: '0 auto 12px auto',
             display: 'block'
           }} />
           <h3 style={{
-            fontSize: '24px',
+            fontSize: '16px',
             fontWeight: 'bold',
             color: '#111827',
-            margin: '0 0 8px 0'
+            margin: '0 0 6px 0'
           }}>
             📎 Upload your media files
           </h3>
           <p style={{
-            fontSize: '18px',
+            fontSize: '14px',
             color: '#6b7280',
-            margin: '0 0 8px 0'
+            margin: '0 0 4px 0'
           }}>
             Drop files here or click to browse
           </p>
           <p style={{
-            fontSize: '14px',
+            fontSize: '12px',
             color: '#9ca3af',
             margin: '0'
           }}>
@@ -367,15 +367,15 @@ const ContentCreationForm = ({
 
         {/* Uploaded Files */}
         {mediaFiles.length > 0 && (
-          <div style={{ marginTop: '24px' }}>
+          <div style={{ marginTop: '16px' }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginBottom: '16px'
+              marginBottom: '12px'
             }}>
               <h4 style={{
-                fontSize: '18px',
+                fontSize: '14px',
                 fontWeight: 'bold',
                 color: '#111827',
                 margin: '0'
@@ -383,47 +383,47 @@ const ContentCreationForm = ({
                 📋 Uploaded Files
               </h4>
               <span style={{
-                padding: '8px 16px',
+                padding: '4px 8px',
                 backgroundColor: '#3b82f6',
                 color: 'white',
-                fontSize: '14px',
+                fontSize: '12px',
                 fontWeight: 'bold',
-                borderRadius: '20px'
+                borderRadius: '12px'
               }}>
                 {mediaFiles.length} files
               </span>
             </div>
-            <div style={{ display: 'grid', gap: '12px' }}>
+            <div style={{ display: 'grid', gap: '8px' }}>
               {mediaFiles.map((file) => (
                 <div key={file.id} style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '16px',
+                  padding: '12px',
                   backgroundColor: '#f9fafb',
-                  borderRadius: '8px',
-                  border: '2px solid #e5e7eb'
+                  borderRadius: '6px',
+                  border: '1px solid #e5e7eb'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{
-                      padding: '12px',
+                      padding: '8px',
                       backgroundColor: 'white',
-                      borderRadius: '8px',
+                      borderRadius: '6px',
                       boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
                     }}>
                       {getFileIcon(file.type)}
                     </div>
                     <div>
                       <div style={{
-                        fontSize: '14px',
+                        fontSize: '13px',
                         fontWeight: 'bold',
                         color: '#111827',
-                        marginBottom: '4px'
+                        marginBottom: '2px'
                       }}>
                         {file.name}
                       </div>
                       <div style={{
-                        fontSize: '12px',
+                        fontSize: '11px',
                         color: '#6b7280'
                       }}>
                         {formatFileSize(file.size)}
@@ -433,10 +433,10 @@ const ContentCreationForm = ({
                   <button
                     onClick={() => handleRemoveFile(file.id)}
                     style={{
-                      padding: '8px',
+                      padding: '6px',
                       backgroundColor: 'transparent',
                       border: 'none',
-                      borderRadius: '8px',
+                      borderRadius: '6px',
                       cursor: 'pointer',
                       color: '#6b7280'
                     }}
@@ -449,7 +449,7 @@ const ContentCreationForm = ({
                       e.currentTarget.style.color = '#6b7280';
                     }}
                   >
-                    <X style={{ height: '20px', width: '20px' }} />
+                    <X style={{ height: '16px', width: '16px' }} />
                   </button>
                 </div>
               ))}
@@ -459,13 +459,13 @@ const ContentCreationForm = ({
       </div>
 
       {/* Description */}
-      <div style={{ marginBottom: '32px' }}>
+      <div style={{ marginBottom: '20px' }}>
         <label style={{
           display: 'block',
-          fontSize: '20px',
+          fontSize: '16px',
           fontWeight: 'bold',
           color: '#111827',
-          marginBottom: '12px'
+          marginBottom: '8px'
         }}>
           ✏️ Post Description
         </label>
@@ -475,34 +475,34 @@ const ContentCreationForm = ({
           placeholder="Write your post content here... Share your thoughts, updates, or announcements."
           style={{
             width: '100%',
-            padding: '24px',
-            border: '2px solid #d1d5db',
-            borderRadius: '12px',
-            fontSize: '16px',
+            padding: '12px',
+            border: '1px solid #d1d5db',
+            borderRadius: '8px',
+            fontSize: '14px',
             backgroundColor: 'white',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
             resize: 'vertical',
-            minHeight: '150px',
+            minHeight: '100px',
             fontFamily: 'inherit'
           }}
         />
       </div>
 
       {/* Platform Selection */}
-      <div style={{ marginBottom: '32px' }}>
+      <div style={{ marginBottom: '20px' }}>
         <label style={{
           display: 'block',
-          fontSize: '20px',
+          fontSize: '16px',
           fontWeight: 'bold',
           color: '#111827',
-          marginBottom: '16px'
+          marginBottom: '12px'
         }}>
           🌐 Select Publishing Platforms
         </label>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '16px'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '12px'
         }}>
           {activePlatforms.map((platform) => (
             <label
@@ -510,19 +510,19 @@ const ContentCreationForm = ({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
-                padding: '16px',
+                gap: '8px',
+                padding: '12px',
                 border: formData.selectedPlatforms.includes(platform.id) 
-                  ? '2px solid #3b82f6' 
-                  : '2px solid #d1d5db',
-                borderRadius: '12px',
+                  ? '1px solid #3b82f6' 
+                  : '1px solid #d1d5db',
+                borderRadius: '8px',
                 cursor: 'pointer',
                 backgroundColor: formData.selectedPlatforms.includes(platform.id) 
                   ? '#dbeafe' 
                   : 'white',
                 boxShadow: formData.selectedPlatforms.includes(platform.id)
-                  ? '0 4px 12px rgba(59, 130, 246, 0.15)'
-                  : '0 2px 4px rgba(0, 0, 0, 0.05)',
+                  ? '0 2px 8px rgba(59, 130, 246, 0.15)'
+                  : '0 1px 3px rgba(0, 0, 0, 0.05)',
                 transition: 'all 0.2s ease'
               }}
             >
@@ -531,8 +531,8 @@ const ContentCreationForm = ({
                 checked={formData.selectedPlatforms.includes(platform.id)}
                 onChange={() => handlePlatformToggle(platform.id)}
                 style={{
-                  height: '20px',
-                  width: '20px',
+                  height: '16px',
+                  width: '16px',
                   accentColor: '#3b82f6'
                 }}
               />
@@ -541,19 +541,19 @@ const ContentCreationForm = ({
                   fontSize: '14px',
                   fontWeight: 'bold',
                   color: '#111827',
-                  marginBottom: '4px'
+                  marginBottom: '2px'
                 }}>
                   {platform.name}
                 </div>
                 {platform.isDefault && (
                   <span style={{
                     display: 'inline-block',
-                    padding: '2px 8px',
-                    fontSize: '12px',
+                    padding: '1px 6px',
+                    fontSize: '10px',
                     fontWeight: 'bold',
                     backgroundColor: '#10b981',
                     color: 'white',
-                    borderRadius: '12px'
+                    borderRadius: '8px'
                   }}>
                     ⭐ Default
                   </span>
@@ -568,29 +568,29 @@ const ContentCreationForm = ({
       <div style={{
         display: 'flex',
         justifyContent: 'flex-end',
-        gap: '16px',
-        paddingTop: '24px',
-        borderTop: '2px solid #e5e7eb'
+        gap: '12px',
+        paddingTop: '16px',
+        borderTop: '1px solid #e5e7eb'
       }}>
         <button
           onClick={handleSave}
           disabled={!canSave}
           style={{
-            padding: '16px 32px',
-            fontSize: '18px',
+            padding: '10px 20px',
+            fontSize: '14px',
             fontWeight: 'bold',
-            borderRadius: '12px',
+            borderRadius: '8px',
             border: 'none',
             cursor: canSave ? 'pointer' : 'not-allowed',
             backgroundColor: canSave ? '#6b7280' : '#d1d5db',
             color: canSave ? 'white' : '#9ca3af',
-            boxShadow: canSave ? '0 4px 12px rgba(0, 0, 0, 0.15)' : 'none',
+            boxShadow: canSave ? '0 2px 6px rgba(0, 0, 0, 0.15)' : 'none',
             transition: 'all 0.2s ease'
           }}
           onMouseOver={(e) => {
             if (canSave) {
               e.currentTarget.style.backgroundColor = '#4b5563';
-              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
             }
           }}
           onMouseOut={(e) => {
@@ -606,21 +606,21 @@ const ContentCreationForm = ({
           onClick={handleAddToSchedule}
           disabled={!canSave}
           style={{
-            padding: '16px 32px',
-            fontSize: '18px',
+            padding: '10px 20px',
+            fontSize: '14px',
             fontWeight: 'bold',
-            borderRadius: '12px',
+            borderRadius: '8px',
             border: 'none',
             cursor: canSave ? 'pointer' : 'not-allowed',
             backgroundColor: canSave ? '#3b82f6' : '#d1d5db',
             color: canSave ? 'white' : '#9ca3af',
-            boxShadow: canSave ? '0 4px 12px rgba(59, 130, 246, 0.25)' : 'none',
+            boxShadow: canSave ? '0 2px 6px rgba(59, 130, 246, 0.25)' : 'none',
             transition: 'all 0.2s ease'
           }}
           onMouseOver={(e) => {
             if (canSave) {
               e.currentTarget.style.backgroundColor = '#2563eb';
-              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
             }
           }}
           onMouseOut={(e) => {
@@ -669,35 +669,35 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
     return (
       <div style={{
         backgroundColor: 'white',
-        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-        border: '2px solid #e5e7eb',
-        borderRadius: '12px',
-        padding: '64px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        border: '1px solid #e5e7eb',
+        borderRadius: '8px',
+        padding: '40px',
         textAlign: 'center'
       }}>
         <div style={{
-          width: '96px',
-          height: '96px',
+          width: '64px',
+          height: '64px',
           backgroundColor: '#f3f4f6',
           borderRadius: '50%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          margin: '0 auto 24px auto'
+          margin: '0 auto 16px auto'
         }}>
-          <FileText style={{ height: '48px', width: '48px', color: '#9ca3af' }} />
+          <FileText style={{ height: '32px', width: '32px', color: '#9ca3af' }} />
         </div>
         <h3 style={{
-          fontSize: '24px',
+          fontSize: '18px',
           fontWeight: 'bold',
           color: '#111827',
-          margin: '0 0 16px 0'
+          margin: '0 0 8px 0'
         }}>
           📝 No content created yet
         </h3>
         <p style={{
           color: '#6b7280',
-          fontSize: '18px',
+          fontSize: '14px',
           margin: '0'
         }}>
           Start creating amazing content using the form above
@@ -709,15 +709,15 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
   return (
     <div style={{
       backgroundColor: 'white',
-      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-      border: '2px solid #e5e7eb',
-      borderRadius: '12px',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      border: '1px solid #e5e7eb',
+      borderRadius: '8px',
       overflow: 'hidden'
     }}>
       <div style={{
-        padding: '24px',
+        padding: '16px',
         background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-        borderBottom: '2px solid #d1d5db'
+        borderBottom: '1px solid #d1d5db'
       }}>
         <div style={{
           display: 'flex',
@@ -725,7 +725,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
           justifyContent: 'space-between'
         }}>
           <h3 style={{
-            fontSize: '24px',
+            fontSize: '18px',
             fontWeight: 'bold',
             color: '#3b82f6',
             margin: '0'
@@ -733,12 +733,12 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
             📚 Saved Content
           </h3>
           <span style={{
-            padding: '8px 16px',
+            padding: '6px 12px',
             background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
             color: 'white',
-            fontSize: '16px',
+            fontSize: '14px',
             fontWeight: 'bold',
-            borderRadius: '20px'
+            borderRadius: '16px'
           }}>
             {posts.length} {posts.length === 1 ? 'post' : 'posts'}
           </span>
@@ -748,8 +748,8 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
       <div>
         {posts.map((post) => (
           <div key={post.id} style={{
-            padding: '24px',
-            borderBottom: '2px solid #f3f4f6',
+            padding: '16px',
+            borderBottom: '1px solid #f3f4f6',
             transition: 'background-color 0.2s ease'
           }}
           onMouseOver={(e) => {
@@ -764,16 +764,16 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
               alignItems: 'flex-start',
               justifyContent: 'space-between'
             }}>
-              <div style={{ flex: 1, marginRight: '24px' }}>
+              <div style={{ flex: 1, marginRight: '16px' }}>
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '16px',
-                  marginBottom: '16px'
+                  gap: '12px',
+                  marginBottom: '12px'
                 }}>
                   {getStatusBadge(post.status)}
                   <span style={{
-                    fontSize: '14px',
+                    fontSize: '12px',
                     color: '#6b7280',
                     fontWeight: 'bold'
                   }}>
@@ -781,12 +781,12 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                   </span>
                   {post.scheduledDate && (
                     <span style={{
-                      fontSize: '14px',
+                      fontSize: '12px',
                       color: '#3b82f6',
                       fontWeight: 'bold',
                       backgroundColor: '#dbeafe',
-                      padding: '6px 12px',
-                      borderRadius: '8px'
+                      padding: '4px 8px',
+                      borderRadius: '6px'
                     }}>
                       ⏰ Scheduled for {post.scheduledDate.toLocaleDateString()}
                     </span>
@@ -795,9 +795,9 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                 
                 <p style={{
                   color: '#111827',
-                  fontSize: '16px',
+                  fontSize: '14px',
                   lineHeight: '1.6',
-                  margin: '0 0 16px 0'
+                  margin: '0 0 12px 0'
                 }}>
                   {post.description}
                 </p>
@@ -805,20 +805,20 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '24px'
+                  gap: '16px'
                 }}>
                   {post.mediaFiles.length > 0 && (
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      fontSize: '14px',
+                      gap: '6px',
+                      fontSize: '12px',
                       color: '#6b7280',
                       backgroundColor: '#f3f4f6',
-                      padding: '8px 12px',
-                      borderRadius: '8px'
+                      padding: '6px 8px',
+                      borderRadius: '6px'
                     }}>
-                      <Image style={{ height: '16px', width: '16px' }} />
+                      <Image style={{ height: '14px', width: '14px' }} />
                       <span style={{ fontWeight: 'bold' }}>
                         {post.mediaFiles.length} file{post.mediaFiles.length !== 1 ? 's' : ''}
                       </span>
@@ -828,14 +828,14 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '14px',
+                    gap: '6px',
+                    fontSize: '12px',
                     color: '#6b7280',
                     backgroundColor: '#f3f4f6',
-                    padding: '8px 12px',
-                    borderRadius: '8px'
+                    padding: '6px 8px',
+                    borderRadius: '6px'
                   }}>
-                    <Settings style={{ height: '16px', width: '16px' }} />
+                    <Settings style={{ height: '14px', width: '14px' }} />
                     <span style={{ fontWeight: 'bold' }}>
                       {post.selectedPlatforms.length} platform{post.selectedPlatforms.length !== 1 ? 's' : ''}
                     </span>
@@ -846,16 +846,16 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '6px'
               }}>
                 <button
                   onClick={() => onEditPost(post.id)}
                   title="Edit"
                   style={{
-                    padding: '12px',
+                    padding: '8px',
                     backgroundColor: 'transparent',
-                    border: '2px solid transparent',
-                    borderRadius: '8px',
+                    border: '1px solid transparent',
+                    borderRadius: '6px',
                     cursor: 'pointer',
                     color: '#6b7280'
                   }}
@@ -870,7 +870,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                     e.currentTarget.style.color = '#6b7280';
                   }}
                 >
-                  <Settings style={{ height: '20px', width: '20px' }} />
+                  <Settings style={{ height: '16px', width: '16px' }} />
                 </button>
                 
                 {post.status === 'pending' && (
@@ -878,10 +878,10 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                     onClick={() => onSchedulePost(post.id)}
                     title="Add to Schedule"
                     style={{
-                      padding: '12px',
+                      padding: '8px',
                       backgroundColor: 'transparent',
-                      border: '2px solid transparent',
-                      borderRadius: '8px',
+                      border: '1px solid transparent',
+                      borderRadius: '6px',
                       cursor: 'pointer',
                       color: '#6b7280'
                     }}
@@ -896,7 +896,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                       e.currentTarget.style.color = '#6b7280';
                     }}
                   >
-                    <Plus style={{ height: '20px', width: '20px' }} />
+                    <Plus style={{ height: '16px', width: '16px' }} />
                   </button>
                 )}
                 
@@ -904,10 +904,10 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                   onClick={() => onDeletePost(post.id)}
                   title="Delete"
                   style={{
-                    padding: '12px',
+                    padding: '8px',
                     backgroundColor: 'transparent',
-                    border: '2px solid transparent',
-                    borderRadius: '8px',
+                    border: '1px solid transparent',
+                    borderRadius: '6px',
                     cursor: 'pointer',
                     color: '#6b7280'
                   }}
@@ -922,7 +922,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                     e.currentTarget.style.color = '#6b7280';
                   }}
                 >
-                  <Trash2 style={{ height: '20px', width: '20px' }} />
+                  <Trash2 style={{ height: '16px', width: '16px' }} />
                 </button>
               </div>
             </div>
@@ -937,30 +937,30 @@ const SupabaseConnection = () => {
   return (
     <div style={{
       backgroundColor: 'white',
-      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-      borderRadius: '12px',
-      border: '2px solid #e5e7eb',
-      padding: '32px'
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      borderRadius: '8px',
+      border: '1px solid #e5e7eb',
+      padding: '20px'
     }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: '24px'
+        marginBottom: '16px'
       }}>
         <div>
           <h3 style={{
-            fontSize: '24px',
+            fontSize: '18px',
             fontWeight: 'bold',
             color: '#111827',
-            margin: '0 0 8px 0'
+            margin: '0 0 4px 0'
           }}>
             💾 Database Connection
           </h3>
           <p style={{
             color: '#6b7280',
             margin: '0',
-            fontSize: '18px'
+            fontSize: '14px'
           }}>
             Manage your data storage and connectivity
           </p>
@@ -968,15 +968,15 @@ const SupabaseConnection = () => {
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
+          gap: '8px',
           backgroundColor: '#d1fae5',
-          padding: '12px 16px',
-          borderRadius: '12px',
-          border: '2px solid #10b981'
+          padding: '8px 12px',
+          borderRadius: '8px',
+          border: '1px solid #10b981'
         }}>
-          <CheckCircle style={{ height: '24px', width: '24px', color: '#10b981' }} />
+          <CheckCircle style={{ height: '18px', width: '18px', color: '#10b981' }} />
           <span style={{
-            fontSize: '14px',
+            fontSize: '12px',
             fontWeight: 'bold',
             color: '#065f46'
           }}>
@@ -987,14 +987,14 @@ const SupabaseConnection = () => {
       
       <div style={{
         background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-        borderRadius: '12px',
-        padding: '24px',
-        border: '2px solid #3b82f6',
-        marginBottom: '24px'
+        borderRadius: '8px',
+        padding: '16px',
+        border: '1px solid #3b82f6',
+        marginBottom: '16px'
       }}>
         <p style={{
           color: '#1e40af',
-          fontSize: '18px',
+          fontSize: '14px',
           lineHeight: '1.6',
           margin: '0'
         }}>
@@ -1006,30 +1006,30 @@ const SupabaseConnection = () => {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
-          padding: '16px 24px',
+          gap: '8px',
+          padding: '12px 16px',
           background: 'linear-gradient(135deg, #111827 0%, #374151 100%)',
           color: 'white',
-          borderRadius: '12px',
+          borderRadius: '8px',
           border: 'none',
           cursor: 'pointer',
-          fontSize: '16px',
+          fontSize: '14px',
           fontWeight: 'bold',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
           transition: 'all 0.2s ease'
         }}
         onMouseOver={(e) => {
-          e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.25)';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25)';
         }}
         onMouseOut={(e) => {
           e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.15)';
         }}
       >
-        <Database style={{ height: '20px', width: '20px' }} />
+        <Database style={{ height: '16px', width: '16px' }} />
         <span>🚀 Open Supabase Project</span>
-        <ExternalLink style={{ height: '16px', width: '16px' }} />
+        <ExternalLink style={{ height: '14px', width: '14px' }} />
       </button>
     </div>
   );
@@ -1111,33 +1111,33 @@ export default function ContentManager() {
     <div style={{
       minHeight: '100vh',
       backgroundColor: '#f3f4f6',
-      padding: '32px'
+      padding: '20px'
     }}>
       <div style={{
-        maxWidth: '1400px',
+        maxWidth: '1200px',
         margin: '0 auto',
         display: 'grid',
-        gap: '32px'
+        gap: '20px'
       }}>
         {/* Header */}
         <div style={{
           backgroundColor: 'white',
-          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-          borderRadius: '12px',
-          padding: '32px',
-          border: '2px solid #3b82f6'
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          borderRadius: '8px',
+          padding: '20px',
+          border: '1px solid #3b82f6'
         }}>
           <h1 style={{
-            fontSize: '36px',
+            fontSize: '24px',
             fontWeight: 'black',
             color: '#3b82f6',
-            margin: '0 0 12px 0'
+            margin: '0 0 8px 0'
           }}>
             🎯 Content Manager
           </h1>
           <p style={{
             color: '#6b7280',
-            fontSize: '20px',
+            fontSize: '16px',
             margin: '0',
             fontWeight: 'bold'
           }}>
@@ -1148,9 +1148,9 @@ export default function ContentManager() {
         {/* Tabs */}
         <div style={{
           backgroundColor: 'white',
-          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-          borderRadius: '12px',
-          border: '2px solid #e5e7eb',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb',
           overflow: 'hidden'
         }}>
           <div style={{ display: 'flex' }}>
@@ -1163,9 +1163,9 @@ export default function ContentManager() {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '12px',
-                    padding: '24px 32px',
-                    fontSize: '18px',
+                    gap: '8px',
+                    padding: '16px 20px',
+                    fontSize: '16px',
                     fontWeight: 'bold',
                     flex: 1,
                     justifyContent: 'center',
@@ -1188,7 +1188,7 @@ export default function ContentManager() {
                     }
                   }}
                 >
-                  <Icon style={{ height: '24px', width: '24px' }} />
+                  <Icon style={{ height: '20px', width: '20px' }} />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -1199,7 +1199,7 @@ export default function ContentManager() {
         {/* Tab Content */}
         <div>
           {activeTab === 'media' && (
-            <div style={{ display: 'grid', gap: '32px' }}>
+            <div style={{ display: 'grid', gap: '20px' }}>
               <ContentCreationForm
                 onSave={handleSavePost}
                 onAddToSchedule={handleAddToSchedule}
