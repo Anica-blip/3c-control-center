@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
 
+// IMPORT YOUR REAL COMPONENTS
+import OverviewComponent from './overviewcomponent';
+import ContentComponent from './contentcomponent';
+import WebChatComponent from './webchat';
+import ScheduleComponent from './schedulecomponent';
+import MarketingComponent from './marketingcomponent';
+import SettingsComponent from './settingscomponent';
+import AdminComponents from './admincomponents';
+import AIChatComponent from './aichatcomponent';
+
 // =============================================================================
 // MAIN DASHBOARD - NAVIGATION WORKING
 // =============================================================================
@@ -179,144 +189,8 @@ function App() {
 }
 
 // =============================================================================
-// PLACEHOLDER COMPONENTS - SHOWS EXPORT INSTRUCTIONS
+// SIMPLE FALLBACK COMPONENT
 // =============================================================================
-
-const OverviewComponent = () => (
-  <div style={{ padding: '20px' }}>
-    <h2>📊 Overview</h2>
-    <div style={{ 
-      padding: '20px', 
-      backgroundColor: '#f0f9ff',
-      borderRadius: '8px',
-      border: '1px solid #0ea5e9'
-    }}>
-      <p style={{ margin: 0, color: '#0369a1' }}>
-        ✅ Your overviewcomponent.tsx file exists<br/>
-        🔧 Add this line to the end: <code>export default OverviewComponent;</code>
-      </p>
-    </div>
-  </div>
-);
-
-const ContentComponent = () => (
-  <div style={{ padding: '20px' }}>
-    <h2>📝 Content Manager</h2>
-    <div style={{ 
-      padding: '20px', 
-      backgroundColor: '#f0f9ff',
-      borderRadius: '8px',
-      border: '1px solid #0ea5e9'
-    }}>
-      <p style={{ margin: 0, color: '#0369a1' }}>
-        ✅ Your contentcomponent.tsx file exists<br/>
-        🔧 Add this line to the end: <code>export default ContentComponent;</code>
-      </p>
-    </div>
-  </div>
-);
-
-const WebChatComponent = () => (
-  <div style={{ padding: '20px' }}>
-    <h2>💬 WebChat Public</h2>
-    <div style={{ 
-      padding: '20px', 
-      backgroundColor: '#f0f9ff',
-      borderRadius: '8px',
-      border: '1px solid #0ea5e9'
-    }}>
-      <p style={{ margin: 0, color: '#0369a1' }}>
-        ✅ Your webchat.tsx file exists<br/>
-        🔧 Add this line to the end: <code>export default WebChatComponent;</code>
-      </p>
-    </div>
-  </div>
-);
-
-const ScheduleComponent = () => (
-  <div style={{ padding: '20px' }}>
-    <h2>📅 Schedule Manager</h2>
-    <div style={{ 
-      padding: '20px', 
-      backgroundColor: '#f0f9ff',
-      borderRadius: '8px',
-      border: '1px solid #0ea5e9'
-    }}>
-      <p style={{ margin: 0, color: '#0369a1' }}>
-        ✅ Your schedulecomponent.tsx file exists<br/>
-        🔧 Add this line to the end: <code>export default ScheduleComponent;</code>
-      </p>
-    </div>
-  </div>
-);
-
-const MarketingComponent = () => (
-  <div style={{ padding: '20px' }}>
-    <h2>🧠 Marketing Center</h2>
-    <div style={{ 
-      padding: '20px', 
-      backgroundColor: '#f0f9ff',
-      borderRadius: '8px',
-      border: '1px solid #0ea5e9'
-    }}>
-      <p style={{ margin: 0, color: '#0369a1' }}>
-        ✅ Your marketingcomponent.tsx file exists<br/>
-        🔧 Add this line to the end: <code>export default MarketingComponent;</code>
-      </p>
-    </div>
-  </div>
-);
-
-const SettingsComponent = () => (
-  <div style={{ padding: '20px' }}>
-    <h2>⚙️ Dashboard Settings</h2>
-    <div style={{ 
-      padding: '20px', 
-      backgroundColor: '#f0f9ff',
-      borderRadius: '8px',
-      border: '1px solid #0ea5e9'
-    }}>
-      <p style={{ margin: 0, color: '#0369a1' }}>
-        ✅ Your settingscomponent.tsx file exists<br/>
-        🔧 Add this line to the end: <code>export default SettingsComponent;</code>
-      </p>
-    </div>
-  </div>
-);
-
-const AdminComponents = () => (
-  <div style={{ padding: '20px' }}>
-    <h2>🔧 Admin Center</h2>
-    <div style={{ 
-      padding: '20px', 
-      backgroundColor: '#f0f9ff',
-      borderRadius: '8px',
-      border: '1px solid #0ea5e9'
-    }}>
-      <p style={{ margin: 0, color: '#0369a1' }}>
-        ✅ Your admincomponents.tsx file exists<br/>
-        🔧 Add this line to the end: <code>export default AdminComponents;</code>
-      </p>
-    </div>
-  </div>
-);
-
-const AIChatComponent = () => (
-  <div style={{ padding: '20px' }}>
-    <h2>🤖 AI Chat Manager</h2>
-    <div style={{ 
-      padding: '20px', 
-      backgroundColor: '#f0f9ff',
-      borderRadius: '8px',
-      border: '1px solid #0ea5e9'
-    }}>
-      <p style={{ margin: 0, color: '#0369a1' }}>
-        ✅ Your aichatcomponent.tsx file exists<br/>
-        🔧 Add this line to the end: <code>export default AIChatComponent;</code>
-      </p>
-    </div>
-  </div>
-);
 
 const ComingSoonComponent = ({ title }: { title: string }) => (
   <div style={{ padding: '20px' }}>
