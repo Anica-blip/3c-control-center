@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 
-// IMPORT YOUR REAL COMPONENTS
-import OverviewComponent from './overviewcomponent';
+// IMPORT YOUR REAL COMPONENTS - Only the ones with proper exports
+// import OverviewComponent from './overviewcomponent';  // No default export
 import ContentComponent from './contentcomponent';
 import WebChatComponent from './webchat';
 import ScheduleComponent from './schedulecomponent';
 import MarketingComponent from './marketingcomponent';
 import SettingsComponent from './settingscomponent';
 import AdminComponents from './admincomponents';
-import AIChatComponent from './aichatcomponent';
+// import AIChatComponent from './aichatcomponent';  // Check if it has default export
+
+// Temporary placeholders for files without proper exports
+const OverviewComponent = () => <div style={{ padding: '20px' }}><h2>📊 Overview</h2><p>Add "export default OverviewComponent;" to overviewcomponent.tsx</p></div>;
+const AIChatComponent = () => <div style={{ padding: '20px' }}><h2>🤖 AI Chat Manager</h2><p>Add "export default AIChatComponent;" to aichatcomponent.tsx</p></div>;
 
 // =============================================================================
 // MAIN DASHBOARD - NAVIGATION WORKING
