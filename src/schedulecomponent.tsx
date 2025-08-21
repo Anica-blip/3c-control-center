@@ -1414,3 +1414,5 @@ export default function ScheduleComponent() {
     </div>
   );
 }
+
+export default SettingsComponent;
