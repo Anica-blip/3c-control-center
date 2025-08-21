@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 
-// YOUR EXISTING COMPONENT FILES
-import OverviewComponent from './overviewcomponent';
-import ContentComponent from './contentcomponent';
-import WebChatComponent from './webchat';
-import ScheduleComponent from './schedulecomponent';
-import MarketingComponent from './marketingcomponent';
-import SettingsComponent from './settingscomponent';
-import AdminComponents from './admincomponents';
-import AIChatComponent from './aichatcomponent';
+// YOUR EXISTING COMPONENT FILES - Using named imports
+import { OverviewComponent } from './overviewcomponent';
+import { ContentComponent } from './contentcomponent';
+import { WebChatComponent } from './webchat';
+import { ScheduleComponent } from './schedulecomponent';
+import { MarketingComponent } from './marketingcomponent';
+import { SettingsComponent } from './settingscomponent';
+import { AdminComponents } from './admincomponents';
+import { AIChatComponent } from './aichatcomponent';
 
 // =============================================================================
 // MAIN DASHBOARD - CONNECTS TO YOUR REAL COMPONENT FILES
