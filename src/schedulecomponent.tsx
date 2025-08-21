@@ -1415,4 +1415,4 @@ export default function ScheduleComponent() {
   );
 }
 
-export default SettingsComponent;
+export default ScheduleComponent;
