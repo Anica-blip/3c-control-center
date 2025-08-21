@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
 
-// Import new components (create these files as needed)
-// import ContentComponent from './contentcomponent';
-// import ScheduleComponent from './schedulecomponent';
-// import MarketingComponent from './marketingcomponent';
-// import AIChatComponent from './aichatcomponent';
-
 // =============================================================================
-// MAIN DASHBOARD WITH YOUR EXACT REQUIREMENTS
+// MAIN DASHBOARD WITH YOUR REAL COMPONENTS + UPDATED NAVIGATION
 // =============================================================================
 
 function App() {
@@ -38,19 +32,19 @@ function App() {
       case 'overview':
         return <OverviewComponent />;
       case 'content-manager':
-        return <ContentManagerComponent />;
+        return <ContentManagerPlaceholder />;
       case 'webchat-public':
         return <WebChatComponent />;
       case 'schedule-manager':
-        return <ScheduleManagerComponent />;
+        return <ScheduleManagerPlaceholder />;
       case 'marketing-center':
-        return <MarketingCenterComponent />;
+        return <MarketingCenterPlaceholder />;
       case 'settings':
         return <SettingsComponent />;
       case 'admin-center':
         return <AdminCenterComponent />;
       case 'ai-chat-manager':
-        return <AIChatManagerComponent />;
+        return <AIChatManagerPlaceholder />;
       default:
         return <ComingSoonComponent title={activeSection} />;
     }
@@ -86,7 +80,7 @@ function App() {
             color: '#6b7280', 
             fontSize: '14px' 
           }}>
-            Your Dashboard
+            Dashboard
           </p>
         </div>
 
@@ -187,7 +181,7 @@ function App() {
 }
 
 // =============================================================================
-// YOUR EXISTING WORKING COMPONENTS - KEPT EXACTLY THE SAME
+// YOUR ORIGINAL WORKING COMPONENTS - PRESERVED EXACTLY
 // =============================================================================
 
 function WebChatComponent() {
@@ -208,7 +202,7 @@ function WebChatComponent() {
           WebChat Component
         </h3>
         <p style={{ fontSize: '16px', color: '#059669', marginBottom: '25px' }}>
-          This is your SAFE working WebChat component. All WebChat functionality is preserved here.
+          This is our SAFE working WebChat component. All WebChat functionality should be preserved here.
         </p>
         <div style={{ 
           padding: '20px', 
@@ -217,7 +211,7 @@ function WebChatComponent() {
           marginBottom: '20px'
         }}>
           <p style={{ color: '#047857', fontWeight: 'bold' }}>
-            ✅ WebChat features preserved:
+            ✅ WebChat features to preserve:
           </p>
           <ul style={{ color: '#059669', textAlign: 'left', marginTop: '10px' }}>
             <li>Chat interface</li>
@@ -308,12 +302,11 @@ function AdminTemplatesTab() {
         border: '2px dashed #f59e0b'
       }}>
         <div style={{ fontSize: '48px', marginBottom: '15px' }}>🔧</div>
-        <h4 style={{ color: '#92400e', marginBottom: '10px' }}>Ready for Enhancement</h4>
+        <h4 style={{ color: '#92400e', marginBottom: '10px' }}>Missing Components</h4>
         <p style={{ color: '#d97706' }}>
-          This section will include:
+          Need to restore:
         </p>
         <ul style={{ color: '#d97706', textAlign: 'left', marginTop: '10px' }}>
-          <li>Template creation and editing</li>
           <li>External GitHub components section</li>
           <li>3C Brand products external links</li>
           <li>Template builder functionality</li>
@@ -367,15 +360,14 @@ function SettingsComponent() {
         border: '2px dashed #ef4444'
       }}>
         <div style={{ fontSize: '48px', marginBottom: '15px' }}>🔧</div>
-        <h4 style={{ color: '#dc2626', marginBottom: '10px' }}>Settings Components Needed</h4>
+        <h4 style={{ color: '#dc2626', marginBottom: '10px' }}>Missing Settings</h4>
         <p style={{ color: '#dc2626' }}>
           Need to restore:
         </p>
         <ul style={{ color: '#dc2626', textAlign: 'left', marginTop: '10px' }}>
-          <li>Character profiles configuration</li>
-          <li>Platforms configuration (Telegram, etc.)</li>
+          <li>Platforms configuration</li>
+          <li>Telegram channel/group settings</li>
           <li>Save and edit functionality</li>
-          <li>Profile images and detailed settings</li>
         </ul>
       </div>
     </div>
@@ -390,28 +382,19 @@ function OverviewComponent() {
         padding: '40px', 
         textAlign: 'center',
         background: '#f3f4f6',
-        borderRadius: '12px',
-        border: '2px dashed #9ca3af'
+        borderRadius: '12px'
       }}>
-        <div style={{ fontSize: '48px', marginBottom: '15px' }}>📊</div>
-        <h4 style={{ color: '#6b7280', marginBottom: '10px' }}>Overview Component</h4>
-        <p style={{ color: '#6b7280' }}>
-          Dashboard overview - File: overviewcomponent.tsx
-        </p>
-        <div style={{ 
-          marginTop: '15px', 
-          fontSize: '12px', 
-          color: '#9ca3af',
-          fontStyle: 'italic'
-        }}>
-          Status: Coming soon (low priority)
-        </div>
+        <p style={{ color: '#6b7280' }}>Overview section - Low priority, to be built last</p>
       </div>
     </div>
   );
 }
 
-function ContentManagerComponent() {
+// =============================================================================
+// PLACEHOLDERS FOR NEW COMPONENTS
+// =============================================================================
+
+function ContentManagerPlaceholder() {
   return (
     <div style={{ padding: '20px' }}>
       <h2>📝 Content Manager</h2>
@@ -435,7 +418,7 @@ function ContentManagerComponent() {
           color: '#1e40af',
           textAlign: 'left'
         }}>
-          <strong>🔗 Integrations needed:</strong>
+          <strong>🔗 Priority integrations:</strong>
           <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
             <li>Character profiles from Settings</li>
             <li>Platforms from Settings</li>
@@ -447,7 +430,7 @@ function ContentManagerComponent() {
   );
 }
 
-function ScheduleManagerComponent() {
+function ScheduleManagerPlaceholder() {
   return (
     <div style={{ padding: '20px' }}>
       <h2>📅 Schedule Manager</h2>
@@ -461,7 +444,7 @@ function ScheduleManagerComponent() {
         <div style={{ fontSize: '48px', marginBottom: '15px' }}>📅</div>
         <h4 style={{ color: '#15803d', marginBottom: '10px' }}>Schedule Manager Component</h4>
         <p style={{ color: '#16a34a', marginBottom: '15px' }}>
-          Schedule and manage post publishing - File: schedulecomponent.tsx
+          Schedule posts to your existing Telegram bot + Supabase setup - File: schedulecomponent.tsx
         </p>
         <div style={{ 
           padding: '15px', 
@@ -474,8 +457,8 @@ function ScheduleManagerComponent() {
           <strong>🔗 Integrations needed:</strong>
           <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
             <li>Posts from Content Manager</li>
-            <li>Telegram bot connection (your existing setup)</li>
-            <li>Supabase scheduled_posts table</li>
+            <li>Your existing Telegram bot (Render)</li>
+            <li>Your existing scheduled_posts table (Supabase)</li>
           </ul>
         </div>
       </div>
@@ -483,7 +466,7 @@ function ScheduleManagerComponent() {
   );
 }
 
-function MarketingCenterComponent() {
+function MarketingCenterPlaceholder() {
   return (
     <div style={{ padding: '20px' }}>
       <h2>🧠 Marketing Center</h2>
@@ -509,9 +492,7 @@ function MarketingCenterComponent() {
         }}>
           <strong>🔗 Integrations needed:</strong>
           <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
-            <li>Data from Admin Center</li>
-            <li>Settings configuration</li>
-            <li>Content Manager analytics</li>
+            <li>Connect with Admin Center/Settings/Content Manager</li>
           </ul>
         </div>
       </div>
@@ -519,7 +500,7 @@ function MarketingCenterComponent() {
   );
 }
 
-function AIChatManagerComponent() {
+function AIChatManagerPlaceholder() {
   return (
     <div style={{ padding: '20px' }}>
       <h2>🤖 AI Chat Manager</h2>
@@ -531,9 +512,9 @@ function AIChatManagerComponent() {
         border: '2px dashed #d1d5db'
       }}>
         <div style={{ fontSize: '48px', marginBottom: '15px' }}>🤖</div>
-        <h4 style={{ color: '#6b7280', marginBottom: '10px' }}>AI Chat Manager Component</h4>
+        <h4 style={{ color: '#6b7280', marginBottom: '10px' }}>AI Chat Manager - Internal Feature</h4>
         <p style={{ color: '#9ca3af', marginBottom: '15px' }}>
-          Internal AI chat management - File: aichatcomponent.tsx
+          File: aichatcomponent.tsx
         </p>
         <div style={{ 
           padding: '15px', 
@@ -543,27 +524,14 @@ function AIChatManagerComponent() {
           color: '#6b7280',
           textAlign: 'left'
         }}>
-          <strong>📋 Features planned:</strong>
-          <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
-            <li>AI conversation management</li>
-            <li>Internal brand features</li>
-            <li>Advanced chat controls</li>
-          </ul>
-          <div style={{ 
-            marginTop: '10px', 
-            fontSize: '11px', 
-            color: '#9ca3af',
-            fontStyle: 'italic'
-          }}>
-            Status: Coming soon
-          </div>
+          <strong>Status:</strong> Coming soon
         </div>
       </div>
     </div>
   );
 }
 
-function ComingSoonComponent({ title, note }: { title: string; note?: string }) {
+function ComingSoonComponent({ title }: { title: string }) {
   return (
     <div style={{ padding: '20px' }}>
       <div style={{ 
@@ -575,22 +543,11 @@ function ComingSoonComponent({ title, note }: { title: string; note?: string }) 
       }}>
         <div style={{ fontSize: '64px', marginBottom: '20px' }}>🚧</div>
         <h2 style={{ color: '#6b7280', marginBottom: '15px', fontSize: '28px' }}>
-          {title}
+          {title.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
         </h2>
-        <p style={{ fontSize: '16px', color: '#9ca3af', marginBottom: '15px' }}>
-          This section is ready for development
+        <p style={{ fontSize: '16px', color: '#9ca3af' }}>
+          This section is coming soon
         </p>
-        {note && (
-          <div style={{ 
-            padding: '15px', 
-            backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            fontSize: '14px',
-            color: '#374151'
-          }}>
-            📝 Next Step: {note}
-          </div>
-        )}
       </div>
     </div>
   );
