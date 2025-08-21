@@ -586,3 +586,4 @@ export default function ContentManager() {
     </div>
   );
 }
+export default ContentComponent;
