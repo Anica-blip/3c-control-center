@@ -86,11 +86,11 @@ export default function ScheduleComponent() {
 
   // Platform configuration
   const platforms: Platform[] = [
-    { id: '1', name: 'Telegram', icon: 'TG', color: 'bg-blue-500' },
-    { id: '2', name: 'YouTube', icon: 'YT', color: 'bg-red-500' },
-    { id: '3', name: 'Facebook', icon: 'FB', color: 'bg-blue-600' },
-    { id: '4', name: 'Twitter', icon: 'TW', color: 'bg-sky-500' },
-    { id: '5', name: 'Forum', icon: 'FR', color: 'bg-gray-600' },
+    { id: '1', name: 'Telegram', icon: 'TG', color: '#3b82f6' },
+    { id: '2', name: 'YouTube', icon: 'YT', color: '#ef4444' },
+    { id: '3', name: 'Facebook', icon: 'FB', color: '#2563eb' },
+    { id: '4', name: 'Twitter', icon: 'TW', color: '#0ea5e9' },
+    { id: '5', name: 'Forum', icon: 'FR', color: '#4b5563' },
   ];
 
   // Initialize with sample data
@@ -183,27 +183,28 @@ export default function ScheduleComponent() {
 
   const getPlatformIcon = (platformId: string) => {
     const platform = platforms.find(p => p.id === platformId);
-    return platform || { icon: 'UN', color: 'bg-gray-400' };
+    return platform || { icon: 'UN', color: '#9ca3af' };
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'border-l-yellow-400 bg-yellow-50';
-      case 'processing': return 'border-l-blue-400 bg-blue-50';
-      case 'complete': return 'border-l-green-400 bg-green-50';
-      case 'failed': return 'border-l-red-400 bg-red-50';
-      case 'resending': return 'border-l-orange-400 bg-orange-50';
-      default: return 'border-l-gray-400 bg-gray-50';
+      case 'pending': return { borderLeft: '4px solid #f59e0b', backgroundColor: '#fefce8' };
+      case 'processing': return { borderLeft: '4px solid #3b82f6', backgroundColor: '#dbeafe' };
+      case 'complete': return { borderLeft: '4px solid #10b981', backgroundColor: '#d1fae5' };
+      case 'failed': return { borderLeft: '4px solid #ef4444', backgroundColor: '#fee2e2' };
+      case 'resending': return { borderLeft: '4px solid #f97316', backgroundColor: '#fed7aa' };
+      default: return { borderLeft: '4px solid #9ca3af', backgroundColor: '#f9fafb' };
     }
   };
 
   const getStatusIcon = (status: string) => {
+    const iconStyle = { height: '12px', width: '12px' };
     switch (status) {
-      case 'pending': return <Clock className="h-3 w-3 text-yellow-600" />;
-      case 'processing': return <Play className="h-3 w-3 text-blue-600" />;
-      case 'complete': return <CheckCircle className="h-3 w-3 text-green-600" />;
-      case 'failed': return <AlertCircle className="h-3 w-3 text-red-600" />;
-      case 'resending': return <RefreshCw className="h-3 w-3 text-orange-600" />;
+      case 'pending': return <Clock style={{...iconStyle, color: '#d97706'}} />;
+      case 'processing': return <Play style={{...iconStyle, color: '#2563eb'}} />;
+      case 'complete': return <CheckCircle style={{...iconStyle, color: '#059669'}} />;
+      case 'failed': return <AlertCircle style={{...iconStyle, color: '#dc2626'}} />;
+      case 'resending': return <RefreshCw style={{...iconStyle, color: '#ea580c'}} />;
       default: return null;
     }
   };
@@ -213,31 +214,6 @@ export default function ScheduleComponent() {
       const postDate = new Date(post.scheduledDate);
       return postDate.toDateString() === date.toDateString();
     });
-  };
-
-  const getHourlyPostsForDay = (date: Date) => {
-    const dayPosts = getPostsForDate(date);
-    const hourlyPosts: { [key: number]: ScheduledPost[] } = {};
-    
-    for (let hour = 0; hour < 24; hour++) {
-      hourlyPosts[hour] = dayPosts.filter(post => new Date(post.scheduledDate).getHours() === hour);
-    }
-    
-    return hourlyPosts;
-  };
-
-  const getWeekDates = (date: Date) => {
-    const week = [];
-    const startOfWeek = new Date(date);
-    startOfWeek.setDate(date.getDate() - date.getDay());
-    
-    for (let i = 0; i < 7; i++) {
-      const day = new Date(startOfWeek);
-      day.setDate(startOfWeek.getDate() + i);
-      week.push(day);
-    }
-    
-    return week;
   };
 
   // Modal handlers
@@ -384,213 +360,6 @@ export default function ScheduleComponent() {
     alert('Template added to Pending Scheduling!');
   };
 
-  const renderCalendarView = () => {
-    if (calendarView === 'day') {
-      const hourlyPosts = getHourlyPostsForDay(currentDate);
-      
-      return (
-        <div className="bg-white rounded-lg border">
-          <div className="p-4 border-b bg-gray-50">
-            <h3 className="text-lg font-semibold">
-              {currentDate.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </h3>
-          </div>
-          
-          <div className="max-h-96 overflow-y-auto">
-            {Array.from({ length: 24 }, (_, hour) => (
-              <div key={hour} className="flex border-b border-gray-100">
-                <div className="w-16 p-3 text-sm text-gray-500 bg-gray-50 border-r">
-                  {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
-                </div>
-                <div className="flex-1 p-2 min-h-[60px]">
-                  {hourlyPosts[hour]?.map(post => (
-                    <div key={post.id} className={`mb-1 p-2 text-xs rounded border-l-4 ${getStatusColor(post.status)}`}>
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{new Date(post.scheduledDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
-                        {getStatusIcon(post.status)}
-                      </div>
-                      <p className="text-gray-900 mt-1 line-clamp-2">{post.description}</p>
-                      <div className="flex mt-1 space-x-1">
-                        {post.platforms.map((platform, idx) => {
-                          const platformInfo = getPlatformIcon(platform.platformId);
-                          return (
-                            <span key={idx} className={`text-xs px-1 py-0.5 rounded text-white ${platformInfo.color}`}>
-                              {platformInfo.icon}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (calendarView === 'week') {
-      const weekDates = getWeekDates(currentDate);
-      
-      return (
-        <div className="bg-white rounded-lg border">
-          <div className="grid grid-cols-8 border-b">
-            <div className="p-3 border-r bg-gray-50"></div>
-            {weekDates.map(date => (
-              <div key={date.toISOString()} className="p-3 text-center border-r last:border-r-0">
-                <div className="font-medium text-gray-700">
-                  {date.toLocaleDateString('en-US', { weekday: 'short' })}
-                </div>
-                <div className={`text-lg font-semibold ${
-                  date.toDateString() === new Date().toDateString() ? 'text-blue-600' : 'text-gray-900'
-                }`}>
-                  {date.getDate()}
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div className="max-h-96 overflow-y-auto">
-            {Array.from({ length: 24 }, (_, hour) => (
-              <div key={hour} className="grid grid-cols-8 border-b border-gray-100">
-                <div className="p-2 text-sm text-gray-500 bg-gray-50 border-r">
-                  {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
-                </div>
-                {weekDates.map(date => {
-                  const hourPosts = getPostsForDate(date).filter(post => 
-                    new Date(post.scheduledDate).getHours() === hour
-                  );
-                  return (
-                    <div key={date.toISOString()} className="p-1 border-r last:border-r-0 min-h-[50px]">
-                      {hourPosts.map(post => (
-                        <div key={post.id} className={`text-xs p-1 mb-1 rounded border-l-2 ${getStatusColor(post.status)}`}>
-                          <div className="flex items-center space-x-1">
-                            {getStatusIcon(post.status)}
-                            <span className="font-medium">{new Date(post.scheduledDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
-                          </div>
-                          <p className="text-gray-900 line-clamp-1">{post.description.substring(0, 20)}...</p>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    // Month view
-    if (calendarView === 'month') {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
-      const startDate = new Date(firstDay);
-      startDate.setDate(firstDay.getDate() - firstDay.getDay());
-      
-      const weeks = [];
-      const currentWeekDate = new Date(startDate);
-      
-      while (currentWeekDate <= lastDay || currentWeekDate.getDay() !== 0) {
-        const week = [];
-        for (let i = 0; i < 7; i++) {
-          week.push(new Date(currentWeekDate));
-          currentWeekDate.setDate(currentWeekDate.getDate() + 1);
-        }
-        weeks.push(week);
-        if (currentWeekDate.getDay() === 0 && currentWeekDate > lastDay) break;
-      }
-
-      return (
-        <div className="bg-white rounded-lg border">
-          <div className="grid grid-cols-7 border-b">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="p-3 text-center font-medium text-gray-700 border-r last:border-r-0">
-                {day}
-              </div>
-            ))}
-          </div>
-          {weeks.map((week, weekIndex) => (
-            <div key={weekIndex} className="grid grid-cols-7 border-b last:border-b-0">
-              {week.map(day => {
-                const dayPosts = getPostsForDate(day);
-                const isCurrentMonth = day.getMonth() === month;
-                const isToday = day.toDateString() === new Date().toDateString();
-                
-                return (
-                  <div
-                    key={day.toISOString()}
-                    className={`min-h-[120px] p-2 border-r last:border-r-0 cursor-pointer hover:bg-gray-50 ${
-                      !isCurrentMonth ? 'bg-gray-50 text-gray-400' : ''
-                    } ${isToday ? 'bg-blue-50' : ''}`}
-                    onClick={() => {
-                      setCurrentDate(new Date(day));
-                      setCalendarView('day');
-                    }}
-                  >
-                    <div className={`text-sm font-medium mb-2 ${isToday ? 'text-blue-600' : ''}`}>
-                      {day.getDate()}
-                    </div>
-                    <div className="space-y-1">
-                      {dayPosts.slice(0, 2).map(post => (
-                        <div
-                          key={post.id}
-                          className={`text-xs p-2 rounded border-l-4 cursor-pointer ${getStatusColor(post.status)} hover:shadow-sm transition-shadow`}
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center space-x-1">
-                              {getStatusIcon(post.status)}
-                              <span className="font-medium">{new Date(post.scheduledDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
-                            </div>
-                          </div>
-                          
-                          <div className="mb-2">
-                            <p className="text-gray-900 text-sm leading-tight line-clamp-2">{post.description}</p>
-                          </div>
-                          
-                          <div className="flex items-center justify-between">
-                            <div className="flex space-x-1">
-                              {post.platforms.slice(0, 3).map((platform, idx) => {
-                                const platformInfo = getPlatformIcon(platform.platformId);
-                                return (
-                                  <span
-                                    key={idx}
-                                    className={`text-xs px-1.5 py-0.5 rounded text-white font-medium ${platformInfo.color}`}
-                                    title={platform.platformName}
-                                  >
-                                    {platformInfo.icon}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                            <span className="text-xs text-blue-600 font-medium">{post.characterProfile}</span>
-                          </div>
-                        </div>
-                      ))}
-                      {dayPosts.length > 2 && (
-                        <div className="text-xs text-gray-500 text-center">
-                          +{dayPosts.length - 2} more
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      );
-    }
-  };
-
   const renderStatusManagement = () => {
     const statusCounts = {
       all: scheduledPosts.length,
@@ -616,10 +385,31 @@ export default function ScheduleComponent() {
 
     if (scheduledPosts.length === 0) {
       return (
-        <div className="text-center py-12 text-gray-500">
-          <Calendar className="mx-auto h-16 w-16 text-gray-300 mb-4" />
-          <h3 className="text-xl font-medium text-gray-900 mb-2">No scheduled posts yet</h3>
-          <p className="text-gray-600 max-w-md mx-auto">
+        <div style={{
+          textAlign: 'center',
+          padding: '48px',
+          color: '#6b7280'
+        }}>
+          <Calendar style={{
+            height: '64px',
+            width: '64px',
+            color: '#d1d5db',
+            margin: '0 auto 16px auto'
+          }} />
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '500',
+            color: '#111827',
+            margin: '0 0 8px 0'
+          }}>
+            No scheduled posts yet
+          </h3>
+          <p style={{
+            color: '#6b7280',
+            maxWidth: '400px',
+            margin: '0 auto',
+            fontSize: '14px'
+          }}>
             Posts will appear here once you schedule them from the Pending Scheduling tab. 
             Start by scheduling your first post!
           </p>
@@ -628,65 +418,149 @@ export default function ScheduleComponent() {
     }
 
     return (
-      <div className="space-y-6">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 overflow-x-auto">
+      <div style={{ display: 'grid', gap: '24px' }}>
+        <div style={{ borderBottom: '1px solid #e5e7eb' }}>
+          <div style={{
+            display: 'flex',
+            gap: '32px',
+            overflowX: 'auto',
+            marginBottom: '-1px'
+          }}>
             {statusTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setStatusFilter(tab.id)}
-                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                  statusFilter === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                style={{
+                  whiteSpace: 'nowrap',
+                  padding: '8px 4px',
+                  borderBottom: statusFilter === tab.id ? '2px solid #3b82f6' : '2px solid transparent',
+                  fontWeight: '500',
+                  fontSize: '14px',
+                  color: statusFilter === tab.id ? '#2563eb' : '#6b7280',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseOver={(e) => {
+                  if (statusFilter !== tab.id) {
+                    e.currentTarget.style.color = '#374151';
+                    e.currentTarget.style.borderBottom = '2px solid #d1d5db';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (statusFilter !== tab.id) {
+                    e.currentTarget.style.color = '#6b7280';
+                    e.currentTarget.style.borderBottom = '2px solid transparent';
+                  }
+                }}
               >
                 {tab.label}
                 {tab.count > 0 && (
-                  <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                    statusFilter === tab.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
-                  }`}>
+                  <span style={{
+                    padding: '2px 8px',
+                    fontSize: '12px',
+                    borderRadius: '12px',
+                    backgroundColor: statusFilter === tab.id ? '#dbeafe' : '#f3f4f6',
+                    color: statusFilter === tab.id ? '#2563eb' : '#6b7280'
+                  }}>
                     {tab.count}
                   </span>
                 )}
               </button>
             ))}
-          </nav>
+          </div>
         </div>
 
-        <div className="space-y-4">
+        <div style={{ display: 'grid', gap: '16px' }}>
           {filteredPosts.map((post) => (
-            <div key={post.id} className="bg-white border border-gray-200 rounded-lg p-5">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-3">
-                    <span className={`px-3 py-1 text-sm rounded-full font-medium ${
-                      post.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      post.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                      post.status === 'complete' ? 'bg-green-100 text-green-800' :
-                      post.status === 'failed' ? 'bg-red-100 text-red-800' :
-                      'bg-orange-100 text-orange-800'
-                    }`}>
+            <div key={post.id} style={{
+              backgroundColor: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              padding: '20px'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between'
+              }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    marginBottom: '12px'
+                  }}>
+                    <span style={{
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      borderRadius: '12px',
+                      fontWeight: '500',
+                      backgroundColor: 
+                        post.status === 'pending' ? '#fef3c7' :
+                        post.status === 'processing' ? '#dbeafe' :
+                        post.status === 'complete' ? '#d1fae5' :
+                        post.status === 'failed' ? '#fee2e2' : '#fed7aa',
+                      color:
+                        post.status === 'pending' ? '#92400e' :
+                        post.status === 'processing' ? '#1e40af' :
+                        post.status === 'complete' ? '#065f46' :
+                        post.status === 'failed' ? '#991b1b' : '#9a3412'
+                    }}>
                       {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
                     </span>
-                    <span className="text-sm text-gray-500">
+                    <span style={{
+                      fontSize: '12px',
+                      color: '#6b7280'
+                    }}>
                       {new Date(post.scheduledDate).toLocaleString()}
                     </span>
-                    <span className="text-sm font-medium text-blue-600">
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      color: '#2563eb'
+                    }}>
                       {post.characterProfile}
                     </span>
                   </div>
                   
-                  <p className="text-gray-900 mb-3 text-base leading-relaxed">{post.description}</p>
+                  <p style={{
+                    color: '#111827',
+                    marginBottom: '12px',
+                    fontSize: '14px',
+                    lineHeight: '1.5',
+                    margin: '0 0 12px 0'
+                  }}>
+                    {post.description}
+                  </p>
                   
-                  <div className="flex items-center space-x-6 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-gray-500">Platforms:</span>
-                      <div className="flex space-x-1">
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '24px',
+                    fontSize: '12px'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <span style={{ color: '#6b7280' }}>Platforms:</span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
                         {post.platforms.map((platform, idx) => (
                           <span
                             key={idx}
-                            className={`px-2 py-1 rounded text-white text-xs font-medium ${platforms.find(p => p.id === platform.platformId)?.color || 'bg-gray-400'}`}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              color: 'white',
+                              fontSize: '10px',
+                              fontWeight: '500',
+                              backgroundColor: platforms.find(p => p.id === platform.platformId)?.color || '#9ca3af'
+                            }}
                           >
                             {platform.platformIcon}
                           </span>
@@ -695,35 +569,90 @@ export default function ScheduleComponent() {
                     </div>
                     
                     {post.mediaFiles.length > 0 && (
-                      <span className="flex items-center space-x-1 text-gray-500">
-                        <Eye className="h-4 w-4" />
+                      <span style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        color: '#6b7280'
+                      }}>
+                        <Eye style={{ height: '14px', width: '14px' }} />
                         <span>{post.mediaFiles.length} file(s)</span>
                       </span>
                     )}
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-2 ml-6">
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginLeft: '24px'
+                }}>
                   <button
                     onClick={() => handleEditPost(post)}
-                    className="p-2 text-gray-400 hover:text-blue-500 rounded-lg hover:bg-blue-50"
+                    style={{
+                      padding: '8px',
+                      color: '#6b7280',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
                     title="Edit"
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.color = '#3b82f6';
+                      e.currentTarget.style.backgroundColor = '#dbeafe';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.color = '#6b7280';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
-                    <Edit3 className="h-4 w-4" />
+                    <Edit3 style={{ height: '16px', width: '16px' }} />
                   </button>
                   
                   <button
                     onClick={() => handleSaveTemplate(post)}
-                    className="p-2 text-gray-400 hover:text-green-500 rounded-lg hover:bg-green-50"
+                    style={{
+                      padding: '8px',
+                      color: '#6b7280',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
                     title="Save as Template"
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.color = '#10b981';
+                      e.currentTarget.style.backgroundColor = '#d1fae5';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.color = '#6b7280';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
-                    <Save className="h-4 w-4" />
+                    <Save style={{ height: '16px', width: '16px' }} />
                   </button>
 
                   <button
                     onClick={() => handleCopyToPending(post)}
-                    className="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 font-medium"
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      backgroundColor: '#dbeafe',
+                      color: '#1e40af',
+                      borderRadius: '6px',
+                      fontWeight: '500',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
                     title="Copy to Pending Scheduling"
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#bfdbfe';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#dbeafe';
+                    }}
                   >
                     Copy
                   </button>
@@ -735,10 +664,25 @@ export default function ScheduleComponent() {
                         alert('Post deleted successfully!');
                       }
                     }}
-                    className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50"
+                    style={{
+                      padding: '8px',
+                      color: '#6b7280',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
                     title="Delete"
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.color = '#ef4444';
+                      e.currentTarget.style.backgroundColor = '#fee2e2';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.color = '#6b7280';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 style={{ height: '16px', width: '16px' }} />
                   </button>
                 </div>
               </div>
@@ -751,26 +695,96 @@ export default function ScheduleComponent() {
 
   const renderSavedTemplates = () => {
     return (
-      <div className="space-y-6">
+      <div style={{ display: 'grid', gap: '24px' }}>
         {savedTemplates.length === 0 ? (
-          <div className="bg-white p-8 rounded-lg border text-center">
-            <Save className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Saved Templates</h3>
-            <p className="text-gray-600">Save templates from Status Management to reuse them here.</p>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '32px',
+            borderRadius: '8px',
+            border: '1px solid #e5e7eb',
+            textAlign: 'center'
+          }}>
+            <Save style={{
+              height: '48px',
+              width: '48px',
+              color: '#9ca3af',
+              margin: '0 auto 16px auto'
+            }} />
+            <h3 style={{
+              fontSize: '16px',
+              fontWeight: '600',
+              color: '#111827',
+              margin: '0 0 8px 0'
+            }}>
+              No Saved Templates
+            </h3>
+            <p style={{
+              color: '#6b7280',
+              fontSize: '14px',
+              margin: '0'
+            }}>
+              Save templates from Status Management to reuse them here.
+            </p>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div style={{
+            display: 'grid',
+            gap: '16px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))'
+          }}>
             {savedTemplates.map((template) => (
-              <div key={template.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900">{template.name}</h3>
-                  <div className="flex items-center space-x-1">
+              <div key={template.id} style={{
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                padding: '16px',
+                transition: 'box-shadow 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+              >
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  marginBottom: '12px'
+                }}>
+                  <h3 style={{
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    color: '#111827',
+                    margin: '0'
+                  }}>
+                    {template.name}
+                  </h3>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
                     <button
                       onClick={() => handleEditTemplate(template)}
-                      className="p-1 text-gray-400 hover:text-blue-500 rounded"
+                      style={{
+                        padding: '4px',
+                        color: '#6b7280',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
                       title="Edit Template"
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.color = '#3b82f6';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.color = '#6b7280';
+                      }}
                     >
-                      <Edit3 className="h-4 w-4" />
+                      <Edit3 style={{ height: '14px', width: '14px' }} />
                     </button>
                     <button
                       onClick={() => {
@@ -779,39 +793,91 @@ export default function ScheduleComponent() {
                           alert('Template deleted successfully!');
                         }
                       }}
-                      className="p-1 text-gray-400 hover:text-red-500 rounded"
+                      style={{
+                        padding: '4px',
+                        color: '#6b7280',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
                       title="Delete Template"
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.color = '#ef4444';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.color = '#6b7280';
+                      }}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 style={{ height: '14px', width: '14px' }} />
                     </button>
                   </div>
                 </div>
                 
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center space-x-2 text-sm">
-                    <span className="text-gray-500">Profile:</span>
-                    <span className="font-medium text-blue-600">{template.characterProfile}</span>
+                <div style={{
+                  display: 'grid',
+                  gap: '8px',
+                  marginBottom: '16px'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '12px'
+                  }}>
+                    <span style={{ color: '#6b7280' }}>Profile:</span>
+                    <span style={{
+                      fontWeight: '500',
+                      color: '#2563eb'
+                    }}>
+                      {template.characterProfile}
+                    </span>
                   </div>
                   
-                  <div className="flex items-center space-x-2 text-sm">
-                    <span className="text-gray-500">Type:</span>
-                    <span className="text-gray-900">{template.type}</span>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '12px'
+                  }}>
+                    <span style={{ color: '#6b7280' }}>Type:</span>
+                    <span style={{ color: '#111827' }}>{template.type}</span>
                   </div>
                   
-                  <div className="text-sm">
-                    <span className="text-gray-500">Description:</span>
-                    <p className="text-gray-900 mt-1">{template.description}</p>
+                  <div style={{ fontSize: '12px' }}>
+                    <span style={{ color: '#6b7280' }}>Description:</span>
+                    <p style={{
+                      color: '#111827',
+                      marginTop: '4px',
+                      fontSize: '13px',
+                      lineHeight: '1.4',
+                      margin: '4px 0 0 0'
+                    }}>
+                      {template.description}
+                    </p>
                   </div>
                   
-                  <div className="flex items-center space-x-2 text-sm">
-                    <span className="text-gray-500">Platforms:</span>
-                    <div className="flex space-x-1">
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '12px'
+                  }}>
+                    <span style={{ color: '#6b7280' }}>Platforms:</span>
+                    <div style={{ display: 'flex', gap: '4px' }}>
                       {template.platforms.map((platform, idx) => {
                         const platformInfo = getPlatformIcon(platform.platformId);
                         return (
                           <span
                             key={idx}
-                            className={`px-2 py-1 rounded text-white text-xs font-medium ${platformInfo.color}`}
+                            style={{
+                              padding: '4px 6px',
+                              borderRadius: '4px',
+                              color: 'white',
+                              fontSize: '10px',
+                              fontWeight: '500',
+                              backgroundColor: platformInfo.color
+                            }}
                             title={platform.platformName}
                           >
                             {platformInfo.icon}
@@ -822,22 +888,65 @@ export default function ScheduleComponent() {
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-xs text-gray-500">
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '8px'
+                }}>
+                  <div style={{
+                    fontSize: '11px',
+                    color: '#6b7280'
+                  }}>
                     Used {template.usageCount} times
                   </div>
                 </div>
                 
-                <div className="flex space-x-2">
+                <div style={{
+                  display: 'flex',
+                  gap: '8px'
+                }}>
                   <button
                     onClick={() => handleCopyTemplate(template)}
-                    className="flex-1 px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 font-medium"
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      backgroundColor: '#f3f4f6',
+                      color: '#374151',
+                      fontSize: '12px',
+                      borderRadius: '6px',
+                      fontWeight: '500',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#e5e7eb';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                    }}
                   >
                     Copy & Edit
                   </button>
                   <button
                     onClick={() => handleUseTemplate(template)}
-                    className="flex-1 px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 font-medium"
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      fontSize: '12px',
+                      borderRadius: '6px',
+                      fontWeight: '500',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#2563eb';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#3b82f6';
+                    }}
                   >
                     Use Template
                   </button>
@@ -857,127 +966,327 @@ export default function ScheduleComponent() {
     { id: 'saved', label: 'Saved Templates', icon: Save },
   ];
 
-  const calendarViewOptions = [
-    { id: 'day', label: 'Day' },
-    { id: 'week', label: 'Week' },
-    { id: 'month', label: 'Month' },
-  ];
-
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+    <div style={{
+      display: 'grid',
+      gap: '20px',
+      padding: '20px',
+      backgroundColor: '#f9fafb',
+      minHeight: '100vh'
+    }}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Schedule Manager</h1>
-          <p className="text-gray-600">Schedule posts and track their delivery status</p>
+          <h1 style={{
+            fontSize: '24px',
+            fontWeight: 'bold',
+            color: '#111827',
+            margin: '0 0 4px 0'
+          }}>
+            📅 Schedule Manager
+          </h1>
+          <p style={{
+            color: '#6b7280',
+            fontSize: '14px',
+            margin: '0'
+          }}>
+            Schedule posts and track their delivery status
+          </p>
         </div>
         
-        <div className="flex items-center space-x-4 text-sm">
-          <div className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full font-medium">
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          fontSize: '12px'
+        }}>
+          <div style={{
+            backgroundColor: '#fed7aa',
+            color: '#9a3412',
+            padding: '6px 12px',
+            borderRadius: '12px',
+            fontWeight: '500'
+          }}>
             {pendingPosts.length} pending scheduling
           </div>
-          <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
+          <div style={{
+            backgroundColor: '#dbeafe',
+            color: '#1e40af',
+            padding: '6px 12px',
+            borderRadius: '12px',
+            fontWeight: '500'
+          }}>
             {scheduledPosts.filter(p => p.status === 'pending').length} scheduled
           </div>
-          <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">
+          <div style={{
+            backgroundColor: '#d1fae5',
+            color: '#065f46',
+            padding: '6px 12px',
+            borderRadius: '12px',
+            fontWeight: '500'
+          }}>
             {savedTemplates.length} templates
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 bg-white rounded-t-lg">
-        <nav className="-mb-px flex space-x-8 px-6">
+      <div style={{
+        borderBottom: '1px solid #e5e7eb',
+        backgroundColor: 'white',
+        borderRadius: '8px 8px 0 0'
+      }}>
+        <div style={{
+          display: 'flex',
+          gap: '32px',
+          padding: '0 24px',
+          marginBottom: '-1px'
+        }}>
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '16px 4px',
+                  borderBottom: activeTab === tab.id ? '2px solid #3b82f6' : '2px solid transparent',
+                  fontWeight: '500',
+                  fontSize: '14px',
+                  color: activeTab === tab.id ? '#2563eb' : '#6b7280',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+                onMouseOver={(e) => {
+                  if (activeTab !== tab.id) {
+                    e.currentTarget.style.color = '#374151';
+                    e.currentTarget.style.borderBottom = '2px solid #d1d5db';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (activeTab !== tab.id) {
+                    e.currentTarget.style.color = '#6b7280';
+                    e.currentTarget.style.borderBottom = '2px solid transparent';
+                  }
+                }}
               >
-                <Icon className="h-4 w-4" />
+                <Icon style={{ height: '16px', width: '16px' }} />
                 <span>{tab.label}</span>
                 {tab.id === 'pending' && pendingPosts.length > 0 && (
-                  <span className="bg-orange-100 text-orange-800 px-2 py-1 text-xs rounded-full font-medium">
+                  <span style={{
+                    backgroundColor: '#fed7aa',
+                    color: '#9a3412',
+                    padding: '2px 8px',
+                    fontSize: '11px',
+                    borderRadius: '12px',
+                    fontWeight: '500'
+                  }}>
                     {pendingPosts.length}
                   </span>
                 )}
                 {tab.id === 'saved' && savedTemplates.length > 0 && (
-                  <span className="bg-green-100 text-green-800 px-2 py-1 text-xs rounded-full font-medium">
+                  <span style={{
+                    backgroundColor: '#d1fae5',
+                    color: '#065f46',
+                    padding: '2px 8px',
+                    fontSize: '11px',
+                    borderRadius: '12px',
+                    fontWeight: '500'
+                  }}>
                     {savedTemplates.length}
                   </span>
                 )}
               </button>
             );
           })}
-        </nav>
+        </div>
       </div>
 
       {/* Tab Content */}
-      <div className="space-y-6">
+      <div style={{ display: 'grid', gap: '24px' }}>
         {activeTab === 'pending' && (
-          <div className="space-y-6">
+          <div style={{ display: 'grid', gap: '24px' }}>
             {pendingPosts.length === 0 ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
-                <Clock className="mx-auto h-12 w-12 text-blue-400 mb-4" />
-                <h3 className="text-lg font-medium text-blue-900 mb-2">Ready for Scheduling</h3>
-                <p className="text-blue-700">Posts from Content Manager will appear here for scheduling</p>
+              <div style={{
+                backgroundColor: '#dbeafe',
+                border: '1px solid #93c5fd',
+                borderRadius: '8px',
+                padding: '32px',
+                textAlign: 'center'
+              }}>
+                <Clock style={{
+                  height: '48px',
+                  width: '48px',
+                  color: '#3b82f6',
+                  margin: '0 auto 16px auto'
+                }} />
+                <h3 style={{
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  color: '#1e3a8a',
+                  margin: '0 0 8px 0'
+                }}>
+                  Ready for Scheduling
+                </h3>
+                <p style={{
+                  color: '#1e40af',
+                  fontSize: '14px',
+                  margin: '0'
+                }}>
+                  Posts from Content Manager will appear here for scheduling
+                </p>
               </div>
             ) : (
-              <div className="bg-white border border-gray-200 rounded-lg">
-                <div className="p-4 bg-blue-50 border-b border-blue-200 rounded-t-lg">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-5 w-5 text-blue-600" />
-                    <h2 className="text-lg font-semibold text-blue-900">Pending Scheduling ({pendingPosts.length})</h2>
+              <div style={{
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px'
+              }}>
+                <div style={{
+                  padding: '16px',
+                  backgroundColor: '#dbeafe',
+                  borderBottom: '1px solid #93c5fd',
+                  borderRadius: '8px 8px 0 0'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <Clock style={{
+                      height: '20px',
+                      width: '20px',
+                      color: '#2563eb'
+                    }} />
+                    <h2 style={{
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      color: '#1e3a8a',
+                      margin: '0'
+                    }}>
+                      Pending Scheduling ({pendingPosts.length})
+                    </h2>
                   </div>
-                  <p className="text-sm text-blue-700 mt-1">Click "Schedule" to set date and time for these posts</p>
+                  <p style={{
+                    fontSize: '12px',
+                    color: '#1e40af',
+                    marginTop: '4px',
+                    margin: '4px 0 0 0'
+                  }}>
+                    Click "Schedule" to set date and time for these posts
+                  </p>
                 </div>
                 
-                <div className="divide-y divide-gray-200">
-                  {pendingPosts.map((post) => (
-                    <div key={post.id} className="p-5 hover:bg-gray-50">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-3 mb-3">
-                            <span className="px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded-full font-medium">
+                <div>
+                  {pendingPosts.map((post, index) => (
+                    <div key={post.id} style={{
+                      padding: '20px',
+                      borderBottom: index < pendingPosts.length - 1 ? '1px solid #e5e7eb' : 'none'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f9fafb';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'white';
+                    }}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between'
+                      }}>
+                        <div style={{
+                          flex: 1,
+                          minWidth: 0
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            marginBottom: '12px'
+                          }}>
+                            <span style={{
+                              padding: '4px 12px',
+                              fontSize: '11px',
+                              backgroundColor: '#fed7aa',
+                              color: '#9a3412',
+                              borderRadius: '12px',
+                              fontWeight: '500'
+                            }}>
                               Ready to Schedule
                             </span>
-                            <span className="text-sm text-gray-500">
+                            <span style={{
+                              fontSize: '12px',
+                              color: '#6b7280'
+                            }}>
                               Created {post.createdDate.toLocaleDateString()}
                             </span>
-                            <span className="text-sm font-medium text-blue-600">
+                            <span style={{
+                              fontSize: '12px',
+                              fontWeight: '500',
+                              color: '#2563eb'
+                            }}>
                               {post.characterProfile}
                             </span>
                           </div>
                           
-                          <div className="mb-4">
-                            <p className="text-gray-900 text-base leading-relaxed">
+                          <div style={{ marginBottom: '16px' }}>
+                            <p style={{
+                              color: '#111827',
+                              fontSize: '14px',
+                              lineHeight: '1.5',
+                              margin: '0'
+                            }}>
                               {post.description}
                             </p>
                           </div>
                           
-                          <div className="flex items-center space-x-6 text-sm text-gray-500">
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '24px',
+                            fontSize: '12px',
+                            color: '#6b7280'
+                          }}>
                             {post.mediaFiles.length > 0 && (
-                              <span className="flex items-center space-x-1">
-                                <Eye className="h-4 w-4" />
+                              <span style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <Eye style={{ height: '14px', width: '14px' }} />
                                 <span>{post.mediaFiles.length} file(s)</span>
                               </span>
                             )}
                             
-                            <div className="flex items-center space-x-2">
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}>
                               <span>Platforms:</span>
-                              <div className="flex space-x-1">
+                              <div style={{ display: 'flex', gap: '4px' }}>
                                 {post.platforms.map((platform, idx) => {
                                   const platformInfo = getPlatformIcon(platform.platformId);
                                   return (
                                     <span
                                       key={idx}
-                                      className={`px-2 py-1 rounded text-white text-xs font-medium ${platformInfo.color}`}
+                                      style={{
+                                        padding: '4px 6px',
+                                        borderRadius: '4px',
+                                        color: 'white',
+                                        fontSize: '10px',
+                                        fontWeight: '500',
+                                        backgroundColor: platformInfo.color
+                                      }}
                                       title={platform.platformName}
                                     >
                                       {platformInfo.icon}
@@ -989,17 +1298,52 @@ export default function ScheduleComponent() {
                           </div>
                         </div>
                         
-                        <div className="flex items-center space-x-3 ml-6">
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          marginLeft: '24px'
+                        }}>
                           <button
                             onClick={() => handleEditPost(post)}
-                            className="px-3 py-2 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 font-medium"
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#4b5563',
+                              color: 'white',
+                              fontSize: '12px',
+                              borderRadius: '6px',
+                              fontWeight: '500',
+                              border: 'none',
+                              cursor: 'pointer'
+                            }}
                             title="Edit Post Content"
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.backgroundColor = '#374151';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor = '#4b5563';
+                            }}
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleSchedulePost(post)}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              borderRadius: '6px',
+                              fontWeight: '500',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '14px'
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.backgroundColor = '#2563eb';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor = '#3b82f6';
+                            }}
                           >
                             Schedule
                           </button>
@@ -1010,10 +1354,25 @@ export default function ScheduleComponent() {
                                 alert('Post deleted successfully!');
                               }
                             }}
-                            className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50"
+                            style={{
+                              padding: '8px',
+                              color: '#6b7280',
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer'
+                            }}
                             title="Delete"
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.color = '#ef4444';
+                              e.currentTarget.style.backgroundColor = '#fee2e2';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.color = '#6b7280';
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 style={{ height: '16px', width: '16px' }} />
                           </button>
                         </div>
                       </div>
@@ -1026,99 +1385,53 @@ export default function ScheduleComponent() {
         )}
 
         {activeTab === 'calendar' && (
-          <div className="space-y-4">
-            <div className="bg-white rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium text-gray-700">View:</span>
-                  {calendarViewOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={() => setCalendarView(option.id as 'day' | 'week' | 'month')}
-                      className={`px-3 py-1 text-sm rounded-lg font-medium ${
-                        calendarView === option.id
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-500">
-                    {scheduledPosts.length} scheduled posts
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-white rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <button
-                      onClick={() => {
-                        const newDate = new Date(currentDate);
-                        if (calendarView === 'month') {
-                          newDate.setMonth(currentDate.getMonth() - 1);
-                        } else if (calendarView === 'week') {
-                          newDate.setDate(currentDate.getDate() - 7);
-                        } else {
-                          newDate.setDate(currentDate.getDate() - 1);
-                        }
-                        setCurrentDate(newDate);
-                      }}
-                      className="p-2 rounded-lg border hover:bg-gray-50"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <h2 className="text-xl font-semibold min-w-[300px] text-center">
-                      {calendarView === 'month' && currentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
-                      {calendarView === 'week' && `Week of ${currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
-                      {calendarView === 'day' && currentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                    </h2>
-                    <button
-                      onClick={() => {
-                        const newDate = new Date(currentDate);
-                        if (calendarView === 'month') {
-                          newDate.setMonth(currentDate.getMonth() + 1);
-                        } else if (calendarView === 'week') {
-                          newDate.setDate(currentDate.getDate() + 7);
-                        } else {
-                          newDate.setDate(currentDate.getDate() + 1);
-                        }
-                        setCurrentDate(newDate);
-                      }}
-                      className="p-2 rounded-lg border hover:bg-gray-50"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                  
-                  <button
-                    onClick={() => setCurrentDate(new Date())}
-                    className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                  >
-                    Today
-                  </button>
-                </div>
-              </div>
-
-              {renderCalendarView()}
-            </div>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            textAlign: 'center',
+            color: '#6b7280'
+          }}>
+            <Calendar style={{
+              height: '64px',
+              width: '64px',
+              color: '#d1d5db',
+              margin: '0 auto 16px auto'
+            }} />
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '500',
+              color: '#111827',
+              margin: '0 0 8px 0'
+            }}>
+              Calendar View Coming Soon
+            </h3>
+            <p style={{
+              color: '#6b7280',
+              fontSize: '14px',
+              margin: '0'
+            }}>
+              Advanced calendar functionality will be available in the next update
+            </p>
           </div>
         )}
 
         {activeTab === 'status' && (
-          <div className="bg-white rounded-lg p-6">
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px'
+          }}>
             {renderStatusManagement()}
           </div>
         )}
 
         {activeTab === 'saved' && (
-          <div className="bg-white rounded-lg p-6">
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px'
+          }}>
             {renderSavedTemplates()}
           </div>
         )}
@@ -1126,35 +1439,122 @@ export default function ScheduleComponent() {
 
       {/* Schedule Modal */}
       {isScheduleModalOpen && selectedPendingPost && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Schedule Post</h2>
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '600px',
+            width: '90%',
+            margin: '16px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '16px'
+            }}>
+              <h2 style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                margin: '0',
+                color: '#111827'
+              }}>
+                Schedule Post
+              </h2>
               <button
                 onClick={() => setIsScheduleModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
+                style={{
+                  color: '#6b7280',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.color = '#374151';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.color = '#6b7280';
+                }}
               >
-                <X className="h-6 w-6" />
+                <X style={{ height: '20px', width: '20px' }} />
               </button>
             </div>
             
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <div className="flex items-center space-x-3 mb-3">
-                <span className="text-sm font-medium text-blue-600">{selectedPendingPost.characterProfile}</span>
-                <span className="text-sm text-gray-500">•</span>
-                <span className="text-sm text-gray-500">{selectedPendingPost.type}</span>
+            <div style={{
+              backgroundColor: '#f9fafb',
+              borderRadius: '8px',
+              padding: '16px',
+              marginBottom: '24px'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '12px'
+              }}>
+                <span style={{
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: '#2563eb'
+                }}>
+                  {selectedPendingPost.characterProfile}
+                </span>
+                <span style={{
+                  fontSize: '12px',
+                  color: '#6b7280'
+                }}>
+                  •
+                </span>
+                <span style={{
+                  fontSize: '12px',
+                  color: '#6b7280'
+                }}>
+                  {selectedPendingPost.type}
+                </span>
               </div>
-              <p className="text-gray-900 mb-3">{selectedPendingPost.description}</p>
+              <p style={{
+                color: '#111827',
+                marginBottom: '12px',
+                fontSize: '14px',
+                margin: '0 0 12px 0'
+              }}>
+                {selectedPendingPost.description}
+              </p>
               
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-500">Will post to:</span>
-                <div className="flex space-x-1">
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{
+                  fontSize: '12px',
+                  color: '#6b7280'
+                }}>
+                  Will post to:
+                </span>
+                <div style={{ display: 'flex', gap: '4px' }}>
                   {selectedPendingPost.platforms.map((platform, idx) => {
                     const platformInfo = getPlatformIcon(platform.platformId);
                     return (
                       <span
                         key={idx}
-                        className={`px-2 py-1 rounded text-white text-xs font-medium ${platformInfo.color}`}
+                        style={{
+                          padding: '4px 6px',
+                          borderRadius: '4px',
+                          color: 'white',
+                          fontSize: '10px',
+                          fontWeight: '500',
+                          backgroundColor: platformInfo.color
+                        }}
                         title={platform.platformName}
                       >
                         {platformInfo.icon}
@@ -1165,37 +1565,104 @@ export default function ScheduleComponent() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '16px',
+              marginBottom: '24px'
+            }}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                <label style={{
+                  display: 'block',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  Date
+                </label>
                 <input
                   type="date"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
                   min={new Date().toISOString().split('T')[0]}
                   defaultValue={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+                <label style={{
+                  display: 'block',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  Time
+                </label>
                 <input
                   type="time"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
                   defaultValue="09:00"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3">
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px'
+            }}>
               <button
                 onClick={() => setIsScheduleModalOpen(false)}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+                style={{
+                  padding: '10px 16px',
+                  color: '#6b7280',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontWeight: '500',
+                  backgroundColor: 'white',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmSchedule}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                style={{
+                  padding: '10px 24px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  borderRadius: '6px',
+                  fontWeight: '500',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#2563eb';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#3b82f6';
+                }}
               >
                 Schedule Post
               </button>
@@ -1206,60 +1673,179 @@ export default function ScheduleComponent() {
 
       {/* Edit Modal */}
       {isEditModalOpen && editingPost && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Edit Post</h2>
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '600px',
+            width: '90%',
+            margin: '16px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '16px'
+            }}>
+              <h2 style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                margin: '0',
+                color: '#111827'
+              }}>
+                Edit Post
+              </h2>
               <button
                 onClick={() => setIsEditModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
+                style={{
+                  color: '#6b7280',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.color = '#374151';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.color = '#6b7280';
+                }}
               >
-                <X className="h-6 w-6" />
+                <X style={{ height: '20px', width: '20px' }} />
               </button>
             </div>
             
-            <div className="space-y-4 mb-6">
+            <div style={{
+              display: 'grid',
+              gap: '16px',
+              marginBottom: '24px'
+            }}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Character Profile</label>
+                <label style={{
+                  display: 'block',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  Character Profile
+                </label>
                 <input
                   type="text"
                   value={editingPost.characterProfile}
                   onChange={(e) => setEditingPost({ ...editingPost, characterProfile: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <label style={{
+                  display: 'block',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  Type
+                </label>
                 <input
                   type="text"
                   value={editingPost.type}
                   onChange={(e) => setEditingPost({ ...editingPost, type: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <label style={{
+                  display: 'block',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  Description
+                </label>
                 <textarea
                   value={editingPost.description}
                   onChange={(e) => setEditingPost({ ...editingPost, description: e.target.value })}
                   rows={4}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    resize: 'vertical'
+                  }}
                 />
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3">
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px'
+            }}>
               <button
                 onClick={() => setIsEditModalOpen(false)}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+                style={{
+                  padding: '10px 16px',
+                  color: '#6b7280',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontWeight: '500',
+                  backgroundColor: 'white',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveEdit}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                style={{
+                  padding: '10px 24px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  borderRadius: '6px',
+                  fontWeight: '500',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#2563eb';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#3b82f6';
+                }}
               >
                 Save Changes
               </button>
@@ -1270,47 +1856,158 @@ export default function ScheduleComponent() {
 
       {/* Save Template Modal */}
       {isSaveTemplateModalOpen && selectedScheduledPost && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Save as Template</h2>
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '400px',
+            width: '90%',
+            margin: '16px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '16px'
+            }}>
+              <h2 style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                margin: '0',
+                color: '#111827'
+              }}>
+                Save as Template
+              </h2>
               <button
                 onClick={() => setIsSaveTemplateModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
+                style={{
+                  color: '#6b7280',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.color = '#374151';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.color = '#6b7280';
+                }}
               >
-                <X className="h-6 w-6" />
+                <X style={{ height: '20px', width: '20px' }} />
               </button>
             </div>
             
-            <div className="space-y-4 mb-6">
+            <div style={{
+              display: 'grid',
+              gap: '16px',
+              marginBottom: '24px'
+            }}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Template Name</label>
+                <label style={{
+                  display: 'block',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  Template Name
+                </label>
                 <input
                   type="text"
                   value={templateName}
                   onChange={(e) => setTemplateName(e.target.value)}
                   placeholder="Enter template name"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
                 />
               </div>
               
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-sm text-gray-600 mb-2">This will save the following as a template:</p>
-                <p className="text-sm font-medium">{selectedScheduledPost.description}</p>
+              <div style={{
+                backgroundColor: '#f9fafb',
+                borderRadius: '6px',
+                padding: '12px'
+              }}>
+                <p style={{
+                  fontSize: '12px',
+                  color: '#6b7280',
+                  marginBottom: '8px',
+                  margin: '0 0 8px 0'
+                }}>
+                  This will save the following as a template:
+                </p>
+                <p style={{
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  margin: '0'
+                }}>
+                  {selectedScheduledPost.description}
+                </p>
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3">
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px'
+            }}>
               <button
                 onClick={() => setIsSaveTemplateModalOpen(false)}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+                style={{
+                  padding: '10px 16px',
+                  color: '#6b7280',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontWeight: '500',
+                  backgroundColor: 'white',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmSaveTemplate}
                 disabled={!templateName.trim()}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  padding: '10px 24px',
+                  backgroundColor: !templateName.trim() ? '#d1d5db' : '#10b981',
+                  color: !templateName.trim() ? '#9ca3af' : 'white',
+                  borderRadius: '6px',
+                  fontWeight: '500',
+                  border: 'none',
+                  cursor: !templateName.trim() ? 'not-allowed' : 'pointer',
+                  fontSize: '14px'
+                }}
+                onMouseOver={(e) => {
+                  if (templateName.trim()) {
+                    e.currentTarget.style.backgroundColor = '#059669';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (templateName.trim()) {
+                    e.currentTarget.style.backgroundColor = '#10b981';
+                  }
+                }}
               >
                 Save Template
               </button>
@@ -1321,68 +2018,185 @@ export default function ScheduleComponent() {
 
       {/* Edit Template Modal */}
       {isEditTemplateModalOpen && editingTemplate && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Edit Template</h2>
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '600px',
+            width: '90%',
+            margin: '16px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '16px'
+            }}>
+              <h2 style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                margin: '0',
+                color: '#111827'
+              }}>
+                Edit Template
+              </h2>
               <button
                 onClick={() => setIsEditTemplateModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
+                style={{
+                  color: '#6b7280',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.color = '#374151';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.color = '#6b7280';
+                }}
               >
-                <X className="h-6 w-6" />
+                <X style={{ height: '20px', width: '20px' }} />
               </button>
             </div>
             
-            <div className="space-y-4 mb-6">
+            <div style={{
+              display: 'grid',
+              gap: '16px',
+              marginBottom: '24px'
+            }}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Template Name</label>
+                <label style={{
+                  display: 'block',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  Template Name
+                </label>
                 <input
                   type="text"
                   value={editingTemplate.name}
                   onChange={(e) => setEditingTemplate({ ...editingTemplate, name: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Character Profile</label>
+                <label style={{
+                  display: 'block',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  Character Profile
+                </label>
                 <input
                   type="text"
                   value={editingTemplate.characterProfile}
                   onChange={(e) => setEditingTemplate({ ...editingTemplate, characterProfile: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <label style={{
+                  display: 'block',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  Type
+                </label>
                 <input
                   type="text"
                   value={editingTemplate.type}
                   onChange={(e) => setEditingTemplate({ ...editingTemplate, type: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <label style={{
+                  display: 'block',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  Description
+                </label>
                 <textarea
                   value={editingTemplate.description}
                   onChange={(e) => setEditingTemplate({ ...editingTemplate, description: e.target.value })}
                   rows={4}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    resize: 'vertical'
+                  }}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Current Platforms</label>
-                <div className="flex space-x-2">
+                <label style={{
+                  display: 'block',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  Current Platforms
+                </label>
+                <div style={{
+                  display: 'flex',
+                  gap: '8px'
+                }}>
                   {editingTemplate.platforms.map((platform, idx) => {
                     const platformInfo = getPlatformIcon(platform.platformId);
                     return (
                       <span
                         key={idx}
-                        className={`px-3 py-1 rounded text-white text-sm font-medium ${platformInfo.color}`}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          color: 'white',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          backgroundColor: platformInfo.color
+                        }}
                         title={platform.platformName}
                       >
                         {platformInfo.icon} {platform.platformName}
@@ -1390,20 +2204,61 @@ export default function ScheduleComponent() {
                     );
                   })}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Platform selection will be available when integrated with Content Manager</p>
+                <p style={{
+                  fontSize: '11px',
+                  color: '#6b7280',
+                  marginTop: '4px',
+                  margin: '4px 0 0 0'
+                }}>
+                  Platform selection will be available when integrated with Content Manager
+                </p>
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3">
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px'
+            }}>
               <button
                 onClick={() => setIsEditTemplateModalOpen(false)}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+                style={{
+                  padding: '10px 16px',
+                  color: '#6b7280',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontWeight: '500',
+                  backgroundColor: 'white',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveTemplateEdit}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                style={{
+                  padding: '10px 24px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  borderRadius: '6px',
+                  fontWeight: '500',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#2563eb';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#3b82f6';
+                }}
               >
                 Save Changes
               </button>
