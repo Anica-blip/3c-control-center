@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 // IMPORT YOUR REAL COMPONENTS
+import HeaderControls from './HeaderControls';
 import ContentComponent from './contentcomponent';
 import WebChatComponent from './webchat';
 import ScheduleComponent from './schedulecomponent';
@@ -39,20 +40,181 @@ const ROUTES = {
 };
 
 // =============================================================================
-// TEMPORARY OVERVIEW COMPONENT (until you create the full one)
+// AUTHENTICATION STATE MANAGEMENT
 // =============================================================================
-const TemporaryOverviewComponent = () => (
+const AUTH_CONFIG = {
+  // Simple authentication for internal use
+  // TODO: Replace with proper authentication system
+  defaultPassword: '3c-internal-2025',
+  sessionKey: '3c-auth-session'
+};
+
+// =============================================================================
+// LOGIN COMPONENT
+// =============================================================================
+const LoginScreen = ({ onLogin }: { onLogin: (password: string) => void }) => {
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    // Simulate authentication delay
+    setTimeout(() => {
+      if (password === AUTH_CONFIG.defaultPassword) {
+        onLogin(password);
+      } else {
+        setError('Invalid password. Access denied.');
+        setPassword('');
+      }
+      setIsLoading(false);
+    }, 1000);
+  };
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px'
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '16px',
+        padding: '40px',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+        maxWidth: '400px',
+        width: '100%'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔐</div>
+          <h1 style={{
+            fontSize: '28px',
+            fontWeight: 'bold',
+            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            margin: '0 0 8px 0'
+          }}>
+            3C Content Center
+          </h1>
+          <p style={{
+            color: '#6b7280',
+            fontSize: '16px',
+            margin: '0'
+          }}>
+            Internal Dashboard Access
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: '#374151',
+              marginBottom: '8px'
+            }}>
+              Access Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter internal access password"
+              disabled={isLoading}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                fontSize: '16px',
+                outline: 'none',
+                boxSizing: 'border-box',
+                backgroundColor: isLoading ? '#f9fafb' : 'white'
+              }}
+              autoFocus
+            />
+          </div>
+
+          {error && (
+            <div style={{
+              padding: '12px 16px',
+              backgroundColor: '#fee2e2',
+              border: '1px solid #fca5a5',
+              borderRadius: '8px',
+              color: '#dc2626',
+              fontSize: '14px',
+              marginBottom: '24px'
+            }}>
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={isLoading || !password.trim()}
+            style={{
+              width: '100%',
+              padding: '12px 24px',
+              background: isLoading || !password.trim() 
+                ? '#9ca3af' 
+                : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: isLoading || !password.trim() ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {isLoading ? 'Authenticating...' : 'Access Dashboard'}
+          </button>
+        </form>
+
+        <div style={{
+          marginTop: '24px',
+          padding: '16px',
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          textAlign: 'center'
+        }}>
+          <p style={{
+            fontSize: '12px',
+            color: '#6b7280',
+            margin: '0'
+          }}>
+            🔒 Internal Use Only • Designed by Claude • © GitHub<br/>
+            Unauthorized access is prohibited
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// =============================================================================
+// TEMPORARY OVERVIEW COMPONENT
+// =============================================================================
+const TemporaryOverviewComponent = ({ isDarkMode }: { isDarkMode: boolean }) => (
   <div style={{ 
     padding: '40px',
-    backgroundColor: '#f8fafc',
+    backgroundColor: isDarkMode ? '#111827' : '#f8fafc',
     minHeight: '100vh'
   }}>
     <div style={{
-      backgroundColor: 'white',
+      backgroundColor: isDarkMode ? '#1f2937' : 'white',
       padding: '40px',
       borderRadius: '16px',
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-      border: '2px solid #3b82f6',
+      border: `2px solid #3b82f6`,
       marginBottom: '20px'
     }}>
       <h1 style={{
@@ -67,7 +229,7 @@ const TemporaryOverviewComponent = () => (
         🎯 3C Content Center
       </h1>
       <p style={{
-        color: '#6b7280',
+        color: isDarkMode ? '#d1d5db' : '#6b7280',
         fontSize: '18px',
         margin: '0 0 24px 0',
         textAlign: 'center'
@@ -120,26 +282,26 @@ const TemporaryOverviewComponent = () => (
       
       <div style={{
         padding: '16px',
-        backgroundColor: '#f9fafb',
+        backgroundColor: isDarkMode ? '#374151' : '#f9fafb',
         borderRadius: '8px',
         textAlign: 'center',
         fontSize: '14px',
-        color: '#6b7280'
+        color: isDarkMode ? '#d1d5db' : '#6b7280'
       }}>
         🔒 Internal Use Only • Navigation working • Overview component ready to deploy
       </div>
     </div>
     
     <div style={{
-      backgroundColor: 'white',
+      backgroundColor: isDarkMode ? '#1f2937' : 'white',
       padding: '20px',
       borderRadius: '12px',
-      border: '1px solid #e5e7eb',
+      border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
       textAlign: 'center'
     }}>
       <p style={{
         fontSize: '12px',
-        color: '#6b7280',
+        color: isDarkMode ? '#9ca3af' : '#6b7280',
         margin: '0'
       }}>
         🔒 Internal Use Only • Designed by Claude • © 2025 GitHub • 
@@ -152,40 +314,80 @@ const TemporaryOverviewComponent = () => (
 );
 
 // =============================================================================
-// MAIN DASHBOARD WITH URL NAVIGATION
+// MAIN DASHBOARD APPLICATION
 // =============================================================================
 function App() {
+  // Authentication State
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // UI State
   const [activeSection, setActiveSection] = useState('overview');
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Initialize authentication state
+  useEffect(() => {
+    const savedAuth = localStorage.getItem(AUTH_CONFIG.sessionKey);
+    const savedDarkMode = localStorage.getItem('3c-dark-mode');
+    
+    if (savedAuth === AUTH_CONFIG.defaultPassword) {
+      setIsLoggedIn(true);
+    }
+    
+    if (savedDarkMode === 'true') {
+      setIsDarkMode(true);
+    }
+    
+    setIsLoading(false);
+  }, []);
 
   // URL Navigation Handler
   useEffect(() => {
+    if (!isLoggedIn) return;
+
     const handleHashChange = () => {
-      const hash = window.location.hash.slice(1); // Remove # symbol
+      const hash = window.location.hash.slice(1);
       if (hash && Object.values(ROUTES).includes(hash)) {
         setActiveSection(hash);
       } else {
-        // Default to overview and update URL
         setActiveSection('overview');
         window.history.replaceState(null, '', '#overview');
       }
     };
 
-    // Set initial route
     handleHashChange();
-    
-    // Listen for hash changes
     window.addEventListener('hashchange', handleHashChange);
-    
-    // Cleanup
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+  }, [isLoggedIn]);
 
-  // Navigation handler that updates URL
+  // Authentication Handlers
+  const handleLogin = (password: string) => {
+    setIsLoggedIn(true);
+    localStorage.setItem(AUTH_CONFIG.sessionKey, password);
+    window.location.hash = 'overview';
+  };
+
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to logout from 3C Dashboard?')) {
+      setIsLoggedIn(false);
+      localStorage.removeItem(AUTH_CONFIG.sessionKey);
+      window.location.hash = '';
+    }
+  };
+
+  // UI Handlers
+  const handleToggleDarkMode = () => {
+    const newDarkMode = !isDarkMode;
+    setIsDarkMode(newDarkMode);
+    localStorage.setItem('3c-dark-mode', newDarkMode.toString());
+  };
+
   const navigateToSection = (sectionId: string) => {
     setActiveSection(sectionId);
     window.location.hash = sectionId;
   };
 
+  // Navigation Configuration
   const navigationItems = [
     { id: 'overview', icon: '📊', label: 'Overview', available: true },
     { id: 'content-manager', icon: '📝', label: 'Content Manager', available: true },
@@ -204,10 +406,11 @@ function App() {
     note: 'Admin/Brand feature'
   };
 
+  // Content Renderer
   const renderContent = () => {
     switch (activeSection) {
       case 'overview':
-        return <TemporaryOverviewComponent />;
+        return <TemporaryOverviewComponent isDarkMode={isDarkMode} />;
       case 'content-manager':
         return <ContentComponent />;
       case 'webchat-public':
@@ -221,19 +424,61 @@ function App() {
       case 'admin-center':
         return <AdminComponents />;
       case 'ai-chat-manager':
-        return <ComingSoonComponent title="AI Chat Manager" />;
+        return <ComingSoonComponent title="AI Chat Manager" isDarkMode={isDarkMode} />;
       default:
-        return <TemporaryOverviewComponent />;
+        return <TemporaryOverviewComponent isDarkMode={isDarkMode} />;
     }
   };
 
+  // Loading Screen
+  if (isLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          padding: '40px',
+          borderRadius: '16px',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚡</div>
+          <div style={{ fontSize: '18px', color: '#6b7280' }}>Loading 3C Dashboard...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show Login Screen if not authenticated
+  if (!isLoggedIn) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
+  // Main Dashboard
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
-      {/* LEFT SIDEBAR NAVIGATION */}
+    <div style={{ 
+      display: 'flex', 
+      minHeight: '100vh', 
+      backgroundColor: isDarkMode ? '#111827' : '#f8fafc' 
+    }}>
+      
+      {/* Header Controls */}
+      <HeaderControls 
+        isDarkMode={isDarkMode}
+        isLoggedIn={isLoggedIn}
+        onToggleDarkMode={handleToggleDarkMode}
+        onLoginLogout={handleLogout}
+      />
+
+      {/* Left Sidebar Navigation */}
       <div style={{ 
         width: '280px', 
-        backgroundColor: '#ffffff', 
-        borderRight: '1px solid #e5e7eb',
+        backgroundColor: isDarkMode ? '#1f2937' : '#ffffff', 
+        borderRight: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
         padding: '20px 0',
         display: 'flex',
         flexDirection: 'column'
@@ -241,12 +486,12 @@ function App() {
         {/* Logo/Header */}
         <div style={{ 
           padding: '0 20px 30px 20px', 
-          borderBottom: '1px solid #e5e7eb',
+          borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
           marginBottom: '20px'
         }}>
           <h2 style={{ 
             margin: '0', 
-            color: '#1f2937', 
+            color: isDarkMode ? '#f9fafb' : '#1f2937', 
             fontSize: '20px',
             fontWeight: 'bold'
           }}>
@@ -254,7 +499,7 @@ function App() {
           </h2>
           <p style={{ 
             margin: '5px 0 0 0', 
-            color: '#6b7280', 
+            color: isDarkMode ? '#d1d5db' : '#6b7280', 
             fontSize: '14px' 
           }}>
             Internal Dashboard
@@ -264,14 +509,14 @@ function App() {
           <div style={{
             marginTop: '12px',
             padding: '8px 12px',
-            backgroundColor: '#f3f4f6',
+            backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
             borderRadius: '6px',
             fontSize: '12px'
           }}>
-            <div style={{ color: '#374151', fontWeight: '500' }}>
+            <div style={{ color: isDarkMode ? '#f3f4f6' : '#374151', fontWeight: '500' }}>
               {DASHBOARD_CONFIG.flags['en-GB']} {DASHBOARD_CONFIG.language}
             </div>
-            <div style={{ color: '#6b7280' }}>
+            <div style={{ color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
               {DASHBOARD_CONFIG.timezone}
             </div>
           </div>
@@ -288,7 +533,8 @@ function App() {
                 padding: '12px 15px',
                 marginBottom: '5px',
                 backgroundColor: activeSection === item.id ? '#3b82f6' : 'transparent',
-                color: activeSection === item.id ? '#ffffff' : (item.available ? '#374151' : '#9ca3af'),
+                color: activeSection === item.id ? '#ffffff' : 
+                       (item.available ? (isDarkMode ? '#f3f4f6' : '#374151') : '#9ca3af'),
                 border: 'none',
                 borderRadius: '8px',
                 textAlign: 'left',
@@ -323,7 +569,7 @@ function App() {
         {/* Bottom Navigation Item */}
         <div style={{ 
           padding: '20px 10px 0 10px', 
-          borderTop: '1px solid #e5e7eb',
+          borderTop: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
           marginTop: '20px'
         }}>
           <button
@@ -367,12 +613,12 @@ function App() {
         {/* Security Footer */}
         <div style={{
           padding: '15px 20px',
-          borderTop: '1px solid #e5e7eb',
+          borderTop: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
           marginTop: '20px'
         }}>
           <div style={{
             fontSize: '11px',
-            color: '#6b7280',
+            color: isDarkMode ? '#9ca3af' : '#6b7280',
             textAlign: 'center',
             lineHeight: '1.4'
           }}>
@@ -392,8 +638,11 @@ function App() {
         </div>
       </div>
 
-      {/* MAIN CONTENT AREA */}
-      <div style={{ flex: '1', backgroundColor: '#ffffff' }}>
+      {/* Main Content Area */}
+      <div style={{ 
+        flex: '1', 
+        backgroundColor: isDarkMode ? '#111827' : '#ffffff' 
+      }}>
         {renderContent()}
       </div>
     </div>
@@ -401,13 +650,13 @@ function App() {
 }
 
 // =============================================================================
-// SIMPLE FALLBACK COMPONENT
+// COMING SOON COMPONENT
 // =============================================================================
-const ComingSoonComponent = ({ title }: { title: string }) => (
+const ComingSoonComponent = ({ title, isDarkMode }: { title: string; isDarkMode: boolean }) => (
   <div style={{ 
     padding: '40px',
     textAlign: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: isDarkMode ? '#111827' : '#f8fafc',
     minHeight: '100vh',
     display: 'flex',
     flexDirection: 'column',
@@ -415,16 +664,16 @@ const ComingSoonComponent = ({ title }: { title: string }) => (
     justifyContent: 'center'
   }}>
     <div style={{
-      backgroundColor: 'white',
+      backgroundColor: isDarkMode ? '#1f2937' : 'white',
       padding: '40px',
       borderRadius: '16px',
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-      border: '1px solid #e5e7eb',
+      border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
       maxWidth: '400px'
     }}>
       <div style={{ fontSize: '64px', marginBottom: '16px' }}>🚀</div>
       <h2 style={{ 
-        color: '#1f2937',
+        color: isDarkMode ? '#f9fafb' : '#1f2937',
         fontSize: '24px',
         fontWeight: 'bold',
         margin: '0 0 8px 0'
@@ -432,7 +681,7 @@ const ComingSoonComponent = ({ title }: { title: string }) => (
         {title}
       </h2>
       <p style={{
-        color: '#6b7280',
+        color: isDarkMode ? '#d1d5db' : '#6b7280',
         fontSize: '16px',
         margin: '0'
       }}>
