@@ -227,7 +227,7 @@ const OverviewComponent = () => {
       padding: '80px 20px 20px 20px'
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        {/* Header - Updated to Match Other Tabs Style */}
+        {/* Header with Clock on Right Side */}
         <div style={{
           backgroundColor: isDarkMode ? '#1e293b' : 'white',
           boxShadow: isDarkMode 
@@ -238,64 +238,56 @@ const OverviewComponent = () => {
           marginBottom: '24px',
           border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
         }}>
-          <h1 style={{
-            fontSize: '20px',
-            fontWeight: 'bold',
-            color: isDarkMode ? '#60a5fa' : '#3b82f6',
-            margin: '0 0 8px 0'
-          }}>
-            🎯 Overview
-          </h1>
-          <p style={{
-            color: isDarkMode ? '#94a3b8' : '#6b7280',
-            fontSize: '14px',
-            margin: '0'
-          }}>
-            Welcome to your content management dashboard
-          </p>
-        </div>
-
-        {/* Time Display */}
-        <div style={{
-          backgroundColor: isDarkMode ? '#1e293b' : 'white',
-          borderRadius: '8px',
-          padding: '20px',
-          marginBottom: '24px',
-          boxShadow: isDarkMode 
-            ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
-            : '0 4px 6px rgba(0, 0, 0, 0.1)',
-          border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            fontSize: '32px',
-            fontWeight: 'bold',
-            color: isDarkMode ? '#f8fafc' : '#111827',
-            marginBottom: '8px'
-          }}>
-            {currentTime.toLocaleTimeString('en-GB', { 
-              hour: '2-digit', 
-              minute: '2-digit',
-              timeZone: 'Europe/Lisbon'
-            })}
-          </div>
-          <div style={{
-            fontSize: '16px',
-            color: isDarkMode ? '#94a3b8' : '#6b7280',
-            marginBottom: '4px'
-          }}>
-            {currentTime.toLocaleDateString('en-GB', { 
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-              timeZone: 'Europe/Lisbon'
-            })}
-          </div>
-          <div style={{
-            fontSize: '12px',
-            color: isDarkMode ? '#64748b' : '#9ca3af'
-          }}>
-            WEST (UTC+1)
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h1 style={{
+                fontSize: '20px',
+                fontWeight: 'bold',
+                color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                margin: '0 0 8px 0'
+              }}>
+                🎯 Overview
+              </h1>
+              <p style={{
+                color: isDarkMode ? '#94a3b8' : '#6b7280',
+                fontSize: '14px',
+                margin: '0'
+              }}>
+                Welcome to your content management dashboard
+              </p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{
+                fontSize: '24px',
+                fontWeight: 'bold',
+                color: isDarkMode ? '#f8fafc' : '#111827',
+                marginBottom: '4px'
+              }}>
+                {currentTime.toLocaleTimeString('en-GB', { 
+                  hour: '2-digit', 
+                  minute: '2-digit',
+                  timeZone: 'Europe/Lisbon'
+                })}
+              </div>
+              <div style={{
+                fontSize: '12px',
+                color: isDarkMode ? '#94a3b8' : '#6b7280',
+                marginBottom: '2px'
+              }}>
+                {currentTime.toLocaleDateString('en-GB', { 
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  timeZone: 'Europe/Lisbon'
+                })}
+              </div>
+              <div style={{
+                fontSize: '10px',
+                color: isDarkMode ? '#64748b' : '#9ca3af'
+              }}>
+                WEST (UTC+1)
+              </div>
+            </div>
           </div>
         </div>
 
@@ -594,8 +586,12 @@ const ContentManager = () => {
           </p>
         </div>
 
-        {/* Component Content */}
-        <ContentComponent />
+        {/* Component Content - Direct Render */}
+        <div style={{
+          // Remove any background override, let the component handle its own styling
+        }}>
+          <ContentComponent />
+        </div>
       </div>
     </div>
   );
@@ -604,6 +600,33 @@ const ContentManager = () => {
 // WebChat Component with Dark Mode Support
 const WebChatComponent = () => {
   const { isDarkMode } = useTheme();
+  
+  useEffect(() => {
+    // Add custom styles for chat sub-navigation
+    const style = document.createElement('style');
+    style.textContent = `
+      ${isDarkMode ? `
+        /* Chat Manager specific styling */
+        .chat-content button[style*="border-bottom"] {
+          color: white !important;
+          font-weight: bold !important;
+          font-size: 12px !important;
+        }
+        
+        /* Tab navigation buttons in dark mode */
+        .chat-content div[style*="border-bottom"] button {
+          color: white !important;
+          font-weight: bold !important;
+          font-size: 12px !important;
+        }
+      ` : ''}
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, [isDarkMode]);
   
   return (
     <div style={{
@@ -644,8 +667,10 @@ const WebChatComponent = () => {
           </p>
         </div>
 
-        {/* Component Content */}
-        <ChatManagerPublic />
+        {/* Component Content with custom class for styling */}
+        <div className="chat-content">
+          <ChatManagerPublic />
+        </div>
       </div>
     </div>
   );
@@ -755,6 +780,33 @@ const MarketingComponent = () => {
 const SettingsComponent = () => {
   const { isDarkMode } = useTheme();
   
+  useEffect(() => {
+    // Add custom styles for settings sub-navigation
+    const style = document.createElement('style');
+    style.textContent = `
+      ${isDarkMode ? `
+        /* Settings specific styling */
+        .settings-content button[style*="border-bottom"] {
+          color: white !important;
+          font-weight: bold !important;
+          font-size: 12px !important;
+        }
+        
+        /* Tab navigation buttons in dark mode */
+        .settings-content div[style*="border-bottom"] button {
+          color: white !important;
+          font-weight: bold !important;
+          font-size: 12px !important;
+        }
+      ` : ''}
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, [isDarkMode]);
+  
   return (
     <div style={{
       minHeight: '100vh',
@@ -794,8 +846,10 @@ const SettingsComponent = () => {
           </p>
         </div>
 
-        {/* Component Content */}
-        <SettingsComponentContent />
+        {/* Component Content with custom class for styling */}
+        <div className="settings-content">
+          <SettingsComponentContent />
+        </div>
       </div>
     </div>
   );
@@ -804,6 +858,33 @@ const SettingsComponent = () => {
 // Admin Components with Dark Mode Support
 const AdminComponents = () => {
   const { isDarkMode } = useTheme();
+  
+  useEffect(() => {
+    // Add custom styles for admin sub-navigation
+    const style = document.createElement('style');
+    style.textContent = `
+      ${isDarkMode ? `
+        /* Admin Center specific styling */
+        .admin-content button[style*="border-bottom"] {
+          color: white !important;
+          font-weight: bold !important;
+          font-size: 12px !important;
+        }
+        
+        /* Tab navigation buttons in dark mode */
+        .admin-content div[style*="border-bottom"] button {
+          color: white !important;
+          font-weight: bold !important;
+          font-size: 12px !important;
+        }
+      ` : ''}
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, [isDarkMode]);
   
   return (
     <div style={{
@@ -844,8 +925,10 @@ const AdminComponents = () => {
           </p>
         </div>
 
-        {/* Component Content */}
-        <AdminComponentsContent />
+        {/* Component Content with custom class for styling */}
+        <div className="admin-content">
+          <AdminComponentsContent />
+        </div>
       </div>
     </div>
   );
