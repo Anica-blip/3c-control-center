@@ -227,56 +227,75 @@ const OverviewComponent = () => {
       padding: '80px 20px 20px 20px'
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        {/* Welcome Header */}
+        {/* Header - Updated to Match Other Tabs Style */}
         <div style={{
-          background: isDarkMode 
-            ? 'linear-gradient(135deg, #1e293b 0%, #334155 100%)'
-            : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-          borderRadius: '12px',
-          padding: '32px',
-          marginBottom: '24px',
-          color: 'white',
+          backgroundColor: isDarkMode ? '#1e293b' : 'white',
           boxShadow: isDarkMode 
-            ? '0 8px 25px rgba(0, 0, 0, 0.3)' 
-            : '0 8px 25px rgba(59, 130, 246, 0.2)'
+            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          borderRadius: '8px',
+          padding: '20px',
+          marginBottom: '24px',
+          border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h1 style={{
-                fontSize: '32px',
-                fontWeight: 'bold',
-                margin: '0 0 8px 0'
-              }}>
-                🎯 3C Control Center
-              </h1>
-              <p style={{
-                fontSize: '18px',
-                opacity: 0.9,
-                margin: '0'
-              }}>
-                Welcome to your content management dashboard
-              </p>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
-                {currentTime.toLocaleTimeString('en-GB', { 
-                  hour: '2-digit', 
-                  minute: '2-digit',
-                  timeZone: 'Europe/Lisbon'
-                })}
-              </div>
-              <div style={{ fontSize: '14px', opacity: 0.8 }}>
-                {currentTime.toLocaleDateString('en-GB', { 
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                  timeZone: 'Europe/Lisbon'
-                })}
-              </div>
-              <div style={{ fontSize: '12px', opacity: 0.7 }}>
-                WEST (UTC+1)
-              </div>
-            </div>
+          <h1 style={{
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: isDarkMode ? '#60a5fa' : '#3b82f6',
+            margin: '0 0 8px 0'
+          }}>
+            🎯 Overview
+          </h1>
+          <p style={{
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            fontSize: '14px',
+            margin: '0'
+          }}>
+            Welcome to your content management dashboard
+          </p>
+        </div>
+
+        {/* Time Display */}
+        <div style={{
+          backgroundColor: isDarkMode ? '#1e293b' : 'white',
+          borderRadius: '8px',
+          padding: '20px',
+          marginBottom: '24px',
+          boxShadow: isDarkMode 
+            ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
+            : '0 4px 6px rgba(0, 0, 0, 0.1)',
+          border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            fontSize: '32px',
+            fontWeight: 'bold',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            marginBottom: '8px'
+          }}>
+            {currentTime.toLocaleTimeString('en-GB', { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              timeZone: 'Europe/Lisbon'
+            })}
+          </div>
+          <div style={{
+            fontSize: '16px',
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            marginBottom: '4px'
+          }}>
+            {currentTime.toLocaleDateString('en-GB', { 
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+              timeZone: 'Europe/Lisbon'
+            })}
+          </div>
+          <div style={{
+            fontSize: '12px',
+            color: isDarkMode ? '#64748b' : '#9ca3af'
+          }}>
+            WEST (UTC+1)
           </div>
         </div>
 
@@ -520,13 +539,17 @@ const OverviewComponent = () => {
             fontSize: '11px',
             margin: '0'
           }}>
-            🌍 Language: English (UK) • ⏰ Timezone: WEST (UTC+1) • 🎯 3C Control Center v1.0
+            🌐 Language: English (UK) • ⏰ Timezone: WEST (UTC+1) • 🎯 3C Control Center v1.0
           </p>
         </div>
       </div>
     </div>
   );
 };
+
+// =============================================================================
+// COMPONENT WRAPPERS WITH DARK MODE HEADERS
+// =============================================================================
 
 // Content Manager Component with Dark Mode Support
 const ContentManager = () => {
@@ -555,8 +578,8 @@ const ContentManager = () => {
           border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
         }}>
           <h1 style={{
-            fontSize: '24px',
-            fontWeight: 'black',
+            fontSize: '20px',
+            fontWeight: 'bold',
             color: isDarkMode ? '#60a5fa' : '#3b82f6',
             margin: '0 0 8px 0'
           }}>
@@ -564,25 +587,15 @@ const ContentManager = () => {
           </h1>
           <p style={{
             color: isDarkMode ? '#94a3b8' : '#6b7280',
-            fontSize: '16px',
-            margin: '0',
-            fontWeight: 'bold'
+            fontSize: '14px',
+            margin: '0'
           }}>
             Create, manage, and schedule your social media content with ease
           </p>
         </div>
 
-        {/* Rest of component wrapped in light container */}
-        <div style={{
-          backgroundColor: '#f3f4f6',
-          borderRadius: '8px',
-          boxShadow: isDarkMode 
-            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          overflow: 'hidden'
-        }}>
-          <ContentComponent />
-        </div>
+        {/* Component Content */}
+        <ContentComponent />
       </div>
     </div>
   );
@@ -615,8 +628,8 @@ const WebChatComponent = () => {
           border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
         }}>
           <h1 style={{
-            fontSize: '24px',
-            fontWeight: 'black',
+            fontSize: '20px',
+            fontWeight: 'bold',
             color: isDarkMode ? '#60a5fa' : '#3b82f6',
             margin: '0 0 8px 0'
           }}>
@@ -624,25 +637,15 @@ const WebChatComponent = () => {
           </h1>
           <p style={{
             color: isDarkMode ? '#94a3b8' : '#6b7280',
-            fontSize: '16px',
-            margin: '0',
-            fontWeight: 'bold'
+            fontSize: '14px',
+            margin: '0'
           }}>
             Manage customer communications, support emails, and notifications
           </p>
         </div>
 
-        {/* Rest of component wrapped in white container */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          boxShadow: isDarkMode 
-            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          overflow: 'hidden'
-        }}>
-          <ChatManagerPublic />
-        </div>
+        {/* Component Content */}
+        <ChatManagerPublic />
       </div>
     </div>
   );
@@ -675,8 +678,8 @@ const ScheduleComponent = () => {
           border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
         }}>
           <h1 style={{
-            fontSize: '24px',
-            fontWeight: 'black',
+            fontSize: '20px',
+            fontWeight: 'bold',
             color: isDarkMode ? '#60a5fa' : '#3b82f6',
             margin: '0 0 8px 0'
           }}>
@@ -684,25 +687,15 @@ const ScheduleComponent = () => {
           </h1>
           <p style={{
             color: isDarkMode ? '#94a3b8' : '#6b7280',
-            fontSize: '16px',
-            margin: '0',
-            fontWeight: 'bold'
+            fontSize: '14px',
+            margin: '0'
           }}>
             Schedule posts and track their delivery status
           </p>
         </div>
 
-        {/* Rest of component wrapped in white container */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          boxShadow: isDarkMode 
-            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          overflow: 'hidden'
-        }}>
-          <ScheduleComponentContent />
-        </div>
+        {/* Component Content */}
+        <ScheduleComponentContent />
       </div>
     </div>
   );
@@ -735,8 +728,8 @@ const MarketingComponent = () => {
           border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
         }}>
           <h1 style={{
-            fontSize: '24px',
-            fontWeight: 'black',
+            fontSize: '20px',
+            fontWeight: 'bold',
             color: isDarkMode ? '#60a5fa' : '#3b82f6',
             margin: '0 0 8px 0'
           }}>
@@ -744,25 +737,15 @@ const MarketingComponent = () => {
           </h1>
           <p style={{
             color: isDarkMode ? '#94a3b8' : '#6b7280',
-            fontSize: '16px',
-            margin: '0',
-            fontWeight: 'bold'
+            fontSize: '14px',
+            margin: '0'
           }}>
             Comprehensive dashboard for persona management, content strategy, and analytics
           </p>
         </div>
 
-        {/* Rest of component wrapped in white container */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          boxShadow: isDarkMode 
-            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          overflow: 'hidden'
-        }}>
-          <MarketingControlCenter />
-        </div>
+        {/* Component Content */}
+        <MarketingControlCenter />
       </div>
     </div>
   );
@@ -795,8 +778,8 @@ const SettingsComponent = () => {
           border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
         }}>
           <h1 style={{
-            fontSize: '24px',
-            fontWeight: 'black',
+            fontSize: '20px',
+            fontWeight: 'bold',
             color: isDarkMode ? '#60a5fa' : '#3b82f6',
             margin: '0 0 8px 0'
           }}>
@@ -804,25 +787,15 @@ const SettingsComponent = () => {
           </h1>
           <p style={{
             color: isDarkMode ? '#94a3b8' : '#6b7280',
-            fontSize: '16px',
-            margin: '0',
-            fontWeight: 'bold'
+            fontSize: '14px',
+            margin: '0'
           }}>
             Configure social platforms, Telegram channels, and character profiles
           </p>
         </div>
 
-        {/* Rest of component wrapped in white container */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          boxShadow: isDarkMode 
-            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          overflow: 'hidden'
-        }}>
-          <SettingsComponentContent />
-        </div>
+        {/* Component Content */}
+        <SettingsComponentContent />
       </div>
     </div>
   );
@@ -855,8 +828,8 @@ const AdminComponents = () => {
           border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
         }}>
           <h1 style={{
-            fontSize: '24px',
-            fontWeight: 'black',
+            fontSize: '20px',
+            fontWeight: 'bold',
             color: isDarkMode ? '#60a5fa' : '#3b82f6',
             margin: '0 0 8px 0'
           }}>
@@ -864,25 +837,15 @@ const AdminComponents = () => {
           </h1>
           <p style={{
             color: isDarkMode ? '#94a3b8' : '#6b7280',
-            fontSize: '16px',
-            margin: '0',
-            fontWeight: 'bold'
+            fontSize: '14px',
+            margin: '0'
           }}>
             Advanced configuration, templates, and system management
           </p>
         </div>
 
-        {/* Rest of component wrapped in white container */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          boxShadow: isDarkMode 
-            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          overflow: 'hidden'
-        }}>
-          <AdminComponentsContent />
-        </div>
+        {/* Component Content */}
+        <AdminComponentsContent />
       </div>
     </div>
   );
@@ -915,8 +878,8 @@ const AiChatManagerComponent = () => {
           border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
         }}>
           <h1 style={{
-            fontSize: '24px',
-            fontWeight: 'black',
+            fontSize: '20px',
+            fontWeight: 'bold',
             color: isDarkMode ? '#60a5fa' : '#3b82f6',
             margin: '0 0 8px 0'
           }}>
@@ -924,9 +887,8 @@ const AiChatManagerComponent = () => {
           </h1>
           <p style={{
             color: isDarkMode ? '#94a3b8' : '#6b7280',
-            fontSize: '16px',
-            margin: '0',
-            fontWeight: 'bold'
+            fontSize: '14px',
+            margin: '0'
           }}>
             Advanced AI conversation management and automation
           </p>
@@ -1111,16 +1073,6 @@ function App() {
   const changeLanguage = (lang: string) => {
     setCurrentLanguage(lang);
     localStorage.setItem('3c-language', lang);
-  };
-
-  const getLanguageFlag = (lang: string) => {
-    const flags = {
-      'en-GB': '🇬🇧',
-      'pt-PT': '🇵🇹',
-      'fr-FR': '🇫🇷',
-      'de-DE': '🇩🇪'
-    };
-    return flags[lang as keyof typeof flags] || '🇬🇧';
   };
 
   const navigationItems = [
