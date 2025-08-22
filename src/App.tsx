@@ -169,6 +169,7 @@ const OverviewComponent = ({ onNavigate, isDarkMode }: { onNavigate: (section: s
   return (
     <div style={{ 
       padding: '20px',
+      paddingTop: '100px', // Space for HeaderControls
       backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
       minHeight: '100vh'
     }}>
@@ -348,6 +349,7 @@ const OverviewComponent = ({ onNavigate, isDarkMode }: { onNavigate: (section: s
 const ComingSoonComponent = ({ title, isDarkMode }: { title: string; isDarkMode: boolean }) => (
   <div style={{ 
     padding: '20px',
+    paddingTop: '100px', // Space for HeaderControls
     backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
     minHeight: '100vh',
     display: 'flex',
@@ -490,17 +492,17 @@ function App() {
       case 'overview':
         return <OverviewComponent onNavigate={handleNavigation} isDarkMode={isDarkMode} />;
       case 'content-manager':
-        return <ContentComponent />;
+        return <ContentComponent isDarkMode={isDarkMode} />;
       case 'webchat-public':
-        return <WebChatComponent />;
+        return <WebChatComponent isDarkMode={isDarkMode} />;
       case 'schedule-manager':
-        return <ScheduleComponent />;
+        return <ScheduleComponent isDarkMode={isDarkMode} />;
       case 'marketing-center':
-        return <MarketingComponent />;
+        return <MarketingComponent isDarkMode={isDarkMode} />;
       case 'settings':
-        return <SettingsComponent />;
+        return <SettingsComponent isDarkMode={isDarkMode} />;
       case 'admin-center':
-        return <AdminComponents />;
+        return <AdminComponents isDarkMode={isDarkMode} />;
       case 'ai-chat-manager':
         return <ComingSoonComponent title="AI Chat Manager" isDarkMode={isDarkMode} />;
       default:
