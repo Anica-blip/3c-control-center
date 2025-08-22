@@ -1,5 +1,4 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { createRoot } from 'react-dom/client';
 
 // Import your real components
 import ContentComponent from './contentcomponent';
@@ -1452,9 +1451,5 @@ function App() {
     </ThemeContext.Provider>
   );
 }
-
-// =============================================================================
-// EXPORT APPLICATION
-// =============================================================================
 
 export default App;
