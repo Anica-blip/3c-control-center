@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 // IMPORT YOUR REAL COMPONENTS
+import OverviewComponent from './OverviewComponent';
 import ContentComponent from './contentcomponent';
 import WebChatComponent from './webchat';
 import ScheduleComponent from './schedulecomponent';
@@ -9,14 +10,72 @@ import SettingsComponent from './settingscomponent';
 import AdminComponents from './admincomponents';
 
 // =============================================================================
-// MAIN DASHBOARD - NAVIGATION WORKING
+// FIXED DASHBOARD CONFIGURATION
 // =============================================================================
+const DASHBOARD_CONFIG = {
+  timezone: 'WEST (UTC+1)',
+  language: 'en-GB',
+  translations: ['pt-PT', 'fr-FR', 'de-DE'],
+  flags: {
+    'en-GB': '🇬🇧',
+    'pt-PT': '🇵🇹', 
+    'fr-FR': '🇫🇷',
+    'de-DE': '🇩🇪'
+  },
+  baseUrl: 'anica-blip.github.io/3c-control-center'
+};
 
+// =============================================================================
+// URL NAVIGATION ROUTES
+// =============================================================================
+const ROUTES = {
+  overview: 'overview',
+  'content-manager': 'content-manager',
+  'webchat-public': 'webchat-public', 
+  'schedule-manager': 'schedule-manager',
+  'marketing-center': 'marketing-center',
+  'settings': 'settings',
+  'admin-center': 'admin-center',
+  'ai-chat-manager': 'ai-chat-manager'
+};
+
+// =============================================================================
+// MAIN DASHBOARD WITH URL NAVIGATION
+// =============================================================================
 function App() {
-  const [activeSection, setActiveSection] = useState('content-manager');
+  const [activeSection, setActiveSection] = useState('overview');
+
+  // URL Navigation Handler
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1); // Remove # symbol
+      if (hash && Object.values(ROUTES).includes(hash)) {
+        setActiveSection(hash);
+      } else {
+        // Default to overview and update URL
+        setActiveSection('overview');
+        window.history.replaceState(null, '', '#overview');
+      }
+    };
+
+    // Set initial route
+    handleHashChange();
+    
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHashChange);
+    
+    // Cleanup
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Navigation handler that updates URL
+  const navigateToSection = (sectionId: string) => {
+    setActiveSection(sectionId);
+    window.location.hash = sectionId;
+  };
 
   const navigationItems = [
-    { id: 'overview', icon: '📊', label: 'Overview', available: false },
+    { id: 'overview', icon: '📊', label: 'Overview', available: true },
     { id: 'content-manager', icon: '📝', label: 'Content Manager', available: true },
     { id: 'webchat-public', icon: '💬', label: 'WebChat Public', available: true },
     { id: 'schedule-manager', icon: '📅', label: 'Schedule Manager', available: true },
@@ -36,7 +95,7 @@ function App() {
   const renderContent = () => {
     switch (activeSection) {
       case 'overview':
-        return <ComingSoonComponent title="Overview" />;
+        return <OverviewComponent />;
       case 'content-manager':
         return <ContentComponent />;
       case 'webchat-public':
@@ -52,7 +111,7 @@ function App() {
       case 'ai-chat-manager':
         return <ComingSoonComponent title="AI Chat Manager" />;
       default:
-        return <ComingSoonComponent title={activeSection} />;
+        return <OverviewComponent />;
     }
   };
 
@@ -86,8 +145,24 @@ function App() {
             color: '#6b7280', 
             fontSize: '14px' 
           }}>
-            Dashboard
+            Internal Dashboard
           </p>
+          
+          {/* Current Config Display */}
+          <div style={{
+            marginTop: '12px',
+            padding: '8px 12px',
+            backgroundColor: '#f3f4f6',
+            borderRadius: '6px',
+            fontSize: '12px'
+          }}>
+            <div style={{ color: '#374151', fontWeight: '500' }}>
+              {DASHBOARD_CONFIG.flags['en-GB']} {DASHBOARD_CONFIG.language}
+            </div>
+            <div style={{ color: '#6b7280' }}>
+              {DASHBOARD_CONFIG.timezone}
+            </div>
+          </div>
         </div>
 
         {/* Main Navigation */}
@@ -95,7 +170,7 @@ function App() {
           {navigationItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => item.available && setActiveSection(item.id)}
+              onClick={() => item.available && navigateToSection(item.id)}
               style={{
                 width: '100%',
                 padding: '12px 15px',
@@ -140,7 +215,7 @@ function App() {
           marginTop: '20px'
         }}>
           <button
-            onClick={() => bottomNavItem.available && setActiveSection(bottomNavItem.id)}
+            onClick={() => bottomNavItem.available && navigateToSection(bottomNavItem.id)}
             style={{
               width: '100%',
               padding: '12px 15px',
@@ -176,6 +251,33 @@ function App() {
             )}
           </button>
         </div>
+
+        {/* Security Footer */}
+        <div style={{
+          padding: '15px 20px',
+          borderTop: '1px solid #e5e7eb',
+          marginTop: '20px'
+        }}>
+          <div style={{
+            fontSize: '11px',
+            color: '#6b7280',
+            textAlign: 'center',
+            lineHeight: '1.4'
+          }}>
+            <div style={{ marginBottom: '4px' }}>
+              🔒 <strong>Internal Use Only</strong>
+            </div>
+            <div style={{ marginBottom: '4px' }}>
+              Designed by Claude • © GitHub
+            </div>
+            <div style={{ 
+              color: '#3b82f6',
+              wordBreak: 'break-all'
+            }}>
+              {DASHBOARD_CONFIG.baseUrl}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* MAIN CONTENT AREA */}
@@ -189,11 +291,42 @@ function App() {
 // =============================================================================
 // SIMPLE FALLBACK COMPONENT
 // =============================================================================
-
 const ComingSoonComponent = ({ title }: { title: string }) => (
-  <div style={{ padding: '20px' }}>
-    <h2>{title}</h2>
-    <p>Coming soon</p>
+  <div style={{ 
+    padding: '40px',
+    textAlign: 'center',
+    backgroundColor: '#f8fafc',
+    minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center'
+  }}>
+    <div style={{
+      backgroundColor: 'white',
+      padding: '40px',
+      borderRadius: '16px',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      border: '1px solid #e5e7eb',
+      maxWidth: '400px'
+    }}>
+      <div style={{ fontSize: '64px', marginBottom: '16px' }}>🚀</div>
+      <h2 style={{ 
+        color: '#1f2937',
+        fontSize: '24px',
+        fontWeight: 'bold',
+        margin: '0 0 8px 0'
+      }}>
+        {title}
+      </h2>
+      <p style={{
+        color: '#6b7280',
+        fontSize: '16px',
+        margin: '0'
+      }}>
+        Coming soon to your 3C Dashboard
+      </p>
+    </div>
   </div>
 );
 
