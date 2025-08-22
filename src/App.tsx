@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { createRoot } from 'react-dom/client';
 
 // IMPORT YOUR REAL COMPONENTS
-import HeaderControls from './HeaderControls';
 import ContentComponent from './contentcomponent';
 import WebChatComponent from './webchat';
 import ScheduleComponent from './schedulecomponent';
@@ -9,66 +9,28 @@ import MarketingComponent from './marketingcomponent';
 import SettingsComponent from './settingscomponent';
 import AdminComponents from './admincomponents';
 
-// =============================================================================
-// FIXED DASHBOARD CONFIGURATION
-// =============================================================================
-const DASHBOARD_CONFIG = {
-  timezone: 'WEST (UTC+1)',
-  language: 'en-GB',
-  translations: ['pt-PT', 'fr-FR', 'de-DE'],
-  flags: {
-    'en-GB': '🇬🇧',
-    'pt-PT': '🇵🇹', 
-    'fr-FR': '🇫🇷',
-    'de-DE': '🇩🇪'
-  },
-  baseUrl: 'anica-blip.github.io/3c-control-center'
-};
+// Import HeaderControls - using lowercase to match your file
+import HeaderControls from './headercontrols';
 
 // =============================================================================
-// URL NAVIGATION ROUTES
+// AUTHENTICATION COMPONENT
 // =============================================================================
-const ROUTES = {
-  overview: 'overview',
-  'content-manager': 'content-manager',
-  'webchat-public': 'webchat-public', 
-  'schedule-manager': 'schedule-manager',
-  'marketing-center': 'marketing-center',
-  'settings': 'settings',
-  'admin-center': 'admin-center',
-  'ai-chat-manager': 'ai-chat-manager'
-};
-
-// =============================================================================
-// AUTHENTICATION STATE MANAGEMENT
-// =============================================================================
-const AUTH_CONFIG = {
-  // Simple authentication for internal use
-  // TODO: Replace with proper authentication system
-  defaultPassword: '3c-internal-2025',
-  sessionKey: '3c-auth-session'
-};
-
-// =============================================================================
-// LOGIN COMPONENT
-// =============================================================================
-const LoginScreen = ({ onLogin }: { onLogin: (password: string) => void }) => {
+const LoginScreen = ({ onLogin, isDarkMode }: { onLogin: () => void; isDarkMode: boolean }) => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    // Simulate authentication delay
+    // Simple password check - in production, this would be more secure
     setTimeout(() => {
-      if (password === AUTH_CONFIG.defaultPassword) {
-        onLogin(password);
+      if (password === '3c-internal-2025') {
+        onLogin();
       } else {
-        setError('Invalid password. Access denied.');
-        setPassword('');
+        setError('Invalid credentials. Access denied.');
       }
       setIsLoading(false);
     }, 1000);
@@ -77,122 +39,122 @@ const LoginScreen = ({ onLogin }: { onLogin: (password: string) => void }) => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '20px'
+      backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
+      background: isDarkMode 
+        ? 'linear-gradient(135deg, #111827 0%, #1f2937 100%)'
+        : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)'
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: isDarkMode ? '#1f2937' : 'white',
+        padding: '48px',
         borderRadius: '16px',
-        padding: '40px',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-        maxWidth: '400px',
-        width: '100%'
+        boxShadow: isDarkMode 
+          ? '0 25px 50px rgba(0, 0, 0, 0.5)' 
+          : '0 25px 50px rgba(59, 130, 246, 0.15)',
+        border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+        width: '100%',
+        maxWidth: '400px'
       }}>
+        {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔐</div>
+          <div style={{ fontSize: '64px', marginBottom: '16px' }}>🔒</div>
           <h1 style={{
-            fontSize: '28px',
+            fontSize: '24px',
             fontWeight: 'bold',
-            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            color: isDarkMode ? '#f9fafb' : '#1f2937',
             margin: '0 0 8px 0'
           }}>
-            3C Content Center
+            3C Internal Dashboard
           </h1>
           <p style={{
-            color: '#6b7280',
-            fontSize: '16px',
+            color: isDarkMode ? '#9ca3af' : '#6b7280',
+            fontSize: '14px',
             margin: '0'
           }}>
-            Internal Dashboard Access
+            Secure access required
           </p>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        {/* Login Form */}
+        <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '24px' }}>
             <label style={{
               display: 'block',
               fontSize: '14px',
-              fontWeight: '600',
-              color: '#374151',
+              fontWeight: '500',
+              color: isDarkMode ? '#f9fafb' : '#374151',
               marginBottom: '8px'
             }}>
-              Access Password
+              Access Code
             </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter internal access password"
-              disabled={isLoading}
+              placeholder="Enter internal access code"
               style={{
                 width: '100%',
-                padding: '12px 16px',
-                border: '1px solid #d1d5db',
+                padding: '12px',
+                border: isDarkMode ? '1px solid #4b5563' : '1px solid #d1d5db',
                 borderRadius: '8px',
                 fontSize: '16px',
-                outline: 'none',
-                boxSizing: 'border-box',
-                backgroundColor: isLoading ? '#f9fafb' : 'white'
+                backgroundColor: isDarkMode ? '#374151' : 'white',
+                color: isDarkMode ? '#f9fafb' : '#1f2937',
+                outline: 'none'
               }}
-              autoFocus
+              disabled={isLoading}
             />
+            {error && (
+              <p style={{
+                color: '#ef4444',
+                fontSize: '12px',
+                marginTop: '8px',
+                margin: '8px 0 0 0'
+              }}>
+                {error}
+              </p>
+            )}
           </div>
-
-          {error && (
-            <div style={{
-              padding: '12px 16px',
-              backgroundColor: '#fee2e2',
-              border: '1px solid #fca5a5',
-              borderRadius: '8px',
-              color: '#dc2626',
-              fontSize: '14px',
-              marginBottom: '24px'
-            }}>
-              {error}
-            </div>
-          )}
 
           <button
             type="submit"
-            disabled={isLoading || !password.trim()}
+            disabled={isLoading || !password}
             style={{
               width: '100%',
-              padding: '12px 24px',
-              background: isLoading || !password.trim() 
-                ? '#9ca3af' 
-                : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+              padding: '12px',
+              backgroundColor: (!password || isLoading) ? '#9ca3af' : '#3b82f6',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
               fontSize: '16px',
-              fontWeight: '600',
-              cursor: isLoading || !password.trim() ? 'not-allowed' : 'pointer',
+              fontWeight: 'bold',
+              cursor: (!password || isLoading) ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s ease'
             }}
           >
-            {isLoading ? 'Authenticating...' : 'Access Dashboard'}
+            {isLoading ? '🔓 Authenticating...' : '🚀 Access Dashboard'}
           </button>
         </form>
 
+        {/* Security Notice */}
         <div style={{
           marginTop: '24px',
           padding: '16px',
-          backgroundColor: '#f9fafb',
+          backgroundColor: isDarkMode ? '#dc2626' : '#fee2e2',
           borderRadius: '8px',
-          textAlign: 'center'
+          border: isDarkMode ? '1px solid #ef4444' : '1px solid #fecaca'
         }}>
           <p style={{
             fontSize: '12px',
-            color: '#6b7280',
-            margin: '0'
+            color: isDarkMode ? '#fecaca' : '#dc2626',
+            margin: '0',
+            textAlign: 'center',
+            fontWeight: '500'
           }}>
-            🔒 Internal Use Only • Designed by Claude • © GitHub<br/>
-            Unauthorized access is prohibited
+            🔒 This dashboard is for 3C internal use only
           </p>
         </div>
       </div>
@@ -201,193 +163,310 @@ const LoginScreen = ({ onLogin }: { onLogin: (password: string) => void }) => {
 };
 
 // =============================================================================
-// TEMPORARY OVERVIEW COMPONENT
+// OVERVIEW COMPONENT
 // =============================================================================
-const TemporaryOverviewComponent = ({ isDarkMode }: { isDarkMode: boolean }) => (
-  <div style={{ 
-    padding: '40px',
-    backgroundColor: isDarkMode ? '#111827' : '#f8fafc',
-    minHeight: '100vh'
-  }}>
-    <div style={{
-      backgroundColor: isDarkMode ? '#1f2937' : 'white',
-      padding: '40px',
-      borderRadius: '16px',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-      border: `2px solid #3b82f6`,
-      marginBottom: '20px'
+const OverviewComponent = ({ onNavigate, isDarkMode }: { onNavigate: (section: string) => void; isDarkMode: boolean }) => {
+  return (
+    <div style={{ 
+      padding: '20px',
+      backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
+      minHeight: '100vh'
     }}>
-      <h1 style={{
-        fontSize: '32px',
-        fontWeight: 'bold',
-        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        margin: '0 0 16px 0',
-        textAlign: 'center'
-      }}>
-        🎯 3C Content Center
-      </h1>
-      <p style={{
-        color: isDarkMode ? '#d1d5db' : '#6b7280',
-        fontSize: '18px',
-        margin: '0 0 24px 0',
-        textAlign: 'center'
-      }}>
-        Professional Dashboard - Overview Coming Soon!
-      </p>
-      
+      {/* Header */}
+      <div style={{ marginBottom: '32px' }}>
+        <h1 style={{
+          fontSize: '32px',
+          fontWeight: 'bold',
+          color: isDarkMode ? '#f9fafb' : '#1f2937',
+          margin: '0 0 8px 0'
+        }}>
+          🎯 3C Control Center
+        </h1>
+        <p style={{
+          color: isDarkMode ? '#9ca3af' : '#6b7280',
+          fontSize: '18px',
+          margin: '0'
+        }}>
+          Welcome to your internal dashboard - WEST (UTC+1)
+        </p>
+      </div>
+
+      {/* Quick Stats */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '16px',
-        marginBottom: '24px'
+        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+        gap: '20px',
+        marginBottom: '32px'
       }}>
-        <div style={{
-          padding: '20px',
-          background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-          borderRadius: '12px',
-          border: '1px solid #3b82f6',
-          textAlign: 'center'
+        {[
+          { title: 'Content Posts', value: '47', icon: '📝', color: '#3b82f6' },
+          { title: 'Scheduled', value: '12', icon: '📅', color: '#10b981' },
+          { title: 'Templates', value: '8', icon: '📋', color: '#8b5cf6' },
+          { title: 'Platforms', value: '5', icon: '🌐', color: '#f59e0b' }
+        ].map((stat, index) => (
+          <div key={index} style={{
+            padding: '24px',
+            backgroundColor: isDarkMode ? '#1f2937' : 'white',
+            borderRadius: '12px',
+            border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+            boxShadow: isDarkMode 
+              ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
+              : '0 4px 12px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                fontSize: '32px',
+                backgroundColor: `${stat.color}20`,
+                padding: '12px',
+                borderRadius: '8px'
+              }}>
+                {stat.icon}
+              </div>
+              <div>
+                <div style={{
+                  fontSize: '24px',
+                  fontWeight: 'bold',
+                  color: stat.color
+                }}>
+                  {stat.value}
+                </div>
+                <div style={{
+                  fontSize: '14px',
+                  color: isDarkMode ? '#9ca3af' : '#6b7280'
+                }}>
+                  {stat.title}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Quick Actions */}
+      <div style={{
+        backgroundColor: isDarkMode ? '#1f2937' : 'white',
+        borderRadius: '12px',
+        padding: '24px',
+        border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+        boxShadow: isDarkMode 
+          ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
+          : '0 4px 12px rgba(0, 0, 0, 0.1)'
+      }}>
+        <h2 style={{
+          fontSize: '20px',
+          fontWeight: 'bold',
+          color: isDarkMode ? '#f9fafb' : '#1f2937',
+          margin: '0 0 20px 0'
         }}>
-          <div style={{ fontSize: '24px', marginBottom: '8px' }}>📝</div>
-          <div style={{ fontWeight: 'bold', color: '#1e40af' }}>Content Manager</div>
-          <div style={{ fontSize: '12px', color: '#1e40af' }}>Create & manage content</div>
-        </div>
+          🚀 Quick Actions
+        </h2>
         
         <div style={{
-          padding: '20px',
-          background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
-          borderRadius: '12px',
-          border: '1px solid #10b981',
-          textAlign: 'center'
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '16px'
         }}>
-          <div style={{ fontSize: '24px', marginBottom: '8px' }}>📅</div>
-          <div style={{ fontWeight: 'bold', color: '#047857' }}>Schedule Manager</div>
-          <div style={{ fontSize: '12px', color: '#047857' }}>Plan your content</div>
-        </div>
-        
-        <div style={{
-          padding: '20px',
-          background: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
-          borderRadius: '12px',
-          border: '1px solid #8b5cf6',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '24px', marginBottom: '8px' }}>🧠</div>
-          <div style={{ fontWeight: 'bold', color: '#7c3aed' }}>Marketing Center</div>
-          <div style={{ fontSize: '12px', color: '#7c3aed' }}>Analytics & insights</div>
+          {[
+            { id: 'content-manager', title: 'Create Content', icon: '📝', color: '#3b82f6' },
+            { id: 'schedule-manager', title: 'Schedule Posts', icon: '📅', color: '#10b981' },
+            { id: 'webchat-public', title: 'Manage Chat', icon: '💬', color: '#8b5cf6' },
+            { id: 'marketing-center', title: 'Marketing Tools', icon: '📊', color: '#f59e0b' },
+            { id: 'settings', title: 'Settings', icon: '⚙️', color: '#6b7280' },
+            { id: 'admin-center', title: 'Admin Panel', icon: '🔧', color: '#ef4444' }
+          ].map((action) => (
+            <button
+              key={action.id}
+              onClick={() => onNavigate(action.id)}
+              style={{
+                padding: '16px',
+                backgroundColor: isDarkMode ? '#374151' : '#f9fafb',
+                border: isDarkMode ? '1px solid #4b5563' : '1px solid #e5e7eb',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = `${action.color}20`;
+                e.currentTarget.style.borderColor = action.color;
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f9fafb';
+                e.currentTarget.style.borderColor = isDarkMode ? '#4b5563' : '#e5e7eb';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <div style={{
+                fontSize: '24px',
+                backgroundColor: `${action.color}20`,
+                padding: '8px',
+                borderRadius: '6px'
+              }}>
+                {action.icon}
+              </div>
+              <div>
+                <div style={{
+                  fontWeight: 'bold',
+                  color: isDarkMode ? '#f9fafb' : '#1f2937',
+                  fontSize: '14px'
+                }}>
+                  {action.title}
+                </div>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
-      
+
+      {/* Footer */}
       <div style={{
-        padding: '16px',
-        backgroundColor: isDarkMode ? '#374151' : '#f9fafb',
-        borderRadius: '8px',
+        marginTop: '32px',
         textAlign: 'center',
-        fontSize: '14px',
-        color: isDarkMode ? '#d1d5db' : '#6b7280'
+        padding: '20px',
+        borderTop: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb'
       }}>
-        🔒 Internal Use Only • Navigation working • Overview component ready to deploy
+        <p style={{
+          color: isDarkMode ? '#6b7280' : '#9ca3af',
+          fontSize: '12px',
+          margin: '0'
+        }}>
+          🎨 Designed by <a href="https://claude.ai" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>Claude</a> • 
+          © 2025 <a href="https://github.com/anica-blip" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>GitHub</a> • 
+          🔒 Internal Use Only
+        </p>
       </div>
     </div>
-    
+  );
+};
+
+// =============================================================================
+// COMING SOON COMPONENT
+// =============================================================================
+const ComingSoonComponent = ({ title, isDarkMode }: { title: string; isDarkMode: boolean }) => (
+  <div style={{ 
+    padding: '20px',
+    backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  }}>
     <div style={{
+      textAlign: 'center',
       backgroundColor: isDarkMode ? '#1f2937' : 'white',
-      padding: '20px',
-      borderRadius: '12px',
-      border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-      textAlign: 'center'
+      padding: '48px',
+      borderRadius: '16px',
+      border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+      boxShadow: isDarkMode 
+        ? '0 25px 50px rgba(0, 0, 0, 0.3)' 
+        : '0 25px 50px rgba(0, 0, 0, 0.1)'
     }}>
+      <div style={{ fontSize: '64px', marginBottom: '16px' }}>🚧</div>
+      <h2 style={{
+        fontSize: '24px',
+        fontWeight: 'bold',
+        color: isDarkMode ? '#f9fafb' : '#1f2937',
+        margin: '0 0 8px 0'
+      }}>
+        {title}
+      </h2>
       <p style={{
-        fontSize: '12px',
         color: isDarkMode ? '#9ca3af' : '#6b7280',
+        fontSize: '16px',
         margin: '0'
       }}>
-        🔒 Internal Use Only • Designed by Claude • © 2025 GitHub • 
-        <span style={{ marginLeft: '8px', color: '#3b82f6' }}>
-          anica-blip.github.io/3c-control-center
-        </span>
+        Coming soon - under development
       </p>
     </div>
   </div>
 );
 
 // =============================================================================
-// MAIN DASHBOARD APPLICATION
+// MAIN APP COMPONENT
 // =============================================================================
 function App() {
-  // Authentication State
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
-  // UI State
+  // Navigation state
   const [activeSection, setActiveSection] = useState('overview');
+  
+  // Theme state
   const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  // Language state
+  const [language, setLanguage] = useState('en-GB');
 
-  // Initialize authentication state
+  // Load saved preferences
   useEffect(() => {
-    const savedAuth = localStorage.getItem(AUTH_CONFIG.sessionKey);
-    const savedDarkMode = localStorage.getItem('3c-dark-mode');
+    const savedAuth = localStorage.getItem('3c-auth');
+    const savedTheme = localStorage.getItem('3c-theme');
+    const savedLanguage = localStorage.getItem('3c-language');
     
-    if (savedAuth === AUTH_CONFIG.defaultPassword) {
-      setIsLoggedIn(true);
+    if (savedAuth === 'authenticated') {
+      setIsAuthenticated(true);
     }
-    
-    if (savedDarkMode === 'true') {
+    if (savedTheme === 'dark') {
       setIsDarkMode(true);
     }
-    
-    setIsLoading(false);
-  }, []);
+    if (savedLanguage) {
+      setLanguage(savedLanguage);
+    }
 
-  // URL Navigation Handler
-  useEffect(() => {
-    if (!isLoggedIn) return;
-
+    // Handle URL hash navigation
     const handleHashChange = () => {
-      const hash = window.location.hash.slice(1);
-      if (hash && Object.values(ROUTES).includes(hash)) {
+      const hash = window.location.hash.substring(1);
+      if (hash && isAuthenticated) {
         setActiveSection(hash);
-      } else {
-        setActiveSection('overview');
-        window.history.replaceState(null, '', '#overview');
       }
     };
 
-    handleHashChange();
     window.addEventListener('hashchange', handleHashChange);
+    handleHashChange(); // Handle initial hash
+
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [isLoggedIn]);
+  }, [isAuthenticated]);
 
-  // Authentication Handlers
-  const handleLogin = (password: string) => {
-    setIsLoggedIn(true);
-    localStorage.setItem(AUTH_CONFIG.sessionKey, password);
-    window.location.hash = 'overview';
+  // Handle login
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+    localStorage.setItem('3c-auth', 'authenticated');
   };
 
+  // Handle logout
   const handleLogout = () => {
-    if (window.confirm('Are you sure you want to logout from 3C Dashboard?')) {
-      setIsLoggedIn(false);
-      localStorage.removeItem(AUTH_CONFIG.sessionKey);
-      window.location.hash = '';
-    }
+    setIsAuthenticated(false);
+    localStorage.removeItem('3c-auth');
+    setActiveSection('overview');
+    window.location.hash = '';
   };
 
-  // UI Handlers
-  const handleToggleDarkMode = () => {
-    const newDarkMode = !isDarkMode;
-    setIsDarkMode(newDarkMode);
-    localStorage.setItem('3c-dark-mode', newDarkMode.toString());
+  // Handle navigation
+  const handleNavigation = (section: string) => {
+    setActiveSection(section);
+    window.location.hash = section;
   };
 
-  const navigateToSection = (sectionId: string) => {
-    setActiveSection(sectionId);
-    window.location.hash = sectionId;
+  // Handle dark mode toggle
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+    localStorage.setItem('3c-theme', !isDarkMode ? 'dark' : 'light');
   };
 
-  // Navigation Configuration
+  // Handle language change
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage);
+    localStorage.setItem('3c-language', newLanguage);
+  };
+
+  // Show login screen if not authenticated
+  if (!isAuthenticated) {
+    return <LoginScreen onLogin={handleLogin} isDarkMode={isDarkMode} />;
+  }
+
   const navigationItems = [
     { id: 'overview', icon: '📊', label: 'Overview', available: true },
     { id: 'content-manager', icon: '📝', label: 'Content Manager', available: true },
@@ -406,11 +485,10 @@ function App() {
     note: 'Admin/Brand feature'
   };
 
-  // Content Renderer
   const renderContent = () => {
     switch (activeSection) {
       case 'overview':
-        return <TemporaryOverviewComponent isDarkMode={isDarkMode} />;
+        return <OverviewComponent onNavigate={handleNavigation} isDarkMode={isDarkMode} />;
       case 'content-manager':
         return <ContentComponent />;
       case 'webchat-public':
@@ -426,59 +504,30 @@ function App() {
       case 'ai-chat-manager':
         return <ComingSoonComponent title="AI Chat Manager" isDarkMode={isDarkMode} />;
       default:
-        return <TemporaryOverviewComponent isDarkMode={isDarkMode} />;
+        return <ComingSoonComponent title={activeSection} isDarkMode={isDarkMode} />;
     }
   };
 
-  // Loading Screen
-  if (isLoading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <div style={{
-          backgroundColor: 'white',
-          padding: '40px',
-          borderRadius: '16px',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚡</div>
-          <div style={{ fontSize: '18px', color: '#6b7280' }}>Loading 3C Dashboard...</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show Login Screen if not authenticated
-  if (!isLoggedIn) {
-    return <LoginScreen onLogin={handleLogin} />;
-  }
-
-  // Main Dashboard
   return (
     <div style={{ 
       display: 'flex', 
       minHeight: '100vh', 
-      backgroundColor: isDarkMode ? '#111827' : '#f8fafc' 
+      backgroundColor: isDarkMode ? '#111827' : '#f8fafc'
     }}>
-      
-      {/* Header Controls */}
-      <HeaderControls 
+      {/* HeaderControls */}
+      <HeaderControls
         isDarkMode={isDarkMode}
-        isLoggedIn={isLoggedIn}
-        onToggleDarkMode={handleToggleDarkMode}
-        onLoginLogout={handleLogout}
+        onToggleDarkMode={toggleDarkMode}
+        onLogout={handleLogout}
+        language={language}
+        onLanguageChange={handleLanguageChange}
       />
 
-      {/* Left Sidebar Navigation */}
+      {/* LEFT SIDEBAR NAVIGATION */}
       <div style={{ 
         width: '280px', 
         backgroundColor: isDarkMode ? '#1f2937' : '#ffffff', 
-        borderRight: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+        borderRight: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
         padding: '20px 0',
         display: 'flex',
         flexDirection: 'column'
@@ -486,7 +535,7 @@ function App() {
         {/* Logo/Header */}
         <div style={{ 
           padding: '0 20px 30px 20px', 
-          borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+          borderBottom: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
           marginBottom: '20px'
         }}>
           <h2 style={{ 
@@ -499,27 +548,11 @@ function App() {
           </h2>
           <p style={{ 
             margin: '5px 0 0 0', 
-            color: isDarkMode ? '#d1d5db' : '#6b7280', 
+            color: isDarkMode ? '#9ca3af' : '#6b7280', 
             fontSize: '14px' 
           }}>
-            Internal Dashboard
+            Dashboard
           </p>
-          
-          {/* Current Config Display */}
-          <div style={{
-            marginTop: '12px',
-            padding: '8px 12px',
-            backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
-            borderRadius: '6px',
-            fontSize: '12px'
-          }}>
-            <div style={{ color: isDarkMode ? '#f3f4f6' : '#374151', fontWeight: '500' }}>
-              {DASHBOARD_CONFIG.flags['en-GB']} {DASHBOARD_CONFIG.language}
-            </div>
-            <div style={{ color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
-              {DASHBOARD_CONFIG.timezone}
-            </div>
-          </div>
         </div>
 
         {/* Main Navigation */}
@@ -527,14 +560,13 @@ function App() {
           {navigationItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => item.available && navigateToSection(item.id)}
+              onClick={() => item.available && handleNavigation(item.id)}
               style={{
                 width: '100%',
                 padding: '12px 15px',
                 marginBottom: '5px',
                 backgroundColor: activeSection === item.id ? '#3b82f6' : 'transparent',
-                color: activeSection === item.id ? '#ffffff' : 
-                       (item.available ? (isDarkMode ? '#f3f4f6' : '#374151') : '#9ca3af'),
+                color: activeSection === item.id ? '#ffffff' : (item.available ? (isDarkMode ? '#f9fafb' : '#374151') : '#9ca3af'),
                 border: 'none',
                 borderRadius: '8px',
                 textAlign: 'left',
@@ -569,11 +601,11 @@ function App() {
         {/* Bottom Navigation Item */}
         <div style={{ 
           padding: '20px 10px 0 10px', 
-          borderTop: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+          borderTop: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
           marginTop: '20px'
         }}>
           <button
-            onClick={() => bottomNavItem.available && navigateToSection(bottomNavItem.id)}
+            onClick={() => bottomNavItem.available && handleNavigation(bottomNavItem.id)}
             style={{
               width: '100%',
               padding: '12px 15px',
@@ -609,86 +641,17 @@ function App() {
             )}
           </button>
         </div>
-
-        {/* Security Footer */}
-        <div style={{
-          padding: '15px 20px',
-          borderTop: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-          marginTop: '20px'
-        }}>
-          <div style={{
-            fontSize: '11px',
-            color: isDarkMode ? '#9ca3af' : '#6b7280',
-            textAlign: 'center',
-            lineHeight: '1.4'
-          }}>
-            <div style={{ marginBottom: '4px' }}>
-              🔒 <strong>Internal Use Only</strong>
-            </div>
-            <div style={{ marginBottom: '4px' }}>
-              Designed by Claude • © GitHub
-            </div>
-            <div style={{ 
-              color: '#3b82f6',
-              wordBreak: 'break-all'
-            }}>
-              {DASHBOARD_CONFIG.baseUrl}
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Main Content Area */}
+      {/* MAIN CONTENT AREA */}
       <div style={{ 
         flex: '1', 
-        backgroundColor: isDarkMode ? '#111827' : '#ffffff' 
+        backgroundColor: isDarkMode ? '#111827' : '#ffffff'
       }}>
         {renderContent()}
       </div>
     </div>
   );
 }
-
-// =============================================================================
-// COMING SOON COMPONENT
-// =============================================================================
-const ComingSoonComponent = ({ title, isDarkMode }: { title: string; isDarkMode: boolean }) => (
-  <div style={{ 
-    padding: '40px',
-    textAlign: 'center',
-    backgroundColor: isDarkMode ? '#111827' : '#f8fafc',
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center'
-  }}>
-    <div style={{
-      backgroundColor: isDarkMode ? '#1f2937' : 'white',
-      padding: '40px',
-      borderRadius: '16px',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-      border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-      maxWidth: '400px'
-    }}>
-      <div style={{ fontSize: '64px', marginBottom: '16px' }}>🚀</div>
-      <h2 style={{ 
-        color: isDarkMode ? '#f9fafb' : '#1f2937',
-        fontSize: '24px',
-        fontWeight: 'bold',
-        margin: '0 0 8px 0'
-      }}>
-        {title}
-      </h2>
-      <p style={{
-        color: isDarkMode ? '#d1d5db' : '#6b7280',
-        fontSize: '16px',
-        margin: '0'
-      }}>
-        Coming soon to your 3C Dashboard
-      </p>
-    </div>
-  </div>
-);
 
 export default App;
