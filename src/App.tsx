@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
 // IMPORT YOUR REAL COMPONENTS
-import OverviewComponent from './OverviewComponent';
 import ContentComponent from './contentcomponent';
 import WebChatComponent from './webchat';
 import ScheduleComponent from './schedulecomponent';
@@ -38,6 +37,119 @@ const ROUTES = {
   'admin-center': 'admin-center',
   'ai-chat-manager': 'ai-chat-manager'
 };
+
+// =============================================================================
+// TEMPORARY OVERVIEW COMPONENT (until you create the full one)
+// =============================================================================
+const TemporaryOverviewComponent = () => (
+  <div style={{ 
+    padding: '40px',
+    backgroundColor: '#f8fafc',
+    minHeight: '100vh'
+  }}>
+    <div style={{
+      backgroundColor: 'white',
+      padding: '40px',
+      borderRadius: '16px',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      border: '2px solid #3b82f6',
+      marginBottom: '20px'
+    }}>
+      <h1 style={{
+        fontSize: '32px',
+        fontWeight: 'bold',
+        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        margin: '0 0 16px 0',
+        textAlign: 'center'
+      }}>
+        🎯 3C Content Center
+      </h1>
+      <p style={{
+        color: '#6b7280',
+        fontSize: '18px',
+        margin: '0 0 24px 0',
+        textAlign: 'center'
+      }}>
+        Professional Dashboard - Overview Coming Soon!
+      </p>
+      
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '16px',
+        marginBottom: '24px'
+      }}>
+        <div style={{
+          padding: '20px',
+          background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+          borderRadius: '12px',
+          border: '1px solid #3b82f6',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '24px', marginBottom: '8px' }}>📝</div>
+          <div style={{ fontWeight: 'bold', color: '#1e40af' }}>Content Manager</div>
+          <div style={{ fontSize: '12px', color: '#1e40af' }}>Create & manage content</div>
+        </div>
+        
+        <div style={{
+          padding: '20px',
+          background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
+          borderRadius: '12px',
+          border: '1px solid #10b981',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '24px', marginBottom: '8px' }}>📅</div>
+          <div style={{ fontWeight: 'bold', color: '#047857' }}>Schedule Manager</div>
+          <div style={{ fontSize: '12px', color: '#047857' }}>Plan your content</div>
+        </div>
+        
+        <div style={{
+          padding: '20px',
+          background: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
+          borderRadius: '12px',
+          border: '1px solid #8b5cf6',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '24px', marginBottom: '8px' }}>🧠</div>
+          <div style={{ fontWeight: 'bold', color: '#7c3aed' }}>Marketing Center</div>
+          <div style={{ fontSize: '12px', color: '#7c3aed' }}>Analytics & insights</div>
+        </div>
+      </div>
+      
+      <div style={{
+        padding: '16px',
+        backgroundColor: '#f9fafb',
+        borderRadius: '8px',
+        textAlign: 'center',
+        fontSize: '14px',
+        color: '#6b7280'
+      }}>
+        🔒 Internal Use Only • Navigation working • Overview component ready to deploy
+      </div>
+    </div>
+    
+    <div style={{
+      backgroundColor: 'white',
+      padding: '20px',
+      borderRadius: '12px',
+      border: '1px solid #e5e7eb',
+      textAlign: 'center'
+    }}>
+      <p style={{
+        fontSize: '12px',
+        color: '#6b7280',
+        margin: '0'
+      }}>
+        🔒 Internal Use Only • Designed by Claude • © 2025 GitHub • 
+        <span style={{ marginLeft: '8px', color: '#3b82f6' }}>
+          anica-blip.github.io/3c-control-center
+        </span>
+      </p>
+    </div>
+  </div>
+);
 
 // =============================================================================
 // MAIN DASHBOARD WITH URL NAVIGATION
@@ -95,7 +207,7 @@ function App() {
   const renderContent = () => {
     switch (activeSection) {
       case 'overview':
-        return <OverviewComponent />;
+        return <TemporaryOverviewComponent />;
       case 'content-manager':
         return <ContentComponent />;
       case 'webchat-public':
@@ -111,7 +223,7 @@ function App() {
       case 'ai-chat-manager':
         return <ComingSoonComponent title="AI Chat Manager" />;
       default:
-        return <OverviewComponent />;
+        return <TemporaryOverviewComponent />;
     }
   };
 
