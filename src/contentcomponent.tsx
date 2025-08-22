@@ -48,6 +48,11 @@ interface ContentTemplate {
   content: string;
 }
 
+// Add isDarkMode prop interface
+interface ComponentProps {
+  isDarkMode?: boolean;
+}
+
 // Sub-components
 const ContentCreationForm = ({ 
   onSave, 
@@ -55,7 +60,8 @@ const ContentCreationForm = ({
   characterProfiles, 
   contentTypes, 
   templates, 
-  platforms 
+  platforms,
+  isDarkMode = false
 }: {
   onSave: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
   onAddToSchedule: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
@@ -63,6 +69,7 @@ const ContentCreationForm = ({
   contentTypes: ContentType[];
   templates: ContentTemplate[];
   platforms: SocialPlatform[];
+  isDarkMode?: boolean;
 }) => {
   const [formData, setFormData] = useState({
     characterProfile: '',
@@ -157,29 +164,31 @@ const ContentCreationForm = ({
 
   return (
     <div style={{
-      backgroundColor: 'white',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-      border: '1px solid #3b82f6',
-      borderRadius: '8px',
-      padding: '20px',
-      marginBottom: '20px'
+      backgroundColor: isDarkMode ? '#1f2937' : 'white',
+      boxShadow: isDarkMode 
+        ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
+        : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      border: isDarkMode ? '1px solid #374151' : '1px solid #3b82f6',
+      borderRadius: '12px',
+      padding: '24px',
+      marginBottom: '24px'
     }}>
       {/* Header */}
       <div style={{
-        borderBottom: '1px solid #e5e7eb',
+        borderBottom: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
         paddingBottom: '16px',
         marginBottom: '20px'
       }}>
         <h2 style={{
           fontSize: '20px',
           fontWeight: 'bold',
-          color: '#3b82f6',
+          color: isDarkMode ? '#f9fafb' : '#3b82f6',
           margin: '0 0 8px 0'
         }}>
           🎨 Create New Content
         </h2>
         <p style={{
-          color: '#6b7280',
+          color: isDarkMode ? '#9ca3af' : '#6b7280',
           fontSize: '14px',
           margin: '0'
         }}>
@@ -193,9 +202,11 @@ const ContentCreationForm = ({
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
         gap: '16px',
         padding: '16px',
-        background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #374151 0%, #4b5563 100%)'
+          : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
         borderRadius: '8px',
-        border: '1px solid #3b82f6',
+        border: isDarkMode ? '1px solid #4b5563' : '1px solid #3b82f6',
         marginBottom: '20px'
       }}>
         <div>
@@ -203,7 +214,7 @@ const ContentCreationForm = ({
             display: 'block',
             fontSize: '12px',
             fontWeight: 'bold',
-            color: '#1e40af',
+            color: isDarkMode ? '#f9fafb' : '#1e40af',
             marginBottom: '6px',
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
@@ -216,10 +227,11 @@ const ContentCreationForm = ({
             style={{
               width: '100%',
               padding: '10px',
-              border: '1px solid #d1d5db',
+              border: isDarkMode ? '1px solid #6b7280' : '1px solid #d1d5db',
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: 'white',
+              backgroundColor: isDarkMode ? '#374151' : 'white',
+              color: isDarkMode ? '#f9fafb' : '#1f2937',
               boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
             }}
           >
@@ -235,7 +247,7 @@ const ContentCreationForm = ({
             display: 'block',
             fontSize: '12px',
             fontWeight: 'bold',
-            color: '#1e40af',
+            color: isDarkMode ? '#f9fafb' : '#1e40af',
             marginBottom: '6px',
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
@@ -248,10 +260,11 @@ const ContentCreationForm = ({
             style={{
               width: '100%',
               padding: '10px',
-              border: '1px solid #d1d5db',
+              border: isDarkMode ? '1px solid #6b7280' : '1px solid #d1d5db',
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: 'white',
+              backgroundColor: isDarkMode ? '#374151' : 'white',
+              color: isDarkMode ? '#f9fafb' : '#1f2937',
               boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
             }}
           >
@@ -267,7 +280,7 @@ const ContentCreationForm = ({
             display: 'block',
             fontSize: '12px',
             fontWeight: 'bold',
-            color: '#1e40af',
+            color: isDarkMode ? '#f9fafb' : '#1e40af',
             marginBottom: '6px',
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
@@ -280,10 +293,11 @@ const ContentCreationForm = ({
             style={{
               width: '100%',
               padding: '10px',
-              border: '1px solid #d1d5db',
+              border: isDarkMode ? '1px solid #6b7280' : '1px solid #d1d5db',
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: 'white',
+              backgroundColor: isDarkMode ? '#374151' : 'white',
+              color: isDarkMode ? '#f9fafb' : '#1f2937',
               boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
             }}
           >
@@ -301,7 +315,7 @@ const ContentCreationForm = ({
           display: 'block',
           fontSize: '16px',
           fontWeight: 'bold',
-          color: '#111827',
+          color: isDarkMode ? '#f9fafb' : '#111827',
           marginBottom: '12px'
         }}>
           📁 Media Upload
@@ -309,48 +323,48 @@ const ContentCreationForm = ({
         <div
           onClick={() => fileInputRef.current?.click()}
           style={{
-            border: '2px dashed #3b82f6',
+            border: isDarkMode ? '2px dashed #6b7280' : '2px dashed #3b82f6',
             borderRadius: '8px',
             padding: '24px',
             textAlign: 'center',
             cursor: 'pointer',
-            backgroundColor: '#f8fafc',
+            backgroundColor: isDarkMode ? '#374151' : '#f8fafc',
             transition: 'all 0.3s ease'
           }}
           onMouseOver={(e) => {
-            e.currentTarget.style.borderColor = '#1d4ed8';
-            e.currentTarget.style.backgroundColor = '#dbeafe';
+            e.currentTarget.style.borderColor = isDarkMode ? '#9ca3af' : '#1d4ed8';
+            e.currentTarget.style.backgroundColor = isDarkMode ? '#4b5563' : '#dbeafe';
           }}
           onMouseOut={(e) => {
-            e.currentTarget.style.borderColor = '#3b82f6';
-            e.currentTarget.style.backgroundColor = '#f8fafc';
+            e.currentTarget.style.borderColor = isDarkMode ? '#6b7280' : '#3b82f6';
+            e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f8fafc';
           }}
         >
           <Upload style={{
             height: '32px',
             width: '32px',
-            color: '#3b82f6',
+            color: isDarkMode ? '#9ca3af' : '#3b82f6',
             margin: '0 auto 12px auto',
             display: 'block'
           }} />
           <h3 style={{
             fontSize: '16px',
             fontWeight: 'bold',
-            color: '#111827',
+            color: isDarkMode ? '#f9fafb' : '#111827',
             margin: '0 0 6px 0'
           }}>
             📎 Upload your media files
           </h3>
           <p style={{
             fontSize: '14px',
-            color: '#6b7280',
+            color: isDarkMode ? '#9ca3af' : '#6b7280',
             margin: '0 0 4px 0'
           }}>
             Drop files here or click to browse
           </p>
           <p style={{
             fontSize: '12px',
-            color: '#9ca3af',
+            color: isDarkMode ? '#6b7280' : '#9ca3af',
             margin: '0'
           }}>
             Support for Images, Videos, GIFs, PDFs, and Interactive Media
@@ -377,7 +391,7 @@ const ContentCreationForm = ({
               <h4 style={{
                 fontSize: '14px',
                 fontWeight: 'bold',
-                color: '#111827',
+                color: isDarkMode ? '#f9fafb' : '#111827',
                 margin: '0'
               }}>
                 📋 Uploaded Files
@@ -400,14 +414,14 @@ const ContentCreationForm = ({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '12px',
-                  backgroundColor: '#f9fafb',
+                  backgroundColor: isDarkMode ? '#4b5563' : '#f9fafb',
                   borderRadius: '6px',
-                  border: '1px solid #e5e7eb'
+                  border: isDarkMode ? '1px solid #6b7280' : '1px solid #e5e7eb'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{
                       padding: '8px',
-                      backgroundColor: 'white',
+                      backgroundColor: isDarkMode ? '#374151' : 'white',
                       borderRadius: '6px',
                       boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
                     }}>
@@ -417,14 +431,14 @@ const ContentCreationForm = ({
                       <div style={{
                         fontSize: '13px',
                         fontWeight: 'bold',
-                        color: '#111827',
+                        color: isDarkMode ? '#f9fafb' : '#111827',
                         marginBottom: '2px'
                       }}>
                         {file.name}
                       </div>
                       <div style={{
                         fontSize: '11px',
-                        color: '#6b7280'
+                        color: isDarkMode ? '#9ca3af' : '#6b7280'
                       }}>
                         {formatFileSize(file.size)}
                       </div>
@@ -438,15 +452,15 @@ const ContentCreationForm = ({
                       border: 'none',
                       borderRadius: '6px',
                       cursor: 'pointer',
-                      color: '#6b7280'
+                      color: isDarkMode ? '#9ca3af' : '#6b7280'
                     }}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#fee2e2';
+                      e.currentTarget.style.backgroundColor = isDarkMode ? '#ef4444' : '#fee2e2';
                       e.currentTarget.style.color = '#ef4444';
                     }}
                     onMouseOut={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = '#6b7280';
+                      e.currentTarget.style.color = isDarkMode ? '#9ca3af' : '#6b7280';
                     }}
                   >
                     <X style={{ height: '16px', width: '16px' }} />
@@ -464,7 +478,7 @@ const ContentCreationForm = ({
           display: 'block',
           fontSize: '16px',
           fontWeight: 'bold',
-          color: '#111827',
+          color: isDarkMode ? '#f9fafb' : '#111827',
           marginBottom: '8px'
         }}>
           ✏️ Post Description
@@ -476,10 +490,11 @@ const ContentCreationForm = ({
           style={{
             width: '100%',
             padding: '12px',
-            border: '1px solid #d1d5db',
+            border: isDarkMode ? '1px solid #6b7280' : '1px solid #d1d5db',
             borderRadius: '8px',
             fontSize: '14px',
-            backgroundColor: 'white',
+            backgroundColor: isDarkMode ? '#374151' : 'white',
+            color: isDarkMode ? '#f9fafb' : '#1f2937',
             boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
             resize: 'vertical',
             minHeight: '100px',
@@ -494,7 +509,7 @@ const ContentCreationForm = ({
           display: 'block',
           fontSize: '16px',
           fontWeight: 'bold',
-          color: '#111827',
+          color: isDarkMode ? '#f9fafb' : '#111827',
           marginBottom: '12px'
         }}>
           🌐 Select Publishing Platforms
@@ -514,15 +529,17 @@ const ContentCreationForm = ({
                 padding: '12px',
                 border: formData.selectedPlatforms.includes(platform.id) 
                   ? '1px solid #3b82f6' 
-                  : '1px solid #d1d5db',
+                  : isDarkMode ? '1px solid #6b7280' : '1px solid #d1d5db',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 backgroundColor: formData.selectedPlatforms.includes(platform.id) 
-                  ? '#dbeafe' 
-                  : 'white',
+                  ? isDarkMode ? '#1e40af' : '#dbeafe'
+                  : isDarkMode ? '#374151' : 'white',
                 boxShadow: formData.selectedPlatforms.includes(platform.id)
                   ? '0 2px 8px rgba(59, 130, 246, 0.15)'
-                  : '0 1px 3px rgba(0, 0, 0, 0.05)',
+                  : isDarkMode 
+                    ? '0 1px 3px rgba(0, 0, 0, 0.3)'
+                    : '0 1px 3px rgba(0, 0, 0, 0.05)',
                 transition: 'all 0.2s ease'
               }}
             >
@@ -540,7 +557,9 @@ const ContentCreationForm = ({
                 <div style={{
                   fontSize: '14px',
                   fontWeight: 'bold',
-                  color: '#111827',
+                  color: formData.selectedPlatforms.includes(platform.id)
+                    ? (isDarkMode ? '#f9fafb' : '#1e40af')
+                    : (isDarkMode ? '#f9fafb' : '#111827'),
                   marginBottom: '2px'
                 }}>
                   {platform.name}
@@ -570,32 +589,32 @@ const ContentCreationForm = ({
         justifyContent: 'flex-end',
         gap: '12px',
         paddingTop: '16px',
-        borderTop: '1px solid #e5e7eb'
+        borderTop: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb'
       }}>
         <button
           onClick={handleSave}
           disabled={!canSave}
           style={{
-            padding: '10px 20px',
+            padding: '12px 24px',
             fontSize: '14px',
             fontWeight: 'bold',
             borderRadius: '8px',
             border: 'none',
             cursor: canSave ? 'pointer' : 'not-allowed',
-            backgroundColor: canSave ? '#6b7280' : '#d1d5db',
-            color: canSave ? 'white' : '#9ca3af',
+            backgroundColor: canSave ? (isDarkMode ? '#6b7280' : '#6b7280') : '#9ca3af',
+            color: canSave ? 'white' : '#d1d5db',
             boxShadow: canSave ? '0 2px 6px rgba(0, 0, 0, 0.15)' : 'none',
             transition: 'all 0.2s ease'
           }}
           onMouseOver={(e) => {
             if (canSave) {
-              e.currentTarget.style.backgroundColor = '#4b5563';
+              e.currentTarget.style.backgroundColor = isDarkMode ? '#4b5563' : '#4b5563';
               e.currentTarget.style.transform = 'translateY(-1px)';
             }
           }}
           onMouseOut={(e) => {
             if (canSave) {
-              e.currentTarget.style.backgroundColor = '#6b7280';
+              e.currentTarget.style.backgroundColor = isDarkMode ? '#6b7280' : '#6b7280';
               e.currentTarget.style.transform = 'translateY(0)';
             }
           }}
@@ -606,14 +625,14 @@ const ContentCreationForm = ({
           onClick={handleAddToSchedule}
           disabled={!canSave}
           style={{
-            padding: '10px 20px',
+            padding: '12px 24px',
             fontSize: '14px',
             fontWeight: 'bold',
             borderRadius: '8px',
             border: 'none',
             cursor: canSave ? 'pointer' : 'not-allowed',
-            backgroundColor: canSave ? '#3b82f6' : '#d1d5db',
-            color: canSave ? 'white' : '#9ca3af',
+            backgroundColor: canSave ? '#3b82f6' : '#9ca3af',
+            color: canSave ? 'white' : '#d1d5db',
             boxShadow: canSave ? '0 2px 6px rgba(59, 130, 246, 0.25)' : 'none',
             transition: 'all 0.2s ease'
           }}
@@ -637,11 +656,12 @@ const ContentCreationForm = ({
   );
 };
 
-const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
+const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isDarkMode = false }: {
   posts: ContentPost[];
   onEditPost: (postId: string) => void;
   onSchedulePost: (postId: string) => void;
   onDeletePost: (postId: string) => void;
+  isDarkMode?: boolean;
 }) => {
   const getStatusBadge = (status: string) => {
     const badgeStyles = {
@@ -668,35 +688,37 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
   if (posts.length === 0) {
     return (
       <div style={{
-        backgroundColor: 'white',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        border: '1px solid #e5e7eb',
-        borderRadius: '8px',
-        padding: '40px',
+        backgroundColor: isDarkMode ? '#1f2937' : 'white',
+        boxShadow: isDarkMode 
+          ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
+          : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+        borderRadius: '12px',
+        padding: '48px',
         textAlign: 'center'
       }}>
         <div style={{
           width: '64px',
           height: '64px',
-          backgroundColor: '#f3f4f6',
+          backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
           borderRadius: '50%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           margin: '0 auto 16px auto'
         }}>
-          <FileText style={{ height: '32px', width: '32px', color: '#9ca3af' }} />
+          <FileText style={{ height: '32px', width: '32px', color: isDarkMode ? '#9ca3af' : '#9ca3af' }} />
         </div>
         <h3 style={{
           fontSize: '18px',
           fontWeight: 'bold',
-          color: '#111827',
+          color: isDarkMode ? '#f9fafb' : '#111827',
           margin: '0 0 8px 0'
         }}>
-          📝 No content created yet
+          📄 No content created yet
         </h3>
         <p style={{
-          color: '#6b7280',
+          color: isDarkMode ? '#9ca3af' : '#6b7280',
           fontSize: '14px',
           margin: '0'
         }}>
@@ -708,16 +730,20 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
 
   return (
     <div style={{
-      backgroundColor: 'white',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-      border: '1px solid #e5e7eb',
-      borderRadius: '8px',
+      backgroundColor: isDarkMode ? '#1f2937' : 'white',
+      boxShadow: isDarkMode 
+        ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
+        : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+      borderRadius: '12px',
       overflow: 'hidden'
     }}>
       <div style={{
-        padding: '16px',
-        background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-        borderBottom: '1px solid #d1d5db'
+        padding: '20px',
+        background: isDarkMode
+          ? 'linear-gradient(135deg, #374151 0%, #4b5563 100%)'
+          : 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
+        borderBottom: isDarkMode ? '1px solid #4b5563' : '1px solid #d1d5db'
       }}>
         <div style={{
           display: 'flex',
@@ -727,13 +753,13 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
           <h3 style={{
             fontSize: '18px',
             fontWeight: 'bold',
-            color: '#3b82f6',
+            color: isDarkMode ? '#f9fafb' : '#3b82f6',
             margin: '0'
           }}>
             📚 Saved Content
           </h3>
           <span style={{
-            padding: '6px 12px',
+            padding: '8px 16px',
             background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
             color: 'white',
             fontSize: '14px',
@@ -746,17 +772,19 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
       </div>
       
       <div>
-        {posts.map((post) => (
+        {posts.map((post, index) => (
           <div key={post.id} style={{
-            padding: '16px',
-            borderBottom: '1px solid #f3f4f6',
+            padding: '20px',
+            borderBottom: index < posts.length - 1 
+              ? (isDarkMode ? '1px solid #374151' : '1px solid #f3f4f6')
+              : 'none',
             transition: 'background-color 0.2s ease'
           }}
           onMouseOver={(e) => {
-            e.currentTarget.style.backgroundColor = '#f9fafb';
+            e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f9fafb';
           }}
           onMouseOut={(e) => {
-            e.currentTarget.style.backgroundColor = 'white';
+            e.currentTarget.style.backgroundColor = 'transparent';
           }}
           >
             <div style={{
@@ -774,7 +802,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                   {getStatusBadge(post.status)}
                   <span style={{
                     fontSize: '12px',
-                    color: '#6b7280',
+                    color: isDarkMode ? '#9ca3af' : '#6b7280',
                     fontWeight: 'bold'
                   }}>
                     📅 Created {post.createdDate.toLocaleDateString()}
@@ -784,7 +812,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                       fontSize: '12px',
                       color: '#3b82f6',
                       fontWeight: 'bold',
-                      backgroundColor: '#dbeafe',
+                      backgroundColor: isDarkMode ? '#1e40af' : '#dbeafe',
                       padding: '4px 8px',
                       borderRadius: '6px'
                     }}>
@@ -794,7 +822,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                 </div>
                 
                 <p style={{
-                  color: '#111827',
+                  color: isDarkMode ? '#f9fafb' : '#111827',
                   fontSize: '14px',
                   lineHeight: '1.6',
                   margin: '0 0 12px 0'
@@ -813,8 +841,8 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                       alignItems: 'center',
                       gap: '6px',
                       fontSize: '12px',
-                      color: '#6b7280',
-                      backgroundColor: '#f3f4f6',
+                      color: isDarkMode ? '#9ca3af' : '#6b7280',
+                      backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
                       padding: '6px 8px',
                       borderRadius: '6px'
                     }}>
@@ -830,8 +858,8 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                     alignItems: 'center',
                     gap: '6px',
                     fontSize: '12px',
-                    color: '#6b7280',
-                    backgroundColor: '#f3f4f6',
+                    color: isDarkMode ? '#9ca3af' : '#6b7280',
+                    backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
                     padding: '6px 8px',
                     borderRadius: '6px'
                   }}>
@@ -857,17 +885,17 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                     border: '1px solid transparent',
                     borderRadius: '6px',
                     cursor: 'pointer',
-                    color: '#6b7280'
+                    color: isDarkMode ? '#9ca3af' : '#6b7280'
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#dbeafe';
+                    e.currentTarget.style.backgroundColor = isDarkMode ? '#1e40af' : '#dbeafe';
                     e.currentTarget.style.borderColor = '#3b82f6';
                     e.currentTarget.style.color = '#3b82f6';
                   }}
                   onMouseOut={(e) => {
                     e.currentTarget.style.backgroundColor = 'transparent';
                     e.currentTarget.style.borderColor = 'transparent';
-                    e.currentTarget.style.color = '#6b7280';
+                    e.currentTarget.style.color = isDarkMode ? '#9ca3af' : '#6b7280';
                   }}
                 >
                   <Settings style={{ height: '16px', width: '16px' }} />
@@ -883,17 +911,17 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                       border: '1px solid transparent',
                       borderRadius: '6px',
                       cursor: 'pointer',
-                      color: '#6b7280'
+                      color: isDarkMode ? '#9ca3af' : '#6b7280'
                     }}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#d1fae5';
+                      e.currentTarget.style.backgroundColor = isDarkMode ? '#065f46' : '#d1fae5';
                       e.currentTarget.style.borderColor = '#10b981';
                       e.currentTarget.style.color = '#10b981';
                     }}
                     onMouseOut={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
                       e.currentTarget.style.borderColor = 'transparent';
-                      e.currentTarget.style.color = '#6b7280';
+                      e.currentTarget.style.color = isDarkMode ? '#9ca3af' : '#6b7280';
                     }}
                   >
                     <Plus style={{ height: '16px', width: '16px' }} />
@@ -909,17 +937,17 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                     border: '1px solid transparent',
                     borderRadius: '6px',
                     cursor: 'pointer',
-                    color: '#6b7280'
+                    color: isDarkMode ? '#9ca3af' : '#6b7280'
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#fee2e2';
+                    e.currentTarget.style.backgroundColor = isDarkMode ? '#991b1b' : '#fee2e2';
                     e.currentTarget.style.borderColor = '#ef4444';
                     e.currentTarget.style.color = '#ef4444';
                   }}
                   onMouseOut={(e) => {
                     e.currentTarget.style.backgroundColor = 'transparent';
                     e.currentTarget.style.borderColor = 'transparent';
-                    e.currentTarget.style.color = '#6b7280';
+                    e.currentTarget.style.color = isDarkMode ? '#9ca3af' : '#6b7280';
                   }}
                 >
                   <Trash2 style={{ height: '16px', width: '16px' }} />
@@ -933,32 +961,34 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
   );
 };
 
-const SupabaseConnection = () => {
+const SupabaseConnection = ({ isDarkMode = false }: { isDarkMode?: boolean }) => {
   return (
     <div style={{
-      backgroundColor: 'white',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-      borderRadius: '8px',
-      border: '1px solid #e5e7eb',
-      padding: '20px'
+      backgroundColor: isDarkMode ? '#1f2937' : 'white',
+      boxShadow: isDarkMode 
+        ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
+        : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      borderRadius: '12px',
+      border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+      padding: '24px'
     }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: '16px'
+        marginBottom: '20px'
       }}>
         <div>
           <h3 style={{
             fontSize: '18px',
             fontWeight: 'bold',
-            color: '#111827',
+            color: isDarkMode ? '#f9fafb' : '#111827',
             margin: '0 0 4px 0'
           }}>
             💾 Database Connection
           </h3>
           <p style={{
-            color: '#6b7280',
+            color: isDarkMode ? '#9ca3af' : '#6b7280',
             margin: '0',
             fontSize: '14px'
           }}>
@@ -986,14 +1016,16 @@ const SupabaseConnection = () => {
       </div>
       
       <div style={{
-        background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+        background: isDarkMode
+          ? 'linear-gradient(135deg, #374151 0%, #4b5563 100%)'
+          : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
         borderRadius: '8px',
-        padding: '16px',
-        border: '1px solid #3b82f6',
-        marginBottom: '16px'
+        padding: '20px',
+        border: isDarkMode ? '1px solid #4b5563' : '1px solid #3b82f6',
+        marginBottom: '20px'
       }}>
         <p style={{
-          color: '#1e40af',
+          color: isDarkMode ? '#f9fafb' : '#1e40af',
           fontSize: '14px',
           lineHeight: '1.6',
           margin: '0'
@@ -1007,8 +1039,10 @@ const SupabaseConnection = () => {
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          padding: '12px 16px',
-          background: 'linear-gradient(135deg, #111827 0%, #374151 100%)',
+          padding: '12px 20px',
+          background: isDarkMode
+            ? 'linear-gradient(135deg, #1f2937 0%, #374151 100%)'
+            : 'linear-gradient(135deg, #111827 0%, #374151 100%)',
           color: 'white',
           borderRadius: '8px',
           border: 'none',
@@ -1035,8 +1069,8 @@ const SupabaseConnection = () => {
   );
 };
 
-// Main Component
-export default function ContentManager() {
+// Main Component with dark mode prop
+export default function ContentManager({ isDarkMode = false }: ComponentProps) {
   const [activeTab, setActiveTab] = useState('media');
   const [savedPosts, setSavedPosts] = useState<ContentPost[]>([]);
   
@@ -1110,36 +1144,39 @@ export default function ContentManager() {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#f3f4f6',
-      padding: '20px'
+      backgroundColor: isDarkMode ? '#111827' : '#f3f4f6',
+      padding: '20px',
+      paddingTop: '100px' // Space for HeaderControls
     }}>
       <div style={{
         maxWidth: '1200px',
         margin: '0 auto',
         display: 'grid',
-        gap: '20px'
+        gap: '24px'
       }}>
         {/* Header */}
         <div style={{
-          backgroundColor: 'white',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          borderRadius: '8px',
-          padding: '20px',
-          border: '1px solid #3b82f6'
+          backgroundColor: isDarkMode ? '#1f2937' : 'white',
+          boxShadow: isDarkMode 
+            ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
+            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          borderRadius: '12px',
+          padding: '24px',
+          border: isDarkMode ? '1px solid #374151' : '1px solid #3b82f6'
         }}>
           <h1 style={{
-            fontSize: '24px',
-            fontWeight: 'black',
-            color: '#3b82f6',
+            fontSize: '28px',
+            fontWeight: 'bold',
+            color: isDarkMode ? '#f9fafb' : '#3b82f6',
             margin: '0 0 8px 0'
           }}>
             🎯 Content Manager
           </h1>
           <p style={{
-            color: '#6b7280',
+            color: isDarkMode ? '#9ca3af' : '#6b7280',
             fontSize: '16px',
             margin: '0',
-            fontWeight: 'bold'
+            fontWeight: '500'
           }}>
             Create, manage, and schedule your social media content with ease
           </p>
@@ -1147,10 +1184,12 @@ export default function ContentManager() {
 
         {/* Tabs */}
         <div style={{
-          backgroundColor: 'white',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          borderRadius: '8px',
-          border: '1px solid #e5e7eb',
+          backgroundColor: isDarkMode ? '#1f2937' : 'white',
+          boxShadow: isDarkMode 
+            ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
+            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          borderRadius: '12px',
+          border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
           overflow: 'hidden'
         }}>
           <div style={{ display: 'flex' }}>
@@ -1164,27 +1203,27 @@ export default function ContentManager() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    padding: '16px 20px',
+                    padding: '16px 24px',
                     fontSize: '16px',
                     fontWeight: 'bold',
                     flex: 1,
                     justifyContent: 'center',
                     border: 'none',
                     cursor: 'pointer',
-                    backgroundColor: activeTab === tab.id ? '#3b82f6' : 'white',
-                    color: activeTab === tab.id ? 'white' : '#6b7280',
+                    backgroundColor: activeTab === tab.id ? '#3b82f6' : 'transparent',
+                    color: activeTab === tab.id ? 'white' : (isDarkMode ? '#9ca3af' : '#6b7280'),
                     transition: 'all 0.2s ease'
                   }}
                   onMouseOver={(e) => {
                     if (activeTab !== tab.id) {
-                      e.currentTarget.style.backgroundColor = '#f9fafb';
-                      e.currentTarget.style.color = '#111827';
+                      e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f9fafb';
+                      e.currentTarget.style.color = isDarkMode ? '#f9fafb' : '#111827';
                     }
                   }}
                   onMouseOut={(e) => {
                     if (activeTab !== tab.id) {
-                      e.currentTarget.style.backgroundColor = 'white';
-                      e.currentTarget.style.color = '#6b7280';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = isDarkMode ? '#9ca3af' : '#6b7280';
                     }
                   }}
                 >
@@ -1199,7 +1238,7 @@ export default function ContentManager() {
         {/* Tab Content */}
         <div>
           {activeTab === 'media' && (
-            <div style={{ display: 'grid', gap: '20px' }}>
+            <div style={{ display: 'grid', gap: '24px' }}>
               <ContentCreationForm
                 onSave={handleSavePost}
                 onAddToSchedule={handleAddToSchedule}
@@ -1207,6 +1246,7 @@ export default function ContentManager() {
                 contentTypes={contentTypes}
                 templates={templates}
                 platforms={platforms}
+                isDarkMode={isDarkMode}
               />
               
               <SavedPostsList
@@ -1214,11 +1254,12 @@ export default function ContentManager() {
                 onEditPost={handleEditPost}
                 onSchedulePost={handleSchedulePost}
                 onDeletePost={handleDeletePost}
+                isDarkMode={isDarkMode}
               />
             </div>
           )}
 
-          {activeTab === 'database' && <SupabaseConnection />}
+          {activeTab === 'database' && <SupabaseConnection isDarkMode={isDarkMode} />}
         </div>
       </div>
     </div>
