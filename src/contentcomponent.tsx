@@ -1,13 +1,5 @@
-import React, { useState, useRef, useContext, createContext } from 'react';
+import React, { useState, useRef } from 'react';
 import { Upload, X, Image, Video, FileText, Download, Eye, Trash2, Plus, Settings, ExternalLink, Database, CheckCircle, Circle, Check } from 'lucide-react';
-
-// Dark Mode Context - This will be passed from App.tsx
-const ThemeContext = createContext({
-  isDarkMode: false,
-  toggleDarkMode: () => {}
-});
-
-const useTheme = () => useContext(ThemeContext);
 
 // Types
 interface ContentPost {
@@ -56,6 +48,28 @@ interface ContentTemplate {
   content: string;
 }
 
+// Get theme-aware styles
+const getThemeStyles = (isDark: boolean) => ({
+  background: isDark ? '#1f2937' : '#ffffff',
+  backgroundSecondary: isDark ? '#374151' : '#f9fafb',
+  backgroundTertiary: isDark ? '#4b5563' : '#f3f4f6',
+  text: isDark ? '#f9fafb' : '#111827',
+  textSecondary: isDark ? '#d1d5db' : '#6b7280',
+  textMuted: isDark ? '#9ca3af' : '#9ca3af',
+  border: isDark ? '#4b5563' : '#e5e7eb',
+  borderSecondary: isDark ? '#374151' : '#d1d5db',
+  accent: '#3b82f6',
+  success: '#10b981',
+  warning: '#f59e0b',
+  error: '#ef4444',
+  gradient: isDark 
+    ? 'linear-gradient(135deg, #374151 0%, #4b5563 100%)'
+    : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+  cardShadow: isDark 
+    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
+    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+});
+
 // Sub-components
 const ContentCreationForm = ({ 
   onSave, 
@@ -63,7 +77,8 @@ const ContentCreationForm = ({
   characterProfiles, 
   contentTypes, 
   templates, 
-  platforms 
+  platforms,
+  isDark = false
 }: {
   onSave: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
   onAddToSchedule: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
@@ -71,8 +86,9 @@ const ContentCreationForm = ({
   contentTypes: ContentType[];
   templates: ContentTemplate[];
   platforms: SocialPlatform[];
+  isDark?: boolean;
 }) => {
-  const { isDarkMode } = useTheme();
+  const theme = getThemeStyles(isDark);
   const [formData, setFormData] = useState({
     characterProfile: '',
     type: '',
@@ -146,11 +162,11 @@ const ContentCreationForm = ({
 
   const getFileIcon = (type: string) => {
     switch (type) {
-      case 'image': return <Image style={{height: '16px', width: '16px', color: '#3b82f6'}} />;
-      case 'video': return <Video style={{height: '16px', width: '16px', color: '#10b981'}} />;
-      case 'pdf': return <FileText style={{height: '16px', width: '16px', color: '#ef4444'}} />;
+      case 'image': return <Image style={{height: '16px', width: '16px', color: theme.accent}} />;
+      case 'video': return <Video style={{height: '16px', width: '16px', color: theme.success}} />;
+      case 'pdf': return <FileText style={{height: '16px', width: '16px', color: theme.error}} />;
       case 'interactive': return <Settings style={{height: '16px', width: '16px', color: '#8b5cf6'}} />;
-      default: return <FileText style={{height: '16px', width: '16px', color: '#6b7280'}} />;
+      default: return <FileText style={{height: '16px', width: '16px', color: theme.textSecondary}} />;
     }
   };
 
@@ -166,32 +182,31 @@ const ContentCreationForm = ({
 
   return (
     <div style={{
-      backgroundColor: isDarkMode ? '#1e293b' : 'white',
-      boxShadow: isDarkMode 
-        ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-        : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-      border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`,
+      backgroundColor: theme.background,
+      boxShadow: theme.cardShadow,
+      border: `1px solid ${theme.accent}`,
       borderRadius: '8px',
       padding: '20px',
       marginBottom: '20px'
     }}>
       {/* Header */}
       <div style={{
-        borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+        borderBottom: `1px solid ${theme.border}`,
         paddingBottom: '16px',
         marginBottom: '20px'
       }}>
         <h2 style={{
-          fontSize: '20px',
+          fontSize: '18px',
           fontWeight: 'bold',
-          color: isDarkMode ? '#60a5fa' : '#3b82f6',
+          color: theme.accent,
           margin: '0 0 8px 0'
         }}>
           🎨 Create New Content
         </h2>
         <p style={{
-          color: isDarkMode ? '#94a3b8' : '#6b7280',
-          fontSize: '14px',
+          color: theme.textSecondary,
+          fontSize: '12px',
+          fontWeight: 'bold',
           margin: '0'
         }}>
           Design and prepare your social media content for publishing
@@ -204,11 +219,9 @@ const ContentCreationForm = ({
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
         gap: '16px',
         padding: '16px',
-        background: isDarkMode 
-          ? 'linear-gradient(135deg, #334155 0%, #475569 100%)'
-          : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+        background: theme.gradient,
         borderRadius: '8px',
-        border: `1px solid ${isDarkMode ? '#475569' : '#3b82f6'}`,
+        border: `1px solid ${theme.accent}`,
         marginBottom: '20px'
       }}>
         <div>
@@ -216,7 +229,7 @@ const ContentCreationForm = ({
             display: 'block',
             fontSize: '12px',
             fontWeight: 'bold',
-            color: isDarkMode ? '#e2e8f0' : '#1e40af',
+            color: theme.accent,
             marginBottom: '6px',
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
@@ -229,12 +242,13 @@ const ContentCreationForm = ({
             style={{
               width: '100%',
               padding: '10px',
-              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              border: `1px solid ${theme.borderSecondary}`,
               borderRadius: '6px',
-              fontSize: '14px',
-              backgroundColor: isDarkMode ? '#374151' : 'white',
-              color: isDarkMode ? '#f8fafc' : '#111827',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+              fontSize: '12px',
+              fontWeight: 'bold',
+              backgroundColor: theme.background,
+              color: theme.text,
+              boxShadow: theme.cardShadow
             }}
           >
             <option value="">Select profile...</option>
@@ -249,7 +263,7 @@ const ContentCreationForm = ({
             display: 'block',
             fontSize: '12px',
             fontWeight: 'bold',
-            color: isDarkMode ? '#e2e8f0' : '#1e40af',
+            color: theme.accent,
             marginBottom: '6px',
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
@@ -262,12 +276,13 @@ const ContentCreationForm = ({
             style={{
               width: '100%',
               padding: '10px',
-              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              border: `1px solid ${theme.borderSecondary}`,
               borderRadius: '6px',
-              fontSize: '14px',
-              backgroundColor: isDarkMode ? '#374151' : 'white',
-              color: isDarkMode ? '#f8fafc' : '#111827',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+              fontSize: '12px',
+              fontWeight: 'bold',
+              backgroundColor: theme.background,
+              color: theme.text,
+              boxShadow: theme.cardShadow
             }}
           >
             <option value="">Select type...</option>
@@ -282,7 +297,7 @@ const ContentCreationForm = ({
             display: 'block',
             fontSize: '12px',
             fontWeight: 'bold',
-            color: isDarkMode ? '#e2e8f0' : '#1e40af',
+            color: theme.accent,
             marginBottom: '6px',
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
@@ -295,12 +310,13 @@ const ContentCreationForm = ({
             style={{
               width: '100%',
               padding: '10px',
-              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              border: `1px solid ${theme.borderSecondary}`,
               borderRadius: '6px',
-              fontSize: '14px',
-              backgroundColor: isDarkMode ? '#374151' : 'white',
-              color: isDarkMode ? '#f8fafc' : '#111827',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+              fontSize: '12px',
+              fontWeight: 'bold',
+              backgroundColor: theme.background,
+              color: theme.text,
+              boxShadow: theme.cardShadow
             }}
           >
             <option value="">Select template...</option>
@@ -315,9 +331,9 @@ const ContentCreationForm = ({
       <div style={{ marginBottom: '20px' }}>
         <label style={{
           display: 'block',
-          fontSize: '16px',
+          fontSize: '14px',
           fontWeight: 'bold',
-          color: isDarkMode ? '#f8fafc' : '#111827',
+          color: theme.text,
           marginBottom: '12px'
         }}>
           📁 Media Upload
@@ -325,48 +341,49 @@ const ContentCreationForm = ({
         <div
           onClick={() => fileInputRef.current?.click()}
           style={{
-            border: `2px dashed ${isDarkMode ? '#475569' : '#3b82f6'}`,
+            border: `2px dashed ${theme.accent}`,
             borderRadius: '8px',
             padding: '24px',
             textAlign: 'center',
             cursor: 'pointer',
-            backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
+            backgroundColor: theme.backgroundSecondary,
             transition: 'all 0.3s ease'
           }}
           onMouseOver={(e) => {
-            e.currentTarget.style.borderColor = isDarkMode ? '#60a5fa' : '#1d4ed8';
-            e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#dbeafe';
+            e.currentTarget.style.borderColor = '#1d4ed8';
+            e.currentTarget.style.backgroundColor = theme.backgroundTertiary;
           }}
           onMouseOut={(e) => {
-            e.currentTarget.style.borderColor = isDarkMode ? '#475569' : '#3b82f6';
-            e.currentTarget.style.backgroundColor = isDarkMode ? '#334155' : '#f8fafc';
+            e.currentTarget.style.borderColor = theme.accent;
+            e.currentTarget.style.backgroundColor = theme.backgroundSecondary;
           }}
         >
           <Upload style={{
             height: '32px',
             width: '32px',
-            color: isDarkMode ? '#60a5fa' : '#3b82f6',
+            color: theme.accent,
             margin: '0 auto 12px auto',
             display: 'block'
           }} />
           <h3 style={{
-            fontSize: '16px',
+            fontSize: '14px',
             fontWeight: 'bold',
-            color: isDarkMode ? '#f8fafc' : '#111827',
+            color: theme.text,
             margin: '0 0 6px 0'
           }}>
             📎 Upload your media files
           </h3>
           <p style={{
-            fontSize: '14px',
-            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            color: theme.textSecondary,
             margin: '0 0 4px 0'
           }}>
             Drop files here or click to browse
           </p>
           <p style={{
-            fontSize: '12px',
-            color: isDarkMode ? '#64748b' : '#9ca3af',
+            fontSize: '11px',
+            color: theme.textMuted,
             margin: '0'
           }}>
             Support for Images, Videos, GIFs, PDFs, and Interactive Media
@@ -391,18 +408,18 @@ const ContentCreationForm = ({
               marginBottom: '12px'
             }}>
               <h4 style={{
-                fontSize: '14px',
+                fontSize: '12px',
                 fontWeight: 'bold',
-                color: isDarkMode ? '#f8fafc' : '#111827',
+                color: theme.text,
                 margin: '0'
               }}>
                 📋 Uploaded Files
               </h4>
               <span style={{
                 padding: '4px 8px',
-                backgroundColor: isDarkMode ? '#60a5fa' : '#3b82f6',
+                backgroundColor: theme.accent,
                 color: 'white',
-                fontSize: '12px',
+                fontSize: '11px',
                 fontWeight: 'bold',
                 borderRadius: '12px'
               }}>
@@ -416,31 +433,31 @@ const ContentCreationForm = ({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '12px',
-                  backgroundColor: isDarkMode ? '#374151' : '#f9fafb',
+                  backgroundColor: theme.backgroundSecondary,
                   borderRadius: '6px',
-                  border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+                  border: `1px solid ${theme.border}`
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{
                       padding: '8px',
-                      backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                      backgroundColor: theme.background,
                       borderRadius: '6px',
-                      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                      boxShadow: theme.cardShadow
                     }}>
                       {getFileIcon(file.type)}
                     </div>
                     <div>
                       <div style={{
-                        fontSize: '13px',
+                        fontSize: '12px',
                         fontWeight: 'bold',
-                        color: isDarkMode ? '#f8fafc' : '#111827',
+                        color: theme.text,
                         marginBottom: '2px'
                       }}>
                         {file.name}
                       </div>
                       <div style={{
                         fontSize: '11px',
-                        color: isDarkMode ? '#94a3b8' : '#6b7280'
+                        color: theme.textSecondary
                       }}>
                         {formatFileSize(file.size)}
                       </div>
@@ -454,15 +471,15 @@ const ContentCreationForm = ({
                       border: 'none',
                       borderRadius: '6px',
                       cursor: 'pointer',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280'
+                      color: theme.textSecondary
                     }}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? '#450a0a' : '#fee2e2';
-                      e.currentTarget.style.color = '#ef4444';
+                      e.currentTarget.style.backgroundColor = '#fee2e2';
+                      e.currentTarget.style.color = theme.error;
                     }}
                     onMouseOut={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = isDarkMode ? '#94a3b8' : '#6b7280';
+                      e.currentTarget.style.color = theme.textSecondary;
                     }}
                   >
                     <X style={{ height: '16px', width: '16px' }} />
@@ -478,9 +495,9 @@ const ContentCreationForm = ({
       <div style={{ marginBottom: '20px' }}>
         <label style={{
           display: 'block',
-          fontSize: '16px',
+          fontSize: '14px',
           fontWeight: 'bold',
-          color: isDarkMode ? '#f8fafc' : '#111827',
+          color: theme.text,
           marginBottom: '8px'
         }}>
           ✏️ Post Description
@@ -492,12 +509,13 @@ const ContentCreationForm = ({
           style={{
             width: '100%',
             padding: '12px',
-            border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+            border: `1px solid ${theme.borderSecondary}`,
             borderRadius: '8px',
-            fontSize: '14px',
-            backgroundColor: isDarkMode ? '#374151' : 'white',
-            color: isDarkMode ? '#f8fafc' : '#111827',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            backgroundColor: theme.background,
+            color: theme.text,
+            boxShadow: theme.cardShadow,
             resize: 'vertical',
             minHeight: '100px',
             fontFamily: 'inherit'
@@ -509,9 +527,9 @@ const ContentCreationForm = ({
       <div style={{ marginBottom: '20px' }}>
         <label style={{
           display: 'block',
-          fontSize: '16px',
+          fontSize: '14px',
           fontWeight: 'bold',
-          color: isDarkMode ? '#f8fafc' : '#111827',
+          color: theme.text,
           marginBottom: '12px'
         }}>
           🌐 Select Publishing Platforms
@@ -530,16 +548,16 @@ const ContentCreationForm = ({
                 gap: '8px',
                 padding: '12px',
                 border: formData.selectedPlatforms.includes(platform.id) 
-                  ? `1px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}` 
-                  : `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                  ? `1px solid ${theme.accent}` 
+                  : `1px solid ${theme.border}`,
                 borderRadius: '8px',
                 cursor: 'pointer',
                 backgroundColor: formData.selectedPlatforms.includes(platform.id) 
-                  ? (isDarkMode ? '#1e3a8a' : '#dbeafe')
-                  : (isDarkMode ? '#374151' : 'white'),
+                  ? theme.backgroundTertiary
+                  : theme.background,
                 boxShadow: formData.selectedPlatforms.includes(platform.id)
-                  ? '0 2px 8px rgba(59, 130, 246, 0.15)'
-                  : '0 1px 3px rgba(0, 0, 0, 0.05)',
+                  ? `0 2px 8px rgba(59, 130, 246, 0.15)`
+                  : theme.cardShadow,
                 transition: 'all 0.2s ease'
               }}
             >
@@ -550,14 +568,14 @@ const ContentCreationForm = ({
                 style={{
                   height: '16px',
                   width: '16px',
-                  accentColor: '#3b82f6'
+                  accentColor: theme.accent
                 }}
               />
               <div style={{ flex: 1 }}>
                 <div style={{
-                  fontSize: '14px',
+                  fontSize: '12px',
                   fontWeight: 'bold',
-                  color: isDarkMode ? '#f8fafc' : '#111827',
+                  color: theme.text,
                   marginBottom: '2px'
                 }}>
                   {platform.name}
@@ -568,7 +586,7 @@ const ContentCreationForm = ({
                     padding: '1px 6px',
                     fontSize: '10px',
                     fontWeight: 'bold',
-                    backgroundColor: '#10b981',
+                    backgroundColor: theme.success,
                     color: 'white',
                     borderRadius: '8px'
                   }}>
@@ -587,32 +605,32 @@ const ContentCreationForm = ({
         justifyContent: 'flex-end',
         gap: '12px',
         paddingTop: '16px',
-        borderTop: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
+        borderTop: `1px solid ${theme.border}`
       }}>
         <button
           onClick={handleSave}
           disabled={!canSave}
           style={{
             padding: '10px 20px',
-            fontSize: '14px',
+            fontSize: '12px',
             fontWeight: 'bold',
             borderRadius: '8px',
             border: 'none',
             cursor: canSave ? 'pointer' : 'not-allowed',
-            backgroundColor: canSave ? (isDarkMode ? '#4b5563' : '#6b7280') : '#d1d5db',
-            color: canSave ? 'white' : '#9ca3af',
-            boxShadow: canSave ? '0 2px 6px rgba(0, 0, 0, 0.15)' : 'none',
+            backgroundColor: canSave ? '#6b7280' : theme.borderSecondary,
+            color: canSave ? 'white' : theme.textMuted,
+            boxShadow: canSave ? theme.cardShadow : 'none',
             transition: 'all 0.2s ease'
           }}
           onMouseOver={(e) => {
             if (canSave) {
-              e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#4b5563';
+              e.currentTarget.style.backgroundColor = '#4b5563';
               e.currentTarget.style.transform = 'translateY(-1px)';
             }
           }}
           onMouseOut={(e) => {
             if (canSave) {
-              e.currentTarget.style.backgroundColor = isDarkMode ? '#4b5563' : '#6b7280';
+              e.currentTarget.style.backgroundColor = '#6b7280';
               e.currentTarget.style.transform = 'translateY(0)';
             }
           }}
@@ -624,25 +642,25 @@ const ContentCreationForm = ({
           disabled={!canSave}
           style={{
             padding: '10px 20px',
-            fontSize: '14px',
+            fontSize: '12px',
             fontWeight: 'bold',
             borderRadius: '8px',
             border: 'none',
             cursor: canSave ? 'pointer' : 'not-allowed',
-            backgroundColor: canSave ? (isDarkMode ? '#2563eb' : '#3b82f6') : '#d1d5db',
-            color: canSave ? 'white' : '#9ca3af',
-            boxShadow: canSave ? '0 2px 6px rgba(59, 130, 246, 0.25)' : 'none',
+            backgroundColor: canSave ? theme.accent : theme.borderSecondary,
+            color: canSave ? 'white' : theme.textMuted,
+            boxShadow: canSave ? theme.cardShadow : 'none',
             transition: 'all 0.2s ease'
           }}
           onMouseOver={(e) => {
             if (canSave) {
-              e.currentTarget.style.backgroundColor = isDarkMode ? '#1d4ed8' : '#2563eb';
+              e.currentTarget.style.backgroundColor = '#2563eb';
               e.currentTarget.style.transform = 'translateY(-1px)';
             }
           }}
           onMouseOut={(e) => {
             if (canSave) {
-              e.currentTarget.style.backgroundColor = isDarkMode ? '#2563eb' : '#3b82f6';
+              e.currentTarget.style.backgroundColor = theme.accent;
               e.currentTarget.style.transform = 'translateY(0)';
             }
           }}
@@ -654,14 +672,15 @@ const ContentCreationForm = ({
   );
 };
 
-const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
+const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isDark = false }: {
   posts: ContentPost[];
   onEditPost: (postId: string) => void;
   onSchedulePost: (postId: string) => void;
   onDeletePost: (postId: string) => void;
+  isDark?: boolean;
 }) => {
-  const { isDarkMode } = useTheme();
-
+  const theme = getThemeStyles(isDark);
+  
   const getStatusBadge = (status: string) => {
     const badgeStyles = {
       pending: { backgroundColor: '#fef3c7', color: '#92400e', text: '⏳ Pending' },
@@ -674,7 +693,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
     return (
       <span style={{
         padding: '6px 12px',
-        fontSize: '12px',
+        fontSize: '11px',
         fontWeight: 'bold',
         borderRadius: '20px',
         ...style
@@ -687,11 +706,9 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
   if (posts.length === 0) {
     return (
       <div style={{
-        backgroundColor: isDarkMode ? '#1e293b' : 'white',
-        boxShadow: isDarkMode 
-          ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-          : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+        backgroundColor: theme.background,
+        boxShadow: theme.cardShadow,
+        border: `1px solid ${theme.border}`,
         borderRadius: '8px',
         padding: '40px',
         textAlign: 'center'
@@ -699,26 +716,27 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
         <div style={{
           width: '64px',
           height: '64px',
-          backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
+          backgroundColor: theme.backgroundSecondary,
           borderRadius: '50%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           margin: '0 auto 16px auto'
         }}>
-          <FileText style={{ height: '32px', width: '32px', color: isDarkMode ? '#64748b' : '#9ca3af' }} />
+          <FileText style={{ height: '32px', width: '32px', color: theme.textMuted }} />
         </div>
         <h3 style={{
-          fontSize: '18px',
+          fontSize: '16px',
           fontWeight: 'bold',
-          color: isDarkMode ? '#f8fafc' : '#111827',
+          color: theme.text,
           margin: '0 0 8px 0'
         }}>
-          📝 No content created yet
+          📄 No content created yet
         </h3>
         <p style={{
-          color: isDarkMode ? '#94a3b8' : '#6b7280',
-          fontSize: '14px',
+          color: theme.textSecondary,
+          fontSize: '12px',
+          fontWeight: 'bold',
           margin: '0'
         }}>
           Start creating amazing content using the form above
@@ -729,20 +747,16 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
 
   return (
     <div style={{
-      backgroundColor: isDarkMode ? '#1e293b' : 'white',
-      boxShadow: isDarkMode 
-        ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-        : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-      border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+      backgroundColor: theme.background,
+      boxShadow: theme.cardShadow,
+      border: `1px solid ${theme.border}`,
       borderRadius: '8px',
       overflow: 'hidden'
     }}>
       <div style={{
         padding: '16px',
-        background: isDarkMode 
-          ? 'linear-gradient(135deg, #374151 0%, #4b5563 100%)'
-          : 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-        borderBottom: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
+        background: theme.gradient,
+        borderBottom: `1px solid ${theme.border}`
       }}>
         <div style={{
           display: 'flex',
@@ -750,20 +764,18 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
           justifyContent: 'space-between'
         }}>
           <h3 style={{
-            fontSize: '18px',
+            fontSize: '16px',
             fontWeight: 'bold',
-            color: isDarkMode ? '#60a5fa' : '#3b82f6',
+            color: theme.accent,
             margin: '0'
           }}>
             📚 Saved Content
           </h3>
           <span style={{
             padding: '6px 12px',
-            background: isDarkMode 
-              ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'
-              : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+            background: `linear-gradient(135deg, ${theme.accent} 0%, #1d4ed8 100%)`,
             color: 'white',
-            fontSize: '14px',
+            fontSize: '12px',
             fontWeight: 'bold',
             borderRadius: '16px'
           }}>
@@ -776,14 +788,15 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
         {posts.map((post) => (
           <div key={post.id} style={{
             padding: '16px',
-            borderBottom: `1px solid ${isDarkMode ? '#334155' : '#f3f4f6'}`,
-            transition: 'background-color 0.2s ease'
+            borderBottom: `1px solid ${theme.border}`,
+            transition: 'background-color 0.2s ease',
+            backgroundColor: theme.background
           }}
           onMouseOver={(e) => {
-            e.currentTarget.style.backgroundColor = isDarkMode ? '#334155' : '#f9fafb';
+            e.currentTarget.style.backgroundColor = theme.backgroundSecondary;
           }}
           onMouseOut={(e) => {
-            e.currentTarget.style.backgroundColor = isDarkMode ? '#1e293b' : 'white';
+            e.currentTarget.style.backgroundColor = theme.background;
           }}
           >
             <div style={{
@@ -800,18 +813,18 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                 }}>
                   {getStatusBadge(post.status)}
                   <span style={{
-                    fontSize: '12px',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    fontSize: '11px',
+                    color: theme.textSecondary,
                     fontWeight: 'bold'
                   }}>
                     📅 Created {post.createdDate.toLocaleDateString()}
                   </span>
                   {post.scheduledDate && (
                     <span style={{
-                      fontSize: '12px',
-                      color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                      fontSize: '11px',
+                      color: theme.accent,
                       fontWeight: 'bold',
-                      backgroundColor: isDarkMode ? '#1e3a8a' : '#dbeafe',
+                      backgroundColor: theme.backgroundTertiary,
                       padding: '4px 8px',
                       borderRadius: '6px'
                     }}>
@@ -821,8 +834,9 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                 </div>
                 
                 <p style={{
-                  color: isDarkMode ? '#f8fafc' : '#111827',
-                  fontSize: '14px',
+                  color: theme.text,
+                  fontSize: '12px',
+                  fontWeight: 'bold',
                   lineHeight: '1.6',
                   margin: '0 0 12px 0'
                 }}>
@@ -839,13 +853,13 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
-                      fontSize: '12px',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280',
-                      backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
+                      fontSize: '11px',
+                      color: theme.textSecondary,
+                      backgroundColor: theme.backgroundSecondary,
                       padding: '6px 8px',
                       borderRadius: '6px'
                     }}>
-                      <Image style={{ height: '14px', width: '14px' }} />
+                      <Image style={{ height: '12px', width: '12px' }} />
                       <span style={{ fontWeight: 'bold' }}>
                         {post.mediaFiles.length} file{post.mediaFiles.length !== 1 ? 's' : ''}
                       </span>
@@ -856,13 +870,13 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    fontSize: '12px',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
+                    fontSize: '11px',
+                    color: theme.textSecondary,
+                    backgroundColor: theme.backgroundSecondary,
                     padding: '6px 8px',
                     borderRadius: '6px'
                   }}>
-                    <Settings style={{ height: '14px', width: '14px' }} />
+                    <Settings style={{ height: '12px', width: '12px' }} />
                     <span style={{ fontWeight: 'bold' }}>
                       {post.selectedPlatforms.length} platform{post.selectedPlatforms.length !== 1 ? 's' : ''}
                     </span>
@@ -884,20 +898,20 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                     border: '1px solid transparent',
                     borderRadius: '6px',
                     cursor: 'pointer',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280'
+                    color: theme.textSecondary
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = isDarkMode ? '#1e3a8a' : '#dbeafe';
-                    e.currentTarget.style.borderColor = isDarkMode ? '#60a5fa' : '#3b82f6';
-                    e.currentTarget.style.color = isDarkMode ? '#60a5fa' : '#3b82f6';
+                    e.currentTarget.style.backgroundColor = theme.backgroundTertiary;
+                    e.currentTarget.style.borderColor = theme.accent;
+                    e.currentTarget.style.color = theme.accent;
                   }}
                   onMouseOut={(e) => {
                     e.currentTarget.style.backgroundColor = 'transparent';
                     e.currentTarget.style.borderColor = 'transparent';
-                    e.currentTarget.style.color = isDarkMode ? '#94a3b8' : '#6b7280';
+                    e.currentTarget.style.color = theme.textSecondary;
                   }}
                 >
-                  <Settings style={{ height: '16px', width: '16px' }} />
+                  <Settings style={{ height: '14px', width: '14px' }} />
                 </button>
                 
                 {post.status === 'pending' && (
@@ -910,20 +924,20 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                       border: '1px solid transparent',
                       borderRadius: '6px',
                       cursor: 'pointer',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280'
+                      color: theme.textSecondary
                     }}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? '#064e3b' : '#d1fae5';
-                      e.currentTarget.style.borderColor = '#10b981';
-                      e.currentTarget.style.color = '#10b981';
+                      e.currentTarget.style.backgroundColor = theme.backgroundTertiary;
+                      e.currentTarget.style.borderColor = theme.success;
+                      e.currentTarget.style.color = theme.success;
                     }}
                     onMouseOut={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
                       e.currentTarget.style.borderColor = 'transparent';
-                      e.currentTarget.style.color = isDarkMode ? '#94a3b8' : '#6b7280';
+                      e.currentTarget.style.color = theme.textSecondary;
                     }}
                   >
-                    <Plus style={{ height: '16px', width: '16px' }} />
+                    <Plus style={{ height: '14px', width: '14px' }} />
                   </button>
                 )}
                 
@@ -936,20 +950,20 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
                     border: '1px solid transparent',
                     borderRadius: '6px',
                     cursor: 'pointer',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280'
+                    color: theme.textSecondary
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = isDarkMode ? '#450a0a' : '#fee2e2';
-                    e.currentTarget.style.borderColor = '#ef4444';
-                    e.currentTarget.style.color = '#ef4444';
+                    e.currentTarget.style.backgroundColor = '#fee2e2';
+                    e.currentTarget.style.borderColor = theme.error;
+                    e.currentTarget.style.color = theme.error;
                   }}
                   onMouseOut={(e) => {
                     e.currentTarget.style.backgroundColor = 'transparent';
                     e.currentTarget.style.borderColor = 'transparent';
-                    e.currentTarget.style.color = isDarkMode ? '#94a3b8' : '#6b7280';
+                    e.currentTarget.style.color = theme.textSecondary;
                   }}
                 >
-                  <Trash2 style={{ height: '16px', width: '16px' }} />
+                  <Trash2 style={{ height: '14px', width: '14px' }} />
                 </button>
               </div>
             </div>
@@ -960,17 +974,15 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
   );
 };
 
-const SupabaseConnection = () => {
-  const { isDarkMode } = useTheme();
-
+const SupabaseConnection = ({ isDark = false }: { isDark?: boolean }) => {
+  const theme = getThemeStyles(isDark);
+  
   return (
     <div style={{
-      backgroundColor: isDarkMode ? '#1e293b' : 'white',
-      boxShadow: isDarkMode 
-        ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-        : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      backgroundColor: theme.background,
+      boxShadow: theme.cardShadow,
       borderRadius: '8px',
-      border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+      border: `1px solid ${theme.border}`,
       padding: '20px'
     }}>
       <div style={{
@@ -981,17 +993,18 @@ const SupabaseConnection = () => {
       }}>
         <div>
           <h3 style={{
-            fontSize: '18px',
+            fontSize: '16px',
             fontWeight: 'bold',
-            color: isDarkMode ? '#f8fafc' : '#111827',
+            color: theme.text,
             margin: '0 0 4px 0'
           }}>
             💾 Database Connection
           </h3>
           <p style={{
-            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            color: theme.textSecondary,
             margin: '0',
-            fontSize: '14px'
+            fontSize: '12px',
+            fontWeight: 'bold'
           }}>
             Manage your data storage and connectivity
           </p>
@@ -1000,14 +1013,14 @@ const SupabaseConnection = () => {
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          backgroundColor: isDarkMode ? '#064e3b' : '#d1fae5',
+          backgroundColor: '#d1fae5',
           padding: '8px 12px',
           borderRadius: '8px',
-          border: '1px solid #10b981'
+          border: `1px solid ${theme.success}`
         }}>
-          <CheckCircle style={{ height: '18px', width: '18px', color: '#10b981' }} />
+          <CheckCircle style={{ height: '16px', width: '16px', color: theme.success }} />
           <span style={{
-            fontSize: '12px',
+            fontSize: '11px',
             fontWeight: 'bold',
             color: '#065f46'
           }}>
@@ -1017,17 +1030,16 @@ const SupabaseConnection = () => {
       </div>
       
       <div style={{
-        background: isDarkMode 
-          ? 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%)'
-          : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+        background: theme.gradient,
         borderRadius: '8px',
         padding: '16px',
-        border: `1px solid ${isDarkMode ? '#2563eb' : '#3b82f6'}`,
+        border: `1px solid ${theme.accent}`,
         marginBottom: '16px'
       }}>
         <p style={{
-          color: isDarkMode ? '#e2e8f0' : '#1e40af',
-          fontSize: '14px',
+          color: theme.accent,
+          fontSize: '12px',
+          fontWeight: 'bold',
           lineHeight: '1.6',
           margin: '0'
         }}>
@@ -1041,16 +1053,16 @@ const SupabaseConnection = () => {
           alignItems: 'center',
           gap: '8px',
           padding: '12px 16px',
-          background: isDarkMode 
-            ? 'linear-gradient(135deg, #111827 0%, #374151 100%)'
+          background: isDark 
+            ? 'linear-gradient(135deg, #374151 0%, #4b5563 100%)'
             : 'linear-gradient(135deg, #111827 0%, #374151 100%)',
           color: 'white',
           borderRadius: '8px',
           border: 'none',
           cursor: 'pointer',
-          fontSize: '14px',
+          fontSize: '12px',
           fontWeight: 'bold',
-          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+          boxShadow: theme.cardShadow,
           transition: 'all 0.2s ease'
         }}
         onMouseOver={(e) => {
@@ -1059,19 +1071,20 @@ const SupabaseConnection = () => {
         }}
         onMouseOut={(e) => {
           e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.15)';
+          e.currentTarget.style.boxShadow = theme.cardShadow;
         }}
       >
-        <Database style={{ height: '16px', width: '16px' }} />
+        <Database style={{ height: '14px', width: '14px' }} />
         <span>🚀 Open Supabase Project</span>
-        <ExternalLink style={{ height: '14px', width: '14px' }} />
+        <ExternalLink style={{ height: '12px', width: '12px' }} />
       </button>
     </div>
   );
 };
 
-// Main Component - Updated to accept and provide theme context
-export default function ContentManager({ isDarkMode = false }: { isDarkMode?: boolean }) {
+// Main Component
+export default function ContentManager({ isDark = false }: { isDark?: boolean }) {
+  const theme = getThemeStyles(isDark);
   const [activeTab, setActiveTab] = useState('media');
   const [savedPosts, setSavedPosts] = useState<ContentPost[]>([]);
   
@@ -1119,17 +1132,14 @@ export default function ContentManager({ isDarkMode = false }: { isDarkMode?: bo
       createdDate: new Date(),
     };
     setSavedPosts(prev => [newPost, ...prev]);
-    // TODO: Navigate to scheduler tab or open scheduler modal
     alert('Post ready for scheduling! (Will integrate with scheduler tab next)');
   };
 
   const handleEditPost = (postId: string) => {
-    // TODO: Load post data into form for editing
     alert('Edit functionality coming next');
   };
 
   const handleSchedulePost = (postId: string) => {
-    // TODO: Move to scheduler
     alert('Schedule functionality coming next');
   };
 
@@ -1143,101 +1153,95 @@ export default function ContentManager({ isDarkMode = false }: { isDarkMode?: bo
   ];
 
   return (
-    <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode: () => {} }}>
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: theme.backgroundSecondary,
+      padding: '20px'
+    }}>
       <div style={{
-        minHeight: '100vh',
-        backgroundColor: isDarkMode ? '#0f172a' : '#f3f4f6',
-        padding: '20px'
+        maxWidth: '1200px',
+        margin: '0 auto',
+        display: 'grid',
+        gap: '20px'
       }}>
+        {/* Tabs */}
         <div style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-          display: 'grid',
-          gap: '20px'
+          backgroundColor: theme.background,
+          boxShadow: theme.cardShadow,
+          borderRadius: '8px',
+          border: `1px solid ${theme.border}`,
+          overflow: 'hidden'
         }}>
-          {/* Tabs */}
-          <div style={{
-            backgroundColor: isDarkMode ? '#1e293b' : 'white',
-            boxShadow: isDarkMode 
-              ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-              : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-            borderRadius: '8px',
-            border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
-            overflow: 'hidden'
-          }}>
-            <div style={{ display: 'flex' }}>
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '16px 20px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      flex: 1,
-                      justifyContent: 'center',
-                      border: 'none',
-                      cursor: 'pointer',
-                      backgroundColor: activeTab === tab.id 
-                        ? (isDarkMode ? '#2563eb' : '#3b82f6') 
-                        : (isDarkMode ? '#1e293b' : 'white'),
-                      color: activeTab === tab.id 
-                        ? 'white' 
-                        : (isDarkMode ? '#94a3b8' : '#6b7280'),
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseOver={(e) => {
-                      if (activeTab !== tab.id) {
-                        e.currentTarget.style.backgroundColor = isDarkMode ? '#334155' : '#f9fafb';
-                        e.currentTarget.style.color = isDarkMode ? '#f8fafc' : '#111827';
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      if (activeTab !== tab.id) {
-                        e.currentTarget.style.backgroundColor = isDarkMode ? '#1e293b' : 'white';
-                        e.currentTarget.style.color = isDarkMode ? '#94a3b8' : '#6b7280';
-                      }
-                    }}
-                  >
-                    <Icon style={{ height: '20px', width: '20px' }} />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Tab Content */}
-          <div>
-            {activeTab === 'media' && (
-              <div style={{ display: 'grid', gap: '20px' }}>
-                <ContentCreationForm
-                  onSave={handleSavePost}
-                  onAddToSchedule={handleAddToSchedule}
-                  characterProfiles={characterProfiles}
-                  contentTypes={contentTypes}
-                  templates={templates}
-                  platforms={platforms}
-                />
-                
-                <SavedPostsList
-                  posts={savedPosts}
-                  onEditPost={handleEditPost}
-                  onSchedulePost={handleSchedulePost}
-                  onDeletePost={handleDeletePost}
-                />
-              </div>
-            )}
-
-            {activeTab === 'database' && <SupabaseConnection />}
+          <div style={{ display: 'flex' }}>
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '16px 20px',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    flex: 1,
+                    justifyContent: 'center',
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: activeTab === tab.id ? theme.accent : theme.background,
+                    color: activeTab === tab.id ? 'white' : theme.textSecondary,
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    if (activeTab !== tab.id) {
+                      e.currentTarget.style.backgroundColor = theme.backgroundSecondary;
+                      e.currentTarget.style.color = theme.text;
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (activeTab !== tab.id) {
+                      e.currentTarget.style.backgroundColor = theme.background;
+                      e.currentTarget.style.color = theme.textSecondary;
+                    }
+                  }}
+                >
+                  <Icon style={{ height: '18px', width: '18px' }} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
+
+        {/* Tab Content */}
+        <div>
+          {activeTab === 'media' && (
+            <div style={{ display: 'grid', gap: '20px' }}>
+              <ContentCreationForm
+                onSave={handleSavePost}
+                onAddToSchedule={handleAddToSchedule}
+                characterProfiles={characterProfiles}
+                contentTypes={contentTypes}
+                templates={templates}
+                platforms={platforms}
+                isDark={isDark}
+              />
+              
+              <SavedPostsList
+                posts={savedPosts}
+                onEditPost={handleEditPost}
+                onSchedulePost={handleSchedulePost}
+                onDeletePost={handleDeletePost}
+                isDark={isDark}
+              />
+            </div>
+          )}
+
+          {activeTab === 'database' && <SupabaseConnection isDark={isDark} />}
+        </div>
       </div>
-    </ThemeContext.Provider>
+    </div>
   );
 }
