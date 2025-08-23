@@ -100,23 +100,6 @@ const MarketingControlCenter = () => {
     color: isDarkMode ? '#f9fafb' : '#111827'
   };
 
-  const headerStyle = {
-    marginBottom: '24px'
-  };
-
-  const titleStyle = {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    margin: '0 0 8px 0',
-    color: isDarkMode ? '#f9fafb' : '#111827'
-  };
-
-  const subtitleStyle = {
-    color: isDarkMode ? '#d1d5db' : '#6b7280',
-    margin: '0',
-    fontSize: '16px'
-  };
-
   const tabsContainerStyle = {
     borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
     backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
@@ -276,13 +259,6 @@ const MarketingControlCenter = () => {
 
   return (
     <div style={containerStyle}>
-      <div style={headerStyle}>
-        <h1 style={titleStyle}>📊 Marketing Control Center</h1>
-        <p style={subtitleStyle}>
-          Comprehensive dashboard for persona management, content strategy, and analytics
-        </p>
-      </div>
-
       <div style={tabsContainerStyle}>
         <nav style={{ display: 'flex', gap: '0', padding: '0 24px' }}>
           {[
