@@ -40,22 +40,6 @@ function SettingsComponent() {
   // Error Logs State - Will come from Supabase
   const [errorLogs, setErrorLogs] = useState([]);
 
-  // Theme classes
-  const themeClasses = {
-    background: isDarkMode ? 'bg-gray-900' : 'bg-gray-50',
-    cardBackground: isDarkMode ? 'bg-gray-800' : 'bg-white',
-    textPrimary: isDarkMode ? 'text-white' : 'text-gray-900',
-    textSecondary: isDarkMode ? 'text-gray-300' : 'text-gray-600',
-    textMuted: isDarkMode ? 'text-gray-400' : 'text-gray-500',
-    border: isDarkMode ? 'border-gray-700' : 'border-gray-200',
-    inputBackground: isDarkMode ? 'bg-gray-700' : 'bg-white',
-    inputBorder: isDarkMode ? 'border-gray-600' : 'border-gray-300',
-    buttonPrimary: isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700',
-    buttonSecondary: isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200',
-    buttonDanger: isDarkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-600 hover:bg-red-700',
-    buttonSuccess: isDarkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'
-  };
-
   // =============================================================================
   // SOCIAL PLATFORMS FUNCTIONS
   // =============================================================================
@@ -210,21 +194,42 @@ function SettingsComponent() {
   };
 
   return (
-    <div className={`min-h-screen ${themeClasses.background} transition-colors duration-200`}>
-      <div className="p-6 max-w-7xl mx-auto">
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
+      transition: 'background-color 0.2s ease' 
+    }}>
+      <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
-        <div className="mb-8">
-          <h1 className={`text-3xl font-black ${themeClasses.textPrimary} mb-2`}>
+        <div style={{ marginBottom: '32px' }}>
+          <h1 style={{ 
+            fontSize: '32px', 
+            fontWeight: '900', 
+            color: isDarkMode ? '#ffffff' : '#111827', 
+            marginBottom: '8px',
+            margin: '0 0 8px 0'
+          }}>
             ⚙️ Dashboard Settings
           </h1>
-          <p className={`text-lg ${themeClasses.textSecondary} font-medium`}>
+          <p style={{ 
+            fontSize: '18px', 
+            color: isDarkMode ? '#d1d5db' : '#6b7280', 
+            fontWeight: '500',
+            margin: '0'
+          }}>
             Configure social platforms, Telegram channels, and character profiles
           </p>
         </div>
         
         {/* Settings Sub-Navigation - 3 TABS ONLY */}
-        <div className={`${themeClasses.cardBackground} rounded-lg shadow-lg border ${themeClasses.border} mb-8`}>
-          <div className="flex border-b border-gray-700">
+        <div style={{
+          backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+          borderRadius: '8px',
+          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+          border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+          marginBottom: '32px'
+        }}>
+          <div style={{ display: 'flex', borderBottom: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb' }}>
             {[
               { id: 'platforms', icon: '📱', label: 'Social Platforms' },
               { id: 'characters', icon: '👥', label: 'Character Profiles' },
@@ -233,40 +238,105 @@ function SettingsComponent() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-3 px-8 py-4 text-sm font-bold transition-all duration-200 border-b-2 ${
-                  activeTab === tab.id
-                    ? `${themeClasses.textPrimary} border-blue-500 bg-blue-500/10`
-                    : `${themeClasses.textSecondary} border-transparent hover:${themeClasses.textPrimary} hover:bg-gray-500/10`
-                }`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '16px 32px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  transition: 'all 0.2s ease',
+                  borderBottom: activeTab === tab.id ? '2px solid #3b82f6' : '2px solid transparent',
+                  backgroundColor: activeTab === tab.id ? (isDarkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.1)') : 'transparent',
+                  color: activeTab === tab.id 
+                    ? (isDarkMode ? '#ffffff' : '#111827')
+                    : (isDarkMode ? '#9ca3af' : '#6b7280'),
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+                onMouseOver={(e) => {
+                  if (activeTab !== tab.id) {
+                    e.currentTarget.style.backgroundColor = isDarkMode ? 'rgba(75, 85, 99, 0.1)' : 'rgba(75, 85, 99, 0.1)';
+                    e.currentTarget.style.color = isDarkMode ? '#ffffff' : '#111827';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (activeTab !== tab.id) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = isDarkMode ? '#9ca3af' : '#6b7280';
+                  }
+                }}
               >
-                <span className="text-lg">{tab.icon}</span>
+                <span style={{ fontSize: '18px' }}>{tab.icon}</span>
                 <span>{tab.label}</span>
               </button>
             ))}
           </div>
 
           {/* Tab Content */}
-          <div className="p-8">
+          <div style={{ padding: '32px' }}>
             {/* 1. SOCIAL PLATFORMS TAB (includes both Social Media + Telegram) */}
             {activeTab === 'platforms' && (
-              <div className="space-y-8">
+              <div style={{ display: 'grid', gap: '32px' }}>
                 
                 {/* SOCIAL MEDIA PLATFORMS SECTION */}
-                <div className={`p-8 border-2 border-blue-500 rounded-xl bg-gradient-to-br ${isDarkMode ? 'from-blue-900/20 to-blue-800/20' : 'from-blue-50 to-blue-100'}`}>
-                  <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-900'} mb-6 flex items-center gap-3`}>
-                    <span className="text-3xl">📱</span>
+                <div style={{
+                  padding: '32px',
+                  border: '2px solid #3b82f6',
+                  borderRadius: '12px',
+                  background: isDarkMode 
+                    ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%)'
+                    : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)'
+                }}>
+                  <h2 style={{
+                    fontSize: '24px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#93c5fd' : '#1e40af',
+                    marginBottom: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    margin: '0 0 24px 0'
+                  }}>
+                    <span style={{ fontSize: '28px' }}>📱</span>
                     Social Media Platforms
                   </h2>
                   
                   {/* Add New Platform Form */}
-                  <div className={`p-6 ${isDarkMode ? 'bg-gray-800/50' : 'bg-white/80'} rounded-lg border ${themeClasses.border} mb-8`}>
-                    <h3 className={`text-lg font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-900'} mb-4 flex items-center gap-2`}>
+                  <div style={{
+                    padding: '24px',
+                    backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.5)' : 'rgba(255, 255, 255, 0.8)',
+                    borderRadius: '8px',
+                    border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+                    marginBottom: '32px'
+                  }}>
+                    <h3 style={{
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      color: isDarkMode ? '#93c5fd' : '#1e40af',
+                      marginBottom: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      margin: '0 0 16px 0'
+                    }}>
                       <span>➕</span>
                       Create New Platform
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                      gap: '24px', 
+                      alignItems: 'end' 
+                    }}>
                       <div>
-                        <label className={`block text-sm font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-900'} mb-2`}>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          color: isDarkMode ? '#93c5fd' : '#1e40af',
+                          marginBottom: '8px'
+                        }}>
                           Platform Name
                         </label>
                         <input
@@ -274,11 +344,28 @@ function SettingsComponent() {
                           value={newPlatform.name}
                           onChange={(e) => setNewPlatform(prev => ({ ...prev, name: e.target.value }))}
                           placeholder="e.g., Facebook, Instagram, Twitter"
-                          className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-blue-500 focus:ring-0 transition-colors`}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                            border: isDarkMode ? '1px solid #4b5563' : '1px solid #93c5fd',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            color: isDarkMode ? '#ffffff' : '#111827',
+                            outline: 'none'
+                          }}
+                          onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                          onBlur={(e) => e.target.style.borderColor = isDarkMode ? '#4b5563' : '#93c5fd'}
                         />
                       </div>
                       <div>
-                        <label className={`block text-sm font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-900'} mb-2`}>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          color: isDarkMode ? '#93c5fd' : '#1e40af',
+                          marginBottom: '8px'
+                        }}>
                           Platform URL/Link
                         </label>
                         <input
@@ -286,13 +373,48 @@ function SettingsComponent() {
                           value={newPlatform.url}
                           onChange={(e) => setNewPlatform(prev => ({ ...prev, url: e.target.value }))}
                           placeholder="https://facebook.com/yourpage"
-                          className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-blue-500 focus:ring-0 transition-colors`}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                            border: isDarkMode ? '1px solid #4b5563' : '1px solid #93c5fd',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            color: isDarkMode ? '#ffffff' : '#111827',
+                            outline: 'none'
+                          }}
+                          onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                          onBlur={(e) => e.target.style.borderColor = isDarkMode ? '#4b5563' : '#93c5fd'}
                         />
                       </div>
                       <button
                         onClick={addPlatform}
                         disabled={!newPlatform.name.trim() || !newPlatform.url.trim()}
-                        className={`px-6 py-3 ${themeClasses.buttonPrimary} text-white border-none rounded-lg text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+                        style={{
+                          padding: '12px 20px',
+                          backgroundColor: (newPlatform.name.trim() && newPlatform.url.trim()) ? '#3b82f6' : '#9ca3af',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          cursor: (newPlatform.name.trim() && newPlatform.url.trim()) ? 'pointer' : 'not-allowed',
+                          transition: 'background-color 0.2s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseOver={(e) => {
+                          if (newPlatform.name.trim() && newPlatform.url.trim()) {
+                            e.currentTarget.style.backgroundColor = '#2563eb';
+                          }
+                        }}
+                        onMouseOut={(e) => {
+                          if (newPlatform.name.trim() && newPlatform.url.trim()) {
+                            e.currentTarget.style.backgroundColor = '#3b82f6';
+                          }
+                        }}
                       >
                         <span>💾</span>
                         Save
@@ -302,43 +424,109 @@ function SettingsComponent() {
 
                   {/* Platforms List */}
                   <div>
-                    <h3 className={`text-lg font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-900'} mb-4 flex items-center gap-2`}>
+                    <h3 style={{
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      color: isDarkMode ? '#93c5fd' : '#1e40af',
+                      marginBottom: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      margin: '0 0 16px 0'
+                    }}>
                       <span>📋</span>
                       Your Platforms ({platforms.length})
                     </h3>
                     {platforms.length === 0 ? (
-                      <div className={`p-12 text-center ${isDarkMode ? 'bg-gray-800/30' : 'bg-white/50'} rounded-lg border-2 border-dashed ${isDarkMode ? 'border-blue-400' : 'border-blue-300'}`}>
-                        <p className={`${themeClasses.textSecondary} text-lg mb-2`}>No platforms added yet</p>
-                        <p className={`${themeClasses.textMuted} text-sm`}>Use the form above to add your first social media platform</p>
+                      <div style={{
+                        padding: '48px',
+                        textAlign: 'center',
+                        backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.3)' : 'rgba(255, 255, 255, 0.5)',
+                        borderRadius: '8px',
+                        border: isDarkMode ? '2px dashed #60a5fa' : '2px dashed #93c5fd'
+                      }}>
+                        <p style={{ 
+                          color: isDarkMode ? '#d1d5db' : '#6b7280', 
+                          fontSize: '16px', 
+                          marginBottom: '8px',
+                          margin: '0 0 8px 0'
+                        }}>No platforms added yet</p>
+                        <p style={{ 
+                          color: isDarkMode ? '#9ca3af' : '#9ca3af', 
+                          fontSize: '14px',
+                          margin: '0'
+                        }}>Use the form above to add your first social media platform</p>
                       </div>
                     ) : (
-                      <div className="space-y-3">
+                      <div style={{ display: 'grid', gap: '12px' }}>
                         {platforms.map(platform => (
-                          <div key={platform.id} className={`p-4 ${themeClasses.cardBackground} rounded-lg border ${themeClasses.border} flex items-center justify-between`}>
+                          <div key={platform.id} style={{
+                            padding: '16px',
+                            backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                            borderRadius: '8px',
+                            border: isDarkMode ? '1px solid #374151' : '1px solid #93c5fd',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                          }}>
                             {editingPlatform && editingPlatform.id === platform.id ? (
-                              <div className="flex items-center gap-4 flex-1">
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1' }}>
                                 <input
                                   type="text"
                                   value={editingPlatform.name}
                                   onChange={(e) => setEditingPlatform(prev => ({ ...prev, name: e.target.value }))}
-                                  className={`px-3 py-2 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border rounded text-sm ${themeClasses.textPrimary} w-40`}
+                                  style={{
+                                    padding: '8px',
+                                    backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                    border: isDarkMode ? '1px solid #4b5563' : '1px solid #93c5fd',
+                                    borderRadius: '4px',
+                                    fontSize: '14px',
+                                    color: isDarkMode ? '#ffffff' : '#111827',
+                                    width: '150px'
+                                  }}
                                 />
                                 <input
                                   type="url"
                                   value={editingPlatform.url}
                                   onChange={(e) => setEditingPlatform(prev => ({ ...prev, url: e.target.value }))}
-                                  className={`flex-1 px-3 py-2 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border rounded text-sm ${themeClasses.textPrimary}`}
+                                  style={{
+                                    flex: '1',
+                                    padding: '8px',
+                                    backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                    border: isDarkMode ? '1px solid #4b5563' : '1px solid #93c5fd',
+                                    borderRadius: '4px',
+                                    fontSize: '14px',
+                                    color: isDarkMode ? '#ffffff' : '#111827'
+                                  }}
                                 />
-                                <div className="flex gap-2">
+                                <div style={{ display: 'flex', gap: '8px' }}>
                                   <button
                                     onClick={savePlatformEdit}
-                                    className={`px-3 py-2 ${themeClasses.buttonSuccess} text-white text-xs rounded font-bold`}
+                                    style={{
+                                      padding: '8px 12px',
+                                      backgroundColor: '#10b981',
+                                      color: '#ffffff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontSize: '12px',
+                                      fontWeight: 'bold'
+                                    }}
                                   >
                                     💾 Save
                                   </button>
                                   <button
                                     onClick={() => setEditingPlatform(null)}
-                                    className={`px-3 py-2 ${themeClasses.buttonSecondary} ${themeClasses.textPrimary} text-xs rounded font-bold`}
+                                    style={{
+                                      padding: '8px 12px',
+                                      backgroundColor: '#6b7280',
+                                      color: '#ffffff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontSize: '12px',
+                                      fontWeight: 'bold'
+                                    }}
                                   >
                                     ❌ Cancel
                                   </button>
@@ -347,23 +535,48 @@ function SettingsComponent() {
                             ) : (
                               <>
                                 <div>
-                                  <div className={`font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-900'} mb-1`}>
+                                  <div style={{
+                                    fontWeight: 'bold',
+                                    color: isDarkMode ? '#93c5fd' : '#1e40af',
+                                    marginBottom: '4px'
+                                  }}>
                                     {platform.name}
                                   </div>
-                                  <div className={`text-xs ${themeClasses.textMuted}`}>
+                                  <div style={{
+                                    fontSize: '12px',
+                                    color: isDarkMode ? '#9ca3af' : '#6b7280'
+                                  }}>
                                     {platform.url}
                                   </div>
                                 </div>
-                                <div className="flex gap-2">
+                                <div style={{ display: 'flex', gap: '8px' }}>
                                   <button
                                     onClick={() => setEditingPlatform(platform)}
-                                    className={`px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded font-bold transition-colors`}
+                                    style={{
+                                      padding: '8px 12px',
+                                      backgroundColor: '#f59e0b',
+                                      color: '#ffffff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontSize: '12px',
+                                      fontWeight: 'bold'
+                                    }}
                                   >
                                     ✏️ Edit
                                   </button>
                                   <button
                                     onClick={() => deletePlatform(platform.id)}
-                                    className={`px-3 py-2 ${themeClasses.buttonDanger} text-white text-xs rounded font-bold`}
+                                    style={{
+                                      padding: '8px 12px',
+                                      backgroundColor: '#ef4444',
+                                      color: '#ffffff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontSize: '12px',
+                                      fontWeight: 'bold'
+                                    }}
                                   >
                                     🗑️ Delete
                                   </button>
@@ -378,22 +591,59 @@ function SettingsComponent() {
                 </div>
 
                 {/* TELEGRAM SECTION */}
-                <div className={`p-8 border-2 border-cyan-500 rounded-xl bg-gradient-to-br ${isDarkMode ? 'from-cyan-900/20 to-cyan-800/20' : 'from-cyan-50 to-cyan-100'}`}>
-                  <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-6 flex items-center gap-3`}>
-                    <span className="text-3xl">📡</span>
+                <div style={{
+                  padding: '32px',
+                  border: '2px solid #0891b2',
+                  borderRadius: '12px',
+                  background: isDarkMode 
+                    ? 'linear-gradient(135deg, rgba(8, 145, 178, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%)'
+                    : 'linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%)'
+                }}>
+                  <h2 style={{
+                    fontSize: '24px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#67e8f9' : '#0e7490',
+                    marginBottom: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    margin: '0 0 24px 0'
+                  }}>
+                    <span style={{ fontSize: '28px' }}>📡</span>
                     Telegram Channels & Groups
                   </h2>
                   
                   {/* Add New Telegram Form */}
-                  <div className={`p-6 ${isDarkMode ? 'bg-gray-800/50' : 'bg-white/80'} rounded-lg border ${themeClasses.border} mb-8`}>
-                    <h3 className={`text-lg font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-4 flex items-center gap-2`}>
+                  <div style={{
+                    padding: '24px',
+                    backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.5)' : 'rgba(255, 255, 255, 0.8)',
+                    borderRadius: '8px',
+                    border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+                    marginBottom: '32px'
+                  }}>
+                    <h3 style={{
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      color: isDarkMode ? '#67e8f9' : '#0e7490',
+                      marginBottom: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      margin: '0 0 16px 0'
+                    }}>
                       <span>➕</span>
                       Add Telegram Channel/Group
                     </h3>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div style={{ display: 'grid', gap: '16px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '16px' }}>
                         <div>
-                          <label className={`block text-sm font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-2`}>
+                          <label style={{
+                            display: 'block',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            color: isDarkMode ? '#67e8f9' : '#0e7490',
+                            marginBottom: '8px'
+                          }}>
                             Channel or Group Name
                           </label>
                           <input
@@ -401,11 +651,26 @@ function SettingsComponent() {
                             value={newTelegram.name}
                             onChange={(e) => setNewTelegram(prev => ({ ...prev, name: e.target.value }))}
                             placeholder="e.g., group2, channel1"
-                            className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-cyan-500 focus:ring-0 transition-colors`}
+                            style={{
+                              width: '100%',
+                              padding: '12px',
+                              backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                              border: isDarkMode ? '1px solid #4b5563' : '1px solid #67e8f9',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              color: isDarkMode ? '#ffffff' : '#111827',
+                              outline: 'none'
+                            }}
                           />
                         </div>
                         <div>
-                          <label className={`block text-sm font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-2`}>
+                          <label style={{
+                            display: 'block',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            color: isDarkMode ? '#67e8f9' : '#0e7490',
+                            marginBottom: '8px'
+                          }}>
                             Channel/Group ID
                           </label>
                           <input
@@ -413,17 +678,41 @@ function SettingsComponent() {
                             value={newTelegram.channel_group_id}
                             onChange={(e) => setNewTelegram(prev => ({ ...prev, channel_group_id: e.target.value }))}
                             placeholder="e.g., -1002377255109"
-                            className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-cyan-500 focus:ring-0 transition-colors`}
+                            style={{
+                              width: '100%',
+                              padding: '12px',
+                              backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                              border: isDarkMode ? '1px solid #4b5563' : '1px solid #67e8f9',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              color: isDarkMode ? '#ffffff' : '#111827',
+                              outline: 'none'
+                            }}
                           />
                         </div>
                         <div>
-                          <label className={`block text-sm font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-2`}>
+                          <label style={{
+                            display: 'block',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            color: isDarkMode ? '#67e8f9' : '#0e7490',
+                            marginBottom: '8px'
+                          }}>
                             Type
                           </label>
                           <select
                             value={newTelegram.type}
                             onChange={(e) => setNewTelegram(prev => ({ ...prev, type: e.target.value }))}
-                            className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-cyan-500 focus:ring-0 transition-colors`}
+                            style={{
+                              width: '100%',
+                              padding: '12px',
+                              backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                              border: isDarkMode ? '1px solid #4b5563' : '1px solid #67e8f9',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              color: isDarkMode ? '#ffffff' : '#111827',
+                              outline: 'none'
+                            }}
                           >
                             <option value="channel">Channel</option>
                             <option value="group">Group</option>
@@ -433,7 +722,13 @@ function SettingsComponent() {
                       
                       {newTelegram.type === 'group' && (
                         <div>
-                          <label className={`block text-sm font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-2`}>
+                          <label style={{
+                            display: 'block',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            color: isDarkMode ? '#67e8f9' : '#0e7490',
+                            marginBottom: '8px'
+                          }}>
                             Thread ID (for groups with topics)
                           </label>
                           <input
@@ -441,16 +736,37 @@ function SettingsComponent() {
                             value={newTelegram.thread_id}
                             onChange={(e) => setNewTelegram(prev => ({ ...prev, thread_id: e.target.value }))}
                             placeholder="e.g., https://t.me/100237725510910 (optional)"
-                            className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-cyan-500 focus:ring-0 transition-colors`}
+                            style={{
+                              width: '100%',
+                              padding: '12px',
+                              backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                              border: isDarkMode ? '1px solid #4b5563' : '1px solid #67e8f9',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              color: isDarkMode ? '#ffffff' : '#111827',
+                              outline: 'none'
+                            }}
                           />
                         </div>
                       )}
                       
-                      <div className="text-right">
+                      <div style={{ textAlign: 'right' }}>
                         <button
                           onClick={addTelegram}
                           disabled={!newTelegram.name.trim() || !newTelegram.channel_group_id.trim()}
-                          className={`px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white border-none rounded-lg text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
+                          style={{
+                            padding: '12px 20px',
+                            backgroundColor: (newTelegram.name.trim() && newTelegram.channel_group_id.trim()) ? '#0891b2' : '#9ca3af',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            cursor: (newTelegram.name.trim() && newTelegram.channel_group_id.trim()) ? 'pointer' : 'not-allowed',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
                         >
                           <span>💾</span>
                           Save
@@ -461,38 +777,95 @@ function SettingsComponent() {
 
                   {/* Telegram List */}
                   <div>
-                    <h3 className={`text-lg font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-4 flex items-center gap-2`}>
+                    <h3 style={{
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      color: isDarkMode ? '#67e8f9' : '#0e7490',
+                      marginBottom: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      margin: '0 0 16px 0'
+                    }}>
                       <span>📋</span>
                       Your Telegram Channels/Groups ({telegramChannels.length})
                     </h3>
                     {telegramChannels.length === 0 ? (
-                      <div className={`p-12 text-center ${isDarkMode ? 'bg-gray-800/30' : 'bg-white/50'} rounded-lg border-2 border-dashed ${isDarkMode ? 'border-cyan-400' : 'border-cyan-300'}`}>
-                        <p className={`${themeClasses.textSecondary} text-lg mb-2`}>No Telegram channels/groups added yet</p>
-                        <p className={`${themeClasses.textMuted} text-sm`}>Use the form above to add your first Telegram destination</p>
+                      <div style={{
+                        padding: '48px',
+                        textAlign: 'center',
+                        backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.3)' : 'rgba(255, 255, 255, 0.5)',
+                        borderRadius: '8px',
+                        border: isDarkMode ? '2px dashed #22d3ee' : '2px dashed #67e8f9'
+                      }}>
+                        <p style={{ 
+                          color: isDarkMode ? '#d1d5db' : '#6b7280', 
+                          fontSize: '16px', 
+                          marginBottom: '8px',
+                          margin: '0 0 8px 0'
+                        }}>No Telegram channels/groups added yet</p>
+                        <p style={{ 
+                          color: isDarkMode ? '#9ca3af' : '#9ca3af', 
+                          fontSize: '14px',
+                          margin: '0'
+                        }}>Use the form above to add your first Telegram destination</p>
                       </div>
                     ) : (
-                      <div className="space-y-3">
+                      <div style={{ display: 'grid', gap: '12px' }}>
                         {telegramChannels.map(telegram => (
-                          <div key={telegram.id} className={`p-4 ${themeClasses.cardBackground} rounded-lg border ${themeClasses.border} flex items-center justify-between`}>
+                          <div key={telegram.id} style={{
+                            padding: '16px',
+                            backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                            borderRadius: '8px',
+                            border: isDarkMode ? '1px solid #374151' : '1px solid #67e8f9',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                          }}>
                             <div>
-                              <div className={`font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-1`}>
+                              <div style={{
+                                fontWeight: 'bold',
+                                color: isDarkMode ? '#67e8f9' : '#0e7490',
+                                marginBottom: '4px'
+                              }}>
                                 {telegram.name} ({telegram.type})
                               </div>
-                              <div className={`text-xs ${themeClasses.textMuted}`}>
+                              <div style={{
+                                fontSize: '12px',
+                                color: isDarkMode ? '#9ca3af' : '#6b7280'
+                              }}>
                                 ID: {telegram.channel_group_id}
                                 {telegram.thread_id && ` • Thread: ${telegram.thread_id}`}
                               </div>
                             </div>
-                            <div className="flex gap-2">
+                            <div style={{ display: 'flex', gap: '8px' }}>
                               <button
                                 onClick={() => setEditingTelegram(telegram)}
-                                className="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded font-bold transition-colors"
+                                style={{
+                                  padding: '8px 12px',
+                                  backgroundColor: '#f59e0b',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: 'bold'
+                                }}
                               >
                                 ✏️ Edit
                               </button>
                               <button
                                 onClick={() => deleteTelegram(telegram.id)}
-                                className={`px-3 py-2 ${themeClasses.buttonDanger} text-white text-xs rounded font-bold`}
+                                style={{
+                                  padding: '8px 12px',
+                                  backgroundColor: '#ef4444',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: 'bold'
+                                }}
                               >
                                 🗑️ Delete
                               </button>
@@ -508,22 +881,59 @@ function SettingsComponent() {
 
             {/* 2. CHARACTER PROFILES TAB */}
             {activeTab === 'characters' && (
-              <div className={`p-8 border-2 border-purple-500 rounded-xl bg-gradient-to-br ${isDarkMode ? 'from-purple-900/20 to-purple-800/20' : 'from-purple-50 to-purple-100'}`}>
-                <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-6 flex items-center gap-3`}>
-                  <span className="text-3xl">👥</span>
+              <div style={{
+                padding: '32px',
+                border: '2px solid #8b5cf6',
+                borderRadius: '12px',
+                background: isDarkMode 
+                  ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%)'
+                  : 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)'
+              }}>
+                <h2 style={{
+                  fontSize: '24px',
+                  fontWeight: 'bold',
+                  color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                  marginBottom: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  margin: '0 0 24px 0'
+                }}>
+                  <span style={{ fontSize: '28px' }}>👥</span>
                   Character Profiles
                 </h2>
                 
                 {/* Add New Character Form */}
-                <div className={`p-6 ${isDarkMode ? 'bg-gray-800/50' : 'bg-white/80'} rounded-lg border ${themeClasses.border} mb-8`}>
-                  <h3 className={`text-lg font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-4 flex items-center gap-2`}>
+                <div style={{
+                  padding: '24px',
+                  backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.5)' : 'rgba(255, 255, 255, 0.8)',
+                  borderRadius: '8px',
+                  border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+                  marginBottom: '32px'
+                }}>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    margin: '0 0 16px 0'
+                  }}>
                     <span>➕</span>
                     Add Profile
                   </h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                       <div>
-                        <label className={`block text-sm font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-2`}>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                          marginBottom: '8px'
+                        }}>
                           Name
                         </label>
                         <input
@@ -531,11 +941,26 @@ function SettingsComponent() {
                           value={newCharacter.name}
                           onChange={(e) => setNewCharacter(prev => ({ ...prev, name: e.target.value }))}
                           placeholder="e.g., Dr. Sarah Chen"
-                          className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-purple-500 focus:ring-0 transition-colors`}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                            border: isDarkMode ? '1px solid #4b5563' : '1px solid #c4b5fd',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            color: isDarkMode ? '#ffffff' : '#111827',
+                            outline: 'none'
+                          }}
                         />
                       </div>
                       <div>
-                        <label className={`block text-sm font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-2`}>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                          marginBottom: '8px'
+                        }}>
                           Username
                         </label>
                         <input
@@ -543,13 +968,28 @@ function SettingsComponent() {
                           value={newCharacter.username}
                           onChange={(e) => setNewCharacter(prev => ({ ...prev, username: e.target.value }))}
                           placeholder="e.g., @drsarahchen"
-                          className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-purple-500 focus:ring-0 transition-colors`}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                            border: isDarkMode ? '1px solid #4b5563' : '1px solid #c4b5fd',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            color: isDarkMode ? '#ffffff' : '#111827',
+                            outline: 'none'
+                          }}
                         />
                       </div>
                     </div>
                     
                     <div>
-                      <label className={`block text-sm font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-2`}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                        marginBottom: '8px'
+                      }}>
                         Title
                       </label>
                       <input
@@ -557,28 +997,60 @@ function SettingsComponent() {
                         value={newCharacter.title}
                         onChange={(e) => setNewCharacter(prev => ({ ...prev, title: e.target.value }))}
                         placeholder="e.g., Wellness Expert & Mindfulness Coach"
-                        className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-purple-500 focus:ring-0 transition-colors`}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                          border: isDarkMode ? '1px solid #4b5563' : '1px solid #c4b5fd',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          color: isDarkMode ? '#ffffff' : '#111827',
+                          outline: 'none'
+                        }}
                       />
                     </div>
                     
                     <div>
-                      <label className={`block text-sm font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-2`}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                        marginBottom: '8px'
+                      }}>
                         Bio
                       </label>
                       <textarea
                         value={newCharacter.bio}
                         onChange={(e) => setNewCharacter(prev => ({ ...prev, bio: e.target.value }))}
                         placeholder="Detailed bio and expertise description..."
-                        rows={3}
-                        className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-purple-500 focus:ring-0 transition-colors resize-vertical`}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                          border: isDarkMode ? '1px solid #4b5563' : '1px solid #c4b5fd',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          color: isDarkMode ? '#ffffff' : '#111827',
+                          minHeight: '80px',
+                          resize: 'vertical',
+                          outline: 'none',
+                          fontFamily: 'inherit'
+                        }}
                       />
                     </div>
                     
                     <div>
-                      <label className={`block text-sm font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-2`}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                        marginBottom: '8px'
+                      }}>
                         Upload Profile Image
                       </label>
-                      <div className="flex items-center gap-4">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <input
                           type="file"
                           accept="image/*"
@@ -588,35 +1060,76 @@ function SettingsComponent() {
                               handleImageUpload(file, false);
                             }
                           }}
-                          className={`flex-1 px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-purple-500 focus:ring-0 transition-colors`}
+                          style={{
+                            flex: '1',
+                            padding: '12px',
+                            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                            border: isDarkMode ? '1px solid #4b5563' : '1px solid #c4b5fd',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            color: isDarkMode ? '#ffffff' : '#111827',
+                            outline: 'none'
+                          }}
                         />
                         {newCharacter.image && (
-                          <div className="flex items-center gap-3">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <img
                               src={newCharacter.image}
                               alt="Preview"
-                              className="w-16 h-16 rounded-full object-cover border-2 border-purple-300"
+                              style={{
+                                width: '64px',
+                                height: '64px',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd'
+                              }}
                             />
                             <button
                               type="button"
                               onClick={() => setNewCharacter(prev => ({ ...prev, image: null }))}
-                              className={`px-3 py-2 ${themeClasses.buttonDanger} text-white text-xs rounded font-bold`}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: '#ef4444',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}
                             >
                               Remove
                             </button>
                           </div>
                         )}
                       </div>
-                      <p className={`mt-2 text-xs ${themeClasses.textMuted}`}>
+                      <p style={{
+                        marginTop: '8px',
+                        fontSize: '12px',
+                        color: isDarkMode ? '#9ca3af' : '#6b7280',
+                        margin: '8px 0 0 0'
+                      }}>
                         Upload an image from your computer. It will be automatically resized to fit 200x200 pixels.
                       </p>
                     </div>
                     
-                    <div className="text-right">
+                    <div style={{ textAlign: 'right' }}>
                       <button
                         onClick={addCharacter}
                         disabled={!newCharacter.name.trim() || !newCharacter.username.trim()}
-                        className={`px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white border-none rounded-lg text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
+                        style={{
+                          padding: '12px 20px',
+                          backgroundColor: (newCharacter.name.trim() && newCharacter.username.trim()) ? '#8b5cf6' : '#9ca3af',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          cursor: (newCharacter.name.trim() && newCharacter.username.trim()) ? 'pointer' : 'not-allowed',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
                       >
                         <span>💾</span>
                         Save
@@ -627,50 +1140,135 @@ function SettingsComponent() {
 
                 {/* Characters List */}
                 <div>
-                  <h3 className={`text-lg font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-4 flex items-center gap-2`}>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    margin: '0 0 16px 0'
+                  }}>
                     <span>📋</span>
                     Your Character Profiles ({characters.length})
                   </h3>
                   {characters.length === 0 ? (
-                    <div className={`p-12 text-center ${isDarkMode ? 'bg-gray-800/30' : 'bg-white/50'} rounded-lg border-2 border-dashed ${isDarkMode ? 'border-purple-400' : 'border-purple-300'}`}>
-                      <p className={`${themeClasses.textSecondary} text-lg mb-2`}>No character profiles created yet</p>
-                      <p className={`${themeClasses.textMuted} text-sm`}>Use the form above to create your first character profile</p>
+                    <div style={{
+                      padding: '48px',
+                      textAlign: 'center',
+                      backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.3)' : 'rgba(255, 255, 255, 0.5)',
+                      borderRadius: '8px',
+                      border: isDarkMode ? '2px dashed #a855f7' : '2px dashed #c4b5fd'
+                    }}>
+                      <p style={{ 
+                        color: isDarkMode ? '#d1d5db' : '#6b7280', 
+                        fontSize: '16px', 
+                        marginBottom: '8px',
+                        margin: '0 0 8px 0'
+                      }}>No character profiles created yet</p>
+                      <p style={{ 
+                        color: isDarkMode ? '#9ca3af' : '#9ca3af', 
+                        fontSize: '14px',
+                        margin: '0'
+                      }}>Use the form above to create your first character profile</p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div style={{ display: 'grid', gap: '16px' }}>
                       {characters.map(character => (
-                        <div key={character.id} className={`p-6 ${themeClasses.cardBackground} rounded-lg border ${themeClasses.border} flex items-start gap-4`}>
-                          <div className={`w-20 h-20 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'} flex items-center justify-center text-2xl ${isDarkMode ? 'text-purple-300' : 'text-purple-600'} font-bold border-2 ${isDarkMode ? 'border-purple-400' : 'border-purple-300'} flex-shrink-0 ${character.image ? 'bg-cover bg-center' : ''}`} style={character.image ? { backgroundImage: `url(${character.image})` } : {}}>
+                        <div key={character.id} style={{
+                          padding: '24px',
+                          backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                          borderRadius: '8px',
+                          border: isDarkMode ? '1px solid #374151' : '1px solid #c4b5fd',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '16px'
+                        }}>
+                          <div style={{
+                            width: '80px',
+                            height: '80px',
+                            borderRadius: '50%',
+                            backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '32px',
+                            color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                            fontWeight: 'bold',
+                            border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd',
+                            flexShrink: 0,
+                            backgroundImage: character.image ? `url(${character.image})` : 'none',
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center'
+                          }}>
                             {!character.image && character.name.charAt(0)}
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h4 className={`text-lg font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'}`}>
+                          <div style={{ flex: '1' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                              <h4 style={{
+                                margin: '0',
+                                color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                                fontSize: '18px',
+                                fontWeight: 'bold'
+                              }}>
                                 {character.name}
                               </h4>
-                              <span className={`text-sm ${themeClasses.textMuted} italic`}>
+                              <span style={{
+                                fontSize: '14px',
+                                color: isDarkMode ? '#9ca3af' : '#6b7280',
+                                fontStyle: 'italic'
+                              }}>
                                 {character.username}
                               </span>
                             </div>
                             {character.title && (
-                              <div className={`text-sm font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-600'} mb-2`}>
+                              <div style={{
+                                fontSize: '14px',
+                                color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                                fontWeight: 'bold',
+                                marginBottom: '8px'
+                              }}>
                                 {character.title}
                               </div>
                             )}
-                            <p className={`${themeClasses.textSecondary} text-sm leading-relaxed`}>
+                            <p style={{
+                              margin: '0',
+                              color: isDarkMode ? '#d1d5db' : '#6b7280',
+                              fontSize: '14px',
+                              lineHeight: '1.4'
+                            }}>
                               {character.bio}
                             </p>
                           </div>
-                          <div className="flex flex-col gap-2">
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <button
                               onClick={() => setEditingCharacter(character)}
-                              className="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded font-bold transition-colors"
+                              style={{
+                                padding: '8px 12px',
+                                backgroundColor: '#f59e0b',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}
                             >
                               ✏️ Edit
                             </button>
                             <button
                               onClick={() => deleteCharacter(character.id)}
-                              className={`px-3 py-2 ${themeClasses.buttonDanger} text-white text-xs rounded font-bold`}
+                              style={{
+                                padding: '8px 12px',
+                                backgroundColor: '#ef4444',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}
                             >
                               🗑️ Delete
                             </button>
@@ -685,59 +1283,122 @@ function SettingsComponent() {
 
             {/* 3. ERROR LOGS TAB */}
             {activeTab === 'logs' && (
-              <div className={`p-8 border-2 border-red-500 rounded-xl bg-gradient-to-br ${isDarkMode ? 'from-red-900/20 to-red-800/20' : 'from-red-50 to-red-100'}`}>
-                <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-red-300' : 'text-red-900'} mb-6 flex items-center gap-3`}>
-                  <span className="text-3xl">📋</span>
+              <div style={{
+                padding: '32px',
+                border: '2px solid #ef4444',
+                borderRadius: '12px',
+                background: isDarkMode 
+                  ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%)'
+                  : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)'
+              }}>
+                <h2 style={{
+                  fontSize: '24px',
+                  fontWeight: 'bold',
+                  color: isDarkMode ? '#fca5a5' : '#dc2626',
+                  marginBottom: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  margin: '0 0 24px 0'
+                }}>
+                  <span style={{ fontSize: '28px' }}>📋</span>
                   Error Logs
                 </h2>
-                <p className={`${isDarkMode ? 'text-red-300' : 'text-red-700'} text-sm mb-6`}>
+                <p style={{
+                  color: isDarkMode ? '#fca5a5' : '#dc2626',
+                  fontSize: '14px',
+                  marginBottom: '24px',
+                  margin: '0 0 24px 0'
+                }}>
                   System error logs from Supabase database
                 </p>
                 
                 {errorLogs.length === 0 ? (
-                  <div className={`p-16 text-center ${isDarkMode ? 'bg-gray-800/30' : 'bg-white/50'} rounded-lg border-2 border-dashed ${isDarkMode ? 'border-red-400' : 'border-red-300'}`}>
-                    <div className="text-5xl mb-4">📋</div>
-                    <h3 className={`${themeClasses.textSecondary} mb-3 text-xl font-bold`}>
+                  <div style={{
+                    padding: '64px',
+                    textAlign: 'center',
+                    backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.3)' : 'rgba(255, 255, 255, 0.5)',
+                    borderRadius: '8px',
+                    border: isDarkMode ? '2px dashed #f87171' : '2px dashed #fca5a5'
+                  }}>
+                    <div style={{ fontSize: '64px', marginBottom: '16px' }}>📋</div>
+                    <h3 style={{
+                      color: isDarkMode ? '#d1d5db' : '#6b7280',
+                      marginBottom: '12px',
+                      fontSize: '20px',
+                      fontWeight: 'bold',
+                      margin: '0 0 12px 0'
+                    }}>
                       No Error Logs Found
                     </h3>
-                    <p className={`${themeClasses.textMuted} text-sm mb-6`}>
+                    <p style={{
+                      color: isDarkMode ? '#9ca3af' : '#9ca3af',
+                      fontSize: '14px',
+                      marginBottom: '24px',
+                      margin: '0 0 24px 0'
+                    }}>
                       Error logs from Supabase will appear here automatically
                     </p>
-                    <div className={`p-4 ${isDarkMode ? 'bg-gray-800/50' : 'bg-white/80'} rounded-lg text-left`}>
-                      <p className={`mb-3 text-xs font-bold ${isDarkMode ? 'text-red-300' : 'text-red-700'} flex items-center gap-2`}>
+                    <div style={{
+                      padding: '16px',
+                      backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.5)' : 'rgba(255, 255, 255, 0.8)',
+                      borderRadius: '8px',
+                      textAlign: 'left'
+                    }}>
+                      <p style={{
+                        margin: '0 0 12px 0',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        color: isDarkMode ? '#fca5a5' : '#dc2626',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
                         <span>📡</span>
                         Supabase Connection Status:
                       </p>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                        <span className={`text-xs ${themeClasses.textMuted}`}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                          width: '8px',
+                          height: '8px',
+                          backgroundColor: '#f59e0b',
+                          borderRadius: '50%'
+                        }}></div>
+                        <span style={{
+                          fontSize: '12px',
+                          color: isDarkMode ? '#9ca3af' : '#6b7280'
+                        }}>
                           Waiting for database connection...
                         </span>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div style={{ display: 'grid', gap: '12px' }}>
                     {errorLogs.map(log => (
-                      <div key={log.id} className={`p-4 ${themeClasses.cardBackground} rounded-lg border-l-4 ${
-                        log.severity === 'error' ? 'border-red-500' : 
-                        log.severity === 'warning' ? 'border-orange-500' : 
-                        'border-green-500'
-                      }`}>
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <span className={`font-bold ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>{log.type}</span>
-                              <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                log.severity === 'error' ? 'bg-red-500 text-white' :
-                                log.severity === 'warning' ? 'bg-orange-500 text-white' :
-                                'bg-green-500 text-white'
-                              }`}>
+                      <div key={log.id} style={{
+                        padding: '16px',
+                        backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                        borderRadius: '8px',
+                        borderLeft: `4px solid ${log.severity === 'error' ? '#ef4444' : log.severity === 'warning' ? '#f59e0b' : '#10b981'}`
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div style={{ flex: '1' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                              <span style={{ fontWeight: 'bold', color: isDarkMode ? '#fca5a5' : '#dc2626' }}>{log.type}</span>
+                              <span style={{
+                                padding: '2px 8px',
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                borderRadius: '8px',
+                                backgroundColor: log.severity === 'error' ? '#ef4444' : log.severity === 'warning' ? '#f59e0b' : '#10b981',
+                                color: '#ffffff'
+                              }}>
                                 {log.severity?.toUpperCase()}
                               </span>
-                              <span className={`text-xs ${themeClasses.textMuted}`}>{log.timestamp}</span>
+                              <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#9ca3af' }}>{log.timestamp}</span>
                             </div>
-                            <p className={`${themeClasses.textSecondary} text-sm`}>{log.message}</p>
+                            <p style={{ margin: '0', color: isDarkMode ? '#d1d5db' : '#6b7280', fontSize: '14px' }}>{log.message}</p>
                           </div>
                         </div>
                       </div>
@@ -746,10 +1407,23 @@ function SettingsComponent() {
                 )}
                 
                 {errorLogs.length > 0 && (
-                  <div className="mt-6 text-center">
+                  <div style={{ marginTop: '24px', textAlign: 'center' }}>
                     <button
                       onClick={() => setErrorLogs([])}
-                      className={`px-6 py-3 ${themeClasses.buttonDanger} text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2 mx-auto`}
+                      style={{
+                        padding: '12px 24px',
+                        backgroundColor: '#dc2626',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        margin: '0 auto'
+                      }}
                     >
                       <span>🗑️</span>
                       Clear All Logs
