@@ -387,7 +387,7 @@ function AurionWebchat({
               }
             }}
           >
-            {isLoading ? '...' : '→'}
+            {isLoading ? '...' : '↑'}
           </button>
         </div>
       </div>
@@ -396,7 +396,7 @@ function AurionWebchat({
 }
 
 // =============================================================================
-// CHAT MANAGER PUBLIC COMPONENT - UPDATED STYLING
+// CHAT MANAGER PUBLIC COMPONENT - UPDATED STYLING (TITLE REMOVED & WIDTH FIXED)
 // =============================================================================
 
 function ChatManagerPublic() {
@@ -430,23 +430,6 @@ function ChatManagerPublic() {
     minHeight: '100vh',
     backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
     color: isDarkMode ? '#f9fafb' : '#111827'
-  };
-
-  const headerStyle = {
-    marginBottom: '24px'
-  };
-
-  const titleStyle = {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    margin: '0 0 8px 0',
-    color: isDarkMode ? '#f9fafb' : '#111827'
-  };
-
-  const subtitleStyle = {
-    color: isDarkMode ? '#d1d5db' : '#6b7280',
-    margin: '0',
-    fontSize: '16px'
   };
 
   const tabsContainerStyle = {
@@ -507,11 +490,6 @@ function ChatManagerPublic() {
 
   return (
     <div style={containerStyle}>
-      <div style={headerStyle}>
-        <h2 style={titleStyle}>💬 Chat Manager - Public</h2>
-        <p style={subtitleStyle}>Manage customer communications, support emails, and notifications</p>
-      </div>
-      
       <div style={tabsContainerStyle}>
         {[
           { id: 'chat', label: '💬 Live Chat', icon: '💬' },
@@ -539,9 +517,9 @@ function ChatManagerPublic() {
         ))}
       </div>
 
-      {/* Live Chat Tab */}
+      {/* Live Chat Tab - FIXED WIDTH ISSUE */}
       {activeTab === 'chat' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 500px', gap: '32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '32px' }}>
           <div style={contentCardStyle}>
             <h3 style={sectionTitleStyle}>💬 Aurion Chat Interface</h3>
             <p style={{ color: isDarkMode ? '#d1d5db' : '#6b7280', marginBottom: '20px' }}>
