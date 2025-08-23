@@ -17,6 +17,153 @@ const ThemeContext = createContext({
 const useTheme = () => useContext(ThemeContext);
 
 // =============================================================================
+// THEME WRAPPER HOC - This ensures all components get dark mode support
+// =============================================================================
+const withThemeWrapper = (WrappedComponent: React.ComponentType<any>) => {
+  return React.forwardRef<any, any>((props, ref) => {
+    const { isDarkMode } = useTheme();
+    
+    // Apply global dark mode styles to the wrapped component
+    useEffect(() => {
+      const applyDarkModeStyles = () => {
+        const style = document.createElement('style');
+        style.id = 'dynamic-dark-mode-styles';
+        
+        // Remove existing dynamic styles
+        const existing = document.getElementById('dynamic-dark-mode-styles');
+        if (existing) {
+          existing.remove();
+        }
+        
+        if (isDarkMode) {
+          style.textContent = `
+            /* Global dark mode overrides for all components */
+            .chat-content *,
+            .settings-content *,
+            .admin-content *,
+            .content-manager *,
+            .schedule-content *,
+            .marketing-content * {
+              color: white !important;
+            }
+            
+            /* Background overrides */
+            .chat-content div[style*="background"],
+            .settings-content div[style*="background"],
+            .admin-content div[style*="background"],
+            .content-manager div[style*="background"],
+            .schedule-content div[style*="background"],
+            .marketing-content div[style*="background"] {
+              background: #1e293b !important;
+            }
+            
+            /* Border overrides */
+            .chat-content *[style*="border"],
+            .settings-content *[style*="border"],
+            .admin-content *[style*="border"],
+            .content-manager *[style*="border"],
+            .schedule-content *[style*="border"],
+            .marketing-content *[style*="border"] {
+              border-color: #334155 !important;
+            }
+            
+            /* Tab navigation buttons */
+            .chat-content button[style*="border-bottom"],
+            .settings-content button[style*="border-bottom"],
+            .admin-content button[style*="border-bottom"] {
+              color: white !important;
+              font-weight: bold !important;
+              font-size: 12px !important;
+            }
+            
+            /* Input fields */
+            .chat-content input,
+            .settings-content input,
+            .admin-content input,
+            .content-manager input,
+            .schedule-content input,
+            .marketing-content input,
+            .chat-content textarea,
+            .settings-content textarea,
+            .admin-content textarea,
+            .content-manager textarea,
+            .schedule-content textarea,
+            .marketing-content textarea {
+              background: #334155 !important;
+              color: white !important;
+              border-color: #475569 !important;
+            }
+            
+            /* Buttons */
+            .chat-content button,
+            .settings-content button,
+            .admin-content button,
+            .content-manager button,
+            .schedule-content button,
+            .marketing-content button {
+              background: #3b82f6 !important;
+              color: white !important;
+              border-color: #3b82f6 !important;
+            }
+            
+            /* Cards and containers */
+            .chat-content > div,
+            .settings-content > div,
+            .admin-content > div,
+            .content-manager > div,
+            .schedule-content > div,
+            .marketing-content > div {
+              background: #1e293b !important;
+              border-color: #334155 !important;
+            }
+            
+            /* Text elements */
+            .chat-content p,
+            .settings-content p,
+            .admin-content p,
+            .content-manager p,
+            .schedule-content p,
+            .marketing-content p,
+            .chat-content span,
+            .settings-content span,
+            .admin-content span,
+            .content-manager span,
+            .schedule-content span,
+            .marketing-content span,
+            .chat-content div,
+            .settings-content div,
+            .admin-content div,
+            .content-manager div,
+            .schedule-content div,
+            .marketing-content div {
+              color: white !important;
+            }
+          `;
+        } else {
+          style.textContent = `
+            /* Light mode - reset any overrides */
+            .chat-content *,
+            .settings-content *,
+            .admin-content *,
+            .content-manager *,
+            .schedule-content *,
+            .marketing-content * {
+              color: inherit;
+            }
+          `;
+        }
+        
+        document.head.appendChild(style);
+      };
+      
+      applyDarkModeStyles();
+    }, [isDarkMode]);
+    
+    return React.createElement(WrappedComponent, { ...props, ref, isDarkMode });
+  });
+};
+
+// =============================================================================
 // AUTHENTICATION SYSTEM
 // =============================================================================
 
@@ -150,7 +297,7 @@ const LoginScreen = ({ onLogin }: { onLogin: () => void }) => {
               transition: 'all 0.2s ease'
             }}
           >
-            {isLoading ? '🔐 Authenticating...' : '🚀 Access Dashboard'}
+            {isLoading ? '🔍 Authenticating...' : '🚀 Access Dashboard'}
           </button>
         </form>
 
@@ -531,7 +678,7 @@ const OverviewComponent = () => {
             fontSize: '11px',
             margin: '0'
           }}>
-            🌐 Language: English (UK) • ⏰ Timezone: WEST (UTC+1) • 🎯 3C Control Center v1.0
+            🌍 Language: English (UK) • ⏰ Timezone: WEST (UTC+1) • 🎯 3C Control Center v1.0
           </p>
         </div>
       </div>
@@ -540,8 +687,16 @@ const OverviewComponent = () => {
 };
 
 // =============================================================================
-// COMPONENT WRAPPERS WITH DARK MODE HEADERS
+// COMPONENT WRAPPERS WITH DARK MODE HEADERS AND THEME SUPPORT
 // =============================================================================
+
+// Create wrapped versions of your components
+const ThemedContentComponent = withThemeWrapper(ContentComponent);
+const ThemedChatManagerPublic = withThemeWrapper(ChatManagerPublic);
+const ThemedScheduleComponentContent = withThemeWrapper(ScheduleComponentContent);
+const ThemedMarketingControlCenter = withThemeWrapper(MarketingControlCenter);
+const ThemedSettingsComponentContent = withThemeWrapper(SettingsComponentContent);
+const ThemedAdminComponentsContent = withThemeWrapper(AdminComponentsContent);
 
 // Content Manager Component with Dark Mode Support
 const ContentManager = () => {
@@ -586,11 +741,9 @@ const ContentManager = () => {
           </p>
         </div>
 
-        {/* Component Content - Direct Render */}
-        <div style={{
-          // Remove any background override, let the component handle its own styling
-        }}>
-          <ContentComponent />
+        {/* Component Content - Using themed wrapper */}
+        <div className="content-manager">
+          <ThemedContentComponent />
         </div>
       </div>
     </div>
@@ -600,33 +753,6 @@ const ContentManager = () => {
 // WebChat Component with Dark Mode Support
 const WebChatComponent = () => {
   const { isDarkMode } = useTheme();
-  
-  useEffect(() => {
-    // Add custom styles for chat sub-navigation
-    const style = document.createElement('style');
-    style.textContent = `
-      ${isDarkMode ? `
-        /* Chat Manager specific styling */
-        .chat-content button[style*="border-bottom"] {
-          color: white !important;
-          font-weight: bold !important;
-          font-size: 12px !important;
-        }
-        
-        /* Tab navigation buttons in dark mode */
-        .chat-content div[style*="border-bottom"] button {
-          color: white !important;
-          font-weight: bold !important;
-          font-size: 12px !important;
-        }
-      ` : ''}
-    `;
-    document.head.appendChild(style);
-    
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, [isDarkMode]);
   
   return (
     <div style={{
@@ -667,9 +793,9 @@ const WebChatComponent = () => {
           </p>
         </div>
 
-        {/* Component Content with custom class for styling */}
+        {/* Component Content with themed wrapper */}
         <div className="chat-content">
-          <ChatManagerPublic />
+          <ThemedChatManagerPublic />
         </div>
       </div>
     </div>
@@ -719,8 +845,10 @@ const ScheduleComponent = () => {
           </p>
         </div>
 
-        {/* Component Content */}
-        <ScheduleComponentContent />
+        {/* Component Content with themed wrapper */}
+        <div className="schedule-content">
+          <ThemedScheduleComponentContent />
+        </div>
       </div>
     </div>
   );
@@ -769,8 +897,10 @@ const MarketingComponent = () => {
           </p>
         </div>
 
-        {/* Component Content */}
-        <MarketingControlCenter />
+        {/* Component Content with themed wrapper */}
+        <div className="marketing-content">
+          <ThemedMarketingControlCenter />
+        </div>
       </div>
     </div>
   );
@@ -779,33 +909,6 @@ const MarketingComponent = () => {
 // Settings Component with Dark Mode Support
 const SettingsComponent = () => {
   const { isDarkMode } = useTheme();
-  
-  useEffect(() => {
-    // Add custom styles for settings sub-navigation
-    const style = document.createElement('style');
-    style.textContent = `
-      ${isDarkMode ? `
-        /* Settings specific styling */
-        .settings-content button[style*="border-bottom"] {
-          color: white !important;
-          font-weight: bold !important;
-          font-size: 12px !important;
-        }
-        
-        /* Tab navigation buttons in dark mode */
-        .settings-content div[style*="border-bottom"] button {
-          color: white !important;
-          font-weight: bold !important;
-          font-size: 12px !important;
-        }
-      ` : ''}
-    `;
-    document.head.appendChild(style);
-    
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, [isDarkMode]);
   
   return (
     <div style={{
@@ -846,9 +949,9 @@ const SettingsComponent = () => {
           </p>
         </div>
 
-        {/* Component Content with custom class for styling */}
+        {/* Component Content with themed wrapper */}
         <div className="settings-content">
-          <SettingsComponentContent />
+          <ThemedSettingsComponentContent />
         </div>
       </div>
     </div>
@@ -858,33 +961,6 @@ const SettingsComponent = () => {
 // Admin Components with Dark Mode Support
 const AdminComponents = () => {
   const { isDarkMode } = useTheme();
-  
-  useEffect(() => {
-    // Add custom styles for admin sub-navigation
-    const style = document.createElement('style');
-    style.textContent = `
-      ${isDarkMode ? `
-        /* Admin Center specific styling */
-        .admin-content button[style*="border-bottom"] {
-          color: white !important;
-          font-weight: bold !important;
-          font-size: 12px !important;
-        }
-        
-        /* Tab navigation buttons in dark mode */
-        .admin-content div[style*="border-bottom"] button {
-          color: white !important;
-          font-weight: bold !important;
-          font-size: 12px !important;
-        }
-      ` : ''}
-    `;
-    document.head.appendChild(style);
-    
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, [isDarkMode]);
   
   return (
     <div style={{
@@ -925,9 +1001,9 @@ const AdminComponents = () => {
           </p>
         </div>
 
-        {/* Component Content with custom class for styling */}
+        {/* Component Content with themed wrapper */}
         <div className="admin-content">
-          <AdminComponentsContent />
+          <ThemedAdminComponentsContent />
         </div>
       </div>
     </div>
@@ -979,13 +1055,14 @@ const AiChatManagerComponent = () => {
 
         {/* Coming Soon Content */}
         <div style={{
-          backgroundColor: 'white',
+          backgroundColor: isDarkMode ? '#1e293b' : 'white',
           borderRadius: '8px',
           boxShadow: isDarkMode 
             ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
             : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           padding: '60px',
-          textAlign: 'center'
+          textAlign: 'center',
+          border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
         }}>
           <div style={{
             fontSize: '96px',
@@ -996,7 +1073,7 @@ const AiChatManagerComponent = () => {
           <h2 style={{
             fontSize: '32px',
             fontWeight: 'bold',
-            color: '#3b82f6',
+            color: isDarkMode ? '#60a5fa' : '#3b82f6',
             marginBottom: '16px',
             margin: '0 0 16px 0'
           }}>
@@ -1004,7 +1081,7 @@ const AiChatManagerComponent = () => {
           </h2>
           <h3 style={{
             fontSize: '20px',
-            color: '#6b7280',
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
             marginBottom: '24px',
             margin: '0 0 24px 0'
           }}>
@@ -1012,7 +1089,7 @@ const AiChatManagerComponent = () => {
           </h3>
           <p style={{
             fontSize: '16px',
-            color: '#6b7280',
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
             maxWidth: '600px',
             margin: '0 auto 32px auto',
             lineHeight: '1.6'
@@ -1031,47 +1108,47 @@ const AiChatManagerComponent = () => {
           }}>
             <div style={{
               padding: '16px',
-              backgroundColor: '#f8fafc',
+              backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
               borderRadius: '8px',
-              border: '1px solid #e5e7eb'
+              border: isDarkMode ? '1px solid #475569' : '1px solid #e5e7eb'
             }}>
               <div style={{ fontSize: '24px', marginBottom: '8px' }}>🧠</div>
-              <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151' }}>Smart Routing</div>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: isDarkMode ? '#f8fafc' : '#374151' }}>Smart Routing</div>
             </div>
             <div style={{
               padding: '16px',
-              backgroundColor: '#f8fafc',
+              backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
               borderRadius: '8px',
-              border: '1px solid #e5e7eb'
+              border: isDarkMode ? '1px solid #475569' : '1px solid #e5e7eb'
             }}>
               <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚡</div>
-              <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151' }}>Auto Responses</div>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: isDarkMode ? '#f8fafc' : '#374151' }}>Auto Responses</div>
             </div>
             <div style={{
               padding: '16px',
-              backgroundColor: '#f8fafc',
+              backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
               borderRadius: '8px',
-              border: '1px solid #e5e7eb'
+              border: isDarkMode ? '1px solid #475569' : '1px solid #e5e7eb'
             }}>
               <div style={{ fontSize: '24px', marginBottom: '8px' }}>📊</div>
-              <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151' }}>Analytics</div>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: isDarkMode ? '#f8fafc' : '#374151' }}>Analytics</div>
             </div>
             <div style={{
               padding: '16px',
-              backgroundColor: '#f8fafc',
+              backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
               borderRadius: '8px',
-              border: '1px solid #e5e7eb'
+              border: isDarkMode ? '1px solid #475569' : '1px solid #e5e7eb'
             }}>
               <div style={{ fontSize: '24px', marginBottom: '8px' }}>🔗</div>
-              <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151' }}>Multi-Platform</div>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: isDarkMode ? '#f8fafc' : '#374151' }}>Multi-Platform</div>
             </div>
           </div>
 
           <div style={{
             display: 'inline-block',
             padding: '12px 24px',
-            backgroundColor: '#e0e7ff',
-            color: '#4338ca',
+            backgroundColor: isDarkMode ? '#3b82f6' + '20' : '#e0e7ff',
+            color: isDarkMode ? '#60a5fa' : '#4338ca',
             borderRadius: '20px',
             fontSize: '14px',
             fontWeight: 'bold'
