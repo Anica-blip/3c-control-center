@@ -200,26 +200,6 @@ function SettingsComponent() {
       transition: 'background-color 0.2s ease' 
     }}>
       <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ 
-            fontSize: '32px', 
-            fontWeight: '900', 
-            color: isDarkMode ? '#ffffff' : '#111827', 
-            marginBottom: '8px',
-            margin: '0 0 8px 0'
-          }}>
-            ⚙️ Dashboard Settings
-          </h1>
-          <p style={{ 
-            fontSize: '18px', 
-            color: isDarkMode ? '#d1d5db' : '#6b7280', 
-            fontWeight: '500',
-            margin: '0'
-          }}>
-            Configure social platforms, Telegram channels, and character profiles
-          </p>
-        </div>
         
         {/* Settings Sub-Navigation - 3 TABS ONLY */}
         <div style={{
