@@ -1,1392 +1,1211 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-// =============================================================================
-// ADMIN COMPONENTS - COMPLETE WITH ALL TABS
-// =============================================================================
-
-function AdminComponents() {
-  const [activeTab, setActiveTab] = useState('templates');
-
-  return (
-    <div>
-      {/* Top Tab Navigation */}
-      <div style={{ 
-        borderBottom: '1px solid #e5e7eb', 
-        backgroundColor: '#f9fafb', 
-        padding: '0 20px' 
-      }}>
-        <div style={{ display: 'flex', gap: '0' }}>
-          <button
-            onClick={() => setActiveTab('templates')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: activeTab === 'templates' ? '#ffffff' : 'transparent',
-              color: activeTab === 'templates' ? '#1f2937' : '#6b7280',
-              border: 'none',
-              borderBottom: activeTab === 'templates' ? '2px solid #3b82f6' : '2px solid transparent',
-              fontWeight: activeTab === 'templates' ? 'bold' : 'normal',
-              cursor: 'pointer'
-            }}
-          >
-            🏗️ Manage Templates
-          </button>
-          <button
-            onClick={() => setActiveTab('libraries')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: activeTab === 'libraries' ? '#ffffff' : 'transparent',
-              color: activeTab === 'libraries' ? '#1f2937' : '#6b7280',
-              border: 'none',
-              borderBottom: activeTab === 'libraries' ? '2px solid #3b82f6' : '2px solid transparent',
-              fontWeight: activeTab === 'libraries' ? 'bold' : 'normal',
-              cursor: 'pointer'
-            }}
-          >
-            📚 Libraries
-          </button>
-          <button
-            onClick={() => setActiveTab('brand')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: activeTab === 'brand' ? '#ffffff' : 'transparent',
-              color: activeTab === 'brand' ? '#1f2937' : '#6b7280',
-              border: 'none',
-              borderBottom: activeTab === 'brand' ? '2px solid #3b82f6' : '2px solid transparent',
-              fontWeight: activeTab === 'brand' ? 'bold' : 'normal',
-              cursor: 'pointer'
-            }}
-          >
-            🏢 Brand Kit
-          </button>
-        </div>
-      </div>
-
-      {/* Content Area */}
-      {activeTab === 'templates' && <AdminTemplatesTab />}
-      {activeTab === 'libraries' && <AdminLibrariesTab />}
-      {activeTab === 'brand' && <AdminBrandTab />}
-    </div>
-  );
+// Types
+interface PendingPost {
+  id: string;
+  characterProfile: string;
+  type: string;
+  template: string;
+  description: string;
+  mediaFiles: MediaFile[];
+  platforms: PlatformAssignment[];
+  status: 'pending_schedule';
+  createdDate: Date;
 }
 
-// =============================================================================
-// TEMPLATES TAB WITH GITHUB EXTERNAL COMPONENTS
-// =============================================================================
+interface ScheduledPost {
+  id: string;
+  characterProfile: string;
+  type: string;
+  template: string;
+  description: string;
+  mediaFiles: MediaFile[];
+  platforms: PlatformAssignment[];
+  scheduledDate: Date;
+  status: 'pending' | 'processing' | 'complete' | 'failed' | 'resending';
+  failureReason?: string;
+  createdDate: Date;
+  lastAttempt?: Date;
+  retryCount?: number;
+}
 
-function AdminTemplatesTab() {
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
-  const [templates, setTemplates] = useState([
-    {
-      id: 1,
-      name: "Social Media Post",
-      category: "Social",
-      description: "Instagram/Facebook post template",
-      fields: ["title", "description", "hashtags", "image"],
-      lastModified: "2025-01-15"
-    },
-    {
-      id: 2,
-      name: "Blog Article", 
-      category: "Content",
-      description: "Standard blog post structure",
-      fields: ["headline", "introduction", "body", "conclusion", "tags"],
-      lastModified: "2025-01-10"
+interface SavedTemplate {
+  id: string;
+  name: string;
+  characterProfile: string;
+  type: string;
+  description: string;
+  platforms: PlatformAssignment[];
+  createdDate: Date;
+  usageCount: number;
+}
+
+interface MediaFile {
+  id: string;
+  name: string;
+  type: 'image' | 'video' | 'pdf' | 'gif' | 'interactive' | 'other';
+  size: number;
+  url: string;
+}
+
+interface PlatformAssignment {
+  platformId: string;
+  platformName: string;
+  platformIcon: string;
+  status: 'pending' | 'sent' | 'failed';
+  sentAt?: Date;
+  errorMessage?: string;
+}
+
+interface Platform {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+}
+
+// Main Component
+export default function ScheduleComponent() {
+  const [activeTab, setActiveTab] = useState('pending');
+  const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month'>('month');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSaveTemplateModalOpen, setIsSaveTemplateModalOpen] = useState(false);
+  const [isEditTemplateModalOpen, setIsEditTemplateModalOpen] = useState(false);
+  const [selectedPendingPost, setSelectedPendingPost] = useState<PendingPost | null>(null);
+  const [selectedScheduledPost, setSelectedScheduledPost] = useState<ScheduledPost | null>(null);
+  const [editingPost, setEditingPost] = useState<PendingPost | ScheduledPost | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<SavedTemplate | null>(null);
+  const [pendingPosts, setPendingPosts] = useState<PendingPost[]>([]);
+  const [scheduledPosts, setScheduledPosts] = useState<ScheduledPost[]>([]);
+  const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
+  const [templateName, setTemplateName] = useState('');
+
+  // Check for dark mode from parent (this would normally come from props or context)
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('darkMode') === 'true';
     }
-  ]);
-
-  const [showBuilder, setShowBuilder] = useState(false);
-  const [newTemplate, setNewTemplate] = useState({
-    name: '',
-    category: 'Social',
-    description: '',
-    fields: ['']
+    return false;
   });
 
-  const addField = () => {
-    setNewTemplate(prev => ({
-      ...prev,
-      fields: [...prev.fields, '']
-    }));
+  // Theme classes
+  const themeClasses = {
+    background: isDarkMode ? 'bg-gray-900' : 'bg-gray-50',
+    cardBackground: isDarkMode ? 'bg-gray-800' : 'bg-white',
+    textPrimary: isDarkMode ? 'text-white' : 'text-gray-900',
+    textSecondary: isDarkMode ? 'text-gray-300' : 'text-gray-600',
+    textMuted: isDarkMode ? 'text-gray-400' : 'text-gray-500',
+    border: isDarkMode ? 'border-gray-700' : 'border-gray-200',
+    inputBackground: isDarkMode ? 'bg-gray-700' : 'bg-white',
+    inputBorder: isDarkMode ? 'border-gray-600' : 'border-gray-300',
+    buttonPrimary: isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700',
+    buttonSecondary: isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200',
+    buttonDanger: isDarkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-600 hover:bg-red-700',
+    buttonSuccess: isDarkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'
   };
 
-  const updateField = (index, value) => {
-    setNewTemplate(prev => ({
-      ...prev,
-      fields: prev.fields.map((field, i) => i === index ? value : field)
-    }));
+  // Platform configuration
+  const platforms: Platform[] = [
+    { id: '1', name: 'Telegram', icon: 'TG', color: '#3b82f6' },
+    { id: '2', name: 'YouTube', icon: 'YT', color: '#ef4444' },
+    { id: '3', name: 'Facebook', icon: 'FB', color: '#2563eb' },
+    { id: '4', name: 'Twitter', icon: 'TW', color: '#0ea5e9' },
+    { id: '5', name: 'Forum', icon: 'FR', color: '#4b5563' },
+  ];
+
+  // Initialize with sample data
+  useEffect(() => {
+    if (pendingPosts.length === 0) {
+      const samplePosts: PendingPost[] = [
+        {
+          id: 'pending-1',
+          characterProfile: 'Business Professional',
+          type: 'Announcement',
+          template: 'Standard Post',
+          description: 'Meet Jan our Admin Support and 3C Community Mentor',
+          mediaFiles: [{ id: '1', name: 'team-photo.jpg', type: 'image', size: 1024000, url: '#' }],
+          platforms: [
+            { platformId: '1', platformName: 'Telegram', platformIcon: 'TG', status: 'pending' },
+            { platformId: '5', platformName: 'Forum', platformIcon: 'FR', status: 'pending' }
+          ],
+          status: 'pending_schedule',
+          createdDate: new Date()
+        },
+        {
+          id: 'pending-2',
+          characterProfile: 'Marketing Expert',
+          type: 'Promotional',
+          template: 'Product Launch',
+          description: 'Exciting new features coming to our platform! Get ready for enhanced productivity tools.',
+          mediaFiles: [{ id: '2', name: 'feature-preview.png', type: 'image', size: 2048000, url: '#' }],
+          platforms: [
+            { platformId: '2', platformName: 'YouTube', platformIcon: 'YT', status: 'pending' },
+            { platformId: '3', platformName: 'Facebook', platformIcon: 'FB', status: 'pending' },
+            { platformId: '4', platformName: 'Twitter', platformIcon: 'TW', status: 'pending' }
+          ],
+          status: 'pending_schedule',
+          createdDate: new Date(Date.now() - 86400000)
+        }
+      ];
+      setPendingPosts(samplePosts);
+      
+      const sampleScheduled: ScheduledPost[] = [
+        {
+          id: 'scheduled-1',
+          characterProfile: 'Community Manager',
+          type: 'Update',
+          template: 'Weekly Update',
+          description: 'Weekly community highlights and upcoming events',
+          mediaFiles: [],
+          platforms: [
+            { platformId: '1', platformName: 'Telegram', platformIcon: 'TG', status: 'pending' },
+            { platformId: '5', platformName: 'Forum', platformIcon: 'FR', status: 'pending' }
+          ],
+          scheduledDate: new Date(Date.now() + 172800000),
+          status: 'pending',
+          createdDate: new Date(Date.now() - 3600000)
+        },
+        {
+          id: 'scheduled-2',
+          characterProfile: 'Technical Writer',
+          type: 'Tutorial',
+          template: 'How-to Guide',
+          description: 'Advanced tips for maximizing your workflow efficiency',
+          mediaFiles: [{ id: '3', name: 'tutorial-video.mp4', type: 'video', size: 10240000, url: '#' }],
+          platforms: [
+            { platformId: '2', platformName: 'YouTube', platformIcon: 'YT', status: 'pending' }
+          ],
+          scheduledDate: new Date(Date.now() + 259200000),
+          status: 'complete',
+          createdDate: new Date(Date.now() - 7200000)
+        }
+      ];
+      setScheduledPosts(sampleScheduled);
+
+      const sampleTemplates: SavedTemplate[] = [
+        {
+          id: 'template-1',
+          name: 'Team Introduction',
+          characterProfile: 'Business Professional',
+          type: 'Announcement',
+          description: 'Template for introducing new team members',
+          platforms: [
+            { platformId: '1', platformName: 'Telegram', platformIcon: 'TG', status: 'pending' },
+            { platformId: '5', platformName: 'Forum', platformIcon: 'FR', status: 'pending' }
+          ],
+          createdDate: new Date(Date.now() - 86400000 * 3),
+          usageCount: 5
+        }
+      ];
+      setSavedTemplates(sampleTemplates);
+    }
+  }, [pendingPosts.length]);
+
+  const getPlatformIcon = (platformId: string) => {
+    const platform = platforms.find(p => p.id === platformId);
+    return platform || { icon: 'UN', color: '#9ca3af' };
   };
 
-  const removeField = (index) => {
-    setNewTemplate(prev => ({
-      ...prev,
-      fields: prev.fields.filter((_, i) => i !== index)
-    }));
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return { borderLeft: '4px solid #f59e0b', backgroundColor: isDarkMode ? '#fef3c7/10' : '#fefce8' };
+      case 'processing': return { borderLeft: '4px solid #3b82f6', backgroundColor: isDarkMode ? '#dbeafe/10' : '#dbeafe' };
+      case 'complete': return { borderLeft: '4px solid #10b981', backgroundColor: isDarkMode ? '#d1fae5/10' : '#d1fae5' };
+      case 'failed': return { borderLeft: '4px solid #ef4444', backgroundColor: isDarkMode ? '#fee2e2/10' : '#fee2e2' };
+      case 'resending': return { borderLeft: '4px solid #f97316', backgroundColor: isDarkMode ? '#fed7aa/10' : '#fed7aa' };
+      default: return { borderLeft: '4px solid #9ca3af', backgroundColor: isDarkMode ? '#f9fafb/10' : '#f9fafb' };
+    }
   };
 
-  const saveTemplate = () => {
-    const newId = Math.max(...templates.map(t => t.id)) + 1;
-    const template = {
-      ...newTemplate,
-      id: newId,
-      lastModified: new Date().toISOString().split('T')[0],
-      fields: newTemplate.fields.filter(f => f.trim() !== '')
+  const getStatusIcon = (status: string) => {
+    const iconStyle = { height: '12px', width: '12px' };
+    switch (status) {
+      case 'pending': return <span style={{...iconStyle, color: '#d97706'}} className="inline-block">⏳</span>;
+      case 'processing': return <span style={{...iconStyle, color: '#2563eb'}} className="inline-block">▶️</span>;
+      case 'complete': return <span style={{...iconStyle, color: '#059669'}} className="inline-block">✅</span>;
+      case 'failed': return <span style={{...iconStyle, color: '#dc2626'}} className="inline-block">⚠️</span>;
+      case 'resending': return <span style={{...iconStyle, color: '#ea580c'}} className="inline-block">🔄</span>;
+      default: return null;
+    }
+  };
+
+  const getPostsForDate = (date: Date) => {
+    return scheduledPosts.filter(post => {
+      const postDate = new Date(post.scheduledDate);
+      return postDate.toDateString() === date.toDateString();
+    });
+  };
+
+  const getHourlyPostsForDay = (date: Date) => {
+    const dayPosts = getPostsForDate(date);
+    const hourlyPosts: { [key: number]: ScheduledPost[] } = {};
+    
+    for (let hour = 0; hour < 24; hour++) {
+      hourlyPosts[hour] = dayPosts.filter(post => new Date(post.scheduledDate).getHours() === hour);
+    }
+    
+    return hourlyPosts;
+  };
+
+  const getWeekDates = (date: Date) => {
+    const week = [];
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(date.getDate() - date.getDay());
+    
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      week.push(day);
+    }
+    
+    return week;
+  };
+
+  const getMonthDates = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
+    
+    const dates = [];
+    const current = new Date(startDate);
+    
+    for (let i = 0; i < 42; i++) { // 6 weeks * 7 days
+      dates.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+    
+    return dates;
+  };
+
+  const navigateCalendar = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentDate);
+    
+    if (calendarView === 'day') {
+      newDate.setDate(newDate.getDate() + (direction === 'next' ? 1 : -1));
+    } else if (calendarView === 'week') {
+      newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
+    } else if (calendarView === 'month') {
+      newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
+    }
+    
+    setCurrentDate(newDate);
+  };
+
+  const formatCalendarTitle = () => {
+    if (calendarView === 'day') {
+      return currentDate.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } else if (calendarView === 'week') {
+      const weekDates = getWeekDates(currentDate);
+      const start = weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const end = weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return `${start} - ${end}, ${weekDates[0].getFullYear()}`;
+    } else {
+      return currentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+    }
+  };
+
+  // Modal handlers
+  const handleSchedulePost = (post: PendingPost) => {
+    setSelectedPendingPost(post);
+    setIsScheduleModalOpen(true);
+  };
+
+  const handleEditPost = (post: PendingPost | ScheduledPost) => {
+    setEditingPost(post);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveTemplate = (post: ScheduledPost) => {
+    setSelectedScheduledPost(post);
+    setTemplateName(`${post.type} Template`);
+    setIsSaveTemplateModalOpen(true);
+  };
+
+  const handleEditTemplate = (template: SavedTemplate) => {
+    setEditingTemplate(template);
+    setIsEditTemplateModalOpen(true);
+  };
+
+  const handleCopyTemplate = (template: SavedTemplate) => {
+    const newPendingPost: PendingPost = {
+      id: 'pending-' + Date.now(),
+      characterProfile: template.characterProfile,
+      type: template.type,
+      template: `Copy of ${template.name}`,
+      description: template.description,
+      mediaFiles: [],
+      platforms: template.platforms,
+      status: 'pending_schedule',
+      createdDate: new Date()
     };
     
-    setTemplates(prev => [...prev, template]);
-    setNewTemplate({ name: '', category: 'Social', description: '', fields: [''] });
-    setShowBuilder(false);
+    setPendingPosts(prev => [newPendingPost, ...prev]);
+    setActiveTab('pending');
+    alert('Template copied to Pending Scheduling for editing!');
   };
 
-  return (
-    <div style={{ padding: '20px' }}>
-      <h2>🏗️ Manage Templates</h2>
-      <p>Create, edit, and manage your content templates</p>
+  const handleConfirmSchedule = () => {
+    if (selectedPendingPost) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(9, 0, 0, 0);
       
-      {/* Template Builder Toggle */}
-      <div style={{ marginBottom: '30px' }}>
-        <button
-          onClick={() => setShowBuilder(!showBuilder)}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: '#3b82f6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: 'bold'
-          }}
-        >
-          {showBuilder ? '📋 View Templates' : '➕ Create New Template'}
-        </button>
-      </div>
+      const scheduledPost: ScheduledPost = {
+        ...selectedPendingPost,
+        scheduledDate: tomorrow,
+        status: 'pending'
+      };
+      
+      setScheduledPosts(prev => [...prev, scheduledPost]);
+      setPendingPosts(prev => prev.filter(p => p.id !== selectedPendingPost.id));
+      
+      alert(`Post scheduled for ${tomorrow.toLocaleString()}!`);
+      setIsScheduleModalOpen(false);
+      setSelectedPendingPost(null);
+    }
+  };
 
-      {showBuilder ? (
-        <div style={{ 
-          padding: '30px', 
-          border: '2px solid #3b82f6', 
-          borderRadius: '8px', 
-          background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)' 
-        }}>
-          <h3 style={{ color: '#1e40af', marginBottom: '20px' }}>🏗️ Template Builder</h3>
-          
-          <div style={{ display: 'grid', gap: '20px' }}>
-            {/* Basic Info */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#1e40af' }}>
-                  Template Name
-                </label>
-                <input
-                  type="text"
-                  value={newTemplate.name}
-                  onChange={(e) => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
+  const handleSaveEdit = () => {
+    if (editingPost) {
+      if ('scheduledDate' in editingPost) {
+        setScheduledPosts(prev => prev.map(p => p.id === editingPost.id ? editingPost as ScheduledPost : p));
+      } else {
+        setPendingPosts(prev => prev.map(p => p.id === editingPost.id ? editingPost as PendingPost : p));
+      }
+      setIsEditModalOpen(false);
+      setEditingPost(null);
+      alert('Post updated successfully!');
+    }
+  };
+
+  const handleSaveTemplateEdit = () => {
+    if (editingTemplate) {
+      setSavedTemplates(prev => prev.map(t => 
+        t.id === editingTemplate.id ? editingTemplate : t
+      ));
+      setIsEditTemplateModalOpen(false);
+      setEditingTemplate(null);
+      alert('Template updated successfully!');
+    }
+  };
+
+  const handleConfirmSaveTemplate = () => {
+    if (selectedScheduledPost && templateName.trim()) {
+      const newTemplate: SavedTemplate = {
+        id: 'template-' + Date.now(),
+        name: templateName.trim(),
+        characterProfile: selectedScheduledPost.characterProfile,
+        type: selectedScheduledPost.type,
+        description: selectedScheduledPost.description,
+        platforms: selectedScheduledPost.platforms,
+        createdDate: new Date(),
+        usageCount: 0
+      };
+      
+      setSavedTemplates(prev => [...prev, newTemplate]);
+      setIsSaveTemplateModalOpen(false);
+      setSelectedScheduledPost(null);
+      setTemplateName('');
+      alert('Template saved successfully!');
+    }
+  };
+
+  const handleCopyToPending = (post: ScheduledPost) => {
+    const newPendingPost: PendingPost = {
+      id: 'pending-' + Date.now(),
+      characterProfile: post.characterProfile,
+      type: post.type,
+      template: post.template,
+      description: post.description,
+      mediaFiles: post.mediaFiles,
+      platforms: post.platforms,
+      status: 'pending_schedule',
+      createdDate: new Date()
+    };
+    
+    setPendingPosts(prev => [newPendingPost, ...prev]);
+    alert('Post copied to Pending Scheduling for modification!');
+  };
+
+  const handleUseTemplate = (template: SavedTemplate) => {
+    const newPendingPost: PendingPost = {
+      id: 'pending-' + Date.now(),
+      characterProfile: template.characterProfile,
+      type: template.type,
+      template: template.name,
+      description: template.description,
+      mediaFiles: [],
+      platforms: template.platforms,
+      status: 'pending_schedule',
+      createdDate: new Date()
+    };
+    
+    setPendingPosts(prev => [newPendingPost, ...prev]);
+    setSavedTemplates(prev => prev.map(t => 
+      t.id === template.id ? { ...t, usageCount: t.usageCount + 1 } : t
+    ));
+    setActiveTab('pending');
+    alert('Template added to Pending Scheduling!');
+  };
+
+  // Calendar rendering methods
+  const renderDayView = () => {
+    const hourlyPosts = getHourlyPostsForDay(currentDate);
+    
+    return (
+      <div className={`grid grid-cols-[80px_1fr] gap-px ${themeClasses.border} border rounded-lg overflow-hidden`}>
+        {Array.from({ length: 24 }, (_, hour) => (
+          <React.Fragment key={hour}>
+            <div className={`p-3 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'} text-xs ${themeClasses.textMuted} text-right font-medium`}>
+              {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
+            </div>
+            <div className={`min-h-[60px] ${themeClasses.cardBackground} p-2 relative`}>
+              {hourlyPosts[hour]?.map((post, idx) => (
+                <div
+                  key={post.id}
+                  className={`p-2 mb-1 rounded cursor-pointer text-xs font-medium`}
                   style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: '1px solid #93c5fd',
-                    borderRadius: '6px',
-                    fontSize: '14px'
+                    maxWidth: '75%',
+                    ...getStatusColor(post.status)
                   }}
-                  placeholder="e.g., Instagram Story Template"
-                />
-              </div>
-              
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#1e40af' }}>
-                  Category
-                </label>
-                <select
-                  value={newTemplate.category}
-                  onChange={(e) => setNewTemplate(prev => ({ ...prev, category: e.target.value }))}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: '1px solid #93c5fd',
-                    borderRadius: '6px',
-                    fontSize: '14px'
-                  }}
+                  title={`${post.description} - ${post.characterProfile}`}
+                  onClick={() => handleEditPost(post)}
                 >
-                  <option value="Social">Social Media</option>
-                  <option value="Content">Blog Content</option>
-                  <option value="Email">Email Marketing</option>
-                  <option value="Video">Video Content</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#1e40af' }}>
-                Description
-              </label>
-              <textarea
-                value={newTemplate.description}
-                onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #93c5fd',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  minHeight: '80px',
-                  resize: 'vertical'
-                }}
-                placeholder="Describe what this template is used for..."
-              />
-            </div>
-
-            {/* Template Fields */}
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#1e40af' }}>
-                Template Fields
-              </label>
-              {newTemplate.fields.map((field, index) => (
-                <div key={index} style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                  <input
-                    type="text"
-                    value={field}
-                    onChange={(e) => updateField(index, e.target.value)}
-                    style={{
-                      flex: '1',
-                      padding: '10px',
-                      border: '1px solid #93c5fd',
-                      borderRadius: '6px',
-                      fontSize: '14px'
-                    }}
-                    placeholder={`Field ${index + 1} (e.g., headline, image, cta)`}
-                  />
-                  {newTemplate.fields.length > 1 && (
-                    <button
-                      onClick={() => removeField(index)}
-                      style={{
-                        padding: '10px',
-                        backgroundColor: '#ef4444',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      ❌
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2 mb-1">
+                    {getStatusIcon(post.status)}
+                    <span className={`text-xs ${themeClasses.textMuted}`}>
+                      {new Date(post.scheduledDate).toLocaleTimeString('en-US', { 
+                        hour: 'numeric', 
+                        minute: '2-digit' 
+                      })}
+                    </span>
+                  </div>
+                  <div className="truncate">
+                    {post.description}
+                  </div>
+                  <div className={`text-xs ${themeClasses.textMuted} mt-1`}>
+                    {post.characterProfile}
+                  </div>
                 </div>
               ))}
-              
-              <button
-                onClick={addField}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
-              >
-                ➕ Add Field
-              </button>
             </div>
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
 
-            {/* Save Button */}
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setShowBuilder(false)}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: '#6b7280',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveTemplate}
-                disabled={!newTemplate.name.trim()}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: newTemplate.name.trim() ? '#10b981' : '#9ca3af',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: newTemplate.name.trim() ? 'pointer' : 'not-allowed'
-                }}
-              >
-                💾 Save Template
-              </button>
+  const renderWeekView = () => {
+    const weekDates = getWeekDates(currentDate);
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    return (
+      <div className={`grid grid-cols-7 gap-px ${themeClasses.border} border rounded-lg overflow-hidden`}>
+        {weekDates.map((date, idx) => {
+          const dayPosts = getPostsForDate(date);
+          const isToday = date.toDateString() === new Date().toDateString();
+          const isCurrentMonth = date.getMonth() === currentDate.getMonth();
+          
+          return (
+            <div
+              key={date.toISOString()}
+              className={`${themeClasses.cardBackground} min-h-[200px] p-2`}
+            >
+              <div className="text-center mb-2 p-1">
+                <div className={`text-xs ${themeClasses.textMuted} font-medium`}>
+                  {dayNames[idx]}
+                </div>
+                <div className={`text-lg font-bold rounded-full w-6 h-6 flex items-center justify-center mx-auto ${
+                  isToday ? 'bg-blue-600 text-white' : isCurrentMonth ? themeClasses.textPrimary : themeClasses.textMuted
+                }`}>
+                  {date.getDate()}
+                </div>
+              </div>
+              
+              <div className="space-y-1">
+                {dayPosts.slice(0, 3).map((post) => (
+                  <div
+                    key={post.id}
+                    className="p-1 rounded text-xs font-medium cursor-pointer"
+                    style={getStatusColor(post.status)}
+                    title={`${post.description} - ${new Date(post.scheduledDate).toLocaleTimeString('en-US', { 
+                      hour: 'numeric', 
+                      minute: '2-digit' 
+                    })}`}
+                    onClick={() => handleEditPost(post)}
+                  >
+                    <div className="truncate">
+                      {post.description.length > 20 ? 
+                        post.description.substring(0, 20) + '...' : 
+                        post.description
+                      }
+                    </div>
+                  </div>
+                ))}
+                {dayPosts.length > 3 && (
+                  <div className={`p-1 text-xs ${themeClasses.textMuted} text-center font-medium`}>
+                    +{dayPosts.length - 3} more
+                  </div>
+                )}
+              </div>
             </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderMonthView = () => {
+    const monthDates = getMonthDates(currentDate);
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    return (
+      <div>
+        {/* Day headers */}
+        <div className={`grid grid-cols-7 gap-px ${themeClasses.border} border rounded-t-lg overflow-hidden`}>
+          {dayNames.map((day) => (
+            <div
+              key={day}
+              className={`${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} p-3 text-center text-xs font-bold ${themeClasses.textSecondary}`}
+            >
+              {day}
+            </div>
+          ))}
+        </div>
+        
+        {/* Calendar grid */}
+        <div className={`grid grid-cols-7 gap-px ${themeClasses.border} border border-t-0 rounded-b-lg overflow-hidden`}>
+          {monthDates.map((date) => {
+            const dayPosts = getPostsForDate(date);
+            const isToday = date.toDateString() === new Date().toDateString();
+            const isCurrentMonth = date.getMonth() === currentDate.getMonth();
+            
+            return (
+              <div
+                key={date.toISOString()}
+                className={`${themeClasses.cardBackground} min-h-[120px] p-2 cursor-pointer hover:bg-gray-500/10 transition-colors`}
+                onClick={() => setCurrentDate(new Date(date))}
+              >
+                <div className={`text-sm font-medium mb-1 text-right ${
+                  isToday ? 'text-blue-600' : isCurrentMonth ? themeClasses.textPrimary : themeClasses.textMuted
+                }`}>
+                  {isToday && (
+                    <span className="inline-block w-2 h-2 bg-blue-600 rounded-full mr-1" />
+                  )}
+                  {date.getDate()}
+                </div>
+                
+                <div className="space-y-1">
+                  {dayPosts.slice(0, 2).map((post) => (
+                    <div
+                      key={post.id}
+                      className="p-1 rounded text-xs font-medium cursor-pointer"
+                      style={getStatusColor(post.status)}
+                      title={`${post.description} - ${new Date(post.scheduledDate).toLocaleTimeString('en-US', { 
+                        hour: 'numeric', 
+                        minute: '2-digit' 
+                      })}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditPost(post);
+                      }}
+                    >
+                      <div className="truncate">
+                        {post.description.length > 15 ? 
+                          post.description.substring(0, 15) + '...' : 
+                          post.description
+                        }
+                      </div>
+                    </div>
+                  ))}
+                  {dayPosts.length > 2 && (
+                    <div className={`p-1 text-xs ${themeClasses.textMuted} font-medium`}>
+                      +{dayPosts.length - 2}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderStatusManagement = () => {
+    const statusCounts = {
+      all: scheduledPosts.length,
+      pending: scheduledPosts.filter(p => p.status === 'pending').length,
+      processing: scheduledPosts.filter(p => p.status === 'processing').length,
+      complete: scheduledPosts.filter(p => p.status === 'complete').length,
+      failed: scheduledPosts.filter(p => p.status === 'failed').length,
+      resending: scheduledPosts.filter(p => p.status === 'resending').length,
+    };
+
+    const filteredPosts = statusFilter === 'all' 
+      ? scheduledPosts 
+      : scheduledPosts.filter(post => post.status === statusFilter);
+
+    const statusTabs = [
+      { id: 'all', label: 'All Posts', count: statusCounts.all },
+      { id: 'pending', label: 'Pending', count: statusCounts.pending },
+      { id: 'processing', label: 'Processing', count: statusCounts.processing },
+      { id: 'complete', label: 'Complete', count: statusCounts.complete },
+      { id: 'failed', label: 'Failed', count: statusCounts.failed },
+      { id: 'resending', label: 'Resending', count: statusCounts.resending },
+    ];
+
+    if (scheduledPosts.length === 0) {
+      return (
+        <div className="text-center p-12">
+          <div className={`text-6xl ${themeClasses.textMuted} mb-4`}>📅</div>
+          <h3 className={`text-xl font-bold ${themeClasses.textPrimary} mb-3`}>
+            No scheduled posts yet
+          </h3>
+          <p className={`${themeClasses.textSecondary} max-w-md mx-auto text-sm`}>
+            Posts will appear here once you schedule them from the Pending Scheduling tab. 
+            Start by scheduling your first post!
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className={`border-b ${themeClasses.border}`}>
+          <div className="flex gap-8 overflow-x-auto -mb-px">
+            {statusTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setStatusFilter(tab.id)}
+                className={`whitespace-nowrap p-2 pb-3 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
+                  statusFilter === tab.id 
+                    ? `border-blue-500 text-blue-600` 
+                    : `border-transparent ${themeClasses.textMuted} hover:${themeClasses.textSecondary} hover:border-gray-300`
+                }`}
+              >
+                {tab.label}
+                {tab.count > 0 && (
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    statusFilter === tab.id ? 'bg-blue-100 text-blue-600' : `${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} ${themeClasses.textMuted}`
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
         </div>
-      ) : (
-        <>
-          {/* Template Library */}
-          <div style={{ 
-            padding: '20px', 
-            border: '1px solid #d1d5db', 
-            borderRadius: '8px', 
-            background: '#f9fafb',
-            marginBottom: '30px'
-          }}>
-            <h3 style={{ marginBottom: '20px' }}>📚 Template Library</h3>
-            
-            <div style={{ display: 'grid', gap: '15px' }}>
-              {templates.map(template => (
-                <div 
-                  key={template.id}
-                  style={{ 
-                    padding: '20px', 
-                    border: '1px solid #e5e7eb', 
-                    borderRadius: '6px', 
-                    background: '#ffffff',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onClick={() => setSelectedTemplate(selectedTemplate === template.id ? null : template.id)}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ flex: '1' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                        <h4 style={{ margin: '0', color: '#1f2937' }}>{template.name}</h4>
-                        <span style={{ 
-                          padding: '4px 8px', 
-                          backgroundColor: '#dbeafe', 
-                          color: '#1e40af', 
-                          borderRadius: '12px', 
-                          fontSize: '12px',
-                          fontWeight: 'bold'
-                        }}>
-                          {template.category}
-                        </span>
-                      </div>
-                      <p style={{ margin: '0 0 10px 0', color: '#6b7280', fontSize: '14px' }}>
-                        {template.description}
-                      </p>
-                      <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                        Last modified: {template.lastModified} • {template.fields.length} fields
+
+        <div className="space-y-4">
+          {filteredPosts.map((post) => (
+            <div key={post.id} className={`${themeClasses.cardBackground} border ${themeClasses.border} rounded-lg p-6`}>
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className={`px-3 py-1 text-xs rounded-full font-medium ${
+                      post.status === 'pending' ? 'bg-orange-100 text-orange-800' :
+                      post.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                      post.status === 'complete' ? 'bg-green-100 text-green-800' :
+                      post.status === 'failed' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
+                    </span>
+                    <span className={`text-xs ${themeClasses.textMuted}`}>
+                      {new Date(post.scheduledDate).toLocaleString()}
+                    </span>
+                    <span className={`text-xs font-medium text-blue-600`}>
+                      {post.characterProfile}
+                    </span>
+                  </div>
+                  
+                  <p className={`${themeClasses.textPrimary} mb-3 text-sm leading-relaxed`}>
+                    {post.description}
+                  </p>
+                  
+                  <div className="flex items-center gap-6 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className={themeClasses.textMuted}>Platforms:</span>
+                      <div className="flex gap-1">
+                        {post.platforms.map((platform, idx) => {
+                          const platformInfo = getPlatformIcon(platform.platformId);
+                          return (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 rounded text-white text-xs font-medium"
+                              style={{ backgroundColor: platformInfo.color }}
+                            >
+                              {platform.platformIcon}
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
                     
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button style={{ 
-                        padding: '6px 12px', 
-                        backgroundColor: '#3b82f6', 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '4px', 
-                        fontSize: '12px',
-                        cursor: 'pointer'
-                      }}>
-                        ✏️ Edit
-                      </button>
-                      <button style={{ 
-                        padding: '6px 12px', 
-                        backgroundColor: '#10b981', 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '4px', 
-                        fontSize: '12px',
-                        cursor: 'pointer'
-                      }}>
-                        📋 Use
-                      </button>
-                    </div>
+                    {post.mediaFiles.length > 0 && (
+                      <span className={`flex items-center gap-1 ${themeClasses.textMuted}`}>
+                        <span>👁️</span>
+                        <span>{post.mediaFiles.length} file(s)</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 ml-6">
+                  <button
+                    onClick={() => handleEditPost(post)}
+                    className={`p-2 ${themeClasses.buttonSecondary} ${themeClasses.textPrimary} rounded transition-colors`}
+                    title="Edit"
+                  >
+                    ✏️
+                  </button>
+                  
+                  <button
+                    onClick={() => handleSaveTemplate(post)}
+                    className={`p-2 ${themeClasses.buttonSuccess} text-white rounded transition-colors`}
+                    title="Save as Template"
+                  >
+                    💾
+                  </button>
+
+                  <button
+                    onClick={() => handleCopyToPending(post)}
+                    className={`px-3 py-2 text-xs ${themeClasses.buttonPrimary} text-white rounded font-medium transition-colors`}
+                    title="Copy to Pending Scheduling"
+                  >
+                    Copy
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      if (confirm('Are you sure you want to delete this scheduled post?')) {
+                        setScheduledPosts(prev => prev.filter(p => p.id !== post.id));
+                        alert('Post deleted successfully!');
+                      }
+                    }}
+                    className={`p-2 ${themeClasses.buttonDanger} text-white rounded transition-colors`}
+                    title="Delete"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderSavedTemplates = () => {
+    return (
+      <div className="space-y-6">
+        {savedTemplates.length === 0 ? (
+          <div className={`${themeClasses.cardBackground} p-8 rounded-lg border ${themeClasses.border} text-center`}>
+            <div className={`text-5xl ${themeClasses.textMuted} mb-4`}>💾</div>
+            <h3 className={`text-lg font-bold ${themeClasses.textPrimary} mb-2`}>
+              No Saved Templates
+            </h3>
+            <p className={`${themeClasses.textSecondary} text-sm`}>
+              Save templates from Status Management to reuse them here.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {savedTemplates.map((template) => (
+              <div key={template.id} className={`${themeClasses.cardBackground} border ${themeClasses.border} rounded-lg p-4 transition-shadow hover:shadow-lg`}>
+                <div className="flex items-start justify-between mb-3">
+                  <h3 className={`font-bold ${themeClasses.textPrimary} text-lg`}>
+                    {template.name}
+                  </h3>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => handleEditTemplate(template)}
+                      className={`p-1 ${themeClasses.textMuted} hover:text-blue-600 transition-colors`}
+                      title="Edit Template"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('Are you sure you want to delete this template?')) {
+                          setSavedTemplates(prev => prev.filter(t => t.id !== template.id));
+                          alert('Template deleted successfully!');
+                        }
+                      }}
+                      className={`p-1 ${themeClasses.textMuted} hover:text-red-600 transition-colors`}
+                      title="Delete Template"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={themeClasses.textMuted}>Profile:</span>
+                    <span className="font-medium text-blue-600">
+                      {template.characterProfile}
+                    </span>
                   </div>
                   
-                  {selectedTemplate === template.id && (
-                    <div style={{ 
-                      marginTop: '15px', 
-                      padding: '15px', 
-                      backgroundColor: '#f3f4f6', 
-                      borderRadius: '6px' 
-                    }}>
-                      <h5 style={{ margin: '0 0 10px 0', color: '#374151' }}>Template Fields:</h5>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {template.fields.map((field, index) => (
-                          <span 
-                            key={index}
-                            style={{ 
-                              padding: '4px 8px', 
-                              backgroundColor: '#e5e7eb', 
-                              color: '#374151', 
-                              borderRadius: '8px', 
-                              fontSize: '12px' 
-                            }}
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={themeClasses.textMuted}>Type:</span>
+                    <span className={themeClasses.textPrimary}>{template.type}</span>
+                  </div>
+                  
+                  <div className="text-xs">
+                    <span className={themeClasses.textMuted}>Description:</span>
+                    <p className={`${themeClasses.textPrimary} mt-1 text-xs leading-relaxed`}>
+                      {template.description}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={themeClasses.textMuted}>Platforms:</span>
+                    <div className="flex gap-1">
+                      {template.platforms.map((platform, idx) => {
+                        const platformInfo = getPlatformIcon(platform.platformId);
+                        return (
+                          <span
+                            key={idx}
+                            className="px-2 py-1 rounded text-white text-xs font-medium"
+                            style={{ backgroundColor: platformInfo.color }}
+                            title={platform.platformName}
                           >
-                            {field}
+                            {platformInfo.icon}
                           </span>
-                        ))}
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className={`text-xs ${themeClasses.textMuted} mb-3`}>
+                  Used {template.usageCount} times
+                </div>
+                
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleCopyTemplate(template)}
+                    className={`flex-1 py-2 px-3 ${themeClasses.buttonSecondary} ${themeClasses.textPrimary} text-xs rounded font-medium transition-colors`}
+                  >
+                    Copy & Edit
+                  </button>
+                  <button
+                    onClick={() => handleUseTemplate(template)}
+                    className={`flex-1 py-2 px-3 ${themeClasses.buttonPrimary} text-white text-xs rounded font-medium transition-colors`}
+                  >
+                    Use Template
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const tabs = [
+    { id: 'pending', label: 'Pending Scheduling', icon: '⏳' },
+    { id: 'calendar', label: 'Calendar View', icon: '📅' },
+    { id: 'status', label: 'Status Management', icon: '✅' },
+    { id: 'saved', label: 'Saved Templates', icon: '💾' },
+  ];
+
+  return (
+    <div className={`min-h-screen ${themeClasses.background} transition-colors duration-200`}>
+      <div className="p-6 max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className={`text-3xl font-black ${themeClasses.textPrimary} mb-2`}>
+              📅 Schedule Manager
+            </h1>
+            <p className={`${themeClasses.textSecondary} text-lg font-medium`}>
+              Schedule posts and track their delivery status
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-4 text-xs">
+            <div className="px-3 py-2 bg-orange-100 text-orange-800 rounded-full font-medium">
+              {pendingPosts.length} pending scheduling
+            </div>
+            <div className="px-3 py-2 bg-blue-100 text-blue-800 rounded-full font-medium">
+              {scheduledPosts.filter(p => p.status === 'pending').length} scheduled
+            </div>
+            <div className="px-3 py-2 bg-green-100 text-green-800 rounded-full font-medium">
+              {savedTemplates.length} templates
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className={`${themeClasses.cardBackground} rounded-lg shadow-lg border ${themeClasses.border} mb-8`}>
+          <div className="flex border-b border-gray-700">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-3 px-8 py-4 text-sm font-bold transition-all duration-200 border-b-2 ${
+                  activeTab === tab.id
+                    ? `${themeClasses.textPrimary} border-blue-500 bg-blue-500/10`
+                    : `${themeClasses.textSecondary} border-transparent hover:${themeClasses.textPrimary} hover:bg-gray-500/10`
+                }`}
+              >
+                <span className="text-lg">{tab.icon}</span>
+                <span>{tab.label}</span>
+                {tab.id === 'pending' && pendingPosts.length > 0 && (
+                  <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full font-medium">
+                    {pendingPosts.length}
+                  </span>
+                )}
+                {tab.id === 'saved' && savedTemplates.length > 0 && (
+                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
+                    {savedTemplates.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Content */}
+          <div className="p-8">
+            {activeTab === 'pending' && (
+              <div className="space-y-6">
+                {pendingPosts.length === 0 ? (
+                  <div className={`p-8 text-center border-2 border-dashed border-blue-300 rounded-lg ${isDarkMode ? 'bg-blue-900/20' : 'bg-blue-50'}`}>
+                    <div className="text-5xl text-blue-600 mb-4">⏳</div>
+                    <h3 className={`text-lg font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-900'} mb-2`}>
+                      Ready for Scheduling
+                    </h3>
+                    <p className={`${isDarkMode ? 'text-blue-300' : 'text-blue-800'} text-sm`}>
+                      Posts from Content Manager will appear here for scheduling
+                    </p>
+                  </div>
+                ) : (
+                  <div className={`${themeClasses.cardBackground} border ${themeClasses.border} rounded-lg`}>
+                    <div className={`p-4 ${isDarkMode ? 'bg-blue-900/20' : 'bg-blue-50'} border-b ${themeClasses.border} rounded-t-lg`}>
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">⏳</span>
+                        <div>
+                          <h2 className={`text-lg font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-900'}`}>
+                            Pending Scheduling ({pendingPosts.length})
+                          </h2>
+                          <p className={`text-xs ${isDarkMode ? 'text-blue-300' : 'text-blue-800'} mt-1`}>
+                            Click "Schedule" to set date and time for these posts
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* External Tools Section - GitHub Components */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-            {/* LEFT SIDE: External Builder Tools */}
-            <div style={{ 
-              padding: '20px', 
-              border: '2px solid #3b82f6', 
-              borderRadius: '8px', 
-              background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)' 
-            }}>
-              <h3 style={{ color: '#1e40af', marginBottom: '10px' }}>🏗️ External Builder Tools</h3>
-              <p style={{ color: '#1e40af', fontSize: '14px', marginBottom: '15px' }}>
-                External integration for automated generation
-              </p>
-              
-              <div style={{ display: 'grid', gap: '10px' }}>
-                <a 
-                  href="https://anica-blip.github.io/3c-content-template-engine/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    padding: '12px', 
-                    background: 'rgba(255,255,255,0.7)', 
-                    border: '1px solid #93c5fd', 
-                    borderRadius: '6px', 
-                    textDecoration: 'none',
-                    color: '#1e40af'
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 'bold' }}>Content Template Engine</div>
-                    <div style={{ fontSize: '12px', opacity: 0.8 }}>Comprehensive template creation and management</div>
+                    
+                    <div>
+                      {pendingPosts.map((post, index) => (
+                        <div key={post.id} className={`p-6 ${index < pendingPosts.length - 1 ? `border-b ${themeClasses.border}` : ''} hover:bg-gray-500/5 transition-colors`}>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-3">
+                                <span className="px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded-full font-medium">
+                                  Ready to Schedule
+                                </span>
+                                <span className={`text-xs ${themeClasses.textMuted}`}>
+                                  Created {post.createdDate.toLocaleDateString()}
+                                </span>
+                                <span className="text-xs font-medium text-blue-600">
+                                  {post.characterProfile}
+                                </span>
+                              </div>
+                              
+                              <div className="mb-4">
+                                <p className={`${themeClasses.textPrimary} text-sm leading-relaxed`}>
+                                  {post.description}
+                                </p>
+                              </div>
+                              
+                              <div className="flex items-center gap-6 text-xs">
+                                {post.mediaFiles.length > 0 && (
+                                  <span className={`flex items-center gap-2 ${themeClasses.textMuted}`}>
+                                    <span>👁️</span>
+                                    <span>{post.mediaFiles.length} file(s)</span>
+                                  </span>
+                                )}
+                                
+                                <div className="flex items-center gap-2">
+                                  <span className={themeClasses.textMuted}>Platforms:</span>
+                                  <div className="flex gap-1">
+                                    {post.platforms.map((platform, idx) => {
+                                      const platformInfo = getPlatformIcon(platform.platformId);
+                                      return (
+                                        <span
+                                          key={idx}
+                                          className="px-2 py-1 rounded text-white text-xs font-medium"
+                                          style={{ backgroundColor: platformInfo.color }}
+                                          title={platform.platformName}
+                                        >
+                                          {platformInfo.icon}
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3 ml-6">
+                              <button
+                                onClick={() => handleEditPost(post)}
+                                className={`px-4 py-2 text-xs ${themeClasses.buttonSecondary} ${themeClasses.textPrimary} rounded font-medium transition-colors`}
+                                title="Edit Post Content"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleSchedulePost(post)}
+                                className={`px-4 py-2 text-sm ${themeClasses.buttonPrimary} text-white rounded font-bold transition-colors`}
+                              >
+                                Schedule
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (confirm('Are you sure you want to delete this post?')) {
+                                    setPendingPosts(prev => prev.filter(p => p.id !== post.id));
+                                    alert('Post deleted successfully!');
+                                  }
+                                }}
+                                className={`p-2 ${themeClasses.buttonDanger} text-white rounded transition-colors`}
+                                title="Delete"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <span style={{ fontSize: '12px' }}>🔗 Open</span>
-                </a>
-                
-                <a 
-                  href="https://anica-blip.github.io/3c-desktop-editor/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    padding: '12px', 
-                    background: 'rgba(255,255,255,0.7)', 
-                    border: '1px solid #93c5fd', 
-                    borderRadius: '6px', 
-                    textDecoration: 'none',
-                    color: '#1e40af'
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 'bold' }}>Featured Content Templates</div>
-                    <div style={{ fontSize: '12px', opacity: 0.8 }}>Social Media, Blog, News page, Article</div>
-                  </div>
-                  <span style={{ fontSize: '12px' }}>🔗 Open</span>
-                </a>
-                
-                <a 
-                  href="https://anica-blip.github.io/3c-content-scheduler/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    padding: '12px', 
-                    background: 'rgba(255,255,255,0.7)', 
-                    border: '1px solid #93c5fd', 
-                    borderRadius: '6px', 
-                    textDecoration: 'none',
-                    color: '#1e40af'
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 'bold' }}>Content Management</div>
-                    <div style={{ fontSize: '12px', opacity: 0.8 }}>Content creation with AI & Templates</div>
-                  </div>
-                  <span style={{ fontSize: '12px' }}>🔗 Open</span>
-                </a>
-                
-                <a 
-                  href="https://anica-blip.github.io/3c-smpost-generator/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    padding: '12px', 
-                    background: 'rgba(255,255,255,0.7)', 
-                    border: '1px solid #93c5fd', 
-                    borderRadius: '6px', 
-                    textDecoration: 'none',
-                    color: '#1e40af'
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 'bold' }}>SM Content Generator</div>
-                    <div style={{ fontSize: '12px', opacity: 0.8 }}>Generate social media post content</div>
-                  </div>
-                  <span style={{ fontSize: '12px' }}>🔗 Open</span>
-                </a>
+                )}
               </div>
-            </div>
+            )}
 
-            {/* RIGHT SIDE: 3C Brand Products */}
-            <div style={{ 
-              padding: '20px', 
-              border: '2px solid #10b981', 
-              borderRadius: '8px', 
-              background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)' 
-            }}>
-              <h3 style={{ color: '#047857', marginBottom: '10px' }}>🎮 3C Brand Products</h3>
-              <p style={{ color: '#047857', fontSize: '14px', marginBottom: '15px' }}>
-                External app editors for interactive app loaders
-              </p>
-              
-              <div style={{ display: 'grid', gap: '10px' }}>
-                <a 
-                  href="https://anica-blip.github.io/3c-quiz-admin/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    padding: '12px', 
-                    background: 'rgba(255,255,255,0.7)', 
-                    border: '1px solid #6ee7b7', 
-                    borderRadius: '6px', 
-                    textDecoration: 'none',
-                    color: '#047857'
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 'bold' }}>Quiz Generator</div>
-                    <div style={{ fontSize: '12px', opacity: 0.8 }}>3C Interactive Quizzes</div>
-                  </div>
-                  <span style={{ fontSize: '12px' }}>🔗 Open</span>
-                </a>
-                
-                <a 
-                  href="https://anica-blip.github.io/3c-quiz-admin/landing.html?quiz=quiz.01" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    padding: '12px', 
-                    background: 'rgba(255,255,255,0.7)', 
-                    border: '1px solid #6ee7b7', 
-                    borderRadius: '6px', 
-                    textDecoration: 'none',
-                    color: '#047857'
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 'bold' }}>Quiz Landing Page & App Loader</div>
-                    <div style={{ fontSize: '12px', opacity: 0.8 }}>Quiz application landing interface</div>
-                  </div>
-                  <span style={{ fontSize: '12px' }}>🔗 Open</span>
-                </a>
-                
-                <a 
-                  href="https://anica-blip.github.io/3c-game-loader/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    padding: '12px', 
-                    background: 'rgba(255,255,255,0.7)', 
-                    border: '1px solid #6ee7b7', 
-                    borderRadius: '6px', 
-                    textDecoration: 'none',
-                    color: '#047857'
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 'bold' }}>Game Generator</div>
-                    <div style={{ fontSize: '12px', opacity: 0.8 }}>Games, puzzles, challenges</div>
-                  </div>
-                  <span style={{ fontSize: '12px' }}>🔗 Open</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// =============================================================================
-// LIBRARIES TAB WITH FULL INTEGRATIONS
-// =============================================================================
-
-function AdminLibrariesTab() {
-  const [notionConnected, setNotionConnected] = useState(false);
-  const [wasabiConnected, setWasabiConnected] = useState(false);
-  const [canvaConnected, setCanvaConnected] = useState(false);
-
-  return (
-    <div style={{ padding: '20px' }}>
-      <h2>📚 Libraries</h2>
-      <p>External service integrations and storage management</p>
-      
-      <div style={{ display: 'grid', gap: '30px', marginTop: '30px' }}>
-        
-        {/* NOTION INTEGRATION */}
-        <div style={{ 
-          padding: '25px', 
-          border: '2px solid #6366f1', 
-          borderRadius: '12px', 
-          background: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <div>
-              <h3 style={{ margin: '0', color: '#4338ca', fontSize: '20px' }}>📝 Notion Integration</h3>
-              <p style={{ margin: '5px 0 0 0', color: '#4338ca', fontSize: '14px' }}>
-                Content management and documentation
-              </p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ 
-                padding: '4px 8px', 
-                backgroundColor: notionConnected ? '#10b981' : '#f59e0b', 
-                color: 'white', 
-                borderRadius: '12px', 
-                fontSize: '12px',
-                fontWeight: 'bold'
-              }}>
-                {notionConnected ? 'Connected' : 'Ready to Connect'}
-              </span>
-              <button
-                onClick={() => setNotionConnected(!notionConnected)}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: notionConnected ? '#ef4444' : '#4338ca',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}
-              >
-                {notionConnected ? 'Disconnect' : '🔗 Connect Notion'}
-              </button>
-            </div>
-          </div>
-
-          {notionConnected ? (
-            <div>
-              <h4 style={{ color: '#4338ca', marginBottom: '15px' }}>📄 Connected to Internal Hub</h4>
-              <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '15px' }}>
-                Content Calendar • Brand Guidelines • Templates
-              </div>
-              <div style={{
-                padding: '15px', 
-                backgroundColor: 'rgba(255,255,255,0.8)', 
-                borderRadius: '8px'
-              }}>
-                <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold', color: '#4338ca' }}>
-                  🔗 Main Hub Link:
-                </p>
-                <a
-                  href="https://www.notion.so/INTERNAL-HUB-2256ace1e8398087a3c9d25c1cf253e5"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ 
-                    fontSize: '12px', 
-                    color: '#4338ca', 
-                    textDecoration: 'underline'
-                  }}
-                >
-                  notion.so/INTERNAL-HUB-2256ace1e8398087a3c9d25c1cf253e5
-                </a>
-              </div>
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '30px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '15px' }}>📝</div>
-              <p style={{ color: '#4338ca', fontSize: '16px', marginBottom: '10px' }}>
-                Connect your Notion workspace
-              </p>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '15px' }}>
-                Access your content calendars, brand guidelines, and documentation
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* WASABI INTEGRATION */}
-        <div style={{ 
-          padding: '25px', 
-          border: '2px solid #dc2626', 
-          borderRadius: '12px', 
-          background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <div>
-              <h3 style={{ margin: '0', color: '#dc2626', fontSize: '20px' }}>📦 Wasabi Cloud Storage</h3>
-              <p style={{ margin: '5px 0 0 0', color: '#dc2626', fontSize: '14px' }}>
-                Internal assets & public member content storage
-              </p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ 
-                padding: '4px 8px', 
-                backgroundColor: wasabiConnected ? '#10b981' : '#f59e0b', 
-                color: 'white', 
-                borderRadius: '12px', 
-                fontSize: '12px',
-                fontWeight: 'bold'
-              }}>
-                {wasabiConnected ? 'Connected' : 'Ready to Connect'}
-              </span>
-              <button
-                onClick={() => setWasabiConnected(!wasabiConnected)}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: wasabiConnected ? '#ef4444' : '#dc2626',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}
-              >
-                {wasabiConnected ? 'Disconnect' : '🔗 Connect Wasabi'}
-              </button>
-            </div>
-          </div>
-
-          {wasabiConnected ? (
-            <div>
-              <h4 style={{ color: '#dc2626', marginBottom: '15px' }}>📦 Storage Connected</h4>
-              <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '15px' }}>
-                Internal Assets • Member Content • Media Library
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                <div style={{
-                  padding: '15px', 
-                  backgroundColor: 'rgba(255,255,255,0.8)', 
-                  borderRadius: '8px'
-                }}>
-                  <p style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 'bold', color: '#dc2626' }}>
-                    Storage Usage:
-                  </p>
-                  <div style={{ fontSize: '14px', color: '#374151' }}>2.4 GB / 50 GB</div>
-                  <div style={{ 
-                    width: '100%', 
-                    height: '8px', 
-                    backgroundColor: '#e5e7eb', 
-                    borderRadius: '4px', 
-                    marginTop: '8px',
-                    overflow: 'hidden'
-                  }}>
-                    <div style={{ 
-                      width: '4.8%', 
-                      height: '100%', 
-                      backgroundColor: '#dc2626' 
-                    }}></div>
-                  </div>
-                </div>
-                <div style={{
-                  padding: '15px', 
-                  backgroundColor: 'rgba(255,255,255,0.8)', 
-                  borderRadius: '8px'
-                }}>
-                  <p style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 'bold', color: '#dc2626' }}>
-                    Quick Actions:
-                  </p>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button style={{
-                      padding: '6px 12px',
-                      fontSize: '11px',
-                      backgroundColor: '#dc2626',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}>
-                      📁 Browse
+            {activeTab === 'calendar' && (
+              <div className={`${themeClasses.cardBackground} rounded-lg p-6`}>
+                {/* Calendar Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => navigateCalendar('prev')}
+                      className={`p-2 ${themeClasses.buttonSecondary} ${themeClasses.textPrimary} border ${themeClasses.border} rounded transition-colors`}
+                    >
+                      ←
                     </button>
-                    <button style={{
-                      padding: '6px 12px',
-                      fontSize: '11px',
-                      backgroundColor: '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}>
-                      ⬆️ Upload
+                    
+                    <h2 className={`text-xl font-bold ${themeClasses.textPrimary} min-w-[300px]`}>
+                      {formatCalendarTitle()}
+                    </h2>
+                    
+                    <button
+                      onClick={() => navigateCalendar('next')}
+                      className={`p-2 ${themeClasses.buttonSecondary} ${themeClasses.textPrimary} border ${themeClasses.border} rounded transition-colors`}
+                    >
+                      →
                     </button>
                   </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setCurrentDate(new Date())}
+                      className={`px-3 py-2 text-xs ${themeClasses.buttonSecondary} ${themeClasses.textPrimary} border ${themeClasses.border} rounded font-medium transition-colors`}
+                    >
+                      Today
+                    </button>
+                    
+                    <div className={`flex ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-1`}>
+                      {(['day', 'week', 'month'] as const).map((view) => (
+                        <button
+                          key={view}
+                          onClick={() => setCalendarView(view)}
+                          className={`px-3 py-2 text-xs font-medium rounded transition-colors ${
+                            calendarView === view 
+                              ? `${themeClasses.cardBackground} ${themeClasses.textPrimary} shadow-sm` 
+                              : `${themeClasses.textMuted} hover:${themeClasses.textSecondary}`
+                          }`}
+                        >
+                          {view.charAt(0).toUpperCase() + view.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
+                
+                {/* Calendar Content */}
+                <div className="mb-4">
+                  {calendarView === 'day' && renderDayView()}
+                  {calendarView === 'week' && renderWeekView()}
+                  {calendarView === 'month' && renderMonthView()}
+                </div>
+                
+                {/* Legend */}
+                <div className={`flex items-center gap-4 p-3 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg text-xs`}>
+                  <span className={`${themeClasses.textMuted} font-medium`}>Status:</span>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-1 bg-orange-500 rounded" />
+                    <span className={themeClasses.textMuted}>Pending</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-1 bg-blue-500 rounded" />
+                    <span className={themeClasses.textMuted}>Processing</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-1 bg-green-500 rounded" />
+                    <span className={themeClasses.textMuted}>Complete</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-1 bg-red-500 rounded" />
+                    <span className={themeClasses.textMuted}>Failed</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-1 bg-orange-600 rounded" />
+                    <span className={themeClasses.textMuted}>Resending</span>
+                  </div>
+                </div>
+                
+                {scheduledPosts.length === 0 && (
+                  <div className="text-center p-8">
+                    <div className={`text-5xl ${themeClasses.textMuted} mb-4`}>📅</div>
+                    <p className={`${themeClasses.textSecondary} text-sm`}>
+                      No scheduled posts to display. Schedule some posts to see them on the calendar.
+                    </p>
+                  </div>
+                )}
               </div>
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '30px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '15px' }}>📦</div>
-              <p style={{ color: '#dc2626', fontSize: '16px', marginBottom: '10px' }}>
-                Connect Wasabi Cloud Storage
-              </p>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '15px' }}>
-                Secure cloud storage for your assets and member content
-              </p>
-            </div>
-          )}
-        </div>
+            )}
 
-        {/* CANVA INTEGRATION */}
-        <div style={{ 
-          padding: '25px', 
-          border: '2px solid #8b5cf6', 
-          borderRadius: '12px', 
-          background: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <div>
-              <h3 style={{ margin: '0', color: '#7c3aed', fontSize: '20px' }}>🎨 Canva Integration</h3>
-              <p style={{ margin: '5px 0 0 0', color: '#7c3aed', fontSize: '14px' }}>
-                Design templates and brand assets
-              </p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ 
-                padding: '4px 8px', 
-                backgroundColor: canvaConnected ? '#10b981' : '#f59e0b', 
-                color: 'white', 
-                borderRadius: '12px', 
-                fontSize: '12px',
-                fontWeight: 'bold'
-              }}>
-                {canvaConnected ? 'Connected' : 'Ready to Connect'}
-              </span>
-              <button
-                onClick={() => setCanvaConnected(!canvaConnected)}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: canvaConnected ? '#ef4444' : '#7c3aed',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}
-              >
-                {canvaConnected ? 'Disconnect' : '🔗 Connect Canva'}
-              </button>
-            </div>
+            {activeTab === 'status' && (
+              <div className={`${themeClasses.cardBackground} rounded-lg p-6`}>
+                {renderStatusManagement()}
+              </div>
+            )}
+
+            {activeTab === 'saved' && (
+              <div className={`${themeClasses.cardBackground} rounded-lg p-6`}>
+                {renderSavedTemplates()}
+              </div>
+            )}
           </div>
-
-          {canvaConnected ? (
-            <div>
-              <h4 style={{ color: '#7c3aed', marginBottom: '15px' }}>🎨 Design Library Connected</h4>
-              <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '15px' }}>
-                Brand Templates • Design Assets • Collaborative Workspace
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
-                <div style={{
-                  padding: '15px', 
-                  backgroundColor: 'rgba(255,255,255,0.8)', 
-                  borderRadius: '8px',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>📄</div>
-                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#7c3aed' }}>Templates</div>
-                  <div style={{ fontSize: '11px', color: '#6b7280' }}>47 designs</div>
-                </div>
-                <div style={{
-                  padding: '15px', 
-                  backgroundColor: 'rgba(255,255,255,0.8)', 
-                  borderRadius: '8px',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>🏢</div>
-                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#7c3aed' }}>Brand Kit</div>
-                  <div style={{ fontSize: '11px', color: '#6b7280' }}>Active</div>
-                </div>
-                <div style={{
-                  padding: '15px', 
-                  backgroundColor: 'rgba(255,255,255,0.8)', 
-                  borderRadius: '8px',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>👥</div>
-                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#7c3aed' }}>Team</div>
-                  <div style={{ fontSize: '11px', color: '#6b7280' }}>5 members</div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '30px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '15px' }}>🎨</div>
-              <p style={{ color: '#7c3aed', fontSize: '16px', marginBottom: '10px' }}>
-                Connect your Canva workspace
-              </p>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '15px' }}>
-                Access design templates, brand kits, and collaborative tools
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>
   );
 }
-
-// =============================================================================
-// BRAND TAB - FULL BRAND KIT MANAGEMENT
-// =============================================================================
-
-function AdminBrandTab() {
-  const [activeSection, setActiveSection] = useState('colors');
-  const [brandColors, setBrandColors] = useState([
-    { id: 1, name: 'Primary Blue', hex: '#3b82f6', usage: 'Main brand color' },
-    { id: 2, name: 'Secondary Green', hex: '#10b981', usage: 'Success states' },
-    { id: 3, name: 'Accent Purple', hex: '#8b5cf6', usage: 'Creative elements' },
-    { id: 4, name: 'Warning Orange', hex: '#f59e0b', usage: 'Alerts & warnings' },
-    { id: 5, name: 'Error Red', hex: '#ef4444', usage: 'Error states' }
-  ]);
-
-  const [logos, setLogos] = useState([
-    { id: 1, name: 'Primary Logo', type: 'SVG', size: '1.2 MB', usage: 'Main brand identity' },
-    { id: 2, name: 'Logo Mark', type: 'PNG', size: '340 KB', usage: 'Social media icons' },
-    { id: 3, name: 'White Version', type: 'SVG', size: '980 KB', usage: 'Dark backgrounds' },
-    { id: 4, name: 'Horizontal Layout', type: 'PNG', size: '567 KB', usage: 'Headers & banners' }
-  ]);
-
-  const [fonts, setFonts] = useState([
-    { id: 1, name: 'Inter', category: 'Primary', usage: 'Headlines, UI text', weight: '400-700' },
-    { id: 2, name: 'Roboto', category: 'Secondary', usage: 'Body text, descriptions', weight: '300-500' },
-    { id: 3, name: 'Playfair Display', category: 'Accent', usage: 'Special headlines', weight: '400-700' }
-  ]);
-
-  return (
-    <div style={{ padding: '20px' }}>
-      <h2>🏢 Brand Kit</h2>
-      <p>Brand guidelines, assets, and style management</p>
-      
-      {/* Brand Kit Sub-Navigation */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '0', 
-        marginTop: '30px', 
-        marginBottom: '30px',
-        borderBottom: '1px solid #e5e7eb'
-      }}>
-        <button
-          onClick={() => setActiveSection('colors')}
-          style={{
-            padding: '12px 20px',
-            backgroundColor: activeSection === 'colors' ? '#f3f4f6' : 'transparent',
-            color: activeSection === 'colors' ? '#1f2937' : '#6b7280',
-            border: 'none',
-            borderBottom: activeSection === 'colors' ? '2px solid #8b5cf6' : '2px solid transparent',
-            fontWeight: activeSection === 'colors' ? 'bold' : 'normal',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          🎨 Colors
-        </button>
-        <button
-          onClick={() => setActiveSection('logos')}
-          style={{
-            padding: '12px 20px',
-            backgroundColor: activeSection === 'logos' ? '#f3f4f6' : 'transparent',
-            color: activeSection === 'logos' ? '#1f2937' : '#6b7280',
-            border: 'none',
-            borderBottom: activeSection === 'logos' ? '2px solid #8b5cf6' : '2px solid transparent',
-            fontWeight: activeSection === 'logos' ? 'bold' : 'normal',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          🏷️ Logos
-        </button>
-        <button
-          onClick={() => setActiveSection('fonts')}
-          style={{
-            padding: '12px 20px',
-            backgroundColor: activeSection === 'fonts' ? '#f3f4f6' : 'transparent',
-            color: activeSection === 'fonts' ? '#1f2937' : '#6b7280',
-            border: 'none',
-            borderBottom: activeSection === 'fonts' ? '2px solid #8b5cf6' : '2px solid transparent',
-            fontWeight: activeSection === 'fonts' ? 'bold' : 'normal',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          🔤 Typography
-        </button>
-        <button
-          onClick={() => setActiveSection('guidelines')}
-          style={{
-            padding: '12px 20px',
-            backgroundColor: activeSection === 'guidelines' ? '#f3f4f6' : 'transparent',
-            color: activeSection === 'guidelines' ? '#1f2937' : '#6b7280',
-            border: 'none',
-            borderBottom: activeSection === 'guidelines' ? '2px solid #8b5cf6' : '2px solid transparent',
-            fontWeight: activeSection === 'guidelines' ? 'bold' : 'normal',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          📋 Guidelines
-        </button>
-      </div>
-
-      {/* COLORS SECTION */}
-      {activeSection === 'colors' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-            <h3>🎨 Brand Colors</h3>
-            <button style={{
-              padding: '10px 20px',
-              backgroundColor: '#8b5cf6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 'bold'
-            }}>
-              ➕ Add Color
-            </button>
-          </div>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-            {brandColors.map(color => (
-              <div key={color.id} style={{
-                padding: '20px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                backgroundColor: '#ffffff'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
-                  <div style={{
-                    width: '60px',
-                    height: '60px',
-                    backgroundColor: color.hex,
-                    borderRadius: '8px',
-                    border: '2px solid #e5e7eb'
-                  }}></div>
-                  <div>
-                    <h4 style={{ margin: '0 0 5px 0', color: '#1f2937' }}>{color.name}</h4>
-                    <div style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'monospace' }}>{color.hex}</div>
-                  </div>
-                </div>
-                <p style={{ margin: '0', fontSize: '14px', color: '#6b7280' }}>{color.usage}</p>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '15px' }}>
-                  <button style={{
-                    padding: '6px 12px',
-                    backgroundColor: '#f3f4f6',
-                    color: '#374151',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}>
-                    📋 Copy
-                  </button>
-                  <button style={{
-                    padding: '6px 12px',
-                    backgroundColor: '#f3f4f6',
-                    color: '#374151',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}>
-                    ✏️ Edit
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* LOGOS SECTION */}
-      {activeSection === 'logos' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-            <h3>🏷️ Logo Assets</h3>
-            <button style={{
-              padding: '10px 20px',
-              backgroundColor: '#8b5cf6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 'bold'
-            }}>
-              ⬆️ Upload Logo
-            </button>
-          </div>
-          
-          <div style={{ display: 'grid', gap: '15px' }}>
-            {logos.map(logo => (
-              <div key={logo.id} style={{
-                padding: '20px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                backgroundColor: '#ffffff',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <div style={{
-                    width: '80px',
-                    height: '60px',
-                    backgroundColor: '#f9fafb',
-                    border: '2px dashed #d1d5db',
-                    borderRadius: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '24px'
-                  }}>
-                    🏷️
-                  </div>
-                  <div>
-                    <h4 style={{ margin: '0 0 5px 0', color: '#1f2937' }}>{logo.name}</h4>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                      {logo.type} • {logo.size} • {logo.usage}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}>
-                    ⬇️ Download
-                  </button>
-                  <button style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}>
-                    👁️ Preview
-                  </button>
-                  <button style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#f59e0b',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}>
-                    ✏️ Edit
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* TYPOGRAPHY SECTION */}
-      {activeSection === 'fonts' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-            <h3>🔤 Typography System</h3>
-            <button style={{
-              padding: '10px 20px',
-              backgroundColor: '#8b5cf6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 'bold'
-            }}>
-              ➕ Add Font
-            </button>
-          </div>
-          
-          <div style={{ display: 'grid', gap: '20px' }}>
-            {fonts.map(font => (
-              <div key={font.id} style={{
-                padding: '25px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                backgroundColor: '#ffffff'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-                  <div>
-                    <h4 style={{ margin: '0 0 8px 0', color: '#1f2937', fontSize: '20px' }}>{font.name}</h4>
-                    <div style={{ display: 'flex', gap: '15px', fontSize: '14px', color: '#6b7280' }}>
-                      <span>Category: {font.category}</span>
-                      <span>Weight: {font.weight}</span>
-                    </div>
-                    <p style={{ margin: '8px 0 0 0', fontSize: '14px', color: '#6b7280' }}>{font.usage}</p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button style={{
-                      padding: '6px 12px',
-                      backgroundColor: '#f3f4f6',
-                      color: '#374151',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}>
-                      📋 Copy CSS
-                    </button>
-                    <button style={{
-                      padding: '6px 12px',
-                      backgroundColor: '#f3f4f6',
-                      color: '#374151',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}>
-                      ✏️ Edit
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Font Preview */}
-                <div style={{
-                  padding: '20px',
-                  backgroundColor: '#f9fafb',
-                  borderRadius: '6px',
-                  fontFamily: font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
-                             font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
-                             'ui-serif, Georgia'
-                }}>
-                  <div style={{ fontSize: '28px', marginBottom: '10px', fontWeight: 'bold' }}>
-                    The quick brown fox jumps
-                  </div>
-                  <div style={{ fontSize: '16px', marginBottom: '8px' }}>
-                    Regular weight sample text for {font.name}
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                    ABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* GUIDELINES SECTION */}
-      {activeSection === 'guidelines' && (
-        <div>
-          <h3 style={{ marginBottom: '25px' }}>📋 Brand Guidelines</h3>
-          
-          <div style={{ display: 'grid', gap: '25px' }}>
-            {/* Logo Usage Guidelines */}
-            <div style={{
-              padding: '25px',
-              border: '2px solid #e5e7eb',
-              borderRadius: '8px',
-              backgroundColor: '#ffffff'
-            }}>
-              <h4 style={{ color: '#1f2937', marginBottom: '15px' }}>🏷️ Logo Usage Guidelines</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div>
-                  <h5 style={{ color: '#10b981', fontSize: '14px', marginBottom: '10px' }}>✅ DO</h5>
-                  <ul style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6' }}>
-                    <li>Use the primary logo on light backgrounds</li>
-                    <li>Maintain minimum clear space of 2x the logo height</li>
-                    <li>Use approved color variations only</li>
-                    <li>Ensure logo is legible at all sizes</li>
-                  </ul>
-                </div>
-                <div>
-                  <h5 style={{ color: '#ef4444', fontSize: '14px', marginBottom: '10px' }}>❌ DON'T</h5>
-                  <ul style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6' }}>
-                    <li>Stretch, distort, or rotate the logo</li>
-                    <li>Use unauthorized colors or effects</li>
-                    <li>Place logo on busy backgrounds</li>
-                    <li>Use low-resolution versions</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Color Usage Guidelines */}
-            <div style={{
-              padding: '25px',
-              border: '2px solid #e5e7eb',
-              borderRadius: '8px',
-              backgroundColor: '#ffffff'
-            }}>
-              <h4 style={{ color: '#1f2937', marginBottom: '15px' }}>🎨 Color Usage Guidelines</h4>
-              <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.8' }}>
-                <p style={{ marginBottom: '15px' }}>
-                  <strong>Primary Blue (#3b82f6):</strong> Use for main call-to-action buttons, primary links, and key brand elements. Should comprise 60% of brand color usage.
-                </p>
-                <p style={{ marginBottom: '15px' }}>
-                  <strong>Secondary Green (#10b981):</strong> Reserved for success states, positive feedback, and completion indicators. Use sparingly for maximum impact.
-                </p>
-                <p style={{ marginBottom: '15px' }}>
-                  <strong>Supporting Colors:</strong> Purple, Orange, and Red should be used as accent colors for specific UI states and never as primary brand colors.
-                </p>
-                <p>
-                  <strong>Accessibility:</strong> Ensure all color combinations meet WCAG AA contrast requirements (4.5:1 for normal text, 3:1 for large text).
-                </p>
-              </div>
-            </div>
-
-            {/* Typography Guidelines */}
-            <div style={{
-              padding: '25px',
-              border: '2px solid #e5e7eb',
-              borderRadius: '8px',
-              backgroundColor: '#ffffff'
-            }}>
-              <h4 style={{ color: '#1f2937', marginBottom: '15px' }}>🔤 Typography Guidelines</h4>
-              <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.8' }}>
-                <p style={{ marginBottom: '15px' }}>
-                  <strong>Hierarchy:</strong> Use Inter for all UI elements and primary headings. Roboto for body text and longer content. Playfair Display only for special occasions and creative headlines.
-                </p>
-                <p style={{ marginBottom: '15px' }}>
-                  <strong>Sizing:</strong> Maintain consistent sizing scale: H1 (32px), H2 (24px), H3 (20px), H4 (18px), Body (16px), Small (14px), Caption (12px).
-                </p>
-                <p>
-                  <strong>Line Height:</strong> Use 1.5x line height for body text, 1.2x for headings. Ensure adequate spacing between elements for readability.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Export the main component
-export default AdminComponents;
