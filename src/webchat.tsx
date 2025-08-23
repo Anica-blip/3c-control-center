@@ -519,7 +519,7 @@ function ChatManagerPublic() {
 
       {/* Live Chat Tab - FIXED WIDTH ISSUE */}
       {activeTab === 'chat' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '32px' }}>
           <div style={contentCardStyle}>
             <h3 style={sectionTitleStyle}>💬 Aurion Chat Interface</h3>
             <p style={{ color: isDarkMode ? '#d1d5db' : '#6b7280', marginBottom: '20px' }}>
