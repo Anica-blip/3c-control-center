@@ -186,17 +186,6 @@ const MarketingControlCenter = () => {
       color: isDarkMode ? '#e2e8f0' : '#111827',
       minHeight: '100vh'
     }}>
-      {/* Status Summary - No Header Needed */}
-      <div style={{ marginBottom: '20px' }}>
-        <p style={{ 
-          color: isDarkMode ? '#94a3b8' : '#6b7280', 
-          margin: '0', 
-          fontSize: '12px',
-          fontWeight: 'bold'
-        }}>
-          Comprehensive dashboard for persona management, content strategy, and analytics
-        </p>
-      </div>
 
       <div style={{ 
         borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`, 
