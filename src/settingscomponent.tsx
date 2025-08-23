@@ -1,986 +1,768 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Edit3, Trash2, RefreshCw, Eye, AlertCircle, CheckCircle, Play, X, Plus, ChevronLeft, ChevronRight, Save } from 'lucide-react';
+import React, { useState } from 'react';
 
-// Types (keeping existing types but adding better styling)
-interface PendingPost {
-  id: string;
-  characterProfile: string;
-  type: string;
-  template: string;
-  description: string;
-  mediaFiles: MediaFile[];
-  platforms: PlatformAssignment[];
-  status: 'pending_schedule';
-  createdDate: Date;
-}
-
-interface ScheduledPost {
-  id: string;
-  characterProfile: string;
-  type: string;
-  template: string;
-  description: string;
-  mediaFiles: MediaFile[];
-  platforms: PlatformAssignment[];
-  scheduledDate: Date;
-  status: 'pending' | 'processing' | 'complete' | 'failed' | 'resending';
-  failureReason?: string;
-  createdDate: Date;
-  lastAttempt?: Date;
-  retryCount?: number;
-}
-
-interface SavedTemplate {
-  id: string;
-  name: string;
-  characterProfile: string;
-  type: string;
-  description: string;
-  platforms: PlatformAssignment[];
-  createdDate: Date;
-  usageCount: number;
-}
-
-interface MediaFile {
-  id: string;
-  name: string;
-  type: 'image' | 'video' | 'pdf' | 'gif' | 'interactive' | 'other';
-  size: number;
-  url: string;
-}
-
-interface PlatformAssignment {
-  platformId: string;
-  platformName: string;
-  platformIcon: string;
-  status: 'pending' | 'sent' | 'failed';
-  sentAt?: Date;
-  errorMessage?: string;
-}
-
-interface Platform {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-}
-
-// Main Component
-export default function ScheduleComponent() {
-  const [activeTab, setActiveTab] = useState('pending');
-  const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month'>('month');
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [statusFilter, setStatusFilter] = useState('all');
+function SettingsComponent() {
+  const [activeTab, setActiveTab] = useState('platforms');
+  
+  // Check for dark mode from parent (this would normally come from props or context)
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem('darkMode') === 'true';
-  });
-  
-  // Modal states
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isSaveTemplateModalOpen, setIsSaveTemplateModalOpen] = useState(false);
-  const [isEditTemplateModalOpen, setIsEditTemplateModalOpen] = useState(false);
-  
-  // Selected items
-  const [selectedPendingPost, setSelectedPendingPost] = useState<PendingPost | null>(null);
-  const [selectedScheduledPost, setSelectedScheduledPost] = useState<ScheduledPost | null>(null);
-  const [editingPost, setEditingPost] = useState<PendingPost | ScheduledPost | null>(null);
-  const [editingTemplate, setEditingTemplate] = useState<SavedTemplate | null>(null);
-  
-  // Data states
-  const [pendingPosts, setPendingPosts] = useState<PendingPost[]>([]);
-  const [scheduledPosts, setScheduledPosts] = useState<ScheduledPost[]>([]);
-  const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
-  const [templateName, setTemplateName] = useState('');
-
-  // Platform configuration
-  const platforms: Platform[] = [
-    { id: '1', name: 'Telegram', icon: 'TG', color: '#3b82f6' },
-    { id: '2', name: 'YouTube', icon: 'YT', color: '#ef4444' },
-    { id: '3', name: 'Facebook', icon: 'FB', color: '#2563eb' },
-    { id: '4', name: 'Twitter', icon: 'TW', color: '#0ea5e9' },
-    { id: '5', name: 'Forum', icon: 'FR', color: '#4b5563' },
-  ];
-
-  // Styles
-  const containerStyle = {
-    padding: '20px',
-    minHeight: '100vh',
-    backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
-    color: isDarkMode ? '#f9fafb' : '#111827'
-  };
-
-  const headerStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: '24px'
-  };
-
-  const titleStyle = {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    margin: '0 0 4px 0',
-    color: isDarkMode ? '#f9fafb' : '#111827'
-  };
-
-  const subtitleStyle = {
-    color: isDarkMode ? '#d1d5db' : '#6b7280',
-    fontSize: '14px',
-    margin: '0'
-  };
-
-  const cardStyle = {
-    backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
-    borderRadius: '12px',
-    padding: '24px',
-    boxShadow: isDarkMode 
-      ? '0 10px 25px -3px rgba(0, 0, 0, 0.3)' 
-      : '0 10px 25px -3px rgba(0, 0, 0, 0.1)',
-    border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
-  };
-
-  const tabsContainerStyle = {
-    borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-    backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
-    borderRadius: '8px 8px 0 0',
-    marginBottom: '24px',
-    boxShadow: isDarkMode 
-      ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-      : '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-  };
-
-  const getTabStyle = (tabId) => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '16px 24px',
-    borderBottom: activeTab === tabId ? '2px solid #3b82f6' : '2px solid transparent',
-    fontWeight: '500',
-    fontSize: '14px',
-    color: activeTab === tabId ? '#2563eb' : (isDarkMode ? '#d1d5db' : '#6b7280'),
-    backgroundColor: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease'
-  });
-
-  const buttonStyle = {
-    padding: '10px 16px',
-    borderRadius: '8px',
-    border: 'none',
-    fontSize: '14px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease'
-  };
-
-  const primaryButtonStyle = {
-    ...buttonStyle,
-    backgroundColor: '#3b82f6',
-    color: '#ffffff',
-    boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.3)'
-  };
-
-  const secondaryButtonStyle = {
-    ...buttonStyle,
-    backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
-    color: isDarkMode ? '#f9fafb' : '#374151',
-    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`
-  };
-
-  const dangerButtonStyle = {
-    ...buttonStyle,
-    backgroundColor: '#ef4444',
-    color: '#ffffff',
-    boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.3)'
-  };
-
-  const inputStyle = {
-    width: '100%',
-    padding: '12px 16px',
-    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
-    borderRadius: '8px',
-    fontSize: '14px',
-    backgroundColor: isDarkMode ? '#374151' : '#ffffff',
-    color: isDarkMode ? '#f9fafb' : '#1f2937',
-    outline: 'none',
-    transition: 'border-color 0.2s ease'
-  };
-
-  const modalOverlayStyle = {
-    position: 'fixed' as const,
-    inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 50,
-    backdropFilter: 'blur(4px)'
-  };
-
-  const modalContentStyle = {
-    backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
-    borderRadius: '12px',
-    padding: '32px',
-    maxWidth: '600px',
-    width: '90%',
-    margin: '16px',
-    maxHeight: '90vh',
-    overflowY: 'auto' as const,
-    boxShadow: isDarkMode 
-      ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)' 
-      : '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-  };
-
-  // Initialize with sample data
-  useEffect(() => {
-    if (pendingPosts.length === 0) {
-      const samplePosts: PendingPost[] = [
-        {
-          id: 'pending-1',
-          characterProfile: 'Business Professional',
-          type: 'Announcement',
-          template: 'Standard Post',
-          description: 'Meet Jan our Admin Support and 3C Community Mentor',
-          mediaFiles: [{ id: '1', name: 'team-photo.jpg', type: 'image', size: 1024000, url: '#' }],
-          platforms: [
-            { platformId: '1', platformName: 'Telegram', platformIcon: 'TG', status: 'pending' },
-            { platformId: '5', platformName: 'Forum', platformIcon: 'FR', status: 'pending' }
-          ],
-          status: 'pending_schedule',
-          createdDate: new Date()
-        },
-        {
-          id: 'pending-2',
-          characterProfile: 'Marketing Expert',
-          type: 'Promotional',
-          template: 'Product Launch',
-          description: 'Exciting new features coming to our platform! Get ready for enhanced productivity tools.',
-          mediaFiles: [{ id: '2', name: 'feature-preview.png', type: 'image', size: 2048000, url: '#' }],
-          platforms: [
-            { platformId: '2', platformName: 'YouTube', platformIcon: 'YT', status: 'pending' },
-            { platformId: '3', platformName: 'Facebook', platformIcon: 'FB', status: 'pending' },
-            { platformId: '4', platformName: 'Twitter', platformIcon: 'TW', status: 'pending' }
-          ],
-          status: 'pending_schedule',
-          createdDate: new Date(Date.now() - 86400000)
-        }
-      ];
-      setPendingPosts(samplePosts);
-      
-      const sampleScheduled: ScheduledPost[] = [
-        {
-          id: 'scheduled-1',
-          characterProfile: 'Community Manager',
-          type: 'Update',
-          template: 'Weekly Update',
-          description: 'Weekly community highlights and upcoming events',
-          mediaFiles: [],
-          platforms: [
-            { platformId: '1', platformName: 'Telegram', platformIcon: 'TG', status: 'pending' },
-            { platformId: '5', platformName: 'Forum', platformIcon: 'FR', status: 'pending' }
-          ],
-          scheduledDate: new Date(Date.now() + 172800000),
-          status: 'pending',
-          createdDate: new Date(Date.now() - 3600000)
-        },
-        {
-          id: 'scheduled-2',
-          characterProfile: 'Technical Writer',
-          type: 'Tutorial',
-          template: 'How-to Guide',
-          description: 'Advanced tips for maximizing your workflow efficiency',
-          mediaFiles: [{ id: '3', name: 'tutorial-video.mp4', type: 'video', size: 10240000, url: '#' }],
-          platforms: [
-            { platformId: '2', platformName: 'YouTube', platformIcon: 'YT', status: 'pending' }
-          ],
-          scheduledDate: new Date(Date.now() + 259200000),
-          status: 'complete',
-          createdDate: new Date(Date.now() - 7200000)
-        }
-      ];
-      setScheduledPosts(sampleScheduled);
-
-      const sampleTemplates: SavedTemplate[] = [
-        {
-          id: 'template-1',
-          name: 'Team Introduction',
-          characterProfile: 'Business Professional',
-          type: 'Announcement',
-          description: 'Template for introducing new team members',
-          platforms: [
-            { platformId: '1', platformName: 'Telegram', platformIcon: 'TG', status: 'pending' },
-            { platformId: '5', platformName: 'Forum', platformIcon: 'FR', status: 'pending' }
-          ],
-          createdDate: new Date(Date.now() - 86400000 * 3),
-          usageCount: 5
-        }
-      ];
-      setSavedTemplates(sampleTemplates);
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('darkMode') === 'true';
     }
-  }, [pendingPosts.length]);
+    return false;
+  });
+  
+  // Social Platforms State - EMPTY to start
+  const [platforms, setPlatforms] = useState([]);
+  const [newPlatform, setNewPlatform] = useState({ name: '', url: '' });
+  const [editingPlatform, setEditingPlatform] = useState(null);
+  
+  // Telegram Channels/Groups State - EMPTY to start (part of Social Platforms)
+  const [telegramChannels, setTelegramChannels] = useState([]);
+  const [newTelegram, setNewTelegram] = useState({ 
+    name: '', 
+    channel_group_id: '', 
+    thread_id: '', 
+    type: 'channel' 
+  });
+  const [editingTelegram, setEditingTelegram] = useState(null);
+  
+  // Character Profiles State - EMPTY to start
+  const [characters, setCharacters] = useState([]);
+  const [newCharacter, setNewCharacter] = useState({ 
+    name: '', 
+    username: '', 
+    title: '', 
+    bio: '', 
+    image: null
+  });
+  const [editingCharacter, setEditingCharacter] = useState(null);
+  
+  // Error Logs State - Will come from Supabase
+  const [errorLogs, setErrorLogs] = useState([]);
 
-  const getStatusColor = (status: string) => {
-    const colors = {
-      pending: { bg: isDarkMode ? '#422006' : '#fef3c7', text: isDarkMode ? '#fbbf24' : '#92400e', border: '#f59e0b' },
-      processing: { bg: isDarkMode ? '#1e3a8a' : '#dbeafe', text: isDarkMode ? '#60a5fa' : '#1e40af', border: '#3b82f6' },
-      complete: { bg: isDarkMode ? '#064e3b' : '#d1fae5', text: isDarkMode ? '#34d399' : '#065f46', border: '#10b981' },
-      failed: { bg: isDarkMode ? '#7f1d1d' : '#fee2e2', text: isDarkMode ? '#f87171' : '#991b1b', border: '#ef4444' },
-      resending: { bg: isDarkMode ? '#9a3412' : '#fed7aa', text: isDarkMode ? '#fb923c' : '#9a3412', border: '#f97316' }
+  // Theme classes
+  const themeClasses = {
+    background: isDarkMode ? 'bg-gray-900' : 'bg-gray-50',
+    cardBackground: isDarkMode ? 'bg-gray-800' : 'bg-white',
+    textPrimary: isDarkMode ? 'text-white' : 'text-gray-900',
+    textSecondary: isDarkMode ? 'text-gray-300' : 'text-gray-600',
+    textMuted: isDarkMode ? 'text-gray-400' : 'text-gray-500',
+    border: isDarkMode ? 'border-gray-700' : 'border-gray-200',
+    inputBackground: isDarkMode ? 'bg-gray-700' : 'bg-white',
+    inputBorder: isDarkMode ? 'border-gray-600' : 'border-gray-300',
+    buttonPrimary: isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700',
+    buttonSecondary: isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200',
+    buttonDanger: isDarkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-600 hover:bg-red-700',
+    buttonSuccess: isDarkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'
+  };
+
+  // =============================================================================
+  // SOCIAL PLATFORMS FUNCTIONS
+  // =============================================================================
+  
+  const addPlatform = () => {
+    if (!newPlatform.name.trim() || !newPlatform.url.trim()) return;
+    const platform = {
+      id: Date.now(),
+      name: newPlatform.name.trim(),
+      url: newPlatform.url.trim(),
+      created_at: new Date().toISOString()
     };
-    return colors[status] || colors.pending;
+    setPlatforms(prev => [...prev, platform]);
+    setNewPlatform({ name: '', url: '' });
+    console.log('Save to Supabase platforms table:', platform);
   };
 
-  const getStatusIcon = (status: string) => {
-    const iconStyle = { height: '14px', width: '14px' };
-    switch (status) {
-      case 'pending': return <Clock style={{...iconStyle, color: '#f59e0b'}} />;
-      case 'processing': return <Play style={{...iconStyle, color: '#3b82f6'}} />;
-      case 'complete': return <CheckCircle style={{...iconStyle, color: '#10b981'}} />;
-      case 'failed': return <AlertCircle style={{...iconStyle, color: '#ef4444'}} />;
-      case 'resending': return <RefreshCw style={{...iconStyle, color: '#f97316'}} />;
-      default: return null;
-    }
+  const savePlatformEdit = () => {
+    if (!editingPlatform || !editingPlatform.name.trim() || !editingPlatform.url.trim()) return;
+    setPlatforms(prev => prev.map(p => 
+      p.id === editingPlatform.id ? { ...editingPlatform } : p
+    ));
+    setEditingPlatform(null);
+    console.log('Update in Supabase platforms table:', editingPlatform);
   };
 
-  const getPlatformIcon = (platformId: string) => {
-    const platform = platforms.find(p => p.id === platformId);
-    return platform || { icon: 'UN', color: isDarkMode ? '#6b7280' : '#9ca3af' };
+  const deletePlatform = (id) => {
+    setPlatforms(prev => prev.filter(p => p.id !== id));
+    console.log('Delete from Supabase platforms table, ID:', id);
   };
 
-  // Event handlers
-  const handleSchedulePost = (post: PendingPost) => {
-    setSelectedPendingPost(post);
-    setIsScheduleModalOpen(true);
+  // =============================================================================
+  // TELEGRAM FUNCTIONS
+  // =============================================================================
+  
+  const addTelegram = () => {
+    if (!newTelegram.name.trim() || !newTelegram.channel_group_id.trim()) return;
+    const telegram = {
+      id: Date.now(),
+      name: newTelegram.name.trim(),
+      channel_group_id: newTelegram.channel_group_id.trim(),
+      thread_id: newTelegram.thread_id.trim() || null,
+      type: newTelegram.type,
+      created_at: new Date().toISOString()
+    };
+    setTelegramChannels(prev => [...prev, telegram]);
+    setNewTelegram({ name: '', channel_group_id: '', thread_id: '', type: 'channel' });
+    console.log('Save to Supabase telegram_channels table:', telegram);
   };
 
-  const handleEditPost = (post: PendingPost | ScheduledPost) => {
-    setEditingPost(post);
-    setIsEditModalOpen(true);
+  const saveTelegramEdit = () => {
+    if (!editingTelegram || !editingTelegram.name.trim() || !editingTelegram.channel_group_id.trim()) return;
+    setTelegramChannels(prev => prev.map(t => 
+      t.id === editingTelegram.id ? { ...editingTelegram } : t
+    ));
+    setEditingTelegram(null);
+    console.log('Update in Supabase telegram_channels table:', editingTelegram);
   };
 
-  const handleConfirmSchedule = () => {
-    if (selectedPendingPost) {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(9, 0, 0, 0);
+  const deleteTelegram = (id) => {
+    setTelegramChannels(prev => prev.filter(t => t.id !== id));
+    console.log('Delete from Supabase telegram_channels table, ID:', id);
+  };
+
+  // =============================================================================
+  // IMAGE PROCESSING FUNCTION
+  // =============================================================================
+  
+  const resizeImage = (file, maxWidth = 200, maxHeight = 200) => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
       
-      const scheduledPost: ScheduledPost = {
-        ...selectedPendingPost,
-        scheduledDate: tomorrow,
-        status: 'pending'
+      img.onload = () => {
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        const resizedImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(resizedImageDataUrl);
       };
       
-      setScheduledPosts(prev => [...prev, scheduledPost]);
-      setPendingPosts(prev => prev.filter(p => p.id !== selectedPendingPost.id));
-      
-      alert(`Post scheduled for ${tomorrow.toLocaleString()}!`);
-      setIsScheduleModalOpen(false);
-      setSelectedPendingPost(null);
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleImageUpload = async (file, isEditing = false) => {
+    if (file && file.type.startsWith('image/')) {
+      try {
+        const resizedImage = await resizeImage(file);
+        
+        if (isEditing) {
+          setEditingCharacter(prev => ({ ...prev, image: resizedImage }));
+        } else {
+          setNewCharacter(prev => ({ ...prev, image: resizedImage }));
+        }
+      } catch (error) {
+        console.error('Error processing image:', error);
+        alert('Error processing image. Please try again.');
+      }
+    } else {
+      alert('Please select a valid image file (JPG, PNG, GIF, etc.)');
     }
   };
 
-  const tabs = [
-    { id: 'pending', label: 'Pending Scheduling', icon: Clock },
-    { id: 'calendar', label: 'Calendar View', icon: Calendar },
-    { id: 'status', label: 'Status Management', icon: CheckCircle },
-    { id: 'saved', label: 'Saved Templates', icon: Save },
-  ];
+  // =============================================================================
+  // CHARACTER PROFILES FUNCTIONS
+  // =============================================================================
+  
+  const addCharacter = () => {
+    if (!newCharacter.name.trim() || !newCharacter.username.trim()) return;
+    const character = {
+      id: Date.now(),
+      name: newCharacter.name.trim(),
+      username: newCharacter.username.trim(),
+      title: newCharacter.title.trim(),
+      bio: newCharacter.bio.trim(),
+      image: newCharacter.image,
+      created_at: new Date().toISOString()
+    };
+    setCharacters(prev => [...prev, character]);
+    setNewCharacter({ name: '', username: '', title: '', bio: '', image: null });
+    console.log('Save to Supabase character_profiles table:', character);
+  };
+
+  const saveCharacterEdit = () => {
+    if (!editingCharacter || !editingCharacter.name.trim() || !editingCharacter.username.trim()) return;
+    setCharacters(prev => prev.map(c => 
+      c.id === editingCharacter.id ? { ...editingCharacter } : c
+    ));
+    setEditingCharacter(null);
+    console.log('Update in Supabase character_profiles table:', editingCharacter);
+  };
+
+  const deleteCharacter = (id) => {
+    setCharacters(prev => prev.filter(c => c.id !== id));
+    console.log('Delete from Supabase character_profiles table, ID:', id);
+  };
 
   return (
-    <div style={containerStyle}>
-      {/* Header */}
-      <div style={headerStyle}>
-        <div>
-          <h1 style={titleStyle}>📅 Schedule Manager</h1>
-          <p style={subtitleStyle}>Schedule posts and track their delivery status</p>
+    <div className={`min-h-screen ${themeClasses.background} transition-colors duration-200`}>
+      <div className="p-6 max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className={`text-3xl font-black ${themeClasses.textPrimary} mb-2`}>
+            ⚙️ Dashboard Settings
+          </h1>
+          <p className={`text-lg ${themeClasses.textSecondary} font-medium`}>
+            Configure social platforms, Telegram channels, and character profiles
+          </p>
         </div>
         
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          fontSize: '12px'
-        }}>
-          <div style={{
-            backgroundColor: isDarkMode ? '#7c2d12' : '#fed7aa',
-            color: isDarkMode ? '#fdba74' : '#9a3412',
-            padding: '6px 12px',
-            borderRadius: '12px',
-            fontWeight: '500'
-          }}>
-            {pendingPosts.length} pending scheduling
-          </div>
-          <div style={{
-            backgroundColor: isDarkMode ? '#1e3a8a' : '#dbeafe',
-            color: isDarkMode ? '#60a5fa' : '#1e40af',
-            padding: '6px 12px',
-            borderRadius: '12px',
-            fontWeight: '500'
-          }}>
-            {scheduledPosts.filter(p => p.status === 'pending').length} scheduled
-          </div>
-          <div style={{
-            backgroundColor: isDarkMode ? '#064e3b' : '#d1fae5',
-            color: isDarkMode ? '#34d399' : '#065f46',
-            padding: '6px 12px',
-            borderRadius: '12px',
-            fontWeight: '500'
-          }}>
-            {savedTemplates.length} templates
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div style={tabsContainerStyle}>
-        <div style={{
-          display: 'flex',
-          gap: '0',
-          padding: '0 24px'
-        }}>
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
+        {/* Settings Sub-Navigation - 3 TABS ONLY */}
+        <div className={`${themeClasses.cardBackground} rounded-lg shadow-lg border ${themeClasses.border} mb-8`}>
+          <div className="flex border-b border-gray-700">
+            {[
+              { id: 'platforms', icon: '📱', label: 'Social Platforms' },
+              { id: 'characters', icon: '👥', label: 'Character Profiles' },
+              { id: 'logs', icon: '📋', label: 'Error Logs' }
+            ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                style={getTabStyle(tab.id)}
-                onMouseOver={(e) => {
-                  if (activeTab !== tab.id) {
-                    e.currentTarget.style.color = isDarkMode ? '#f3f4f6' : '#374151';
-                    e.currentTarget.style.borderBottom = `2px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`;
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (activeTab !== tab.id) {
-                    e.currentTarget.style.color = isDarkMode ? '#d1d5db' : '#6b7280';
-                    e.currentTarget.style.borderBottom = '2px solid transparent';
-                  }
-                }}
+                className={`flex items-center gap-3 px-8 py-4 text-sm font-bold transition-all duration-200 border-b-2 ${
+                  activeTab === tab.id
+                    ? `${themeClasses.textPrimary} border-blue-500 bg-blue-500/10`
+                    : `${themeClasses.textSecondary} border-transparent hover:${themeClasses.textPrimary} hover:bg-gray-500/10`
+                }`}
               >
-                <Icon style={{ height: '16px', width: '16px' }} />
+                <span className="text-lg">{tab.icon}</span>
                 <span>{tab.label}</span>
-                {tab.id === 'pending' && pendingPosts.length > 0 && (
-                  <span style={{
-                    backgroundColor: isDarkMode ? '#7c2d12' : '#fed7aa',
-                    color: isDarkMode ? '#fdba74' : '#9a3412',
-                    padding: '2px 8px',
-                    fontSize: '11px',
-                    borderRadius: '12px',
-                    fontWeight: '500'
-                  }}>
-                    {pendingPosts.length}
-                  </span>
-                )}
-                {tab.id === 'saved' && savedTemplates.length > 0 && (
-                  <span style={{
-                    backgroundColor: isDarkMode ? '#064e3b' : '#d1fae5',
-                    color: isDarkMode ? '#34d399' : '#065f46',
-                    padding: '2px 8px',
-                    fontSize: '11px',
-                    borderRadius: '12px',
-                    fontWeight: '500'
-                  }}>
-                    {savedTemplates.length}
-                  </span>
-                )}
               </button>
-            );
-          })}
-        </div>
-      </div>
+            ))}
+          </div>
 
-      {/* Tab Content */}
-      <div style={{ display: 'grid', gap: '24px' }}>
-        {activeTab === 'pending' && (
-          <div style={{ display: 'grid', gap: '24px' }}>
-            {pendingPosts.length === 0 ? (
-              <div style={{
-                ...cardStyle,
-                background: isDarkMode 
-                  ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)'
-                  : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-                textAlign: 'center',
-                padding: '48px'
-              }}>
-                <Clock style={{
-                  height: '48px',
-                  width: '48px',
-                  color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                  margin: '0 auto 16px auto'
-                }} />
-                <h3 style={{
-                  fontSize: '18px',
-                  fontWeight: '600',
-                  color: isDarkMode ? '#dbeafe' : '#1e3a8a',
-                  margin: '0 0 8px 0'
-                }}>
-                  Ready for Scheduling
-                </h3>
-                <p style={{
-                  color: isDarkMode ? '#93c5fd' : '#1e40af',
-                  fontSize: '14px',
-                  margin: '0'
-                }}>
-                  Posts from Content Manager will appear here for scheduling
-                </p>
-              </div>
-            ) : (
-              <div style={cardStyle}>
-                <div style={{
-                  padding: '20px',
-                  backgroundColor: isDarkMode ? '#1e3a8a' : '#dbeafe',
-                  borderBottom: `1px solid ${isDarkMode ? '#3b82f6' : '#93c5fd'}`,
-                  borderRadius: '12px 12px 0 0',
-                  marginBottom: '24px'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px'
-                  }}>
-                    <Clock style={{
-                      height: '20px',
-                      width: '20px',
-                      color: isDarkMode ? '#dbeafe' : '#1e3a8a'
-                    }} />
-                    <h2 style={{
-                      fontSize: '18px',
-                      fontWeight: '600',
-                      color: isDarkMode ? '#dbeafe' : '#1e3a8a',
-                      margin: '0'
-                    }}>
-                      Pending Scheduling ({pendingPosts.length})
-                    </h2>
-                  </div>
-                  <p style={{
-                    fontSize: '12px',
-                    color: isDarkMode ? '#93c5fd' : '#1e40af',
-                    marginTop: '4px',
-                    margin: '4px 0 0 0'
-                  }}>
-                    Click "Schedule" to set date and time for these posts
-                  </p>
-                </div>
+          {/* Tab Content */}
+          <div className="p-8">
+            {/* 1. SOCIAL PLATFORMS TAB (includes both Social Media + Telegram) */}
+            {activeTab === 'platforms' && (
+              <div className="space-y-8">
                 
-                <div style={{ display: 'grid', gap: '16px' }}>
-                  {pendingPosts.map((post, index) => (
-                    <div 
-                      key={post.id} 
-                      style={{
-                        padding: '20px',
-                        backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
-                        borderRadius: '12px',
-                        border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = isDarkMode ? '#1f2937' : '#f3f4f6';
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = isDarkMode 
-                          ? '0 10px 25px -3px rgba(0, 0, 0, 0.4)' 
-                          : '0 10px 25px -3px rgba(0, 0, 0, 0.15)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = isDarkMode ? '#111827' : '#f9fafb';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
-                    >
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        justifyContent: 'space-between'
-                      }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            marginBottom: '12px',
-                            flexWrap: 'wrap'
-                          }}>
-                            <span style={{
-                              padding: '6px 12px',
-                              fontSize: '11px',
-                              backgroundColor: isDarkMode ? '#7c2d12' : '#fed7aa',
-                              color: isDarkMode ? '#fdba74' : '#9a3412',
-                              borderRadius: '12px',
-                              fontWeight: '600'
-                            }}>
-                              Ready to Schedule
-                            </span>
-                            <span style={{
-                              fontSize: '12px',
-                              color: isDarkMode ? '#9ca3af' : '#6b7280'
-                            }}>
-                              Created {post.createdDate.toLocaleDateString()}
-                            </span>
-                            <span style={{
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              color: '#3b82f6'
-                            }}>
-                              {post.characterProfile}
-                            </span>
-                          </div>
-                          
-                          <div style={{ marginBottom: '16px' }}>
-                            <p style={{
-                              color: isDarkMode ? '#f9fafb' : '#111827',
-                              fontSize: '14px',
-                              lineHeight: '1.5',
-                              margin: '0'
-                            }}>
-                              {post.description}
-                            </p>
-                          </div>
-                          
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '24px',
-                            fontSize: '12px',
-                            color: isDarkMode ? '#9ca3af' : '#6b7280'
-                          }}>
-                            {post.mediaFiles.length > 0 && (
-                              <span style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}>
-                                <Eye style={{ height: '14px', width: '14px' }} />
-                                <span>{post.mediaFiles.length} file(s)</span>
-                              </span>
-                            )}
-                            
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px'
-                            }}>
-                              <span>Platforms:</span>
-                              <div style={{ display: 'flex', gap: '4px' }}>
-                                {post.platforms.map((platform, idx) => {
-                                  const platformInfo = getPlatformIcon(platform.platformId);
-                                  return (
-                                    <span
-                                      key={idx}
-                                      style={{
-                                        padding: '4px 8px',
-                                        borderRadius: '4px',
-                                        color: 'white',
-                                        fontSize: '10px',
-                                        fontWeight: '500',
-                                        backgroundColor: platformInfo.color
-                                      }}
-                                      title={platform.platformName}
-                                    >
-                                      {platformInfo.icon}
-                                    </span>
-                                  );
-                                })}
+                {/* SOCIAL MEDIA PLATFORMS SECTION */}
+                <div className={`p-8 border-2 border-blue-500 rounded-xl bg-gradient-to-br ${isDarkMode ? 'from-blue-900/20 to-blue-800/20' : 'from-blue-50 to-blue-100'}`}>
+                  <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-900'} mb-6 flex items-center gap-3`}>
+                    <span className="text-3xl">📱</span>
+                    Social Media Platforms
+                  </h2>
+                  
+                  {/* Add New Platform Form */}
+                  <div className={`p-6 ${isDarkMode ? 'bg-gray-800/50' : 'bg-white/80'} rounded-lg border ${themeClasses.border} mb-8`}>
+                    <h3 className={`text-lg font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-900'} mb-4 flex items-center gap-2`}>
+                      <span>➕</span>
+                      Create New Platform
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
+                      <div>
+                        <label className={`block text-sm font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-900'} mb-2`}>
+                          Platform Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newPlatform.name}
+                          onChange={(e) => setNewPlatform(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="e.g., Facebook, Instagram, Twitter"
+                          className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-blue-500 focus:ring-0 transition-colors`}
+                        />
+                      </div>
+                      <div>
+                        <label className={`block text-sm font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-900'} mb-2`}>
+                          Platform URL/Link
+                        </label>
+                        <input
+                          type="url"
+                          value={newPlatform.url}
+                          onChange={(e) => setNewPlatform(prev => ({ ...prev, url: e.target.value }))}
+                          placeholder="https://facebook.com/yourpage"
+                          className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-blue-500 focus:ring-0 transition-colors`}
+                        />
+                      </div>
+                      <button
+                        onClick={addPlatform}
+                        disabled={!newPlatform.name.trim() || !newPlatform.url.trim()}
+                        className={`px-6 py-3 ${themeClasses.buttonPrimary} text-white border-none rounded-lg text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+                      >
+                        <span>💾</span>
+                        Save
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Platforms List */}
+                  <div>
+                    <h3 className={`text-lg font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-900'} mb-4 flex items-center gap-2`}>
+                      <span>📋</span>
+                      Your Platforms ({platforms.length})
+                    </h3>
+                    {platforms.length === 0 ? (
+                      <div className={`p-12 text-center ${isDarkMode ? 'bg-gray-800/30' : 'bg-white/50'} rounded-lg border-2 border-dashed ${isDarkMode ? 'border-blue-400' : 'border-blue-300'}`}>
+                        <p className={`${themeClasses.textSecondary} text-lg mb-2`}>No platforms added yet</p>
+                        <p className={`${themeClasses.textMuted} text-sm`}>Use the form above to add your first social media platform</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {platforms.map(platform => (
+                          <div key={platform.id} className={`p-4 ${themeClasses.cardBackground} rounded-lg border ${themeClasses.border} flex items-center justify-between`}>
+                            {editingPlatform && editingPlatform.id === platform.id ? (
+                              <div className="flex items-center gap-4 flex-1">
+                                <input
+                                  type="text"
+                                  value={editingPlatform.name}
+                                  onChange={(e) => setEditingPlatform(prev => ({ ...prev, name: e.target.value }))}
+                                  className={`px-3 py-2 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border rounded text-sm ${themeClasses.textPrimary} w-40`}
+                                />
+                                <input
+                                  type="url"
+                                  value={editingPlatform.url}
+                                  onChange={(e) => setEditingPlatform(prev => ({ ...prev, url: e.target.value }))}
+                                  className={`flex-1 px-3 py-2 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border rounded text-sm ${themeClasses.textPrimary}`}
+                                />
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={savePlatformEdit}
+                                    className={`px-3 py-2 ${themeClasses.buttonSuccess} text-white text-xs rounded font-bold`}
+                                  >
+                                    💾 Save
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingPlatform(null)}
+                                    className={`px-3 py-2 ${themeClasses.buttonSecondary} ${themeClasses.textPrimary} text-xs rounded font-bold`}
+                                  >
+                                    ❌ Cancel
+                                  </button>
+                                </div>
                               </div>
-                            </div>
+                            ) : (
+                              <>
+                                <div>
+                                  <div className={`font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-900'} mb-1`}>
+                                    {platform.name}
+                                  </div>
+                                  <div className={`text-xs ${themeClasses.textMuted}`}>
+                                    {platform.url}
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => setEditingPlatform(platform)}
+                                    className={`px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded font-bold transition-colors`}
+                                  >
+                                    ✏️ Edit
+                                  </button>
+                                  <button
+                                    onClick={() => deletePlatform(platform.id)}
+                                    className={`px-3 py-2 ${themeClasses.buttonDanger} text-white text-xs rounded font-bold`}
+                                  >
+                                    🗑️ Delete
+                                  </button>
+                                </div>
+                              </>
+                            )}
                           </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* TELEGRAM SECTION */}
+                <div className={`p-8 border-2 border-cyan-500 rounded-xl bg-gradient-to-br ${isDarkMode ? 'from-cyan-900/20 to-cyan-800/20' : 'from-cyan-50 to-cyan-100'}`}>
+                  <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-6 flex items-center gap-3`}>
+                    <span className="text-3xl">📡</span>
+                    Telegram Channels & Groups
+                  </h2>
+                  
+                  {/* Add New Telegram Form */}
+                  <div className={`p-6 ${isDarkMode ? 'bg-gray-800/50' : 'bg-white/80'} rounded-lg border ${themeClasses.border} mb-8`}>
+                    <h3 className={`text-lg font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-4 flex items-center gap-2`}>
+                      <span>➕</span>
+                      Add Telegram Channel/Group
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className={`block text-sm font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-2`}>
+                            Channel or Group Name
+                          </label>
+                          <input
+                            type="text"
+                            value={newTelegram.name}
+                            onChange={(e) => setNewTelegram(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="e.g., group2, channel1"
+                            className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-cyan-500 focus:ring-0 transition-colors`}
+                          />
                         </div>
-                        
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          marginLeft: '24px'
-                        }}>
-                          <button
-                            onClick={() => handleEditPost(post)}
-                            style={{
-                              ...secondaryButtonStyle,
-                              padding: '8px 16px',
-                              fontSize: '12px'
-                            }}
-                            onMouseOver={(e) => {
-                              e.currentTarget.style.backgroundColor = isDarkMode ? '#4b5563' : '#e5e7eb';
-                            }}
-                            onMouseOut={(e) => {
-                              e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f3f4f6';
-                            }}
+                        <div>
+                          <label className={`block text-sm font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-2`}>
+                            Channel/Group ID
+                          </label>
+                          <input
+                            type="text"
+                            value={newTelegram.channel_group_id}
+                            onChange={(e) => setNewTelegram(prev => ({ ...prev, channel_group_id: e.target.value }))}
+                            placeholder="e.g., -1002377255109"
+                            className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-cyan-500 focus:ring-0 transition-colors`}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-sm font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-2`}>
+                            Type
+                          </label>
+                          <select
+                            value={newTelegram.type}
+                            onChange={(e) => setNewTelegram(prev => ({ ...prev, type: e.target.value }))}
+                            className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-cyan-500 focus:ring-0 transition-colors`}
                           >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleSchedulePost(post)}
-                            style={{
-                              ...primaryButtonStyle,
-                              padding: '10px 20px',
-                              fontSize: '14px'
-                            }}
-                            onMouseOver={(e) => {
-                              e.currentTarget.style.backgroundColor = '#2563eb';
-                              e.currentTarget.style.transform = 'translateY(-1px)';
-                            }}
-                            onMouseOut={(e) => {
-                              e.currentTarget.style.backgroundColor = '#3b82f6';
-                              e.currentTarget.style.transform = 'translateY(0)';
-                            }}
-                          >
-                            🚀 Schedule
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (confirm('Are you sure you want to delete this post?')) {
-                                setPendingPosts(prev => prev.filter(p => p.id !== post.id));
-                              }
-                            }}
-                            style={{
-                              padding: '8px',
-                              color: isDarkMode ? '#f87171' : '#ef4444',
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer'
-                            }}
-                            onMouseOver={(e) => {
-                              e.currentTarget.style.backgroundColor = isDarkMode ? '#7f1d1d' : '#fee2e2';
-                            }}
-                            onMouseOut={(e) => {
-                              e.currentTarget.style.backgroundColor = 'transparent';
-                            }}
-                          >
-                            <Trash2 style={{ height: '16px', width: '16px' }} />
-                          </button>
+                            <option value="channel">Channel</option>
+                            <option value="group">Group</option>
+                          </select>
                         </div>
                       </div>
+                      
+                      {newTelegram.type === 'group' && (
+                        <div>
+                          <label className={`block text-sm font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-2`}>
+                            Thread ID (for groups with topics)
+                          </label>
+                          <input
+                            type="text"
+                            value={newTelegram.thread_id}
+                            onChange={(e) => setNewTelegram(prev => ({ ...prev, thread_id: e.target.value }))}
+                            placeholder="e.g., https://t.me/100237725510910 (optional)"
+                            className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-cyan-500 focus:ring-0 transition-colors`}
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="text-right">
+                        <button
+                          onClick={addTelegram}
+                          disabled={!newTelegram.name.trim() || !newTelegram.channel_group_id.trim()}
+                          className={`px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white border-none rounded-lg text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
+                        >
+                          <span>💾</span>
+                          Save
+                        </button>
+                      </div>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Telegram List */}
+                  <div>
+                    <h3 className={`text-lg font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-4 flex items-center gap-2`}>
+                      <span>📋</span>
+                      Your Telegram Channels/Groups ({telegramChannels.length})
+                    </h3>
+                    {telegramChannels.length === 0 ? (
+                      <div className={`p-12 text-center ${isDarkMode ? 'bg-gray-800/30' : 'bg-white/50'} rounded-lg border-2 border-dashed ${isDarkMode ? 'border-cyan-400' : 'border-cyan-300'}`}>
+                        <p className={`${themeClasses.textSecondary} text-lg mb-2`}>No Telegram channels/groups added yet</p>
+                        <p className={`${themeClasses.textMuted} text-sm`}>Use the form above to add your first Telegram destination</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {telegramChannels.map(telegram => (
+                          <div key={telegram.id} className={`p-4 ${themeClasses.cardBackground} rounded-lg border ${themeClasses.border} flex items-center justify-between`}>
+                            <div>
+                              <div className={`font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-900'} mb-1`}>
+                                {telegram.name} ({telegram.type})
+                              </div>
+                              <div className={`text-xs ${themeClasses.textMuted}`}>
+                                ID: {telegram.channel_group_id}
+                                {telegram.thread_id && ` • Thread: ${telegram.thread_id}`}
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setEditingTelegram(telegram)}
+                                className="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded font-bold transition-colors"
+                              >
+                                ✏️ Edit
+                              </button>
+                              <button
+                                onClick={() => deleteTelegram(telegram.id)}
+                                className={`px-3 py-2 ${themeClasses.buttonDanger} text-white text-xs rounded font-bold`}
+                              >
+                                🗑️ Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
-          </div>
-        )}
 
-        {/* Other tabs would go here with similar styling improvements */}
-        {activeTab !== 'pending' && (
-          <div style={cardStyle}>
-            <h3 style={{
-              fontSize: '18px',
-              fontWeight: 'bold',
-              marginBottom: '16px',
-              color: isDarkMode ? '#f9fafb' : '#111827'
-            }}>
-              {activeTab === 'calendar' && '📅 Calendar View'}
-              {activeTab === 'status' && '📊 Status Management'}
-              {activeTab === 'saved' && '💾 Saved Templates'}
-            </h3>
-            <p style={{
-              color: isDarkMode ? '#d1d5db' : '#6b7280',
-              margin: '0'
-            }}>
-              Content for {activeTab} tab - styling will be applied consistently...
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Schedule Modal */}
-      {isScheduleModalOpen && selectedPendingPost && (
-        <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '24px'
-            }}>
-              <h2 style={{
-                fontSize: '20px',
-                fontWeight: '600',
-                margin: '0',
-                color: isDarkMode ? '#f9fafb' : '#111827'
-              }}>
-                Schedule Post
-              </h2>
-              <button
-                onClick={() => setIsScheduleModalOpen(false)}
-                style={{
-                  color: isDarkMode ? '#9ca3af' : '#6b7280',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '4px'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.color = isDarkMode ? '#f3f4f6' : '#374151';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.color = isDarkMode ? '#9ca3af' : '#6b7280';
-                }}
-              >
-                <X style={{ height: '20px', width: '20px' }} />
-              </button>
-            </div>
-            
-            <div style={{
-              backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
-              borderRadius: '8px',
-              padding: '16px',
-              marginBottom: '24px',
-              border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                marginBottom: '12px'
-              }}>
-                <span style={{
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  color: '#3b82f6'
-                }}>
-                  {selectedPendingPost.characterProfile}
-                </span>
-                <span style={{
-                  fontSize: '12px',
-                  color: isDarkMode ? '#9ca3af' : '#6b7280'
-                }}>
-                  •
-                </span>
-                <span style={{
-                  fontSize: '12px',
-                  color: isDarkMode ? '#9ca3af' : '#6b7280'
-                }}>
-                  {selectedPendingPost.type}
-                </span>
-              </div>
-              <p style={{
-                color: isDarkMode ? '#f9fafb' : '#111827',
-                marginBottom: '12px',
-                fontSize: '14px',
-                margin: '0 0 12px 0'
-              }}>
-                {selectedPendingPost.description}
-              </p>
-              
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <span style={{
-                  fontSize: '12px',
-                  color: isDarkMode ? '#9ca3af' : '#6b7280'
-                }}>
-                  Will post to:
-                </span>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  {selectedPendingPost.platforms.map((platform, idx) => {
-                    const platformInfo = getPlatformIcon(platform.platformId);
-                    return (
-                      <span
-                        key={idx}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          color: 'white',
-                          fontSize: '10px',
-                          fontWeight: '500',
-                          backgroundColor: platformInfo.color
-                        }}
-                        title={platform.platformName}
+            {/* 2. CHARACTER PROFILES TAB */}
+            {activeTab === 'characters' && (
+              <div className={`p-8 border-2 border-purple-500 rounded-xl bg-gradient-to-br ${isDarkMode ? 'from-purple-900/20 to-purple-800/20' : 'from-purple-50 to-purple-100'}`}>
+                <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-6 flex items-center gap-3`}>
+                  <span className="text-3xl">👥</span>
+                  Character Profiles
+                </h2>
+                
+                {/* Add New Character Form */}
+                <div className={`p-6 ${isDarkMode ? 'bg-gray-800/50' : 'bg-white/80'} rounded-lg border ${themeClasses.border} mb-8`}>
+                  <h3 className={`text-lg font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-4 flex items-center gap-2`}>
+                    <span>➕</span>
+                    Add Profile
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className={`block text-sm font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-2`}>
+                          Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newCharacter.name}
+                          onChange={(e) => setNewCharacter(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="e.g., Dr. Sarah Chen"
+                          className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-purple-500 focus:ring-0 transition-colors`}
+                        />
+                      </div>
+                      <div>
+                        <label className={`block text-sm font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-2`}>
+                          Username
+                        </label>
+                        <input
+                          type="text"
+                          value={newCharacter.username}
+                          onChange={(e) => setNewCharacter(prev => ({ ...prev, username: e.target.value }))}
+                          placeholder="e.g., @drsarahchen"
+                          className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-purple-500 focus:ring-0 transition-colors`}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className={`block text-sm font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-2`}>
+                        Title
+                      </label>
+                      <input
+                        type="text"
+                        value={newCharacter.title}
+                        onChange={(e) => setNewCharacter(prev => ({ ...prev, title: e.target.value }))}
+                        placeholder="e.g., Wellness Expert & Mindfulness Coach"
+                        className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-purple-500 focus:ring-0 transition-colors`}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className={`block text-sm font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-2`}>
+                        Bio
+                      </label>
+                      <textarea
+                        value={newCharacter.bio}
+                        onChange={(e) => setNewCharacter(prev => ({ ...prev, bio: e.target.value }))}
+                        placeholder="Detailed bio and expertise description..."
+                        rows={3}
+                        className={`w-full px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-purple-500 focus:ring-0 transition-colors resize-vertical`}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className={`block text-sm font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-2`}>
+                        Upload Profile Image
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              handleImageUpload(file, false);
+                            }
+                          }}
+                          className={`flex-1 px-4 py-3 ${themeClasses.inputBackground} ${themeClasses.inputBorder} border-2 rounded-lg text-sm ${themeClasses.textPrimary} focus:border-purple-500 focus:ring-0 transition-colors`}
+                        />
+                        {newCharacter.image && (
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={newCharacter.image}
+                              alt="Preview"
+                              className="w-16 h-16 rounded-full object-cover border-2 border-purple-300"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setNewCharacter(prev => ({ ...prev, image: null }))}
+                              className={`px-3 py-2 ${themeClasses.buttonDanger} text-white text-xs rounded font-bold`}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <p className={`mt-2 text-xs ${themeClasses.textMuted}`}>
+                        Upload an image from your computer. It will be automatically resized to fit 200x200 pixels.
+                      </p>
+                    </div>
+                    
+                    <div className="text-right">
+                      <button
+                        onClick={addCharacter}
+                        disabled={!newCharacter.name.trim() || !newCharacter.username.trim()}
+                        className={`px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white border-none rounded-lg text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
                       >
-                        {platformInfo.icon}
-                      </span>
-                    );
-                  })}
+                        <span>💾</span>
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Characters List */}
+                <div>
+                  <h3 className={`text-lg font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'} mb-4 flex items-center gap-2`}>
+                    <span>📋</span>
+                    Your Character Profiles ({characters.length})
+                  </h3>
+                  {characters.length === 0 ? (
+                    <div className={`p-12 text-center ${isDarkMode ? 'bg-gray-800/30' : 'bg-white/50'} rounded-lg border-2 border-dashed ${isDarkMode ? 'border-purple-400' : 'border-purple-300'}`}>
+                      <p className={`${themeClasses.textSecondary} text-lg mb-2`}>No character profiles created yet</p>
+                      <p className={`${themeClasses.textMuted} text-sm`}>Use the form above to create your first character profile</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {characters.map(character => (
+                        <div key={character.id} className={`p-6 ${themeClasses.cardBackground} rounded-lg border ${themeClasses.border} flex items-start gap-4`}>
+                          <div className={`w-20 h-20 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'} flex items-center justify-center text-2xl ${isDarkMode ? 'text-purple-300' : 'text-purple-600'} font-bold border-2 ${isDarkMode ? 'border-purple-400' : 'border-purple-300'} flex-shrink-0 ${character.image ? 'bg-cover bg-center' : ''}`} style={character.image ? { backgroundImage: `url(${character.image})` } : {}}>
+                            {!character.image && character.name.charAt(0)}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className={`text-lg font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'}`}>
+                                {character.name}
+                              </h4>
+                              <span className={`text-sm ${themeClasses.textMuted} italic`}>
+                                {character.username}
+                              </span>
+                            </div>
+                            {character.title && (
+                              <div className={`text-sm font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-600'} mb-2`}>
+                                {character.title}
+                              </div>
+                            )}
+                            <p className={`${themeClasses.textSecondary} text-sm leading-relaxed`}>
+                              {character.bio}
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <button
+                              onClick={() => setEditingCharacter(character)}
+                              className="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded font-bold transition-colors"
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              onClick={() => deleteCharacter(character.id)}
+                              className={`px-3 py-2 ${themeClasses.buttonDanger} text-white text-xs rounded font-bold`}
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '16px',
-              marginBottom: '24px'
-            }}>
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: isDarkMode ? '#f9fafb' : '#374151',
-                  marginBottom: '8px'
-                }}>
-                  Date
-                </label>
-                <input
-                  type="date"
-                  style={inputStyle}
-                  min={new Date().toISOString().split('T')[0]}
-                  defaultValue={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
-                />
+            {/* 3. ERROR LOGS TAB */}
+            {activeTab === 'logs' && (
+              <div className={`p-8 border-2 border-red-500 rounded-xl bg-gradient-to-br ${isDarkMode ? 'from-red-900/20 to-red-800/20' : 'from-red-50 to-red-100'}`}>
+                <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-red-300' : 'text-red-900'} mb-6 flex items-center gap-3`}>
+                  <span className="text-3xl">📋</span>
+                  Error Logs
+                </h2>
+                <p className={`${isDarkMode ? 'text-red-300' : 'text-red-700'} text-sm mb-6`}>
+                  System error logs from Supabase database
+                </p>
+                
+                {errorLogs.length === 0 ? (
+                  <div className={`p-16 text-center ${isDarkMode ? 'bg-gray-800/30' : 'bg-white/50'} rounded-lg border-2 border-dashed ${isDarkMode ? 'border-red-400' : 'border-red-300'}`}>
+                    <div className="text-5xl mb-4">📋</div>
+                    <h3 className={`${themeClasses.textSecondary} mb-3 text-xl font-bold`}>
+                      No Error Logs Found
+                    </h3>
+                    <p className={`${themeClasses.textMuted} text-sm mb-6`}>
+                      Error logs from Supabase will appear here automatically
+                    </p>
+                    <div className={`p-4 ${isDarkMode ? 'bg-gray-800/50' : 'bg-white/80'} rounded-lg text-left`}>
+                      <p className={`mb-3 text-xs font-bold ${isDarkMode ? 'text-red-300' : 'text-red-700'} flex items-center gap-2`}>
+                        <span>📡</span>
+                        Supabase Connection Status:
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                        <span className={`text-xs ${themeClasses.textMuted}`}>
+                          Waiting for database connection...
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {errorLogs.map(log => (
+                      <div key={log.id} className={`p-4 ${themeClasses.cardBackground} rounded-lg border-l-4 ${
+                        log.severity === 'error' ? 'border-red-500' : 
+                        log.severity === 'warning' ? 'border-orange-500' : 
+                        'border-green-500'
+                      }`}>
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className={`font-bold ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>{log.type}</span>
+                              <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                log.severity === 'error' ? 'bg-red-500 text-white' :
+                                log.severity === 'warning' ? 'bg-orange-500 text-white' :
+                                'bg-green-500 text-white'
+                              }`}>
+                                {log.severity?.toUpperCase()}
+                              </span>
+                              <span className={`text-xs ${themeClasses.textMuted}`}>{log.timestamp}</span>
+                            </div>
+                            <p className={`${themeClasses.textSecondary} text-sm`}>{log.message}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {errorLogs.length > 0 && (
+                  <div className="mt-6 text-center">
+                    <button
+                      onClick={() => setErrorLogs([])}
+                      className={`px-6 py-3 ${themeClasses.buttonDanger} text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2 mx-auto`}
+                    >
+                      <span>🗑️</span>
+                      Clear All Logs
+                    </button>
+                  </div>
+                )}
               </div>
-              
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: isDarkMode ? '#f9fafb' : '#374151',
-                  marginBottom: '8px'
-                }}>
-                  Time
-                </label>
-                <input
-                  type="time"
-                  style={inputStyle}
-                  defaultValue="09:00"
-                />
-              </div>
-            </div>
-
-            <div style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '12px'
-            }}>
-              <button
-                onClick={() => setIsScheduleModalOpen(false)}
-                style={{
-                  ...secondaryButtonStyle,
-                  padding: '12px 20px'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = isDarkMode ? '#4b5563' : '#e5e7eb';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f3f4f6';
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmSchedule}
-                style={{
-                  ...primaryButtonStyle,
-                  padding: '12px 24px'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#2563eb';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = '#3b82f6';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                Schedule Post
-              </button>
-            </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
+
+export default SettingsComponent;
