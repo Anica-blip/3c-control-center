@@ -8,6 +8,16 @@ import MarketingControlCenter from './marketingcomponent';
 import SettingsComponentContent from './settingscomponent';
 import AdminComponentsContent from './admincomponents';
 
+// Import secure authentication components and services
+import GitHubLoginScreen from './components/auth/GitHubLoginScreen';
+import { 
+  getAuthenticatedUser, 
+  validateUser, 
+  formatLocalTime,
+  security,
+  type AuthenticatedUser 
+} from './services/auth';
+
 // Theme Context
 const ThemeContext = createContext({
   isDarkMode: false,
@@ -164,254 +174,7 @@ const withThemeWrapper = (WrappedComponent: React.ComponentType<any>) => {
 };
 
 // =============================================================================
-// GITHUB OAUTH AUTHENTICATION SYSTEM
-// =============================================================================
-
-// =============================================================================
-// GITHUB OAUTH AUTHENTICATION SYSTEM
-// =============================================================================
-
-/*
-SETUP INSTRUCTIONS FOR GITHUB OAUTH:
-
-1. Go to GitHub Settings > Developer settings > OAuth Apps
-2. Create a New OAuth App with these settings:
-   - Application name: "3C Control Center"
-   - Homepage URL: https://your-domain.com (or http://localhost:3000 for dev)
-   - Authorization callback URL: https://your-domain.com (SAME as homepage - no /auth/callback)
-3. Copy the Client ID and create environment variable:
-   - REACT_APP_GITHUB_CLIENT_ID=your_client_id_here
-4. The app will handle the OAuth callback on the main page
-
-IMPORTANT: Set your callback URL to the SAME as your homepage URL, not /auth/callback
-*/
-
-const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  // GitHub OAuth configuration
-  const GITHUB_CLIENT_ID = process.env.REACT_APP_GITHUB_CLIENT_ID || 'Iv23lizeirH3ZoENlcig';
-  const REDIRECT_URI = window.location.origin; // Changed: redirect back to main page
-  const SCOPE = 'repo user';
-
-  const handleGitHubLogin = () => {
-    setIsLoading(true);
-    
-    // Build GitHub OAuth URL
-    const githubAuthUrl = new URL('https://github.com/login/oauth/authorize');
-    githubAuthUrl.searchParams.append('client_id', GITHUB_CLIENT_ID);
-    githubAuthUrl.searchParams.append('redirect_uri', REDIRECT_URI);
-    githubAuthUrl.searchParams.append('scope', SCOPE);
-    githubAuthUrl.searchParams.append('state', Math.random().toString(36).substring(7));
-    
-    // Redirect to GitHub OAuth
-    window.location.href = githubAuthUrl.toString();
-  };
-
-  // Check for OAuth callback
-  React.useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const error = urlParams.get('error');
-    
-    if (error) {
-      setError('GitHub authentication was cancelled or failed');
-      setIsLoading(false);
-      return;
-    }
-    
-    if (code) {
-      handleOAuthCallback(code);
-    }
-  }, []);
-
-  const handleOAuthCallback = async (code: string) => {
-    try {
-      setIsLoading(true);
-      
-      // In a real implementation, you'd exchange the code for an access token
-      // via your backend. For now, we'll simulate successful authentication
-      
-      // Simulate GitHub API call to get user data
-      setTimeout(() => {
-        const mockUserData = {
-          id: '12345',
-          login: 'your-github-username',
-          name: 'Your Name',
-          avatar_url: 'https://github.com/identicons/your-avatar.png',
-          email: 'your.email@gmail.com',
-          repos_url: 'https://api.github.com/users/your-username/repos'
-        };
-        
-        // Store authentication data
-        localStorage.setItem('3c-github-auth', 'true');
-        localStorage.setItem('3c-github-user', JSON.stringify(mockUserData));
-        
-        // Clear URL parameters
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        onLogin(mockUserData);
-        setIsLoading(false);
-      }, 1500);
-      
-    } catch (error) {
-      console.error('OAuth callback error:', error);
-      setError('Failed to complete GitHub authentication');
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        padding: '40px',
-        maxWidth: '400px',
-        width: '90%',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        border: '1px solid #e5e7eb'
-      }}>
-        {/* Logo Section */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{
-            fontSize: '48px',
-            marginBottom: '16px'
-          }}>
-            🎯
-          </div>
-          <h1 style={{
-            fontSize: '24px',
-            fontWeight: 'bold',
-            color: '#3b82f6',
-            margin: '0 0 8px 0'
-          }}>
-            3C Control Center
-          </h1>
-          <p style={{
-            color: '#6b7280',
-            fontSize: '14px',
-            margin: '0'
-          }}>
-            Open Source Dashboard - Repository Access
-          </p>
-        </div>
-
-        {/* GitHub Login */}
-        <div style={{ marginBottom: '24px' }}>
-          {error && (
-            <div style={{
-              padding: '12px',
-              backgroundColor: '#fee2e2',
-              border: '1px solid #fca5a5',
-              borderRadius: '8px',
-              marginBottom: '16px'
-            }}>
-              <p style={{
-                color: '#dc2626',
-                fontSize: '14px',
-                margin: '0'
-              }}>
-                🚨 {error}
-              </p>
-            </div>
-          )}
-
-          <button
-            onClick={handleGitHubLogin}
-            disabled={isLoading}
-            style={{
-              width: '100%',
-              padding: '12px',
-              backgroundColor: isLoading ? '#6b7280' : '#24292f',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}
-            onMouseOver={(e) => {
-              if (!isLoading) {
-                e.currentTarget.style.backgroundColor = '#1c2128';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!isLoading) {
-                e.currentTarget.style.backgroundColor = '#24292f';
-              }
-            }}
-          >
-            {isLoading ? (
-              <>
-                <div style={{ 
-                  width: '16px', 
-                  height: '16px', 
-                  border: '2px solid #ffffff', 
-                  borderTop: '2px solid transparent', 
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite' 
-                }}></div>
-                Connecting to GitHub...
-              </>
-            ) : (
-              <>
-                <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
-                </svg>
-                Continue with GitHub
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Information */}
-        <div style={{
-          padding: '16px',
-          backgroundColor: '#f8fafc',
-          borderRadius: '8px',
-          border: '1px solid #e5e7eb'
-        }}>
-          <p style={{
-            fontSize: '12px',
-            color: '#6b7280',
-            margin: '0',
-            textAlign: 'center',
-            lineHeight: '1.5'
-          }}>
-            🔐 <strong>Secure Repository Access</strong><br />
-            Login with your GitHub account to access your repository data.<br />
-            Each user maintains their own secure instance.
-          </p>
-        </div>
-
-        {/* Add CSS animation for loading spinner */}
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    </div>
-  );
-};
-
-// =============================================================================
-// OVERVIEW COMPONENT
+// OVERVIEW COMPONENT - Updated with WEST timezone
 // =============================================================================
 
 const OverviewComponent = () => {
@@ -458,7 +221,7 @@ const OverviewComponent = () => {
       padding: '80px 20px 20px 20px'
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        {/* Header with Clock on Right Side */}
+        {/* Header with Clock on Right Side - Updated for WEST timezone */}
         <div style={{
           backgroundColor: isDarkMode ? '#1e293b' : 'white',
           boxShadow: isDarkMode 
@@ -494,11 +257,7 @@ const OverviewComponent = () => {
                 color: isDarkMode ? '#f8fafc' : '#111827',
                 marginBottom: '4px'
               }}>
-                {currentTime.toLocaleTimeString('en-GB', { 
-                  hour: '2-digit', 
-                  minute: '2-digit',
-                  timeZone: 'Europe/Lisbon'
-                })}
+                {formatLocalTime(currentTime).slice(11, 16)}
               </div>
               <div style={{
                 fontSize: '12px',
@@ -755,7 +514,7 @@ const OverviewComponent = () => {
             fontSize: '12px',
             margin: '0 0 8px 0'
           }}>
-            🔓 <strong>Open Source Project</strong> • Designed by Claude • GitHub Repository Access
+            📂 <strong>Open Source Project</strong> • Designed by Claude • GitHub Repository Access
           </p>
           <p style={{
             color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1246,7 +1005,7 @@ const AiChatManagerComponent = () => {
 };
 
 // =============================================================================
-// MAIN DASHBOARD APPLICATION
+// MAIN DASHBOARD APPLICATION - Updated with Secure Authentication
 // =============================================================================
 
 function App() {
@@ -1255,27 +1014,52 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState('en-GB');
-  const [githubUser, setGitHubUser] = useState(null);
+  const [githubUser, setGitHubUser] = useState<AuthenticatedUser | null>(null);
 
-  // Check authentication status on load
+  // Check authentication status on load with secure validation
   useEffect(() => {
     const checkAuth = () => {
-      const authStatus = localStorage.getItem('3c-github-auth');
-      const userData = localStorage.getItem('3c-github-user');
-      const darkMode = localStorage.getItem('3c-dark-mode') === 'true';
-      const language = localStorage.getItem('3c-language') || 'en-GB';
-      
-      setIsAuthenticated(authStatus === 'true');
-      if (userData) {
-        setGitHubUser(JSON.parse(userData));
+      try {
+        // Use secure authentication service
+        const authenticatedUser = getAuthenticatedUser();
+        const darkMode = localStorage.getItem('3c-dark-mode') === 'true';
+        const language = localStorage.getItem('3c-language') || 'en-GB';
+        
+        if (authenticatedUser && security.validateSession()) {
+          setIsAuthenticated(true);
+          setGitHubUser(authenticatedUser);
+          
+          // Refresh session for continued use
+          security.refreshSession();
+        } else {
+          // Clear invalid session data
+          security.clearSession();
+          setIsAuthenticated(false);
+          setGitHubUser(null);
+        }
+        
+        setIsDarkMode(darkMode);
+        setCurrentLanguage(language);
+      } catch (error) {
+        console.error('Authentication check failed:', error);
+        setIsAuthenticated(false);
+        setGitHubUser(null);
+      } finally {
+        setIsLoading(false);
       }
-      setIsDarkMode(darkMode);
-      setCurrentLanguage(language);
-      setIsLoading(false);
     };
 
     checkAuth();
-  }, []);
+
+    // Set up session refresh interval
+    const sessionInterval = setInterval(() => {
+      if (isAuthenticated) {
+        security.refreshSession();
+      }
+    }, 300000); // Check every 5 minutes
+
+    return () => clearInterval(sessionInterval);
+  }, [isAuthenticated]);
 
   // Handle URL navigation
   useEffect(() => {
@@ -1300,15 +1084,23 @@ function App() {
     }
   }, [activeSection, isAuthenticated]);
 
-  const handleLogin = (userData: any) => {
+  const handleLogin = (userData: AuthenticatedUser) => {
+    // Validate user before setting authentication
+    if (!validateUser(userData.login)) {
+      alert(`Access denied. Only ${process.env.REACT_APP_AUTHORIZED_USER || 'Anica-blip'} is authorized to access this application.`);
+      return;
+    }
+
     setIsAuthenticated(true);
     setGitHubUser(userData);
+    
+    // Set session expiry
+    localStorage.setItem('session-expiry', new Date(Date.now() + 3600000).toISOString());
   };
 
   const handleLogout = () => {
     if (confirm('Are you sure you want to logout from GitHub?')) {
-      localStorage.removeItem('3c-github-auth');
-      localStorage.removeItem('3c-github-user');
+      security.clearSession();
       setIsAuthenticated(false);
       setGitHubUser(null);
       setActiveSection('overview');
@@ -1403,7 +1195,7 @@ function App() {
     }
   };
 
-  // Loading screen
+  // Loading screen with security checks
   if (isLoading) {
     return (
       <div style={{
@@ -1417,7 +1209,7 @@ function App() {
         <div style={{ textAlign: 'center', color: 'white' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎯</div>
           <div style={{ fontSize: '18px' }}>Initializing 3C Control Center...</div>
-          <div style={{ fontSize: '14px', marginTop: '8px', opacity: 0.8 }}>Checking GitHub authentication...</div>
+          <div style={{ fontSize: '14px', marginTop: '8px', opacity: 0.8 }}>Verifying secure GitHub authentication...</div>
         </div>
       </div>
     );
@@ -1493,7 +1285,7 @@ function App() {
               {isDarkMode ? '☀️' : '🌙'}
             </button>
 
-            {/* User Info & Logout Button */}
+            {/* User Info & Session Status */}
             {githubUser && (
               <div style={{
                 display: 'flex',
@@ -1515,6 +1307,13 @@ function App() {
                   }}
                 />
                 <span>{githubUser.login}</span>
+                <div style={{
+                  width: '6px',
+                  height: '6px',
+                  backgroundColor: '#10b981',
+                  borderRadius: '50%',
+                  title: 'Session Active'
+                }}></div>
               </div>
             )}
 
@@ -1535,7 +1334,7 @@ function App() {
               onMouseOut={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
               }}
-              title="Logout from GitHub"
+              title="Secure Logout from GitHub"
             >
               🚪
             </button>
@@ -1570,7 +1369,7 @@ function App() {
               color: isDarkMode ? '#94a3b8' : '#6b7280', 
               fontSize: '14px' 
             }}>
-              Dashboard
+              Secure Dashboard
             </p>
           </div>
 
