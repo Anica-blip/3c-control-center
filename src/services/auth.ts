@@ -2,11 +2,10 @@ import { format } from 'date-fns';
 import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
 
 // Secure configuration constants
-const TIME_ZONE = 'Europe/Lisbon'; // WEST (UTC+1)
-const SYSTEM_TIME = '2025-08-24 11:00:09';
-const AUTHORIZED_USER = 'Anica-blip';
+const TIME_ZONE = process.env.REACT_APP_TIMEZONE || 'Europe/Lisbon';
+const AUTHORIZED_USER = process.env.REACT_APP_AUTHORIZED_USER || 'Anica-blip';
+const CURRENT_TIME = '2025-08-24 11:38:50';
 
-// Security interface definitions
 interface SecurityContext {
   timestamp: string;
   user: string;
@@ -14,7 +13,7 @@ interface SecurityContext {
   accessLevel: string;
 }
 
-interface AuthenticatedUser {
+export interface AuthenticatedUser {
   login: string;
   name: string;
   email: string;
@@ -23,23 +22,20 @@ interface AuthenticatedUser {
   securityContext: SecurityContext;
 }
 
-// Time formatting with security checks
 export const formatLocalTime = (date: Date): string => {
   try {
     const zonedDate = utcToZonedTime(date, TIME_ZONE);
     return format(zonedDate, 'yyyy-MM-dd HH:mm:ss zzz');
   } catch (error) {
     console.error('Time formatting error:', error);
-    return SYSTEM_TIME;
+    return CURRENT_TIME;
   }
 };
 
-// Secure user validation
 export const validateUser = (userLogin: string): boolean => {
   return userLogin === AUTHORIZED_USER;
 };
 
-// Secure session management
 export const createSecureSession = (): SecurityContext => {
   return {
     timestamp: new Date().toISOString(),
@@ -49,7 +45,6 @@ export const createSecureSession = (): SecurityContext => {
   };
 };
 
-// Get authenticated user with security context
 export const getAuthenticatedUser = (): AuthenticatedUser | null => {
   try {
     const userData = localStorage.getItem('github-user');
@@ -57,7 +52,7 @@ export const getAuthenticatedUser = (): AuthenticatedUser | null => {
 
     const user = JSON.parse(userData);
     if (!validateUser(user.login)) {
-      throw new Error('Invalid user detected');
+      throw new Error('Unauthorized user detected');
     }
 
     return {
@@ -71,19 +66,6 @@ export const getAuthenticatedUser = (): AuthenticatedUser | null => {
   }
 };
 
-// GitHub OAuth configuration
-export const getAuthConfig = () => ({
-  clientId: 'Iv23lizeirH3ZoENlcig',
-  redirectUri: process.env.REACT_APP_REDIRECT_URI || window.location.origin,
-  scope: 'repo user',
-  allowedOrigins: [window.location.origin],
-  securityHeaders: {
-    'X-Timestamp': new Date().toISOString(),
-    'X-User': AUTHORIZED_USER
-  }
-});
-
-// Session security utilities
 export const security = {
   validateSession: (): boolean => {
     const user = getAuthenticatedUser();
