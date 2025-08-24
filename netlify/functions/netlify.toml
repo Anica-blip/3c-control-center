@@ -5,3 +5,6 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+GITHUB_CLIENT_ID=Iv23lizeirH3ZoENlcig
+GITHUB_CLIENT_SECRET=SHA256:kL1kzzKzBkwEsFSLG4VxZDqHpAIwrihUaCVYOeeug7U=
