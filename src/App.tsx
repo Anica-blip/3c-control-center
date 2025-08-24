@@ -43,7 +43,14 @@ const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) =>
     const state = Math.random().toString(36).substring(7);
     localStorage.setItem('github_oauth_state', state);
     
-    const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${window.location.origin}&scope=repo user&state=${state}`;
+    // Force correct redirect URI with trailing slash to match GitHub settings
+    const redirectUri = window.location.origin.includes('localhost') 
+      ? 'http://localhost:3000' 
+      : 'https://anica-blip.github.io/3c-control-center/';
+    
+    console.log('🔍 Using redirect_uri:', redirectUri); // Debug line
+    
+    const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo user&state=${state}`;
     
     window.location.href = githubAuthUrl;
   };
