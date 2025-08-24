@@ -177,16 +177,13 @@ SETUP INSTRUCTIONS FOR GITHUB OAUTH:
 1. Go to GitHub Settings > Developer settings > OAuth Apps
 2. Create a New OAuth App with these settings:
    - Application name: "3C Control Center"
-   - Homepage URL: your-domain.com (or localhost:3000 for dev)
-   - Authorization callback URL: your-domain.com/auth/callback
+   - Homepage URL: https://your-domain.com (or http://localhost:3000 for dev)
+   - Authorization callback URL: https://your-domain.com (SAME as homepage - no /auth/callback)
 3. Copy the Client ID and create environment variable:
    - REACT_APP_GITHUB_CLIENT_ID=your_client_id_here
-4. For production, you'll need a backend to handle the OAuth token exchange
-   - Never expose your Client Secret in frontend code
-   - Use a serverless function or backend API to exchange code for access token
+4. The app will handle the OAuth callback on the main page
 
-SECURITY NOTE: This current implementation is for development/demo purposes.
-For production, implement proper OAuth token exchange on your backend.
+IMPORTANT: Set your callback URL to the SAME as your homepage URL, not /auth/callback
 */
 
 const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) => {
@@ -195,7 +192,7 @@ const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) =>
 
   // GitHub OAuth configuration
   const GITHUB_CLIENT_ID = process.env.REACT_APP_GITHUB_CLIENT_ID || 'your_github_client_id_here';
-  const REDIRECT_URI = window.location.origin + '/auth/callback';
+  const REDIRECT_URI = window.location.origin; // Changed: redirect back to main page
   const SCOPE = 'repo user';
 
   const handleGitHubLogin = () => {
