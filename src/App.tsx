@@ -191,7 +191,7 @@ const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) =>
   const [error, setError] = useState('');
 
   // GitHub OAuth configuration
-  const GITHUB_CLIENT_ID = process.env.REACT_APP_GITHUB_CLIENT_ID || 'your_github_client_id_here';
+  const GITHUB_CLIENT_ID = process.env.REACT_APP_GITHUB_CLIENT_ID || 'Iv23lizeirH3ZoENlcig';
   const REDIRECT_URI = window.location.origin; // Changed: redirect back to main page
   const SCOPE = 'repo user';
 
