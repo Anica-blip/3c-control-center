@@ -4,7 +4,7 @@ import path from "path";
 
 export default defineConfig({
   plugins: [react()],
-  base: '/3c-control-center/',
+  base: '/',  // ✅ FIXED: Changed from '/3c-control-center/' to '/'
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
