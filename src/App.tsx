@@ -573,22 +573,19 @@ function App() {
         backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
         fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}>
-        {/* FIXED Header Controls - Static Position */}
+        {/* FIXED Header Controls - Truly Static Position */}
         <div style={{
           position: 'fixed',
-          top: '20px',
-          right: '20px',
-          zIndex: 1000,
+          top: '15px',
+          right: '15px',
+          zIndex: 9999,
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
-          backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(8px)',
+          gap: '8px',
+          backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
           borderRadius: '12px',
-          padding: '8px 12px',
-          boxShadow: isDarkMode 
-            ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
-            : '0 4px 6px rgba(0, 0, 0, 0.1)',
+          padding: '6px 10px',
+          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
           border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
         }}>
           {/* FIXED: Avatar moved to first position with online status */}
@@ -598,8 +595,8 @@ function App() {
                 src={githubUser.avatar_url} 
                 alt="User Avatar"
                 style={{
-                  width: '32px',
-                  height: '32px',
+                  width: '28px',
+                  height: '28px',
                   borderRadius: '50%',
                   border: `2px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
                 }}
@@ -609,25 +606,82 @@ function App() {
                 position: 'absolute',
                 bottom: '-2px',
                 right: '-2px',
-                width: '12px',
-                height: '12px',
+                width: '10px',
+                height: '10px',
                 borderRadius: '50%',
                 backgroundColor: isOnline ? '#10b981' : '#ef4444',
                 border: `2px solid ${isDarkMode ? '#1e293b' : 'white'}`,
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
               }} />
             </div>
           )}
+
+          {/* FIXED: Language Translation Flags */}
+          <button
+            style={{
+              background: 'transparent',
+              border: 'none',
+              fontSize: '16px',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '4px'
+            }}
+            title="English (UK)"
+          >
+            🇬🇧
+          </button>
+          
+          <button
+            style={{
+              background: 'transparent',
+              border: 'none',
+              fontSize: '16px',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '4px'
+            }}
+            title="Português (Portugal)"
+          >
+            🇵🇹
+          </button>
+          
+          <button
+            style={{
+              background: 'transparent',
+              border: 'none',
+              fontSize: '16px',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '4px'
+            }}
+            title="Français (France)"
+          >
+            🇫🇷
+          </button>
+          
+          <button
+            style={{
+              background: 'transparent',
+              border: 'none',
+              fontSize: '16px',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '4px'
+            }}
+            title="Deutsch (Germany)"
+          >
+            🇩🇪
+          </button>
 
           <button
             onClick={toggleDarkMode}
             style={{
               background: 'transparent',
               border: 'none',
-              fontSize: '20px',
+              fontSize: '18px',
               cursor: 'pointer',
-              padding: '8px',
-              borderRadius: '8px',
+              padding: '6px',
+              borderRadius: '6px',
               color: isDarkMode ? '#f8fafc' : '#374151'
             }}
             title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
@@ -640,10 +694,10 @@ function App() {
             style={{
               background: 'transparent',
               border: 'none',
-              fontSize: '20px',
+              fontSize: '18px',
               cursor: 'pointer',
-              padding: '8px',
-              borderRadius: '8px',
+              padding: '6px',
+              borderRadius: '6px',
               color: isDarkMode ? '#f8fafc' : '#374151'
             }}
             title="Logout"
@@ -736,7 +790,17 @@ function App() {
                 subtitle="Create and manage your social media content" 
                 icon="📝"
               />
-              <ContentComponent />
+              <div style={{
+                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                borderRadius: '8px',
+                padding: '20px',
+                boxShadow: isDarkMode 
+                  ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
+                  : '0 4px 6px rgba(0, 0, 0, 0.1)',
+                border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
+              }}>
+                <ContentComponent />
+              </div>
             </div>
           )}
           
@@ -751,7 +815,17 @@ function App() {
                 subtitle="Manage public chat and customer interactions" 
                 icon="💬"
               />
-              <ChatManagerPublic />
+              <div style={{
+                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                borderRadius: '8px',
+                padding: '20px',
+                boxShadow: isDarkMode 
+                  ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
+                  : '0 4px 6px rgba(0, 0, 0, 0.1)',
+                border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
+              }}>
+                <ChatManagerPublic />
+              </div>
             </div>
           )}
           
@@ -766,7 +840,17 @@ function App() {
                 subtitle="Schedule and plan your content publishing" 
                 icon="📅"
               />
-              <ScheduleComponentContent />
+              <div style={{
+                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                borderRadius: '8px',
+                padding: '20px',
+                boxShadow: isDarkMode 
+                  ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
+                  : '0 4px 6px rgba(0, 0, 0, 0.1)',
+                border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
+              }}>
+                <ScheduleComponentContent />
+              </div>
             </div>
           )}
           
@@ -781,7 +865,17 @@ function App() {
                 subtitle="Analytics and marketing insights dashboard" 
                 icon="🧠"
               />
-              <MarketingControlCenter />
+              <div style={{
+                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                borderRadius: '8px',
+                padding: '20px',
+                boxShadow: isDarkMode 
+                  ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
+                  : '0 4px 6px rgba(0, 0, 0, 0.1)',
+                border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
+              }}>
+                <MarketingControlCenter />
+              </div>
             </div>
           )}
           
@@ -796,7 +890,17 @@ function App() {
                 subtitle="Configure your dashboard preferences and settings" 
                 icon="⚙️"
               />
-              <SettingsComponentContent />
+              <div style={{
+                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                borderRadius: '8px',
+                padding: '20px',
+                boxShadow: isDarkMode 
+                  ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
+                  : '0 4px 6px rgba(0, 0, 0, 0.1)',
+                border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
+              }}>
+                <SettingsComponentContent />
+              </div>
             </div>
           )}
           
@@ -811,7 +915,17 @@ function App() {
                 subtitle="Administrative controls and system management" 
                 icon="🔧"
               />
-              <AdminComponentsContent />
+              <div style={{
+                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                borderRadius: '8px',
+                padding: '20px',
+                boxShadow: isDarkMode 
+                  ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
+                  : '0 4px 6px rgba(0, 0, 0, 0.1)',
+                border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
+              }}>
+                <AdminComponentsContent />
+              </div>
             </div>
           )}
         </div>
