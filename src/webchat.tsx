@@ -1,7 +1,7 @@
 import React from 'react';
 
 // =============================================================================
-// AURION WEBCHAT COMPONENT - STYLED FOR CONSISTENCY
+// AURION WEBCHAT COMPONENT - NO AUTO-SCROLL VERSION
 // =============================================================================
 
 function AurionWebchat({ 
@@ -22,13 +22,15 @@ function AurionWebchat({
   const [chatSessionId, setChatSessionId] = React.useState(null);
   const messagesEndRef = React.useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  // ✅ REMOVED: Auto-scroll behavior - Let user scroll manually
+  // const scrollToBottom = () => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // };
 
-  React.useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  // ✅ REMOVED: Auto-scroll on new messages
+  // React.useEffect(() => {
+  //   scrollToBottom();
+  // }, [messages]);
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
@@ -303,7 +305,7 @@ function AurionWebchat({
         </div>
       </div>
 
-      {/* Messages Container */}
+      {/* Messages Container - NO AUTO-SCROLL */}
       <div style={baseStyles.messagesContainer}>
         {messages.map((message) => (
           <div 
@@ -351,6 +353,7 @@ function AurionWebchat({
           </div>
         )}
         
+        {/* ✅ KEPT: Reference for manual scrolling if needed later */}
         <div ref={messagesEndRef} />
       </div>
 
@@ -396,7 +399,7 @@ function AurionWebchat({
 }
 
 // =============================================================================
-// CHAT MANAGER PUBLIC COMPONENT - UPDATED STYLING (TITLE REMOVED & WIDTH FIXED)
+// CHAT MANAGER PUBLIC COMPONENT - SAME AS BEFORE
 // =============================================================================
 
 function ChatManagerPublic() {
@@ -517,7 +520,7 @@ function ChatManagerPublic() {
         ))}
       </div>
 
-      {/* Live Chat Tab - FIXED WIDTH ISSUE */}
+      {/* Live Chat Tab - NO AUTO-SCROLL */}
       {activeTab === 'chat' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '32px' }}>
           <div style={contentCardStyle}>
