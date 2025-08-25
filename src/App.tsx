@@ -415,7 +415,48 @@ const OverviewComponent = () => {
 };
 
 // =============================================================================
-// MAIN APP - HOBBY PLAN COMPATIBLE
+// SECTION HEADER COMPONENT - For All Tabs
+// =============================================================================
+const SectionHeader = ({ title, subtitle, icon }: { title: string; subtitle: string; icon: string }) => {
+  const { isDarkMode } = useTheme();
+  
+  return (
+    <div style={{
+      backgroundColor: isDarkMode ? '#1e293b' : 'white',
+      boxShadow: isDarkMode 
+        ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+        : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      borderRadius: '8px',
+      padding: '20px',
+      marginBottom: '24px',
+      border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <span style={{ fontSize: '24px' }}>{icon}</span>
+        <div>
+          <h1 style={{
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: isDarkMode ? '#60a5fa' : '#3b82f6',
+            margin: '0 0 4px 0'
+          }}>
+            {title}
+          </h1>
+          <p style={{
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            fontSize: '14px',
+            margin: '0'
+          }}>
+            {subtitle}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// =============================================================================
+// MAIN APP - FIXED VERSION
 // =============================================================================
 function App() {
   const [activeSection, setActiveSection] = useState('overview');
@@ -423,6 +464,21 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [githubUser, setGitHubUser] = useState<AuthenticatedUser | null>(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Simple auth check - no loops
   useEffect(() => {
@@ -517,7 +573,7 @@ function App() {
         backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
         fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}>
-        {/* Header Controls */}
+        {/* FIXED Header Controls - Static Position */}
         <div style={{
           position: 'fixed',
           top: '20px',
@@ -525,8 +581,44 @@ function App() {
           zIndex: 1000,
           display: 'flex',
           alignItems: 'center',
-          gap: '12px'
+          gap: '12px',
+          backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(8px)',
+          borderRadius: '12px',
+          padding: '8px 12px',
+          boxShadow: isDarkMode 
+            ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
+            : '0 4px 6px rgba(0, 0, 0, 0.1)',
+          border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
         }}>
+          {/* FIXED: Avatar moved to first position with online status */}
+          {githubUser && (
+            <div style={{ position: 'relative' }}>
+              <img 
+                src={githubUser.avatar_url} 
+                alt="User Avatar"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  border: `2px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
+                }}
+              />
+              {/* FIXED: Online/Offline Status Indicator */}
+              <div style={{
+                position: 'absolute',
+                bottom: '-2px',
+                right: '-2px',
+                width: '12px',
+                height: '12px',
+                borderRadius: '50%',
+                backgroundColor: isOnline ? '#10b981' : '#ef4444',
+                border: `2px solid ${isDarkMode ? '#1e293b' : 'white'}`,
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+              }} />
+            </div>
+          )}
+
           <button
             onClick={toggleDarkMode}
             style={{
@@ -535,36 +627,13 @@ function App() {
               fontSize: '20px',
               cursor: 'pointer',
               padding: '8px',
-              borderRadius: '8px'
+              borderRadius: '8px',
+              color: isDarkMode ? '#f8fafc' : '#374151'
             }}
             title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
             {isDarkMode ? '☀️' : '🌙'}
           </button>
-
-          {githubUser && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '8px 12px',
-              backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-              borderRadius: '8px',
-              fontSize: '14px',
-              color: isDarkMode ? '#f8fafc' : '#111827'
-            }}>
-              <img 
-                src={githubUser.avatar_url} 
-                alt={githubUser.name}
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%'
-                }}
-              />
-              <span>{githubUser.login}</span>
-            </div>
-          )}
 
           <button
             onClick={handleLogout}
@@ -574,7 +643,8 @@ function App() {
               fontSize: '20px',
               cursor: 'pointer',
               padding: '8px',
-              borderRadius: '8px'
+              borderRadius: '8px',
+              color: isDarkMode ? '#f8fafc' : '#374151'
             }}
             title="Logout"
           >
@@ -647,36 +717,100 @@ function App() {
           </div>
         </div>
 
-        {/* Main Content */}
-        <div style={{ flex: '1', backgroundColor: isDarkMode ? '#0f172a' : '#ffffff' }}>
+        {/* FIXED Main Content - With Headers & Dark Mode Context */}
+        <div style={{ 
+          flex: '1', 
+          backgroundColor: isDarkMode ? '#0f172a' : '#ffffff',
+          paddingTop: '20px'
+        }}>
           {activeSection === 'overview' && <OverviewComponent />}
+          
           {activeSection === 'content-manager' && (
-            <div style={{ padding: '80px 20px 20px 20px' }}>
+            <div style={{ 
+              padding: '60px 20px 20px 20px',
+              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+              minHeight: '100vh'
+            }}>
+              <SectionHeader 
+                title="Content Manager" 
+                subtitle="Create and manage your social media content" 
+                icon="📝"
+              />
               <ContentComponent />
             </div>
           )}
+          
           {activeSection === 'webchat-public' && (
-            <div style={{ padding: '80px 20px 20px 20px' }}>
+            <div style={{ 
+              padding: '60px 20px 20px 20px',
+              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+              minHeight: '100vh'
+            }}>
+              <SectionHeader 
+                title="WebChat Public" 
+                subtitle="Manage public chat and customer interactions" 
+                icon="💬"
+              />
               <ChatManagerPublic />
             </div>
           )}
+          
           {activeSection === 'schedule-manager' && (
-            <div style={{ padding: '80px 20px 20px 20px' }}>
+            <div style={{ 
+              padding: '60px 20px 20px 20px',
+              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+              minHeight: '100vh'
+            }}>
+              <SectionHeader 
+                title="Schedule Manager" 
+                subtitle="Schedule and plan your content publishing" 
+                icon="📅"
+              />
               <ScheduleComponentContent />
             </div>
           )}
+          
           {activeSection === 'marketing-center' && (
-            <div style={{ padding: '80px 20px 20px 20px' }}>
+            <div style={{ 
+              padding: '60px 20px 20px 20px',
+              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+              minHeight: '100vh'
+            }}>
+              <SectionHeader 
+                title="Marketing Center" 
+                subtitle="Analytics and marketing insights dashboard" 
+                icon="🧠"
+              />
               <MarketingControlCenter />
             </div>
           )}
+          
           {activeSection === 'settings' && (
-            <div style={{ padding: '80px 20px 20px 20px' }}>
+            <div style={{ 
+              padding: '60px 20px 20px 20px',
+              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+              minHeight: '100vh'
+            }}>
+              <SectionHeader 
+                title="Dashboard Settings" 
+                subtitle="Configure your dashboard preferences and settings" 
+                icon="⚙️"
+              />
               <SettingsComponentContent />
             </div>
           )}
+          
           {activeSection === 'admin-center' && (
-            <div style={{ padding: '80px 20px 20px 20px' }}>
+            <div style={{ 
+              padding: '60px 20px 20px 20px',
+              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+              minHeight: '100vh'
+            }}>
+              <SectionHeader 
+                title="Admin Center" 
+                subtitle="Administrative controls and system management" 
+                icon="🔧"
+              />
               <AdminComponentsContent />
             </div>
           )}
