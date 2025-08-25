@@ -17,6 +17,153 @@ const ThemeContext = createContext({
 const useTheme = () => useContext(ThemeContext);
 
 // =============================================================================
+// THEME WRAPPER HOC - From Working Version
+// =============================================================================
+const withThemeWrapper = (WrappedComponent: React.ComponentType<any>) => {
+  return React.forwardRef<any, any>((props, ref) => {
+    const { isDarkMode } = useTheme();
+    
+    // Apply global dark mode styles to the wrapped component
+    useEffect(() => {
+      const applyDarkModeStyles = () => {
+        const style = document.createElement('style');
+        style.id = 'dynamic-dark-mode-styles';
+        
+        // Remove existing dynamic styles
+        const existing = document.getElementById('dynamic-dark-mode-styles');
+        if (existing) {
+          existing.remove();
+        }
+        
+        if (isDarkMode) {
+          style.textContent = `
+            /* Global dark mode overrides for all components */
+            .chat-content *,
+            .settings-content *,
+            .admin-content *,
+            .content-manager *,
+            .schedule-content *,
+            .marketing-content * {
+              color: white !important;
+            }
+            
+            /* Background overrides */
+            .chat-content div[style*="background"],
+            .settings-content div[style*="background"],
+            .admin-content div[style*="background"],
+            .content-manager div[style*="background"],
+            .schedule-content div[style*="background"],
+            .marketing-content div[style*="background"] {
+              background: #1e293b !important;
+            }
+            
+            /* Border overrides */
+            .chat-content *[style*="border"],
+            .settings-content *[style*="border"],
+            .admin-content *[style*="border"],
+            .content-manager *[style*="border"],
+            .schedule-content *[style*="border"],
+            .marketing-content *[style*="border"] {
+              border-color: #334155 !important;
+            }
+            
+            /* Tab navigation buttons */
+            .chat-content button[style*="border-bottom"],
+            .settings-content button[style*="border-bottom"],
+            .admin-content button[style*="border-bottom"] {
+              color: white !important;
+              font-weight: bold !important;
+              font-size: 12px !important;
+            }
+            
+            /* Input fields */
+            .chat-content input,
+            .settings-content input,
+            .admin-content input,
+            .content-manager input,
+            .schedule-content input,
+            .marketing-content input,
+            .chat-content textarea,
+            .settings-content textarea,
+            .admin-content textarea,
+            .content-manager textarea,
+            .schedule-content textarea,
+            .marketing-content textarea {
+              background: #334155 !important;
+              color: white !important;
+              border-color: #475569 !important;
+            }
+            
+            /* Buttons */
+            .chat-content button,
+            .settings-content button,
+            .admin-content button,
+            .content-manager button,
+            .schedule-content button,
+            .marketing-content button {
+              background: #3b82f6 !important;
+              color: white !important;
+              border-color: #3b82f6 !important;
+            }
+            
+            /* Cards and containers */
+            .chat-content > div,
+            .settings-content > div,
+            .admin-content > div,
+            .content-manager > div,
+            .schedule-content > div,
+            .marketing-content > div {
+              background: #1e293b !important;
+              border-color: #334155 !important;
+            }
+            
+            /* Text elements */
+            .chat-content p,
+            .settings-content p,
+            .admin-content p,
+            .content-manager p,
+            .schedule-content p,
+            .marketing-content p,
+            .chat-content span,
+            .settings-content span,
+            .admin-content span,
+            .content-manager span,
+            .schedule-content span,
+            .marketing-content span,
+            .chat-content div,
+            .settings-content div,
+            .admin-content div,
+            .content-manager div,
+            .schedule-content div,
+            .marketing-content div {
+              color: white !important;
+            }
+          `;
+        } else {
+          style.textContent = `
+            /* Light mode - reset any overrides */
+            .chat-content *,
+            .settings-content *,
+            .admin-content *,
+            .content-manager *,
+            .schedule-content *,
+            .marketing-content * {
+              color: inherit;
+            }
+          `;
+        }
+        
+        document.head.appendChild(style);
+      };
+      
+      applyDarkModeStyles();
+    }, [isDarkMode]);
+    
+    return React.createElement(WrappedComponent, { ...props, ref, isDarkMode });
+  });
+};
+
+// =============================================================================
 // SIMPLE AUTH - No Ownership Issues, Hobby Plan Compatible
 // =============================================================================
 
@@ -190,7 +337,7 @@ const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) =>
 };
 
 // =============================================================================
-// OVERVIEW COMPONENT - Clean & Simple
+// OVERVIEW COMPONENT - From Working Version (Full Glory)
 // =============================================================================
 const OverviewComponent = () => {
   const { isDarkMode } = useTheme();
@@ -210,6 +357,14 @@ const OverviewComponent = () => {
     { icon: '📊', label: 'View Analytics', section: 'marketing-center', color: '#f59e0b' },
     { icon: '⚙️', label: 'Settings', section: 'settings', color: '#6b7280' },
     { icon: '🔧', label: 'Admin Panel', section: 'admin-center', color: '#ef4444' }
+  ];
+
+  const recentActivity = [
+    { icon: '📝', action: 'New content created', time: '2 min ago', status: 'success' },
+    { icon: '📤', action: 'Post scheduled for tomorrow', time: '15 min ago', status: 'pending' },
+    { icon: '💬', action: 'Chat message received', time: '1 hour ago', status: 'info' },
+    { icon: '🔄', action: 'Settings updated', time: '3 hours ago', status: 'success' },
+    { icon: '📊', action: 'Weekly report generated', time: '1 day ago', status: 'info' }
   ];
 
   const metrics = [
@@ -246,14 +401,14 @@ const OverviewComponent = () => {
                 color: isDarkMode ? '#60a5fa' : '#3b82f6',
                 margin: '0 0 8px 0'
               }}>
-                🧵 3C Thread To Success
+                🎯 Overview
               </h1>
               <p style={{
                 color: isDarkMode ? '#94a3b8' : '#6b7280',
                 fontSize: '14px',
                 margin: '0'
               }}>
-                Welcome to your professional dashboard
+                Welcome to your content management dashboard
               </p>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -345,109 +500,193 @@ const OverviewComponent = () => {
           ))}
         </div>
 
-        {/* Quick Actions */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+          {/* Quick Actions */}
+          <div style={{
+            backgroundColor: isDarkMode ? '#1e293b' : 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            boxShadow: isDarkMode 
+              ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
+              : '0 4px 6px rgba(0, 0, 0, 0.1)',
+            border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
+          }}>
+            <h3 style={{
+              color: isDarkMode ? '#f8fafc' : '#111827',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              margin: '0 0 16px 0'
+            }}>
+              🚀 Quick Actions
+            </h3>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+              gap: '12px'
+            }}>
+              {quickActions.map((action, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    window.location.hash = action.section;
+                    window.dispatchEvent(new HashChangeEvent('hashchange'));
+                  }}
+                  style={{
+                    padding: '16px',
+                    backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
+                    border: isDarkMode ? '1px solid #475569' : '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'center'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = action.color + '20';
+                    e.currentTarget.style.borderColor = action.color;
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = isDarkMode ? '#334155' : '#f8fafc';
+                    e.currentTarget.style.borderColor = isDarkMode ? '#475569' : '#e5e7eb';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>
+                    {action.icon}
+                  </div>
+                  <div style={{
+                    color: isDarkMode ? '#f8fafc' : '#374151',
+                    fontSize: '12px',
+                    fontWeight: '500'
+                  }}>
+                    {action.label}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Activity */}
+          <div style={{
+            backgroundColor: isDarkMode ? '#1e293b' : 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            boxShadow: isDarkMode 
+              ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
+              : '0 4px 6px rgba(0, 0, 0, 0.1)',
+            border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
+          }}>
+            <h3 style={{
+              color: isDarkMode ? '#f8fafc' : '#111827',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              margin: '0 0 16px 0'
+            }}>
+              📊 Recent Activity
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {recentActivity.map((activity, index) => (
+                <div key={index} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px',
+                  backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
+                  borderRadius: '6px'
+                }}>
+                  <div style={{ fontSize: '16px' }}>
+                    {activity.icon}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{
+                      color: isDarkMode ? '#f8fafc' : '#374151',
+                      fontSize: '13px',
+                      margin: '0 0 2px 0'
+                    }}>
+                      {activity.action}
+                    </p>
+                    <p style={{
+                      color: isDarkMode ? '#94a3b8' : '#6b7280',
+                      fontSize: '11px',
+                      margin: '0'
+                    }}>
+                      {activity.time}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* System Status */}
         <div style={{
+          marginTop: '24px',
           backgroundColor: isDarkMode ? '#1e293b' : 'white',
           borderRadius: '8px',
-          padding: '24px',
+          padding: '20px',
           boxShadow: isDarkMode 
             ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
             : '0 4px 6px rgba(0, 0, 0, 0.1)',
           border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
         }}>
-          <h3 style={{
-            color: isDarkMode ? '#f8fafc' : '#111827',
-            fontSize: '18px',
-            fontWeight: 'bold',
-            margin: '0 0 16px 0'
-          }}>
-            🚀 Quick Actions
-          </h3>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: '12px'
-          }}>
-            {quickActions.map((action, index) => (
-              <button
-                key={index}
-                onClick={() => {
-                  window.location.hash = action.section;
-                  window.dispatchEvent(new HashChangeEvent('hashchange'));
-                }}
-                style={{
-                  padding: '16px',
-                  backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
-                  border: isDarkMode ? '1px solid #475569' : '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'center'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = action.color + '20';
-                  e.currentTarget.style.borderColor = action.color;
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = isDarkMode ? '#334155' : '#f8fafc';
-                  e.currentTarget.style.borderColor = isDarkMode ? '#475569' : '#e5e7eb';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <div style={{ fontSize: '24px', marginBottom: '8px' }}>
-                  {action.icon}
-                </div>
-                <div style={{
-                  color: isDarkMode ? '#f8fafc' : '#374151',
-                  fontSize: '12px',
-                  fontWeight: '500'
-                }}>
-                  {action.label}
-                </div>
-              </button>
-            ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h4 style={{
+                color: isDarkMode ? '#f8fafc' : '#111827',
+                margin: '0 0 4px 0'
+              }}>
+                🔧 System Status
+              </h4>
+              <p style={{
+                color: isDarkMode ? '#94a3b8' : '#6b7280',
+                fontSize: '14px',
+                margin: '0'
+              }}>
+                All systems operational
+              </p>
+            </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#10b981'
+            }}>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                backgroundColor: '#10b981',
+                borderRadius: '50%'
+              }}></div>
+              <span style={{ fontSize: '14px', fontWeight: '500' }}>
+                Online
+              </span>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-};
 
-// =============================================================================
-// SECTION HEADER COMPONENT - For All Tabs
-// =============================================================================
-const SectionHeader = ({ title, subtitle, icon }: { title: string; subtitle: string; icon: string }) => {
-  const { isDarkMode } = useTheme();
-  
-  return (
-    <div style={{
-      backgroundColor: isDarkMode ? '#1e293b' : 'white',
-      boxShadow: isDarkMode 
-        ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-        : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-      borderRadius: '8px',
-      padding: '20px',
-      marginBottom: '24px',
-      border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <span style={{ fontSize: '24px' }}>{icon}</span>
-        <div>
-          <h1 style={{
-            fontSize: '20px',
-            fontWeight: 'bold',
-            color: isDarkMode ? '#60a5fa' : '#3b82f6',
-            margin: '0 0 4px 0'
-          }}>
-            {title}
-          </h1>
+        {/* Footer */}
+        <div style={{
+          marginTop: '32px',
+          padding: '20px',
+          backgroundColor: isDarkMode ? '#1e293b' : '#f8fafc',
+          borderRadius: '8px',
+          textAlign: 'center',
+          border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
+        }}>
           <p style={{
             color: isDarkMode ? '#94a3b8' : '#6b7280',
-            fontSize: '14px',
+            fontSize: '12px',
+            margin: '0 0 8px 0'
+          }}>
+            📝 <strong>Open Source Project</strong> • Designed by Claude • GitHub Repository Access
+          </p>
+          <p style={{
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            fontSize: '11px',
             margin: '0'
           }}>
-            {subtitle}
+            🌍 Language: English (UK) • ⏰ Timezone: WEST (UTC+1) • 🎯 3C Control Center v2.0
           </p>
         </div>
       </div>
@@ -456,13 +695,25 @@ const SectionHeader = ({ title, subtitle, icon }: { title: string; subtitle: str
 };
 
 // =============================================================================
-// MAIN APP - FIXED VERSION
+// THEMED COMPONENT WRAPPERS - From Working Version
+// =============================================================================
+
+const ThemedContentComponent = withThemeWrapper(ContentComponent);
+const ThemedChatManagerPublic = withThemeWrapper(ChatManagerPublic);
+const ThemedScheduleComponentContent = withThemeWrapper(ScheduleComponentContent);
+const ThemedMarketingControlCenter = withThemeWrapper(MarketingControlCenter);
+const ThemedSettingsComponentContent = withThemeWrapper(SettingsComponentContent);
+const ThemedAdminComponentsContent = withThemeWrapper(AdminComponentsContent);
+
+// =============================================================================
+// MAIN APP - With Working Patterns Applied
 // =============================================================================
 function App() {
   const [activeSection, setActiveSection] = useState('overview');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState('en-GB');
   const [githubUser, setGitHubUser] = useState<AuthenticatedUser | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -480,12 +731,13 @@ function App() {
     };
   }, []);
 
-  // Simple auth check - no loops
+  // Check authentication status on load
   useEffect(() => {
     const checkAuth = () => {
       const authStatus = localStorage.getItem('3c-github-auth');
       const userData = localStorage.getItem('3c-github-user');
       const darkMode = localStorage.getItem('3c-dark-mode') === 'true';
+      const language = localStorage.getItem('3c-language') || 'en-GB';
       
       setIsAuthenticated(authStatus === 'true');
       if (userData) {
@@ -496,6 +748,7 @@ function App() {
         }
       }
       setIsDarkMode(darkMode);
+      setCurrentLanguage(language);
       setIsLoading(false);
     };
 
@@ -528,7 +781,11 @@ function App() {
     localStorage.setItem('3c-dark-mode', newDarkMode.toString());
   };
 
-  // Navigation items
+  const changeLanguage = (lang: string) => {
+    setCurrentLanguage(lang);
+    localStorage.setItem('3c-language', lang);
+  };
+
   const navigationItems = [
     { id: 'overview', icon: '🧵', label: 'Overview', available: true },
     { id: 'content-manager', icon: '📝', label: 'Content Manager', available: true },
@@ -573,138 +830,114 @@ function App() {
         backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
         fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}>
-        {/* FIXED Header Controls - Truly Static Position */}
-        <div style={{
-          position: 'fixed',
-          top: '15px',
-          right: '15px',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-          borderRadius: '12px',
-          padding: '6px 10px',
-          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
-          border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
-        }}>
-          {/* FIXED: Avatar moved to first position with online status */}
-          {githubUser && (
-            <div style={{ position: 'relative' }}>
-              <img 
-                src={githubUser.avatar_url} 
-                alt="User Avatar"
-                style={{
-                  width: '28px',
-                  height: '28px',
+        {/* FIXED Header Controls - Working Pattern from Older Version */}
+        {isAuthenticated && (
+          <div style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            {/* Avatar with Online Status - First Position */}
+            {githubUser && (
+              <div style={{ position: 'relative' }}>
+                <img 
+                  src={githubUser.avatar_url} 
+                  alt={githubUser.name}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    border: `2px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
+                  }}
+                />
+                {/* Online/Offline Status Indicator */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '-2px',
+                  right: '-2px',
+                  width: '12px',
+                  height: '12px',
                   borderRadius: '50%',
-                  border: `2px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
+                  backgroundColor: isOnline ? '#10b981' : '#ef4444',
+                  border: `2px solid ${isDarkMode ? '#0f172a' : '#f8fafc'}`,
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+                }} />
+              </div>
+            )}
+
+            {/* Language Selector - Working Pattern from Older Version */}
+            <div style={{ position: 'relative' }}>
+              <select
+                value={currentLanguage}
+                onChange={(e) => changeLanguage(e.target.value)}
+                style={{
+                  appearance: 'none',
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '20px',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  padding: '4px'
                 }}
-              />
-              {/* FIXED: Online/Offline Status Indicator */}
-              <div style={{
-                position: 'absolute',
-                bottom: '-2px',
-                right: '-2px',
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                backgroundColor: isOnline ? '#10b981' : '#ef4444',
-                border: `2px solid ${isDarkMode ? '#1e293b' : 'white'}`,
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
-              }} />
+                title="Select Language"
+              >
+                <option value="en-GB">🇬🇧</option>
+                <option value="pt-PT">🇵🇹</option>
+                <option value="fr-FR">🇫🇷</option>
+                <option value="de-DE">🇩🇪</option>
+              </select>
             </div>
-          )}
 
-          {/* FIXED: Language Translation Flags */}
-          <button
-            style={{
-              background: 'transparent',
-              border: 'none',
-              fontSize: '16px',
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: '4px'
-            }}
-            title="English (UK)"
-          >
-            🇬🇧
-          </button>
-          
-          <button
-            style={{
-              background: 'transparent',
-              border: 'none',
-              fontSize: '16px',
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: '4px'
-            }}
-            title="Português (Portugal)"
-          >
-            🇵🇹
-          </button>
-          
-          <button
-            style={{
-              background: 'transparent',
-              border: 'none',
-              fontSize: '16px',
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: '4px'
-            }}
-            title="Français (France)"
-          >
-            🇫🇷
-          </button>
-          
-          <button
-            style={{
-              background: 'transparent',
-              border: 'none',
-              fontSize: '16px',
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: '4px'
-            }}
-            title="Deutsch (Germany)"
-          >
-            🇩🇪
-          </button>
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={toggleDarkMode}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                fontSize: '20px',
+                cursor: 'pointer',
+                padding: '8px',
+                borderRadius: '8px',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {isDarkMode ? '☀️' : '🌙'}
+            </button>
 
-          <button
-            onClick={toggleDarkMode}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              fontSize: '18px',
-              cursor: 'pointer',
-              padding: '6px',
-              borderRadius: '6px',
-              color: isDarkMode ? '#f8fafc' : '#374151'
-            }}
-            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          >
-            {isDarkMode ? '☀️' : '🌙'}
-          </button>
-
-          <button
-            onClick={handleLogout}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              fontSize: '18px',
-              cursor: 'pointer',
-              padding: '6px',
-              borderRadius: '6px',
-              color: isDarkMode ? '#f8fafc' : '#374151'
-            }}
-            title="Logout"
-          >
-            🚪
-          </button>
-        </div>
+            <button
+              onClick={handleLogout}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                fontSize: '20px',
+                cursor: 'pointer',
+                padding: '8px',
+                borderRadius: '8px',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+              title="Logout"
+            >
+              🚪
+            </button>
+          </div>
+        )}
 
         {/* Sidebar Navigation */}
         <div style={{ 
@@ -771,160 +1004,252 @@ function App() {
           </div>
         </div>
 
-        {/* FIXED Main Content - With Headers & Dark Mode Context */}
-        <div style={{ 
-          flex: '1', 
-          backgroundColor: isDarkMode ? '#0f172a' : '#ffffff',
-          paddingTop: '20px'
-        }}>
+        {/* MAIN CONTENT AREA - With Working Pattern Headers & Dark Mode */}
+        <div style={{ flex: '1', backgroundColor: isDarkMode ? '#0f172a' : '#ffffff' }}>
           {activeSection === 'overview' && <OverviewComponent />}
           
           {activeSection === 'content-manager' && (
             <div style={{ 
-              padding: '60px 20px 20px 20px',
-              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-              minHeight: '100vh'
+              minHeight: '100vh',
+              backgroundColor: isDarkMode ? '#0f172a' : '#f3f4f6',
+              paddingTop: '80px',
+              padding: '80px 20px 20px 20px'
             }}>
-              <SectionHeader 
-                title="Content Manager" 
-                subtitle="Create and manage your social media content" 
-                icon="📝"
-              />
-              <div style={{
-                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-                borderRadius: '8px',
-                padding: '20px',
-                boxShadow: isDarkMode 
-                  ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
-                  : '0 4px 6px rgba(0, 0, 0, 0.1)',
-                border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
-              }}>
-                <ContentComponent />
+              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <div style={{
+                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                  boxShadow: isDarkMode 
+                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+                    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                  borderRadius: '8px',
+                  padding: '20px',
+                  marginBottom: '20px',
+                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+                }}>
+                  <h1 style={{
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                    margin: '0 0 8px 0'
+                  }}>
+                    📝 Content Manager
+                  </h1>
+                  <p style={{
+                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    fontSize: '14px',
+                    margin: '0'
+                  }}>
+                    Create, manage, and schedule your social media content with ease
+                  </p>
+                </div>
+                <div className="content-manager">
+                  <ThemedContentComponent />
+                </div>
               </div>
             </div>
           )}
           
           {activeSection === 'webchat-public' && (
             <div style={{ 
-              padding: '60px 20px 20px 20px',
+              minHeight: '100vh',
               backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-              minHeight: '100vh'
+              paddingTop: '80px',
+              padding: '80px 20px 20px 20px'
             }}>
-              <SectionHeader 
-                title="WebChat Public" 
-                subtitle="Manage public chat and customer interactions" 
-                icon="💬"
-              />
-              <div style={{
-                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-                borderRadius: '8px',
-                padding: '20px',
-                boxShadow: isDarkMode 
-                  ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
-                  : '0 4px 6px rgba(0, 0, 0, 0.1)',
-                border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
-              }}>
-                <ChatManagerPublic />
+              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <div style={{
+                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                  boxShadow: isDarkMode 
+                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+                    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                  borderRadius: '8px',
+                  padding: '20px',
+                  marginBottom: '20px',
+                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+                }}>
+                  <h1 style={{
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                    margin: '0 0 8px 0'
+                  }}>
+                    💬 Chat Manager - Public
+                  </h1>
+                  <p style={{
+                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    fontSize: '14px',
+                    margin: '0'
+                  }}>
+                    Manage customer communications, support emails, and notifications
+                  </p>
+                </div>
+                <div className="chat-content">
+                  <ThemedChatManagerPublic />
+                </div>
               </div>
             </div>
           )}
           
           {activeSection === 'schedule-manager' && (
             <div style={{ 
-              padding: '60px 20px 20px 20px',
+              minHeight: '100vh',
               backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-              minHeight: '100vh'
+              paddingTop: '80px',
+              padding: '80px 20px 20px 20px'
             }}>
-              <SectionHeader 
-                title="Schedule Manager" 
-                subtitle="Schedule and plan your content publishing" 
-                icon="📅"
-              />
-              <div style={{
-                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-                borderRadius: '8px',
-                padding: '20px',
-                boxShadow: isDarkMode 
-                  ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
-                  : '0 4px 6px rgba(0, 0, 0, 0.1)',
-                border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
-              }}>
-                <ScheduleComponentContent />
+              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <div style={{
+                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                  boxShadow: isDarkMode 
+                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+                    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                  borderRadius: '8px',
+                  padding: '20px',
+                  marginBottom: '20px',
+                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+                }}>
+                  <h1 style={{
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                    margin: '0 0 8px 0'
+                  }}>
+                    📅 Schedule Manager
+                  </h1>
+                  <p style={{
+                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    fontSize: '14px',
+                    margin: '0'
+                  }}>
+                    Schedule posts and track their delivery status
+                  </p>
+                </div>
+                <div className="schedule-content">
+                  <ThemedScheduleComponentContent />
+                </div>
               </div>
             </div>
           )}
           
           {activeSection === 'marketing-center' && (
             <div style={{ 
-              padding: '60px 20px 20px 20px',
+              minHeight: '100vh',
               backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-              minHeight: '100vh'
+              paddingTop: '80px',
+              padding: '80px 20px 20px 20px'
             }}>
-              <SectionHeader 
-                title="Marketing Center" 
-                subtitle="Analytics and marketing insights dashboard" 
-                icon="🧠"
-              />
-              <div style={{
-                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-                borderRadius: '8px',
-                padding: '20px',
-                boxShadow: isDarkMode 
-                  ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
-                  : '0 4px 6px rgba(0, 0, 0, 0.1)',
-                border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
-              }}>
-                <MarketingControlCenter />
+              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <div style={{
+                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                  boxShadow: isDarkMode 
+                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+                    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                  borderRadius: '8px',
+                  padding: '20px',
+                  marginBottom: '20px',
+                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+                }}>
+                  <h1 style={{
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                    margin: '0 0 8px 0'
+                  }}>
+                    🧠 Marketing Control Center
+                  </h1>
+                  <p style={{
+                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    fontSize: '14px',
+                    margin: '0'
+                  }}>
+                    Comprehensive dashboard for persona management, content strategy, and analytics
+                  </p>
+                </div>
+                <div className="marketing-content">
+                  <ThemedMarketingControlCenter />
+                </div>
               </div>
             </div>
           )}
           
           {activeSection === 'settings' && (
             <div style={{ 
-              padding: '60px 20px 20px 20px',
+              minHeight: '100vh',
               backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-              minHeight: '100vh'
+              paddingTop: '80px',
+              padding: '80px 20px 20px 20px'
             }}>
-              <SectionHeader 
-                title="Dashboard Settings" 
-                subtitle="Configure your dashboard preferences and settings" 
-                icon="⚙️"
-              />
-              <div style={{
-                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-                borderRadius: '8px',
-                padding: '20px',
-                boxShadow: isDarkMode 
-                  ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
-                  : '0 4px 6px rgba(0, 0, 0, 0.1)',
-                border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
-              }}>
-                <SettingsComponentContent />
+              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <div style={{
+                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                  boxShadow: isDarkMode 
+                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+                    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                  borderRadius: '8px',
+                  padding: '20px',
+                  marginBottom: '20px',
+                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+                }}>
+                  <h1 style={{
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                    margin: '0 0 8px 0'
+                  }}>
+                    ⚙️ Dashboard Settings
+                  </h1>
+                  <p style={{
+                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    fontSize: '14px',
+                    margin: '0'
+                  }}>
+                    Configure social platforms, Telegram channels, and character profiles
+                  </p>
+                </div>
+                <div className="settings-content">
+                  <ThemedSettingsComponentContent />
+                </div>
               </div>
             </div>
           )}
           
           {activeSection === 'admin-center' && (
             <div style={{ 
-              padding: '60px 20px 20px 20px',
+              minHeight: '100vh',
               backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-              minHeight: '100vh'
+              paddingTop: '80px',
+              padding: '80px 20px 20px 20px'
             }}>
-              <SectionHeader 
-                title="Admin Center" 
-                subtitle="Administrative controls and system management" 
-                icon="🔧"
-              />
-              <div style={{
-                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-                borderRadius: '8px',
-                padding: '20px',
-                boxShadow: isDarkMode 
-                  ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
-                  : '0 4px 6px rgba(0, 0, 0, 0.1)',
-                border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
-              }}>
-                <AdminComponentsContent />
+              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <div style={{
+                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                  boxShadow: isDarkMode 
+                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+                    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                  borderRadius: '8px',
+                  padding: '20px',
+                  marginBottom: '20px',
+                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+                }}>
+                  <h1 style={{
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                    margin: '0 0 8px 0'
+                  }}>
+                    🔧 Admin Center
+                  </h1>
+                  <p style={{
+                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    fontSize: '14px',
+                    margin: '0'
+                  }}>
+                    Advanced configuration, templates, and system management
+                  </p>
+                </div>
+                <div className="admin-content">
+                  <ThemedAdminComponentsContent />
+                </div>
               </div>
             </div>
           )}
