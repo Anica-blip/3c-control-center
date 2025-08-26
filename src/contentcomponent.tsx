@@ -487,19 +487,107 @@ const EnhancedContentCreationForm = ({
             onChange={(e) => handleSelectionChange('characterProfile', e.target.value)}
             style={{
               width: '100%',
-              padding: '10px 12px',
+              padding: '12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
               backgroundColor: isDarkMode ? '#334155' : 'white',
               color: isDarkMode ? '#f8fafc' : '#111827',
-              fontFamily: 'inherit',
-              appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%23f8fafc' : '%23111827'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 12px center',
-              backgroundSize: '16px',
-              paddingRight: '40px'
+              fontFamily: 'inherit'
+            }}
+          >
+            <option value="">Select character profile...</option>
+            {characterProfiles.map(profile => (
+              <option key={profile.id} value={profile.id}>{profile.name}</option>
+            ))}
+          </select>
+          
+          <button
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '12px 16px',
+              backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
+              color: isDarkMode ? '#f8fafc' : '#374151',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: '500',
+              fontFamily: 'inherit'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = isDarkMode ? '#60a5fa' : '#3b82f6';
+              e.currentTarget.style.color = 'white';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#e5e7eb';
+              e.currentTarget.style.color = isDarkMode ? '#f8fafc' : '#374151';
+            }}
+          >
+            <Plus style={{ height: '16px', width: '16px' }} />
+            Add New Profile
+          </button>
+        </div>
+        
+        {selections.characterProfile && (
+          <div style={{
+            marginTop: '12px',
+            padding: '12px',
+            backgroundColor: isDarkMode ? '#1e293b' : 'white',
+            borderRadius: '6px',
+            border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
+          }}>
+            <p style={{
+              fontSize: '13px',
+              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              margin: '0'
+            }}>
+              Profile: {characterProfiles.find(p => p.id === selections.characterProfile)?.description || 'Selected character profile'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Character Profile Section */}
+      <div style={{
+        backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
+        borderRadius: '8px',
+        padding: '16px',
+        marginBottom: '24px',
+        border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: '12px'
+        }}>
+          <User style={{ height: '20px', width: '20px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
+          <h3 style={{
+            fontSize: '16px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            margin: '0'
+          }}>
+            Character Profile
+          </h3>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px', alignItems: 'center' }}>
+          <select
+            value={selections.characterProfile}
+            onChange={(e) => handleSelectionChange('characterProfile', e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: isDarkMode ? '#334155' : 'white',
+              color: isDarkMode ? '#f8fafc' : '#111827',
+              fontFamily: 'inherit'
             }}
           >
             <option value="">Select character profile...</option>
@@ -1293,7 +1381,7 @@ const EnhancedContentCreationForm = ({
                 cursor: 'pointer',
                 backgroundColor: selectedPlatforms.includes(platform.id) 
                   ? (isDarkMode ? '#1e3a8a30' : '#dbeafe') 
-                  : (isDarkMode ? '#334155' : 'white'),
+                  : (isDarkMode ? '#334155' : '#f9fafb'),
                 transition: 'all 0.2s ease'
               }}
             >
