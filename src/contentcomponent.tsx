@@ -119,19 +119,58 @@ const EnhancedContentCreationForm = ({
   const [fieldConfig, setFieldConfig] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Generate content ID (CP-YYYY-###)
+  // Generate content ID (Pattern-###CC format)
   const generateContentId = () => {
-    const year = new Date().getFullYear();
+    const theme = selections.theme ? getThemeCode(selections.theme) : 'XX';
+    const audience = selections.audience ? getAudienceCode(selections.audience) : 'XX';
+    const media = selections.mediaType ? getMediaCode(selections.mediaType) : 'XX';
+    const template = selections.templateType ? getTemplateTypeCode(selections.templateType) : 'XX';
     const randomNum = Math.floor(Math.random() * 999) + 1;
-    return `CP-${year}-${String(randomNum).padStart(3, '0')}`;
+    return `${theme}-${audience}-${media}-${template}-${String(randomNum).padStart(3, '0')}CC`;
   };
 
-  // Initialize content ID
+  // Code mapping functions for content ID generation
+  const getThemeCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'news_alert': 'NA', 'promotion': 'PR', 'standard_post': 'SP',
+      'cta_quiz': 'QZ', 'cta_game': 'GA', 'cta_puzzle': 'PZ',
+      'cta_challenge': 'CH', 'news': 'NS', 'blog': 'BP',
+      'tutorial_guide': 'TG', 'course_tool': 'CT', 'assessment': 'AS'
+    };
+    return codes[value] || 'XX';
+  };
+
+  const getAudienceCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'existing_members': 'EM', 'new_members': 'NM', 'persona_falcon': 'FL',
+      'persona_panther': 'PA', 'persona_wolf': 'WF', 'persona_lion': 'LI',
+      'general_public': 'GP'
+    };
+    return codes[value] || 'XX';
+  };
+
+  const getMediaCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'image': 'IM', 'video': 'VD', 'gifs': 'GF', 'pdf': 'PF',
+      'interactive_media': 'IM', 'url_link': 'UL'
+    };
+    return codes[value] || 'XX';
+  };
+
+  const getTemplateTypeCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'social_media': 'SM', 'presentation': 'PR', 'video_message': 'VM',
+      'anica_chat': 'AC', 'blog_posts': 'BP', 'news_article': 'NA',
+      'newsletter': 'NL', 'email_templates': 'ET', 'custom_templates': 'CT'
+    };
+    return codes[value] || 'XX';
+  };
+
+  // Initialize and update content ID based on selections
   useEffect(() => {
-    if (!contentId) {
-      setContentId(generateContentId());
-    }
-  }, [contentId]);
+    const newId = generateContentId();
+    setContentId(newId);
+  }, [selections.theme, selections.audience, selections.mediaType, selections.templateType]);
 
   // Load template data when provided
   useEffect(() => {
@@ -453,8 +492,14 @@ const EnhancedContentCreationForm = ({
               borderRadius: '6px',
               fontSize: '14px',
               backgroundColor: isDarkMode ? '#1e293b' : 'white',
-              color: isDarkMode ? '#f8fafc' : '#111827',
-              fontFamily: 'inherit'
+              color: isDarkMode ? 'white' : '#111827',
+              fontFamily: 'inherit',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              backgroundSize: '16px',
+              paddingRight: '40px'
             }}
           >
             <option value="">Select character profile...</option>
@@ -545,10 +590,16 @@ const EnhancedContentCreationForm = ({
               padding: '12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
-              fontSize: '14px',
+              fontSize: '13px',
               backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: isDarkMode ? '#f8fafc' : '#111827',
-              fontFamily: 'inherit'
+              color: isDarkMode ? 'white' : '#111827',
+              fontFamily: 'inherit',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              backgroundSize: '14px',
+              paddingRight: '36px'
             }}
           >
             <option value="">Select theme...</option>
@@ -588,10 +639,16 @@ const EnhancedContentCreationForm = ({
               padding: '12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
-              fontSize: '14px',
+              fontSize: '13px',
               backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: isDarkMode ? '#f8fafc' : '#111827',
-              fontFamily: 'inherit'
+              color: isDarkMode ? 'white' : '#111827',
+              fontFamily: 'inherit',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              backgroundSize: '14px',
+              paddingRight: '36px'
             }}
           >
             <option value="">Select audience...</option>
@@ -626,10 +683,16 @@ const EnhancedContentCreationForm = ({
               padding: '12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
-              fontSize: '14px',
+              fontSize: '13px',
               backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: isDarkMode ? '#f8fafc' : '#111827',
-              fontFamily: 'inherit'
+              color: isDarkMode ? 'white' : '#111827',
+              fontFamily: 'inherit',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              backgroundSize: '14px',
+              paddingRight: '36px'
             }}
           >
             <option value="">Select media type...</option>
@@ -663,10 +726,16 @@ const EnhancedContentCreationForm = ({
               padding: '12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
-              fontSize: '14px',
+              fontSize: '13px',
               backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: isDarkMode ? '#f8fafc' : '#111827',
-              fontFamily: 'inherit'
+              color: isDarkMode ? 'white' : '#111827',
+              fontFamily: 'inherit',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              backgroundSize: '14px',
+              paddingRight: '36px'
             }}
           >
             <option value="">Select template type...</option>
@@ -703,10 +772,16 @@ const EnhancedContentCreationForm = ({
               padding: '12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
-              fontSize: '14px',
+              fontSize: '13px',
               backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: isDarkMode ? '#f8fafc' : '#111827',
-              fontFamily: 'inherit'
+              color: isDarkMode ? 'white' : '#111827',
+              fontFamily: 'inherit',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              backgroundSize: '14px',
+              paddingRight: '36px'
             }}
           >
             <option value="">Generic (no optimization)...</option>
@@ -2307,8 +2382,7 @@ export default function ContentManager() {
                   onMouseOver={(e) => {
                     if (activeTab !== tab.id) {
                       e.currentTarget.style.backgroundColor = isDarkMode ? '#334155' : '#f9fafb';
-                      e.currentTarget.style.color = isDarkMode
-                     ? '#f8fafc' : '#111827';
+                      e.currentTarget.style.color = isDarkMode ? '#f8fafc' : '#111827';
                     }
                   }}
                   onMouseOut={(e) => {
