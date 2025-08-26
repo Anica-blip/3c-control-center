@@ -2308,3 +2308,55 @@ export default function ContentManager() {
                     if (activeTab !== tab.id) {
                       e.currentTarget.style.backgroundColor = isDarkMode ? '#334155' : '#f9fafb';
                       e.currentTarget.style.color = isDarkMode
+                     ? '#f8fafc' : '#111827';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (activeTab !== tab.id) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = isDarkMode ? '#94a3b8' : '#6b7280';
+                    }
+                  }}
+                >
+                  <Icon style={{ height: '20px', width: '20px' }} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div>
+          {activeTab === 'create' && (
+            <div style={{ display: 'grid', gap: '24px' }}>
+              <EnhancedContentCreationForm
+                onSave={handleSavePost}
+                onAddToSchedule={handleAddToSchedule}
+                characterProfiles={characterProfiles}
+                platforms={platforms}
+                loadedTemplate={loadedTemplate}
+                onTemplateLoaded={handleTemplateLoaded}
+              />
+              
+              <SavedPostsList
+                posts={savedPosts}
+                onEditPost={handleEditPost}
+                onSchedulePost={handleSchedulePost}
+                onDeletePost={handleDeletePost}
+              />
+            </div>
+          )}
+
+          {activeTab === 'notion' && (
+            <NotionDatabaseSection
+              onLoadTemplate={handleLoadTemplate}
+            />
+          )}
+
+          {activeTab === 'supabase' && <SupabaseConnection />}
+        </div>
+      </div>
+    </div>
+  );
+}
