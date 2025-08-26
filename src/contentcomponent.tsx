@@ -31,7 +31,68 @@ interface ContentPost {
   scheduledDate?: Date;
   isFromTemplate?: boolean;
   sourceTemplateId?: string;
+  notionPageId?: string;
 }
+
+// Notion Integration Functions
+const saveToNotionDatabase = async (postData: Omit<ContentPost, 'id' | 'createdDate'>) => {
+  try {
+    const response = await fetch('/api/notion-save-content', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(postData)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error saving to Notion:', error);
+    throw error;
+  }
+};
+
+const loadFromNotionDatabase = async () => {
+  try {
+    const response = await fetch('/api/notion-load-content');
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.posts || [];
+  } catch (error) {
+    console.error('Error loading from Notion:', error);
+    return [];
+  }
+};
+
+const updateNotionContent = async (postId: string, updates: Partial<ContentPost>) => {
+  try {
+    const response = await fetch('/api/notion-update-content', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ postId, updates })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating Notion content:', error);
+    throw error;
+  }
+};
 
 interface MediaFile {
   id: string;
@@ -82,7 +143,8 @@ const EnhancedContentCreationForm = ({
   characterProfiles, 
   platforms,
   loadedTemplate,
-  onTemplateLoaded
+  onTemplateLoaded,
+  isSaving
 }: {
   onSave: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
   onAddToSchedule: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
@@ -90,6 +152,7 @@ const EnhancedContentCreationForm = ({
   platforms: SocialPlatform[];
   loadedTemplate?: NotionTemplate | null;
   onTemplateLoaded?: () => void;
+  isSaving?: boolean;
 }) => {
   const { isDarkMode } = useTheme();
   
@@ -657,6 +720,40 @@ const EnhancedContentCreationForm = ({
         border: `1px solid ${isDarkMode ? '#475569' : '#3b82f6'}`,
         marginBottom: '24px'
       }}>
+        {/* Character Profile */}
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '12px',
+            fontWeight: '600',
+            color: isDarkMode ? '#94a3b8' : '#1e40af',
+            marginBottom: '8px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            Character Profile
+          </label>
+          <select
+            value={selections.characterProfile}
+            onChange={(e) => handleSelectionChange('characterProfile', e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: isDarkMode ? '#334155' : 'white',
+              color: isDarkMode ? '#f8fafc' : '#111827',
+              fontFamily: 'inherit'
+            }}
+          >
+            <option value="">Select character profile...</option>
+            {characterProfiles.map(profile => (
+              <option key={profile.id} value={profile.id}>{profile.name}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Theme Selection */}
         <div>
           <label style={{
@@ -1071,7 +1168,7 @@ const EnhancedContentCreationForm = ({
       </div>
 
       {/* Content Fields */}
-      <div style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gap: '16px', marginBottom: '24px', maxWidth: '800px' }}>
         {/* Title Field */}
         {(!fieldConfig || fieldConfig.title?.show !== false) && (
           <div>
@@ -1450,51 +1547,82 @@ const EnhancedContentCreationForm = ({
         
         <button
           onClick={handleSave}
-          disabled={!canSave}
+          disabled={!canSave || isSaving}
           style={{
             padding: '12px 20px',
             fontSize: '14px',
             fontWeight: '600',
             borderRadius: '8px',
             border: 'none',
-            cursor: canSave ? 'pointer' : 'not-allowed',
-            backgroundColor: canSave ? (isDarkMode ? '#64748b' : '#6b7280') : (isDarkMode ? '#475569' : '#d1d5db'),
-            color: canSave ? 'white' : (isDarkMode ? '#64748b' : '#9ca3af'),
-            fontFamily: 'inherit'
+            cursor: (canSave && !isSaving) ? 'pointer' : 'not-allowed',
+            backgroundColor: (canSave && !isSaving) ? (isDarkMode ? '#64748b' : '#6b7280') : (isDarkMode ? '#475569' : '#d1d5db'),
+            color: (canSave && !isSaving) ? 'white' : (isDarkMode ? '#64748b' : '#9ca3af'),
+            fontFamily: 'inherit',
+            opacity: isSaving ? 0.7 : 1
           }}
         >
-          💾 Save as Draft
+          {isSaving ? '⏳ Saving...' : '💾 Save as Draft'}
         </button>
         
         <button
           onClick={handleAddToSchedule}
-          disabled={!canSave}
+          disabled={!canSave || isSaving}
           style={{
             padding: '12px 20px',
             fontSize: '14px',
             fontWeight: '600',
             borderRadius: '8px',
             border: 'none',
-            cursor: canSave ? 'pointer' : 'not-allowed',
-            backgroundColor: canSave ? (isDarkMode ? '#60a5fa' : '#3b82f6') : (isDarkMode ? '#475569' : '#d1d5db'),
-            color: canSave ? 'white' : (isDarkMode ? '#64748b' : '#9ca3af'),
-            fontFamily: 'inherit'
+            cursor: (canSave && !isSaving) ? 'pointer' : 'not-allowed',
+            backgroundColor: (canSave && !isSaving) ? (isDarkMode ? '#60a5fa' : '#3b82f6') : (isDarkMode ? '#475569' : '#d1d5db'),
+            color: (canSave && !isSaving) ? 'white' : (isDarkMode ? '#64748b' : '#9ca3af'),
+            fontFamily: 'inherit',
+            opacity: isSaving ? 0.7 : 1
           }}
         >
-          🚀 Schedule Post
+          {isSaving ? '⏳ Saving...' : '🚀 Schedule Post'}
         </button>
       </div>
     </div>
   );
 };
 
-const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost }: {
+const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoading }: {
   posts: ContentPost[];
   onEditPost: (postId: string) => void;
   onSchedulePost: (postId: string) => void;
   onDeletePost: (postId: string) => void;
+  isLoading?: boolean;
 }) => {
   const { isDarkMode } = useTheme();
+  
+  if (isLoading) {
+    return (
+      <div style={{
+        backgroundColor: isDarkMode ? '#1e293b' : 'white',
+        boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+        borderRadius: '8px',
+        padding: '48px',
+        textAlign: 'center',
+        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      }}>
+        <div style={{
+          fontSize: '18px',
+          color: isDarkMode ? '#60a5fa' : '#3b82f6',
+          marginBottom: '12px'
+        }}>
+          ⏳ Loading your saved content...
+        </div>
+        <div style={{
+          fontSize: '14px',
+          color: isDarkMode ? '#94a3b8' : '#6b7280'
+        }}>
+          Fetching posts from Notion database
+        </div>
+      </div>
+    );
+  }
   
   const getStatusBadge = (status: string) => {
     const badgeStyles = {
@@ -2360,6 +2488,27 @@ export default function ContentManager() {
   const [activeTab, setActiveTab] = useState('create');
   const [savedPosts, setSavedPosts] = useState<ContentPost[]>([]);
   const [loadedTemplate, setLoadedTemplate] = useState<NotionTemplate | null>(null);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load posts from Notion on component mount
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        setIsLoadingPosts(true);
+        const posts = await loadFromNotionDatabase();
+        setSavedPosts(posts);
+      } catch (error) {
+        console.error('Failed to load posts:', error);
+        // Fallback to empty array if Notion fails
+        setSavedPosts([]);
+      } finally {
+        setIsLoadingPosts(false);
+      }
+    };
+
+    fetchPosts();
+  }, []);
   
   // Mock character profiles
   const [characterProfiles] = useState<CharacterProfile[]>([
@@ -2377,26 +2526,60 @@ export default function ContentManager() {
     { id: '5', name: 'Twitter', url: 'https://twitter.com/account', isActive: false, isDefault: false },
   ]);
 
-  const handleSavePost = (postData: Omit<ContentPost, 'id' | 'createdDate'>) => {
-    const newPost: ContentPost = {
-      ...postData,
-      id: Date.now().toString(),
-      createdDate: new Date(),
-    };
-    setSavedPosts(prev => [newPost, ...prev]);
-    setLoadedTemplate(null); // Clear loaded template after saving
+  const handleSavePost = async (postData: Omit<ContentPost, 'id' | 'createdDate'>) => {
+    try {
+      setIsSaving(true);
+      
+      // Save to Notion first
+      const notionResult = await saveToNotionDatabase(postData);
+      
+      // Create local post with Notion page ID
+      const newPost: ContentPost = {
+        ...postData,
+        id: Date.now().toString(),
+        createdDate: new Date(),
+        notionPageId: notionResult.id
+      };
+      
+      // Update local state
+      setSavedPosts(prev => [newPost, ...prev]);
+      setLoadedTemplate(null);
+      
+      alert('✅ Content saved successfully to database!');
+    } catch (error) {
+      console.error('Save failed:', error);
+      alert('❌ Failed to save content. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleAddToSchedule = (postData: Omit<ContentPost, 'id' | 'createdDate'>) => {
-    const newPost: ContentPost = {
-      ...postData,
-      id: Date.now().toString(),
-      createdDate: new Date(),
-    };
-    setSavedPosts(prev => [newPost, ...prev]);
-    setLoadedTemplate(null); // Clear loaded template after scheduling
-    // TODO: Navigate to scheduler tab or open scheduler modal
-    alert('Post ready for scheduling! (Will integrate with scheduler tab next)');
+  const handleAddToSchedule = async (postData: Omit<ContentPost, 'id' | 'createdDate'>) => {
+    try {
+      setIsSaving(true);
+      
+      // Save to Notion with scheduled status
+      const scheduledData = { ...postData, status: 'scheduled' as const };
+      const notionResult = await saveToNotionDatabase(scheduledData);
+      
+      // Create local post
+      const newPost: ContentPost = {
+        ...scheduledData,
+        id: Date.now().toString(),
+        createdDate: new Date(),
+        notionPageId: notionResult.id
+      };
+      
+      setSavedPosts(prev => [newPost, ...prev]);
+      setLoadedTemplate(null);
+      
+      alert('🚀 Content saved and ready for scheduling!');
+    } catch (error) {
+      console.error('Schedule save failed:', error);
+      alert('❌ Failed to save content for scheduling. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleEditPost = (postId: string) => {
@@ -2409,8 +2592,26 @@ export default function ContentManager() {
     alert('Schedule functionality coming next');
   };
 
-  const handleDeletePost = (postId: string) => {
-    setSavedPosts(prev => prev.filter(post => post.id !== postId));
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm('Are you sure you want to delete this content? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const post = savedPosts.find(p => p.id === postId);
+      
+      if (post?.notionPageId) {
+        // Soft delete in Notion (update status to 'Deleted')
+        await updateNotionContent(post.notionPageId, { status: 'deleted' as any });
+      }
+      
+      // Remove from local state
+      setSavedPosts(prev => prev.filter(post => post.id !== postId));
+      
+    } catch (error) {
+      console.error('Delete failed:', error);
+      alert('❌ Failed to delete content. Please try again.');
+    }
   };
 
   const handleLoadTemplate = (template: NotionTemplate) => {
@@ -2502,6 +2703,7 @@ export default function ContentManager() {
                 platforms={platforms}
                 loadedTemplate={loadedTemplate}
                 onTemplateLoaded={handleTemplateLoaded}
+                isSaving={isSaving}
               />
               
               <SavedPostsList
@@ -2509,6 +2711,7 @@ export default function ContentManager() {
                 onEditPost={handleEditPost}
                 onSchedulePost={handleSchedulePost}
                 onDeletePost={handleDeletePost}
+                isLoading={isLoadingPosts}
               />
             </div>
           )}
