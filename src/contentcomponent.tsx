@@ -487,15 +487,15 @@ const EnhancedContentCreationForm = ({
             onChange={(e) => handleSelectionChange('characterProfile', e.target.value)}
             style={{
               width: '100%',
-              padding: '12px',
+              padding: '10px 12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: isDarkMode ? '#1e293b' : 'white',
-              color: isDarkMode ? 'white' : '#111827',
+              backgroundColor: isDarkMode ? '#334155' : 'white',
+              color: isDarkMode ? '#f8fafc' : '#111827',
               fontFamily: 'inherit',
               appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%23f8fafc' : '%23111827'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 12px center',
               backgroundSize: '16px',
@@ -559,14 +559,14 @@ const EnhancedContentCreationForm = ({
       {/* Template Builder Style Selections */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
         gap: '16px',
         padding: '20px',
         background: isDarkMode 
-          ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' 
+          ? 'linear-gradient(135deg, #334155 0%, #475569 100%)' 
           : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
         borderRadius: '8px',
-        border: `1px solid ${isDarkMode ? '#1e40af' : '#3b82f6'}`,
+        border: `1px solid ${isDarkMode ? '#475569' : '#3b82f6'}`,
         marginBottom: '24px'
       }}>
         {/* Theme Selection */}
@@ -575,7 +575,7 @@ const EnhancedContentCreationForm = ({
             display: 'block',
             fontSize: '12px',
             fontWeight: '600',
-            color: isDarkMode ? '#bfdbfe' : '#1e40af',
+            color: isDarkMode ? '#94a3b8' : '#1e40af',
             marginBottom: '8px',
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
@@ -587,19 +587,19 @@ const EnhancedContentCreationForm = ({
             onChange={(e) => handleSelectionChange('theme', e.target.value)}
             style={{
               width: '100%',
-              padding: '12px',
+              padding: '10px 12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
-              fontSize: '13px',
+              fontSize: '14px',
               backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: isDarkMode ? 'white' : '#111827',
+              color: isDarkMode ? '#f8fafc' : '#111827',
               fontFamily: 'inherit',
               appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%23f8fafc' : '%23111827'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 12px center',
-              backgroundSize: '14px',
-              paddingRight: '36px'
+              backgroundSize: '16px',
+              paddingRight: '40px'
             }}
           >
             <option value="">Select theme...</option>
@@ -636,19 +636,19 @@ const EnhancedContentCreationForm = ({
             onChange={(e) => handleSelectionChange('audience', e.target.value)}
             style={{
               width: '100%',
-              padding: '12px',
+              padding: '10px 12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
-              fontSize: '13px',
+              fontSize: '14px',
               backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: isDarkMode ? 'white' : '#111827',
+              color: isDarkMode ? '#f8fafc' : '#111827',
               fontFamily: 'inherit',
               appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%23f8fafc' : '%23111827'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 12px center',
-              backgroundSize: '14px',
-              paddingRight: '36px'
+              backgroundSize: '16px',
+              paddingRight: '40px'
             }}
           >
             <option value="">Select audience...</option>
@@ -680,19 +680,19 @@ const EnhancedContentCreationForm = ({
             onChange={(e) => handleSelectionChange('mediaType', e.target.value)}
             style={{
               width: '100%',
-              padding: '12px',
+              padding: '10px 12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
-              fontSize: '13px',
+              fontSize: '14px',
               backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: isDarkMode ? 'white' : '#111827',
+              color: isDarkMode ? '#f8fafc' : '#111827',
               fontFamily: 'inherit',
               appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%23f8fafc' : '%23111827'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 12px center',
-              backgroundSize: '14px',
-              paddingRight: '36px'
+              backgroundSize: '16px',
+              paddingRight: '40px'
             }}
           >
             <option value="">Select media type...</option>
@@ -723,19 +723,19 @@ const EnhancedContentCreationForm = ({
             onChange={(e) => handleSelectionChange('templateType', e.target.value)}
             style={{
               width: '100%',
-              padding: '12px',
+              padding: '10px 12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
-              fontSize: '13px',
+              fontSize: '14px',
               backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: isDarkMode ? 'white' : '#111827',
+              color: isDarkMode ? '#f8fafc' : '#111827',
               fontFamily: 'inherit',
               appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%23f8fafc' : '%23111827'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 12px center',
-              backgroundSize: '14px',
-              paddingRight: '36px'
+              backgroundSize: '16px',
+              paddingRight: '40px'
             }}
           >
             <option value="">Select template type...</option>
@@ -769,19 +769,19 @@ const EnhancedContentCreationForm = ({
             onChange={(e) => handleSelectionChange('platform', e.target.value)}
             style={{
               width: '100%',
-              padding: '12px',
+              padding: '10px 12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
-              fontSize: '13px',
+              fontSize: '14px',
               backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: isDarkMode ? 'white' : '#111827',
+              color: isDarkMode ? '#f8fafc' : '#111827',
               fontFamily: 'inherit',
               appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%23f8fafc' : '%23111827'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 12px center',
-              backgroundSize: '14px',
-              paddingRight: '36px'
+              backgroundSize: '16px',
+              paddingRight: '40px'
             }}
           >
             <option value="">Generic (no optimization)...</option>
@@ -791,6 +791,9 @@ const EnhancedContentCreationForm = ({
             <option value="twitter">Twitter/X</option>
             <option value="youtube">YouTube</option>
             <option value="tiktok">TikTok</option>
+            <option value="telegram">Telegram</option>
+            <option value="pinterest">Pinterest</option>
+            <option value="whatsapp">WhatsApp</option>
           </select>
         </div>
       </div>
@@ -818,14 +821,14 @@ const EnhancedContentCreationForm = ({
             gap: '12px'
           }}>
             {fieldConfig.title?.show && (
-              <div style={{ fontSize: '12px', color: isDarkMode ? '#bfdbfe' : '#1e40af' }}>
+              <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#1e40af' }}>
                 Title: {fieldConfig.title.maxLength} chars
               </div>
             )}
-            <div style={{ fontSize: '12px', color: isDarkMode ? '#bfdbfe' : '#1e40af' }}>
+            <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#1e40af' }}>
               Description: {fieldConfig.description.maxLength} chars
             </div>
-            <div style={{ fontSize: '12px', color: isDarkMode ? '#bfdbfe' : '#1e40af' }}>
+            <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#1e40af' }}>
               Hashtags: {fieldConfig.hashtags.maxCount} max ({fieldConfig.hashtags.recommended} recommended)
             </div>
           </div>
