@@ -1159,9 +1159,9 @@ const EnhancedContentCreationForm = ({
                 type="button"
                 onClick={() => {
                   const input = document.querySelector('input[placeholder*="compelling title"]') as HTMLInputElement;
-                  if (input) {
-                    const start = input.selectionStart || 0;
-                    const end = input.selectionEnd || 0;
+                  if (input && input.selectionStart !== null && input.selectionEnd !== null) {
+                    const start = input.selectionStart;
+                    const end = input.selectionEnd;
                     const selectedText = input.value.substring(start, end);
                     const newText = input.value.substring(0, start) + `**${selectedText}**` + input.value.substring(end);
                     setContent(prev => ({ ...prev, title: newText }));
@@ -1184,7 +1184,7 @@ const EnhancedContentCreationForm = ({
               
               <button
                 type="button"
-                onClick={() => setShowTitleEmojiPicker(!showTitleEmojiPicker)}
+                onClick={() => showEmojiSelector('title')}
                 style={{
                   padding: '6px 10px',
                   backgroundColor: isDarkMode ? '#334155' : 'white',
@@ -1192,87 +1192,12 @@ const EnhancedContentCreationForm = ({
                   borderRadius: '4px',
                   cursor: 'pointer',
                   fontSize: '14px',
-                  color: isDarkMode ? '#f8fafc' : '#111827',
-                  position: 'relative'
+                  color: isDarkMode ? '#f8fafc' : '#111827'
                 }}
                 title="Add Emoji"
               >
                 😊
               </button>
-              
-              {/* Title Emoji Picker */}
-              {showTitleEmojiPicker && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: '0',
-                  zIndex: 1000,
-                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                  border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                  borderRadius: '8px',
-                  padding: '12px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  width: '300px',
-                  maxHeight: '200px',
-                  overflowY: 'auto'
-                }}>
-                  {Object.entries(emojiCategories).map(([category, emojis]) => (
-                    <div key={category} style={{ marginBottom: '8px' }}>
-                      <div style={{
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        color: isDarkMode ? '#94a3b8' : '#6b7280',
-                        marginBottom: '4px'
-                      }}>
-                        {category}
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {emojis.map(emoji => (
-                          <button
-                            key={emoji}
-                            onClick={() => {
-                              setContent(prev => ({ ...prev, title: prev.title + emoji }));
-                              setShowTitleEmojiPicker(false);
-                            }}
-                            style={{
-                              padding: '4px 8px',
-                              border: 'none',
-                              backgroundColor: 'transparent',
-                              cursor: 'pointer',
-                              borderRadius: '4px',
-                              fontSize: '16px'
-                            }}
-                            onMouseOver={(e) => {
-                              e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#f3f4f6';
-                            }}
-                            onMouseOut={(e) => {
-                              e.currentTarget.style.backgroundColor = 'transparent';
-                            }}
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  <button
-                    onClick={() => setShowTitleEmojiPicker(false)}
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      backgroundColor: isDarkMode ? '#60a5fa' : '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      marginTop: '8px'
-                    }}
-                  >
-                    Close
-                  </button>
-                </div>
-              )}
               
               <div style={{
                 fontSize: '12px',
@@ -1335,14 +1260,13 @@ const EnhancedContentCreationForm = ({
             backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
             borderRadius: '6px 6px 0 0',
             border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-            borderBottom: 'none',
-            position: 'relative'
+            borderBottom: 'none'
           }}>
             <button
               type="button"
               onClick={() => {
                 const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
-                if (textarea) {
+                if (textarea && textarea.selectionStart !== null && textarea.selectionEnd !== null) {
                   const start = textarea.selectionStart;
                   const end = textarea.selectionEnd;
                   const selectedText = textarea.value.substring(start, end);
@@ -1369,7 +1293,7 @@ const EnhancedContentCreationForm = ({
               type="button"
               onClick={() => {
                 const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
-                if (textarea) {
+                if (textarea && textarea.selectionStart !== null && textarea.selectionEnd !== null) {
                   const start = textarea.selectionStart;
                   const end = textarea.selectionEnd;
                   const selectedText = textarea.value.substring(start, end);
@@ -1396,7 +1320,7 @@ const EnhancedContentCreationForm = ({
               type="button"
               onClick={() => {
                 const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
-                if (textarea) {
+                if (textarea && textarea.selectionStart !== null && textarea.selectionEnd !== null) {
                   const start = textarea.selectionStart;
                   const end = textarea.selectionEnd;
                   const selectedText = textarea.value.substring(start, end);
@@ -1446,7 +1370,7 @@ const EnhancedContentCreationForm = ({
             
             <button
               type="button"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              onClick={() => showEmojiSelector('description')}
               style={{
                 padding: '6px 10px',
                 backgroundColor: isDarkMode ? '#334155' : 'white',
@@ -1460,113 +1384,6 @@ const EnhancedContentCreationForm = ({
             >
               😊
             </button>
-            
-            {/* Enhanced Emoji Picker */}
-            {showEmojiPicker && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                right: '0',
-                zIndex: 1000,
-                backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '8px',
-                padding: '12px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                width: '320px',
-                maxHeight: '300px',
-                overflowY: 'auto'
-              }}>
-                {Object.entries(emojiCategories).map(([category, emojis]) => (
-                  <div key={category} style={{ marginBottom: '12px' }}>
-                    <div style={{
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280',
-                      marginBottom: '6px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em'
-                    }}>
-                      {category}
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                      {emojis.map(emoji => (
-                        <button
-                          key={emoji}
-                          onClick={() => {
-                            setContent(prev => ({ ...prev, description: prev.description + emoji }));
-                            setShowEmojiPicker(false);
-                          }}
-                          style={{
-                            padding: '6px 10px',
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            cursor: 'pointer',
-                            borderRadius: '6px',
-                            fontSize: '18px',
-                            transition: 'background-color 0.2s ease'
-                          }}
-                          onMouseOver={(e) => {
-                            e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#f3f4f6';
-                          }}
-                          onMouseOut={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                          }}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                <div style={{
-                  display: 'flex',
-                  gap: '8px',
-                  marginTop: '12px',
-                  paddingTop: '12px',
-                  borderTop: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
-                }}>
-                  <input
-                    type="text"
-                    placeholder="Enter custom emoji..."
-                    style={{
-                      flex: 1,
-                      padding: '8px',
-                      fontSize: '12px',
-                      border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                      borderRadius: '4px',
-                      backgroundColor: isDarkMode ? '#334155' : 'white',
-                      color: isDarkMode ? '#f8fafc' : '#111827'
-                    }}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        const input = e.target as HTMLInputElement;
-                        if (input.value) {
-                          setContent(prev => ({ ...prev, description: prev.description + input.value }));
-                          input.value = '';
-                          setShowEmojiPicker(false);
-                        }
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={() => setShowEmojiPicker(false)}
-                    style={{
-                      padding: '8px 12px',
-                      backgroundColor: isDarkMode ? '#60a5fa' : '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      fontWeight: '500'
-                    }}
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            )}
             
             <div style={{
               fontSize: '12px',
