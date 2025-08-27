@@ -492,7 +492,7 @@ const EnhancedContentCreationForm = ({
               color: isDarkMode ? '#60a5fa' : '#3b82f6',
               margin: '0 0 8px 0'
             }}>
-              {isEditingTemplate ? '📝 Editing Template Content' : '🎨 Create New Content'}
+              {isEditingTemplate ? 'Editing Template Content' : 'Create New Content'}
             </h2>
             <p style={{
               color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -616,7 +616,7 @@ const EnhancedContentCreationForm = ({
       {/* Template Builder Style Selections */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gridTemplateColumns: 'repeat(2, 1fr)',
         gap: '16px',
         padding: '20px',
         background: isDarkMode 
@@ -682,7 +682,7 @@ const EnhancedContentCreationForm = ({
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: isDarkMode ? '#334155' : 'white',
+              backgroundColor: '#334155',
               color: isDarkMode ? '#f8fafc' : '#111827',
               fontFamily: 'inherit',
               appearance: 'none',
@@ -731,7 +731,7 @@ const EnhancedContentCreationForm = ({
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: isDarkMode ? '#334155' : 'white',
+              backgroundColor: '#334155',
               color: isDarkMode ? '#f8fafc' : '#111827',
               fontFamily: 'inherit',
               appearance: 'none',
@@ -775,7 +775,7 @@ const EnhancedContentCreationForm = ({
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: isDarkMode ? '#334155' : 'white',
+              backgroundColor: '#334155',
               color: isDarkMode ? '#f8fafc' : '#111827',
               fontFamily: 'inherit',
               appearance: 'none',
@@ -818,7 +818,7 @@ const EnhancedContentCreationForm = ({
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: isDarkMode ? '#334155' : 'white',
+              backgroundColor: '#334155',
               color: isDarkMode ? '#f8fafc' : '#111827',
               fontFamily: 'inherit',
               appearance: 'none',
@@ -864,7 +864,7 @@ const EnhancedContentCreationForm = ({
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: isDarkMode ? '#334155' : 'white',
+              backgroundColor: '#334155',
               color: isDarkMode ? '#f8fafc' : '#111827',
               fontFamily: 'inherit',
               appearance: 'none',
@@ -904,7 +904,7 @@ const EnhancedContentCreationForm = ({
             color: isDarkMode ? '#60a5fa' : '#1e40af',
             margin: '0 0 8px 0'
           }}>
-            📊 Platform Optimization: {selections.platform?.toUpperCase()}
+            Platform Optimization: {selections.platform?.toUpperCase()}
           </h4>
           <div style={{
             display: 'grid',
@@ -935,7 +935,7 @@ const EnhancedContentCreationForm = ({
           color: isDarkMode ? '#f8fafc' : '#111827',
           marginBottom: '12px'
         }}>
-          📁 Media Upload
+          Media Upload
         </label>
         <div
           onClick={() => fileInputRef.current?.click()}
@@ -962,7 +962,7 @@ const EnhancedContentCreationForm = ({
             color: isDarkMode ? '#f8fafc' : '#111827',
             margin: '0 0 6px 0'
           }}>
-            🔎 Upload your media files
+            Upload your media files
           </h3>
           <p style={{
             fontSize: '14px',
@@ -1003,7 +1003,7 @@ const EnhancedContentCreationForm = ({
                 color: isDarkMode ? '#f8fafc' : '#111827',
                 margin: '0'
               }}>
-                📋 Uploaded Files
+                Uploaded Files
               </h4>
               <span style={{
                 padding: '4px 8px',
@@ -1073,12 +1073,12 @@ const EnhancedContentCreationForm = ({
         )}
       </div>
 
-      {/* Content Fields */}
+      {/* Content Fields - Reduced Width */}
       <div style={{ 
         display: 'grid', 
         gap: '16px', 
         marginBottom: '24px', 
-        maxWidth: '800px',
+        maxWidth: '600px',
         margin: '0 auto 24px auto'
       }}>
         {/* Title Field */}
@@ -1091,7 +1091,7 @@ const EnhancedContentCreationForm = ({
               color: isDarkMode ? '#f8fafc' : '#111827',
               marginBottom: '8px'
             }}>
-              📝 Title/Headline
+              Title/Headline
             </label>
             <input
               type="text"
@@ -1132,7 +1132,7 @@ const EnhancedContentCreationForm = ({
             color: isDarkMode ? '#f8fafc' : '#111827',
             marginBottom: '8px'
           }}>
-            ✏️ Post Description *
+            Post Description *
           </label>
           <textarea
             value={content.description}
@@ -1175,7 +1175,7 @@ const EnhancedContentCreationForm = ({
             color: isDarkMode ? '#f8fafc' : '#111827',
             marginBottom: '8px'
           }}>
-            #️⃣ Hashtags
+            Hashtags
           </label>
           <div style={{
             backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
@@ -1291,7 +1291,7 @@ const EnhancedContentCreationForm = ({
             color: isDarkMode ? '#f8fafc' : '#111827',
             marginBottom: '8px'
           }}>
-            🔍 SEO Keywords
+            SEO Keywords
           </label>
           <input
             type="text"
@@ -1327,7 +1327,7 @@ const EnhancedContentCreationForm = ({
             color: isDarkMode ? '#f8fafc' : '#111827',
             marginBottom: '8px'
           }}>
-            🎯 Call to Action
+            Call to Action
           </label>
           <input
             type="text"
@@ -1368,7 +1368,7 @@ const EnhancedContentCreationForm = ({
           color: isDarkMode ? '#f8fafc' : '#111827',
           marginBottom: '12px'
         }}>
-          🌐 Select Publishing Platforms
+          Select Publishing Platforms
         </label>
         <div style={{
           display: 'grid',
@@ -1390,7 +1390,7 @@ const EnhancedContentCreationForm = ({
                 cursor: 'pointer',
                 backgroundColor: selectedPlatforms.includes(platform.id) 
                   ? (isDarkMode ? '#1e3a8a30' : '#dbeafe') 
-                  : (isDarkMode ? '#334155' : '#f9fafb'),
+                  : '#334155',
                 transition: 'all 0.2s ease'
               }}
             >
@@ -1423,7 +1423,7 @@ const EnhancedContentCreationForm = ({
                     color: 'white',
                     borderRadius: '8px'
                   }}>
-                    ⭐ Default
+                    Default
                   </span>
                 )}
               </div>
@@ -1454,7 +1454,7 @@ const EnhancedContentCreationForm = ({
             fontFamily: 'inherit'
           }}
         >
-          🔄 Reset Form
+          Reset Form
         </button>
         
         <button
@@ -1473,7 +1473,7 @@ const EnhancedContentCreationForm = ({
             opacity: isSaving ? 0.7 : 1
           }}
         >
-          {isSaving ? '⏳ Saving...' : '💾 Save as Draft'}
+          {isSaving ? 'Saving...' : 'Save as Draft'}
         </button>
         
         <button
@@ -1492,7 +1492,7 @@ const EnhancedContentCreationForm = ({
             opacity: isSaving ? 0.7 : 1
           }}
         >
-          {isSaving ? '⏳ Saving...' : '🚀 Schedule Post'}
+          {isSaving ? 'Saving...' : 'Schedule Post'}
         </button>
       </div>
     </div>
@@ -1524,7 +1524,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
           color: isDarkMode ? '#60a5fa' : '#3b82f6',
           marginBottom: '12px'
         }}>
-          ⏳ Loading your saved content...
+          Loading your saved content...
         </div>
         <div style={{
           fontSize: '14px',
@@ -1538,9 +1538,9 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
   
   const getStatusBadge = (status: string) => {
     const badgeStyles = {
-      pending: { backgroundColor: isDarkMode ? '#92400e' : '#fef3c7', color: isDarkMode ? '#fef3c7' : '#92400e', text: '⏳ Pending' },
-      scheduled: { backgroundColor: isDarkMode ? '#1e40af' : '#dbeafe', color: isDarkMode ? '#dbeafe' : '#1e40af', text: '📅 Scheduled' },
-      published: { backgroundColor: isDarkMode ? '#065f46' : '#d1fae5', color: isDarkMode ? '#d1fae5' : '#065f46', text: '✅ Published' }
+      pending: { backgroundColor: isDarkMode ? '#92400e' : '#fef3c7', color: isDarkMode ? '#fef3c7' : '#92400e', text: 'Pending' },
+      scheduled: { backgroundColor: isDarkMode ? '#1e40af' : '#dbeafe', color: isDarkMode ? '#dbeafe' : '#1e40af', text: 'Scheduled' },
+      published: { backgroundColor: isDarkMode ? '#065f46' : '#d1fae5', color: isDarkMode ? '#d1fae5' : '#065f46', text: 'Published' }
     };
     
     const style = badgeStyles[status as keyof typeof badgeStyles];
@@ -1587,7 +1587,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
           color: isDarkMode ? '#f8fafc' : '#111827',
           margin: '0 0 8px 0'
         }}>
-          📝 No content created yet
+          No content created yet
         </h3>
         <p style={{
           color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1627,7 +1627,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
             color: isDarkMode ? '#60a5fa' : '#3b82f6',
             margin: '0'
           }}>
-            📚 Pending Content
+            Pending Content
           </h3>
           <span style={{
             padding: '6px 12px',
@@ -1677,7 +1677,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
                     fontWeight: '600'
                   }}>
-                    📅 Created {post.createdDate.toLocaleDateString()}
+                    Created {post.createdDate.toLocaleDateString()}
                   </span>
                   {post.isFromTemplate && (
                     <span style={{
@@ -1688,7 +1688,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
                       padding: '4px 8px',
                       borderRadius: '6px'
                     }}>
-                      📄 From Template: {post.sourceTemplateId}
+                      From Template: {post.sourceTemplateId}
                     </span>
                   )}
                 </div>
@@ -1914,15 +1914,15 @@ const NotionDatabaseSection = ({ onLoadTemplate }: {
 
   const getThemeIcon = (theme: string) => {
     const icons: Record<string, string> = {
-      news_alert: '📢',
-      promotion: '🎉',
-      standard_post: '📝',
-      cta_quiz: '❓',
-      tutorial_guide: '📚',
-      blog: '📰',
-      assessment: '📊'
+      news_alert: 'News',
+      promotion: 'Promo',
+      standard_post: 'Post',
+      cta_quiz: 'Quiz',
+      tutorial_guide: 'Guide',
+      blog: 'Blog',
+      assessment: 'Test'
     };
-    return icons[theme] || '📄';
+    return icons[theme] || 'Template';
   };
 
   return (
@@ -1952,7 +1952,7 @@ const NotionDatabaseSection = ({ onLoadTemplate }: {
               color: isDarkMode ? '#f8fafc' : '#111827',
               margin: '0 0 4px 0'
             }}>
-              📊 Notion Database Connection
+              Notion Database Connection
             </h3>
             <p style={{
               color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1977,7 +1977,7 @@ const NotionDatabaseSection = ({ onLoadTemplate }: {
               fontWeight: '600',
               color: isDarkMode ? '#34d399' : '#065f46'
             }}>
-              ✅ Connected
+              Connected
             </span>
           </div>
         </div>
@@ -1997,7 +1997,7 @@ const NotionDatabaseSection = ({ onLoadTemplate }: {
             lineHeight: '1.6',
             margin: '0'
           }}>
-            🔗 Your templates are stored in Notion and can be loaded directly into the Content Manager for editing and publishing.
+            Your templates are stored in Notion and can be loaded directly into the Content Manager for editing and publishing.
           </p>
         </div>
         
@@ -2029,7 +2029,7 @@ const NotionDatabaseSection = ({ onLoadTemplate }: {
             }}
           >
             <Database style={{ height: '16px', width: '16px' }} />
-            <span>{isLoading ? '🔄 Refreshing...' : '🔄 Refresh Templates'}</span>
+            <span>{isLoading ? 'Refreshing...' : 'Refresh Templates'}</span>
           </button>
           
           <button
@@ -2052,7 +2052,7 @@ const NotionDatabaseSection = ({ onLoadTemplate }: {
             onClick={() => window.open('https://notion.so', '_blank')}
           >
             <ExternalLink style={{ height: '16px', width: '16px' }} />
-            <span>🚀 Open Notion Workspace</span>
+            <span>Open Notion Workspace</span>
           </button>
         </div>
       </div>
@@ -2084,7 +2084,7 @@ const NotionDatabaseSection = ({ onLoadTemplate }: {
               color: isDarkMode ? '#60a5fa' : '#3b82f6',
               margin: '0'
             }}>
-              📄 Available Templates
+              Available Templates
             </h3>
             <span style={{
               padding: '6px 12px',
@@ -2218,7 +2218,7 @@ const NotionDatabaseSection = ({ onLoadTemplate }: {
                       color: isDarkMode ? '#64748b' : '#9ca3af',
                       fontWeight: '600'
                     }}>
-                      📅 Created {new Date(template.createdDate).toLocaleDateString()}
+                      Created {new Date(template.createdDate).toLocaleDateString()}
                     </div>
                   </div>
                 </div>
@@ -2319,7 +2319,7 @@ const SupabaseConnection = () => {
             color: isDarkMode ? '#f8fafc' : '#111827',
             margin: '0 0 4px 0'
           }}>
-            💾 Supabase Database
+            Supabase Database
           </h3>
           <p style={{
             color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -2344,7 +2344,7 @@ const SupabaseConnection = () => {
             fontWeight: '600',
             color: isDarkMode ? '#34d399' : '#065f46'
           }}>
-            ✅ Connected
+            Connected
           </span>
         </div>
       </div>
@@ -2364,7 +2364,7 @@ const SupabaseConnection = () => {
           lineHeight: '1.6',
           margin: '0'
         }}>
-          🔗 Your content and settings are being stored securely in Supabase. All data is encrypted and backed up automatically.
+          Your content and settings are being stored securely in Supabase. All data is encrypted and backed up automatically.
         </p>
       </div>
       
@@ -2387,7 +2387,7 @@ const SupabaseConnection = () => {
         }}
       >
         <Database style={{ height: '16px', width: '16px' }} />
-        <span>🚀 Open Supabase Project</span>
+        <span>Open Supabase Project</span>
         <ExternalLink style={{ height: '14px', width: '14px' }} />
       </button>
     </div>
@@ -2457,10 +2457,10 @@ export default function ContentManager() {
       setSavedPosts(prev => [newPost, ...prev]);
       setLoadedTemplate(null);
       
-      alert('✅ Content saved successfully to database!');
+      alert('Content saved successfully to database!');
     } catch (error) {
       console.error('Save failed:', error);
-      alert('❌ Failed to save content. Please try again.');
+      alert('Failed to save content. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -2485,10 +2485,10 @@ export default function ContentManager() {
       setSavedPosts(prev => [newPost, ...prev]);
       setLoadedTemplate(null);
       
-      alert('🚀 Content saved and ready for scheduling!');
+      alert('Content saved and ready for scheduling!');
     } catch (error) {
       console.error('Schedule save failed:', error);
-      alert('❌ Failed to save content for scheduling. Please try again.');
+      alert('Failed to save content for scheduling. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -2522,7 +2522,7 @@ export default function ContentManager() {
       
     } catch (error) {
       console.error('Delete failed:', error);
-      alert('❌ Failed to delete content. Please try again.');
+      alert('Failed to delete content. Please try again.');
     }
   };
 
