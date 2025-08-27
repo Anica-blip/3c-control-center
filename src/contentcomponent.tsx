@@ -144,15 +144,17 @@ const EnhancedContentCreationForm = ({
   platforms,
   loadedTemplate,
   onTemplateLoaded,
-  isSaving
+  isSaving,
+  onSuccessfulSave
 }: {
-  onSave: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
-  onAddToSchedule: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
+  onSave: (post: Omit<ContentPost, 'id' | 'createdDate'>) => Promise<void>;
+  onAddToSchedule: (post: Omit<ContentPost, 'id' | 'createdDate'>) => Promise<void>;
   characterProfiles: CharacterProfile[];
   platforms: SocialPlatform[];
   loadedTemplate?: NotionTemplate | null;
   onTemplateLoaded?: () => void;
   isSaving?: boolean;
+  onSuccessfulSave?: () => void;
 }) => {
   const { isDarkMode } = useTheme();
   
@@ -178,9 +180,17 @@ const EnhancedContentCreationForm = ({
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [contentId, setContentId] = useState('');
   const [isEditingTemplate, setIsEditingTemplate] = useState(false);
-  const [hashtagInput, setHashtagInput] = useState('');
-  const [fieldConfig, setFieldConfig] = useState<any>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Enhanced emoji picker state
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showTitleEmojiPicker, setShowTitleEmojiPicker] = useState(false);
+
+  // Common emojis organized by category
+  const emojiCategories = {
+    'Faces': ['😀', '😊', '😍', '🤔', '😎', '😴', '😂', '🥰', '😢', '😡', '🤗', '😱'],
+    'Gestures': ['👍', '👎', '👏', '🙏', '💪', '✋', '👌', '✌️', '🤝', '👋'],
+    'Objects': ['💡', '📝', '📊', '🔥', '⭐', '💯', '🎉', '🚀', '💎', '🔔'],
+    'Symbols': ['❤️', '💚', '💙', '💜', '🖤', '✨', '🌟', '⚡', '🎯', '🔗']
+  };
 
   // Generate content ID (Pattern-###CC format)
   const generateContentId = () => {
@@ -395,14 +405,6 @@ const EnhancedContentCreationForm = ({
   };
 
   const handleSave = async () => {
-    // Store current form state before attempting save
-    const currentFormState = {
-      selections: { ...selections },
-      content: { ...content },
-      mediaFiles: [...mediaFiles],
-      selectedPlatforms: [...selectedPlatforms]
-    };
-
     const postData = {
       contentId,
       ...selections,
@@ -421,18 +423,11 @@ const EnhancedContentCreationForm = ({
     } catch (error) {
       // Don't reset form on error - preserve user's work
       console.error('Save failed, preserving form data:', error);
+      // Form data remains intact
     }
   };
 
   const handleAddToSchedule = async () => {
-    // Store current form state before attempting save
-    const currentFormState = {
-      selections: { ...selections },
-      content: { ...content },
-      mediaFiles: [...mediaFiles],
-      selectedPlatforms: [...selectedPlatforms]
-    };
-
     const postData = {
       contentId,
       ...selections,
@@ -451,6 +446,7 @@ const EnhancedContentCreationForm = ({
     } catch (error) {
       // Don't reset form on error - preserve user's work
       console.error('Schedule save failed, preserving form data:', error);
+      // Form data remains intact
     }
   };
 
@@ -1132,9 +1128,10 @@ const EnhancedContentCreationForm = ({
       <div style={{ 
         display: 'grid', 
         gap: '16px', 
-        marginBottom: '24px'
+        marginBottom: '24px',
+        width: '100%'
       }}>
-        {/* Title Field */}
+        {/* Title Field with Formatting */}
         {(!fieldConfig || fieldConfig.title?.show !== false) && (
           <div>
             <label style={{
@@ -1146,6 +1143,146 @@ const EnhancedContentCreationForm = ({
             }}>
               Title/Headline
             </label>
+            
+            {/* Title Formatting Toolbar */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px',
+              backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+              borderRadius: '6px 6px 0 0',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderBottom: 'none'
+            }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const input = document.querySelector('input[placeholder*="compelling title"]') as HTMLInputElement;
+                  if (input) {
+                    const start = input.selectionStart || 0;
+                    const end = input.selectionEnd || 0;
+                    const selectedText = input.value.substring(start, end);
+                    const newText = input.value.substring(0, start) + `**${selectedText}**` + input.value.substring(end);
+                    setContent(prev => ({ ...prev, title: newText }));
+                  }
+                }}
+                style={{
+                  padding: '6px 10px',
+                  backgroundColor: isDarkMode ? '#334155' : 'white',
+                  border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  color: isDarkMode ? '#f8fafc' : '#111827'
+                }}
+                title="Bold (wrap selected text with **)"
+              >
+                B
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setShowTitleEmojiPicker(!showTitleEmojiPicker)}
+                style={{
+                  padding: '6px 10px',
+                  backgroundColor: isDarkMode ? '#334155' : 'white',
+                  border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: isDarkMode ? '#f8fafc' : '#111827',
+                  position: 'relative'
+                }}
+                title="Add Emoji"
+              >
+                😊
+              </button>
+              
+              {/* Title Emoji Picker */}
+              {showTitleEmojiPicker && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: '0',
+                  zIndex: 1000,
+                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                  border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                  borderRadius: '8px',
+                  padding: '12px',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                  width: '300px',
+                  maxHeight: '200px',
+                  overflowY: 'auto'
+                }}>
+                  {Object.entries(emojiCategories).map(([category, emojis]) => (
+                    <div key={category} style={{ marginBottom: '8px' }}>
+                      <div style={{
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        color: isDarkMode ? '#94a3b8' : '#6b7280',
+                        marginBottom: '4px'
+                      }}>
+                        {category}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {emojis.map(emoji => (
+                          <button
+                            key={emoji}
+                            onClick={() => {
+                              setContent(prev => ({ ...prev, title: prev.title + emoji }));
+                              setShowTitleEmojiPicker(false);
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              border: 'none',
+                              backgroundColor: 'transparent',
+                              cursor: 'pointer',
+                              borderRadius: '4px',
+                              fontSize: '16px'
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#f3f4f6';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setShowTitleEmojiPicker(false)}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      backgroundColor: isDarkMode ? '#60a5fa' : '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      marginTop: '8px'
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+              
+              <div style={{
+                fontSize: '12px',
+                color: isDarkMode ? '#94a3b8' : '#6b7280',
+                marginLeft: 'auto'
+              }}>
+                UK English | **bold**
+              </div>
+            </div>
+            
             <input
               type="text"
               value={content.title}
@@ -1156,11 +1293,12 @@ const EnhancedContentCreationForm = ({
                 width: '100%',
                 padding: '12px',
                 border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '8px',
+                borderRadius: '0 0 8px 8px',
                 fontSize: '14px',
                 backgroundColor: isDarkMode ? '#334155' : 'white',
                 color: '#000000', // Black font for posts as requested
-                fontFamily: 'inherit'
+                fontFamily: 'inherit',
+                borderTop: 'none'
               }}
             />
             <div style={{
@@ -1197,7 +1335,8 @@ const EnhancedContentCreationForm = ({
             backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
             borderRadius: '6px 6px 0 0',
             border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-            borderBottom: 'none'
+            borderBottom: 'none',
+            position: 'relative'
           }}>
             <button
               type="button"
@@ -1256,6 +1395,33 @@ const EnhancedContentCreationForm = ({
             <button
               type="button"
               onClick={() => {
+                const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
+                if (textarea) {
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+                  const selectedText = textarea.value.substring(start, end);
+                  const newText = textarea.value.substring(0, start) + `<u>${selectedText}</u>` + textarea.value.substring(end);
+                  setContent(prev => ({ ...prev, description: newText }));
+                }
+              }}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                textDecoration: 'underline',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+              title="Underline (wrap selected text with <u></u>)"
+            >
+              U
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => {
                 const url = prompt('Enter URL:');
                 const linkText = prompt('Enter link text (or leave empty to use URL):');
                 if (url) {
@@ -1280,13 +1446,7 @@ const EnhancedContentCreationForm = ({
             
             <button
               type="button"
-              onClick={() => {
-                const commonEmojis = ['😀', '😊', '😍', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙏', '💡', '📝', '📊'];
-                const emoji = prompt(`Choose an emoji:\n${commonEmojis.join(' ')}\n\nOr enter any emoji:`);
-                if (emoji) {
-                  setContent(prev => ({ ...prev, description: prev.description + emoji }));
-                }
-              }}
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               style={{
                 padding: '6px 10px',
                 backgroundColor: isDarkMode ? '#334155' : 'white',
@@ -1301,12 +1461,119 @@ const EnhancedContentCreationForm = ({
               😊
             </button>
             
+            {/* Enhanced Emoji Picker */}
+            {showEmojiPicker && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                right: '0',
+                zIndex: 1000,
+                backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '8px',
+                padding: '12px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                width: '320px',
+                maxHeight: '300px',
+                overflowY: 'auto'
+              }}>
+                {Object.entries(emojiCategories).map(([category, emojis]) => (
+                  <div key={category} style={{ marginBottom: '12px' }}>
+                    <div style={{
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: isDarkMode ? '#94a3b8' : '#6b7280',
+                      marginBottom: '6px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      {category}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                      {emojis.map(emoji => (
+                        <button
+                          key={emoji}
+                          onClick={() => {
+                            setContent(prev => ({ ...prev, description: prev.description + emoji }));
+                            setShowEmojiPicker(false);
+                          }}
+                          style={{
+                            padding: '6px 10px',
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            cursor: 'pointer',
+                            borderRadius: '6px',
+                            fontSize: '18px',
+                            transition: 'background-color 0.2s ease'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#f3f4f6';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <div style={{
+                  display: 'flex',
+                  gap: '8px',
+                  marginTop: '12px',
+                  paddingTop: '12px',
+                  borderTop: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+                }}>
+                  <input
+                    type="text"
+                    placeholder="Enter custom emoji..."
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      fontSize: '12px',
+                      border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                      borderRadius: '4px',
+                      backgroundColor: isDarkMode ? '#334155' : 'white',
+                      color: isDarkMode ? '#f8fafc' : '#111827'
+                    }}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        const input = e.target as HTMLInputElement;
+                        if (input.value) {
+                          setContent(prev => ({ ...prev, description: prev.description + input.value }));
+                          input.value = '';
+                          setShowEmojiPicker(false);
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => setShowEmojiPicker(false)}
+                    style={{
+                      padding: '8px 12px',
+                      backgroundColor: isDarkMode ? '#60a5fa' : '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+            
             <div style={{
               fontSize: '12px',
               color: isDarkMode ? '#94a3b8' : '#6b7280',
               marginLeft: 'auto'
             }}>
-              UK English | Formatting: **bold** *italic* [link](url)
+              UK English | **bold** *italic* <u>underline</u> [link](url)
             </div>
           </div>
           
@@ -2086,6 +2353,26 @@ const NotionDatabaseSection = ({ onLoadTemplate }: {
     onLoadTemplate(template);
   };
 
+  const handleDeleteTemplate = async (template: NotionTemplate) => {
+    const confirmMessage = `Are you sure you want to delete the template "${template.content.title}"?\n\nTemplate ID: ${template.templateId}\n\nThis action cannot be undone.`;
+    
+    if (confirm(confirmMessage)) {
+      try {
+        // Here you would call your Notion API to delete the template
+        // For now, we'll simulate the deletion
+        setTemplates(prev => prev.filter(t => t.id !== template.id));
+        alert(`Template "${template.content.title}" has been deleted successfully.`);
+        
+        // In a real implementation, you would call:
+        // await deleteNotionTemplate(template.id);
+        
+      } catch (error) {
+        console.error('Failed to delete template:', error);
+        alert('Failed to delete template. Please try again.');
+      }
+    }
+  };
+
   const formatTheme = (theme: string) => {
     return theme.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
@@ -2437,13 +2724,7 @@ const NotionDatabaseSection = ({ onLoadTemplate }: {
                   </button>
                   
                   <button
-                    onClick={() => {
-                      if (confirm(`Are you sure you want to delete the template "${template.content.title}"?\n\nThis action cannot be undone.`)) {
-                        // Handle template deletion here
-                        setTemplates(prev => prev.filter(t => t.id !== template.id));
-                        alert('Template deleted successfully.');
-                      }
-                    }}
+                    onClick={() => handleDeleteTemplate(template)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -2645,10 +2926,13 @@ export default function ContentManager() {
       
       alert('Content saved successfully to database!');
       
+      // Only clear form on successful save - trigger form reset in child component
+      // We can add a callback here to reset the form
+      
     } catch (error) {
       console.error('Save failed:', error);
       alert('Failed to save content. Please try again.\n\nNote: Your content has been preserved and not lost.');
-      // Don't reset form data on error - form content is preserved
+      // Form data is preserved automatically - no reset on error
     } finally {
       setIsSaving(false);
     }
@@ -2675,10 +2959,12 @@ export default function ContentManager() {
       
       alert('Content saved and ready for scheduling!');
       
+      // Only clear form on successful save
+      
     } catch (error) {
       console.error('Schedule save failed:', error);
       alert('Failed to save content for scheduling. Please try again.\n\nNote: Your content has been preserved and not lost.');
-      // Don't reset form data on error - form content is preserved
+      // Form data is preserved automatically - no reset on error
     } finally {
       setIsSaving(false);
     }
