@@ -1182,23 +1182,6 @@ const EnhancedContentCreationForm = ({
                 B
               </button>
               
-              <button
-                type="button"
-                onClick={() => showEmojiSelector('title')}
-                style={{
-                  padding: '6px 10px',
-                  backgroundColor: isDarkMode ? '#334155' : 'white',
-                  border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  color: isDarkMode ? '#f8fafc' : '#111827'
-                }}
-                title="Add Emoji"
-              >
-                😊
-              </button>
-              
               <div style={{
                 fontSize: '12px',
                 color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1365,24 +1348,7 @@ const EnhancedContentCreationForm = ({
               }}
               title="Add Link"
             >
-              🔗
-            </button>
-            
-            <button
-              type="button"
-              onClick={() => showEmojiSelector('description')}
-              style={{
-                padding: '6px 10px',
-                backgroundColor: isDarkMode ? '#334155' : 'white',
-                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                color: isDarkMode ? '#f8fafc' : '#111827'
-              }}
-              title="Add Emoji"
-            >
-              😊
+              Link
             </button>
             
             <div style={{
