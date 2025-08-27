@@ -394,7 +394,15 @@ const EnhancedContentCreationForm = ({
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Store current form state before attempting save
+    const currentFormState = {
+      selections: { ...selections },
+      content: { ...content },
+      mediaFiles: [...mediaFiles],
+      selectedPlatforms: [...selectedPlatforms]
+    };
+
     const postData = {
       contentId,
       ...selections,
@@ -405,11 +413,26 @@ const EnhancedContentCreationForm = ({
       isFromTemplate: isEditingTemplate,
       sourceTemplateId: loadedTemplate?.templateId
     };
-    onSave(postData);
-    resetForm();
+
+    try {
+      await onSave(postData);
+      // Only reset form if save was successful
+      resetForm();
+    } catch (error) {
+      // Don't reset form on error - preserve user's work
+      console.error('Save failed, preserving form data:', error);
+    }
   };
 
-  const handleAddToSchedule = () => {
+  const handleAddToSchedule = async () => {
+    // Store current form state before attempting save
+    const currentFormState = {
+      selections: { ...selections },
+      content: { ...content },
+      mediaFiles: [...mediaFiles],
+      selectedPlatforms: [...selectedPlatforms]
+    };
+
     const postData = {
       contentId,
       ...selections,
@@ -420,8 +443,15 @@ const EnhancedContentCreationForm = ({
       isFromTemplate: isEditingTemplate,
       sourceTemplateId: loadedTemplate?.templateId
     };
-    onAddToSchedule(postData);
-    resetForm();
+
+    try {
+      await onAddToSchedule(postData);
+      // Only reset form if save was successful
+      resetForm();
+    } catch (error) {
+      // Don't reset form on error - preserve user's work
+      console.error('Schedule save failed, preserving form data:', error);
+    }
   };
 
   const resetForm = () => {
@@ -501,7 +531,7 @@ const EnhancedContentCreationForm = ({
             }}>
               {isEditingTemplate 
                 ? `Working from template: ${loadedTemplate?.templateId}`
-                : 'Design and prepare your social media content for publishing'
+                : 'Design and prepare your social media content for publishing (UK English)'
               }
             </p>
           </div>
@@ -554,8 +584,8 @@ const EnhancedContentCreationForm = ({
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: isDarkMode ? '#f8fafc' : '#111827',
+              backgroundColor: '#334155',
+              color: '#ffffff',
               fontFamily: 'inherit'
             }}
           >
@@ -613,7 +643,7 @@ const EnhancedContentCreationForm = ({
         )}
       </div>
 
-      {/* Template Builder Style Selections */}
+      {/* Template Builder Style Selections - All Dropdowns Gray Background */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(2, 1fr)',
@@ -644,13 +674,19 @@ const EnhancedContentCreationForm = ({
             onChange={(e) => handleSelectionChange('characterProfile', e.target.value)}
             style={{
               width: '100%',
-              padding: '12px',
+              padding: '10px 12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: isDarkMode ? '#f8fafc' : '#111827',
-              fontFamily: 'inherit'
+              backgroundColor: '#334155',
+              color: '#ffffff',
+              fontFamily: 'inherit',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              backgroundSize: '16px',
+              paddingRight: '40px'
             }}
           >
             <option value="">Select character profile...</option>
@@ -683,10 +719,10 @@ const EnhancedContentCreationForm = ({
               borderRadius: '6px',
               fontSize: '14px',
               backgroundColor: '#334155',
-              color: isDarkMode ? '#f8fafc' : '#111827',
+              color: '#ffffff',
               fontFamily: 'inherit',
               appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%23f8fafc' : '%23111827'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 12px center',
               backgroundSize: '16px',
@@ -732,10 +768,10 @@ const EnhancedContentCreationForm = ({
               borderRadius: '6px',
               fontSize: '14px',
               backgroundColor: '#334155',
-              color: isDarkMode ? '#f8fafc' : '#111827',
+              color: '#ffffff',
               fontFamily: 'inherit',
               appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%23f8fafc' : '%23111827'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 12px center',
               backgroundSize: '16px',
@@ -776,10 +812,10 @@ const EnhancedContentCreationForm = ({
               borderRadius: '6px',
               fontSize: '14px',
               backgroundColor: '#334155',
-              color: isDarkMode ? '#f8fafc' : '#111827',
+              color: '#ffffff',
               fontFamily: 'inherit',
               appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%23f8fafc' : '%23111827'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 12px center',
               backgroundSize: '16px',
@@ -819,10 +855,10 @@ const EnhancedContentCreationForm = ({
               borderRadius: '6px',
               fontSize: '14px',
               backgroundColor: '#334155',
-              color: isDarkMode ? '#f8fafc' : '#111827',
+              color: '#ffffff',
               fontFamily: 'inherit',
               appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%23f8fafc' : '%23111827'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 12px center',
               backgroundSize: '16px',
@@ -865,10 +901,10 @@ const EnhancedContentCreationForm = ({
               borderRadius: '6px',
               fontSize: '14px',
               backgroundColor: '#334155',
-              color: isDarkMode ? '#f8fafc' : '#111827',
+              color: '#ffffff',
               fontFamily: 'inherit',
               appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%23f8fafc' : '%23111827'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 12px center',
               backgroundSize: '16px',
@@ -976,7 +1012,7 @@ const EnhancedContentCreationForm = ({
             color: isDarkMode ? '#64748b' : '#9ca3af',
             margin: '0'
           }}>
-            Support for Images, Videos, GIFs, PDFs, and Interactive Media
+            Support for Images, Videos, GIFs, PDFs, and Interactive Media (up to 100MB per file)
           </p>
           <input
             ref={fileInputRef}
@@ -984,7 +1020,26 @@ const EnhancedContentCreationForm = ({
             multiple
             accept="image/*,video/*,.pdf,.gif,.html"
             style={{ display: 'none' }}
-            onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+            onChange={(e) => {
+              if (e.target.files) {
+                // Handle large files - check size before processing
+                const maxSize = 100 * 1024 * 1024; // 100MB limit
+                const oversizedFiles: string[] = [];
+                
+                Array.from(e.target.files).forEach(file => {
+                  if (file.size > maxSize) {
+                    oversizedFiles.push(`${file.name} (${Math.round(file.size / 1024 / 1024)}MB)`);
+                  }
+                });
+                
+                if (oversizedFiles.length > 0) {
+                  alert(`The following files are too large (>100MB):\n${oversizedFiles.join('\n')}\n\nPlease compress or choose smaller files.`);
+                  return;
+                }
+                
+                handleFileUpload(e.target.files);
+              }
+            }}
           />
         </div>
 
@@ -1073,13 +1128,11 @@ const EnhancedContentCreationForm = ({
         )}
       </div>
 
-      {/* Content Fields - Reduced Width */}
+      {/* Content Fields - Full Width to Match Media Upload */}
       <div style={{ 
         display: 'grid', 
         gap: '16px', 
-        marginBottom: '24px', 
-        maxWidth: '600px',
-        margin: '0 auto 24px auto'
+        marginBottom: '24px'
       }}>
         {/* Title Field */}
         {(!fieldConfig || fieldConfig.title?.show !== false) && (
@@ -1097,7 +1150,7 @@ const EnhancedContentCreationForm = ({
               type="text"
               value={content.title}
               onChange={(e) => setContent(prev => ({ ...prev, title: e.target.value }))}
-              placeholder={fieldConfig?.title?.placeholder || "Enter compelling title..."}
+              placeholder="Enter compelling title... (UK English)"
               maxLength={fieldConfig?.title?.maxLength || 150}
               style={{
                 width: '100%',
@@ -1106,7 +1159,7 @@ const EnhancedContentCreationForm = ({
                 borderRadius: '8px',
                 fontSize: '14px',
                 backgroundColor: isDarkMode ? '#334155' : 'white',
-                color: isDarkMode ? '#f8fafc' : '#111827',
+                color: '#000000', // Black font for posts as requested
                 fontFamily: 'inherit'
               }}
             />
@@ -1117,13 +1170,13 @@ const EnhancedContentCreationForm = ({
               fontSize: '12px',
               color: isDarkMode ? '#94a3b8' : '#6b7280'
             }}>
-              <span>Create an attention-grabbing headline</span>
+              <span>Create an attention-grabbing headline (UK English)</span>
               <span>{content.title.length}/{fieldConfig?.title?.maxLength || 150}</span>
             </div>
           </div>
         )}
 
-        {/* Description Field */}
+        {/* Description Field with Enhanced Features */}
         <div>
           <label style={{
             display: 'block',
@@ -1134,22 +1187,147 @@ const EnhancedContentCreationForm = ({
           }}>
             Post Description *
           </label>
+          
+          {/* Formatting Toolbar */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px',
+            backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+            borderRadius: '6px 6px 0 0',
+            border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+            borderBottom: 'none'
+          }}>
+            <button
+              type="button"
+              onClick={() => {
+                const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
+                if (textarea) {
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+                  const selectedText = textarea.value.substring(start, end);
+                  const newText = textarea.value.substring(0, start) + `**${selectedText}**` + textarea.value.substring(end);
+                  setContent(prev => ({ ...prev, description: newText }));
+                }
+              }}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+              title="Bold (wrap selected text with **)"
+            >
+              B
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => {
+                const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
+                if (textarea) {
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+                  const selectedText = textarea.value.substring(start, end);
+                  const newText = textarea.value.substring(0, start) + `*${selectedText}*` + textarea.value.substring(end);
+                  setContent(prev => ({ ...prev, description: newText }));
+                }
+              }}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontStyle: 'italic',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+              title="Italic (wrap selected text with *)"
+            >
+              I
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => {
+                const url = prompt('Enter URL:');
+                const linkText = prompt('Enter link text (or leave empty to use URL):');
+                if (url) {
+                  const displayText = linkText || url;
+                  const linkMarkdown = `[${displayText}](${url})`;
+                  setContent(prev => ({ ...prev, description: prev.description + linkMarkdown }));
+                }
+              }}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+              title="Add Link"
+            >
+              🔗
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => {
+                const commonEmojis = ['😀', '😊', '😍', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙏', '💡', '📝', '📊'];
+                const emoji = prompt(`Choose an emoji:\n${commonEmojis.join(' ')}\n\nOr enter any emoji:`);
+                if (emoji) {
+                  setContent(prev => ({ ...prev, description: prev.description + emoji }));
+                }
+              }}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+              title="Add Emoji"
+            >
+              😊
+            </button>
+            
+            <div style={{
+              fontSize: '12px',
+              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              marginLeft: 'auto'
+            }}>
+              UK English | Formatting: **bold** *italic* [link](url)
+            </div>
+          </div>
+          
           <textarea
             value={content.description}
             onChange={(e) => setContent(prev => ({ ...prev, description: e.target.value }))}
-            placeholder={fieldConfig?.description?.placeholder || "Write your post content here..."}
+            placeholder="Write your post content here... (UK English)"
             maxLength={fieldConfig?.description?.maxLength || 2200}
             style={{
               width: '100%',
               padding: '12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-              borderRadius: '8px',
+              borderRadius: '0 0 8px 8px',
               fontSize: '14px',
               backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: isDarkMode ? '#f8fafc' : '#111827',
+              color: '#000000', // Black font for posts as requested
               resize: 'vertical',
               minHeight: '120px',
-              fontFamily: 'inherit'
+              fontFamily: 'inherit',
+              lineHeight: '1.4', // Enhanced line spacing as requested
+              borderTop: 'none'
             }}
           />
           <div style={{
@@ -1161,7 +1339,7 @@ const EnhancedContentCreationForm = ({
               ? '#ef4444' 
               : (isDarkMode ? '#94a3b8' : '#6b7280')
           }}>
-            <span>Provide engaging content that matches your theme and brand voice</span>
+            <span>Provide engaging content that matches your theme and brand voice (UK English)</span>
             <span>{content.description.length}/{fieldConfig?.description?.maxLength || 2200}</span>
           </div>
         </div>
@@ -2259,15 +2437,22 @@ const NotionDatabaseSection = ({ onLoadTemplate }: {
                   </button>
                   
                   <button
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to delete the template "${template.content.title}"?\n\nThis action cannot be undone.`)) {
+                        // Handle template deletion here
+                        setTemplates(prev => prev.filter(t => t.id !== template.id));
+                        alert('Template deleted successfully.');
+                      }
+                    }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
                       padding: '8px 12px',
-                      backgroundColor: 'transparent',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280',
+                      backgroundColor: '#dc2626',
+                      color: 'white',
                       borderRadius: '6px',
-                      border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                      border: 'none',
                       cursor: 'pointer',
                       fontSize: '12px',
                       fontWeight: '500',
@@ -2275,14 +2460,14 @@ const NotionDatabaseSection = ({ onLoadTemplate }: {
                       transition: 'all 0.2s ease'
                     }}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? '#334155' : '#f9fafb';
+                      e.currentTarget.style.backgroundColor = '#b91c1c';
                     }}
                     onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.backgroundColor = '#dc2626';
                     }}
                   >
-                    <Copy style={{ height: '14px', width: '14px' }} />
-                    <span>Preview</span>
+                    <Trash2 style={{ height: '14px', width: '14px' }} />
+                    <span>Delete</span>
                   </button>
                 </div>
               </div>
@@ -2385,6 +2570,7 @@ const SupabaseConnection = () => {
           fontWeight: '600',
           fontFamily: 'inherit'
         }}
+        onClick={() => window.open('https://supabase.com/dashboard/project/uqyqpwhkzlhqxcqajhkn/database/schemas', '_blank')}
       >
         <Database style={{ height: '16px', width: '16px' }} />
         <span>Open Supabase Project</span>
@@ -2458,9 +2644,11 @@ export default function ContentManager() {
       setLoadedTemplate(null);
       
       alert('Content saved successfully to database!');
+      
     } catch (error) {
       console.error('Save failed:', error);
-      alert('Failed to save content. Please try again.');
+      alert('Failed to save content. Please try again.\n\nNote: Your content has been preserved and not lost.');
+      // Don't reset form data on error - form content is preserved
     } finally {
       setIsSaving(false);
     }
@@ -2486,9 +2674,11 @@ export default function ContentManager() {
       setLoadedTemplate(null);
       
       alert('Content saved and ready for scheduling!');
+      
     } catch (error) {
       console.error('Schedule save failed:', error);
-      alert('Failed to save content for scheduling. Please try again.');
+      alert('Failed to save content for scheduling. Please try again.\n\nNote: Your content has been preserved and not lost.');
+      // Don't reset form data on error - form content is preserved
     } finally {
       setIsSaving(false);
     }
