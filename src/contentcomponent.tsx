@@ -144,17 +144,15 @@ const EnhancedContentCreationForm = ({
   platforms,
   loadedTemplate,
   onTemplateLoaded,
-  isSaving,
-  onSuccessfulSave
+  isSaving
 }: {
-  onSave: (post: Omit<ContentPost, 'id' | 'createdDate'>) => Promise<void>;
-  onAddToSchedule: (post: Omit<ContentPost, 'id' | 'createdDate'>) => Promise<void>;
+  onSave: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
+  onAddToSchedule: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
   characterProfiles: CharacterProfile[];
   platforms: SocialPlatform[];
   loadedTemplate?: NotionTemplate | null;
   onTemplateLoaded?: () => void;
   isSaving?: boolean;
-  onSuccessfulSave?: () => void;
 }) => {
   const { isDarkMode } = useTheme();
   
@@ -180,17 +178,9 @@ const EnhancedContentCreationForm = ({
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [contentId, setContentId] = useState('');
   const [isEditingTemplate, setIsEditingTemplate] = useState(false);
-  // Enhanced emoji picker state
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showTitleEmojiPicker, setShowTitleEmojiPicker] = useState(false);
-
-  // Common emojis organized by category
-  const emojiCategories = {
-    'Faces': ['😀', '😊', '😍', '🤔', '😎', '😴', '😂', '🥰', '😢', '😡', '🤗', '😱'],
-    'Gestures': ['👍', '👎', '👏', '🙏', '💪', '✋', '👌', '✌️', '🤝', '👋'],
-    'Objects': ['💡', '📝', '📊', '🔥', '⭐', '💯', '🎉', '🚀', '💎', '🔔'],
-    'Symbols': ['❤️', '💚', '💙', '💜', '🖤', '✨', '🌟', '⚡', '🎯', '🔗']
-  };
+  const [hashtagInput, setHashtagInput] = useState('');
+  const [fieldConfig, setFieldConfig] = useState<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Generate content ID (Pattern-###CC format)
   const generateContentId = () => {
@@ -405,6 +395,14 @@ const EnhancedContentCreationForm = ({
   };
 
   const handleSave = async () => {
+    // Store current form state before attempting save
+    const currentFormState = {
+      selections: { ...selections },
+      content: { ...content },
+      mediaFiles: [...mediaFiles],
+      selectedPlatforms: [...selectedPlatforms]
+    };
+
     const postData = {
       contentId,
       ...selections,
@@ -423,11 +421,18 @@ const EnhancedContentCreationForm = ({
     } catch (error) {
       // Don't reset form on error - preserve user's work
       console.error('Save failed, preserving form data:', error);
-      // Form data remains intact
     }
   };
 
   const handleAddToSchedule = async () => {
+    // Store current form state before attempting save
+    const currentFormState = {
+      selections: { ...selections },
+      content: { ...content },
+      mediaFiles: [...mediaFiles],
+      selectedPlatforms: [...selectedPlatforms]
+    };
+
     const postData = {
       contentId,
       ...selections,
@@ -446,7 +451,6 @@ const EnhancedContentCreationForm = ({
     } catch (error) {
       // Don't reset form on error - preserve user's work
       console.error('Schedule save failed, preserving form data:', error);
-      // Form data remains intact
     }
   };
 
@@ -1128,10 +1132,9 @@ const EnhancedContentCreationForm = ({
       <div style={{ 
         display: 'grid', 
         gap: '16px', 
-        marginBottom: '24px',
-        width: '100%'
+        marginBottom: '24px'
       }}>
-        {/* Title Field with Formatting */}
+        {/* Title Field */}
         {(!fieldConfig || fieldConfig.title?.show !== false) && (
           <div>
             <label style={{
@@ -1143,54 +1146,6 @@ const EnhancedContentCreationForm = ({
             }}>
               Title/Headline
             </label>
-            
-            {/* Title Formatting Toolbar */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px',
-              backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
-              borderRadius: '6px 6px 0 0',
-              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-              borderBottom: 'none'
-            }}>
-              <button
-                type="button"
-                onClick={() => {
-                  const input = document.querySelector('input[placeholder*="compelling title"]') as HTMLInputElement;
-                  if (input && input.selectionStart !== null && input.selectionEnd !== null) {
-                    const start = input.selectionStart;
-                    const end = input.selectionEnd;
-                    const selectedText = input.value.substring(start, end);
-                    const newText = input.value.substring(0, start) + `**${selectedText}**` + input.value.substring(end);
-                    setContent(prev => ({ ...prev, title: newText }));
-                  }
-                }}
-                style={{
-                  padding: '6px 10px',
-                  backgroundColor: isDarkMode ? '#334155' : 'white',
-                  border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  color: isDarkMode ? '#f8fafc' : '#111827'
-                }}
-                title="Bold (wrap selected text with **)"
-              >
-                B
-              </button>
-              
-              <div style={{
-                fontSize: '12px',
-                color: isDarkMode ? '#94a3b8' : '#6b7280',
-                marginLeft: 'auto'
-              }}>
-                UK English | **bold**
-              </div>
-            </div>
-            
             <input
               type="text"
               value={content.title}
@@ -1201,12 +1156,11 @@ const EnhancedContentCreationForm = ({
                 width: '100%',
                 padding: '12px',
                 border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '0 0 8px 8px',
+                borderRadius: '8px',
                 fontSize: '14px',
                 backgroundColor: isDarkMode ? '#334155' : 'white',
                 color: '#000000', // Black font for posts as requested
-                fontFamily: 'inherit',
-                borderTop: 'none'
+                fontFamily: 'inherit'
               }}
             />
             <div style={{
@@ -1249,7 +1203,7 @@ const EnhancedContentCreationForm = ({
               type="button"
               onClick={() => {
                 const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
-                if (textarea && textarea.selectionStart !== null && textarea.selectionEnd !== null) {
+                if (textarea) {
                   const start = textarea.selectionStart;
                   const end = textarea.selectionEnd;
                   const selectedText = textarea.value.substring(start, end);
@@ -1276,7 +1230,7 @@ const EnhancedContentCreationForm = ({
               type="button"
               onClick={() => {
                 const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
-                if (textarea && textarea.selectionStart !== null && textarea.selectionEnd !== null) {
+                if (textarea) {
                   const start = textarea.selectionStart;
                   const end = textarea.selectionEnd;
                   const selectedText = textarea.value.substring(start, end);
@@ -1302,33 +1256,6 @@ const EnhancedContentCreationForm = ({
             <button
               type="button"
               onClick={() => {
-                const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
-                if (textarea && textarea.selectionStart !== null && textarea.selectionEnd !== null) {
-                  const start = textarea.selectionStart;
-                  const end = textarea.selectionEnd;
-                  const selectedText = textarea.value.substring(start, end);
-                  const newText = textarea.value.substring(0, start) + `<u>${selectedText}</u>` + textarea.value.substring(end);
-                  setContent(prev => ({ ...prev, description: newText }));
-                }
-              }}
-              style={{
-                padding: '6px 10px',
-                backgroundColor: isDarkMode ? '#334155' : 'white',
-                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                textDecoration: 'underline',
-                color: isDarkMode ? '#f8fafc' : '#111827'
-              }}
-              title="Underline (wrap selected text with <u></u>)"
-            >
-              U
-            </button>
-            
-            <button
-              type="button"
-              onClick={() => {
                 const url = prompt('Enter URL:');
                 const linkText = prompt('Enter link text (or leave empty to use URL):');
                 if (url) {
@@ -1348,7 +1275,30 @@ const EnhancedContentCreationForm = ({
               }}
               title="Add Link"
             >
-              Link
+              🔗
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => {
+                const commonEmojis = ['😀', '😊', '😍', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙏', '💡', '📝', '📊'];
+                const emoji = prompt(`Choose an emoji:\n${commonEmojis.join(' ')}\n\nOr enter any emoji:`);
+                if (emoji) {
+                  setContent(prev => ({ ...prev, description: prev.description + emoji }));
+                }
+              }}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+              title="Add Emoji"
+            >
+              😊
             </button>
             
             <div style={{
@@ -1356,7 +1306,7 @@ const EnhancedContentCreationForm = ({
               color: isDarkMode ? '#94a3b8' : '#6b7280',
               marginLeft: 'auto'
             }}>
-              UK English | **bold** *italic* <u>underline</u> [link](url)
+              UK English | Formatting: **bold** *italic* [link](url)
             </div>
           </div>
           
@@ -2136,26 +2086,6 @@ const NotionDatabaseSection = ({ onLoadTemplate }: {
     onLoadTemplate(template);
   };
 
-  const handleDeleteTemplate = async (template: NotionTemplate) => {
-    const confirmMessage = `Are you sure you want to delete the template "${template.content.title}"?\n\nTemplate ID: ${template.templateId}\n\nThis action cannot be undone.`;
-    
-    if (confirm(confirmMessage)) {
-      try {
-        // Here you would call your Notion API to delete the template
-        // For now, we'll simulate the deletion
-        setTemplates(prev => prev.filter(t => t.id !== template.id));
-        alert(`Template "${template.content.title}" has been deleted successfully.`);
-        
-        // In a real implementation, you would call:
-        // await deleteNotionTemplate(template.id);
-        
-      } catch (error) {
-        console.error('Failed to delete template:', error);
-        alert('Failed to delete template. Please try again.');
-      }
-    }
-  };
-
   const formatTheme = (theme: string) => {
     return theme.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
@@ -2507,7 +2437,13 @@ const NotionDatabaseSection = ({ onLoadTemplate }: {
                   </button>
                   
                   <button
-                    onClick={() => handleDeleteTemplate(template)}
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to delete the template "${template.content.title}"?\n\nThis action cannot be undone.`)) {
+                        // Handle template deletion here
+                        setTemplates(prev => prev.filter(t => t.id !== template.id));
+                        alert('Template deleted successfully.');
+                      }
+                    }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -2709,13 +2645,10 @@ export default function ContentManager() {
       
       alert('Content saved successfully to database!');
       
-      // Only clear form on successful save - trigger form reset in child component
-      // We can add a callback here to reset the form
-      
     } catch (error) {
       console.error('Save failed:', error);
       alert('Failed to save content. Please try again.\n\nNote: Your content has been preserved and not lost.');
-      // Form data is preserved automatically - no reset on error
+      // Don't reset form data on error - form content is preserved
     } finally {
       setIsSaving(false);
     }
@@ -2742,12 +2675,10 @@ export default function ContentManager() {
       
       alert('Content saved and ready for scheduling!');
       
-      // Only clear form on successful save
-      
     } catch (error) {
       console.error('Schedule save failed:', error);
       alert('Failed to save content for scheduling. Please try again.\n\nNote: Your content has been preserved and not lost.');
-      // Form data is preserved automatically - no reset on error
+      // Don't reset form data on error - form content is preserved
     } finally {
       setIsSaving(false);
     }
