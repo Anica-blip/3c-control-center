@@ -940,7 +940,7 @@ const EnhancedContentCreationForm = ({
       )}
 
       {/* Media Upload */}
-      <div style={{ marginBottom: '24px' }}>
+      <div style={{ marginBottom: '24px', width: '80%' }}>
         <label style={{
           display: 'block',
           fontSize: '16px',
@@ -959,7 +959,8 @@ const EnhancedContentCreationForm = ({
             textAlign: 'center',
             cursor: 'pointer',
             backgroundColor: isDarkMode ? '#1e3a8a20' : '#f8fafc',
-            transition: 'all 0.3s ease'
+            transition: 'all 0.3s ease',
+            width: '100%'
           }}
         >
           <Upload style={{
@@ -1105,11 +1106,12 @@ const EnhancedContentCreationForm = ({
         )}
       </div>
 
-      {/* Content Fields - Full Width to Match Media Upload */}
+      {/* Content Fields - 80% Width to Match Media Upload */}
       <div style={{ 
         display: 'grid', 
         gap: '16px', 
-        marginBottom: '24px'
+        marginBottom: '24px',
+        width: '80%'
       }}>
         {/* Title Field */}
         {(!fieldConfig || fieldConfig.title?.show !== false) && (
