@@ -1168,7 +1168,13 @@ const EnhancedContentCreationForm = ({
       </div>
 
       {/* Content Fields */}
-      <div style={{ display: 'grid', gap: '16px', marginBottom: '24px', maxWidth: '800px' }}>
+      <div style={{ 
+        display: 'grid', 
+        gap: '16px', 
+        marginBottom: '24px', 
+        maxWidth: '800px',
+        margin: '0 auto 24px auto'
+      }}>
         {/* Title Field */}
         {(!fieldConfig || fieldConfig.title?.show !== false) && (
           <div>
