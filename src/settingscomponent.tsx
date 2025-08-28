@@ -915,11 +915,19 @@ function SettingsComponent() {
                             fontSize: '14px',
                             color: isDarkMode ? '#ffffff' : '#111827',
                             outline: 'none',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            WebkitAppearance: 'auto',
+                            MozAppearance: 'auto'
                           }}
                         >
-                          <option value="channel">Channel</option>
-                          <option value="group">Group</option>
+                          <option value="channel" style={{ 
+                            backgroundColor: isDarkMode ? '#334155 !important' : '#ffffff !important',
+                            color: isDarkMode ? '#ffffff !important' : '#111827 !important'
+                          }}>Channel</option>
+                          <option value="group" style={{ 
+                            backgroundColor: isDarkMode ? '#334155 !important' : '#ffffff !important',
+                            color: isDarkMode ? '#ffffff !important' : '#111827 !important'
+                          }}>Group</option>
                         </select>
                       </div>
                       
@@ -1025,56 +1033,145 @@ function SettingsComponent() {
                             alignItems: 'center',
                             justifyContent: 'space-between'
                           }}>
-                            <div>
-                              <div style={{
-                                fontWeight: 'bold',
-                                color: isDarkMode ? '#67e8f9' : '#0e7490',
-                                marginBottom: '4px'
-                              }}>
-                                {telegram.name} ({telegram.type})
+                            {editingTelegram && editingTelegram.id === telegram.id ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1' }}>
+                                <input
+                                  type="text"
+                                  value={editingTelegram.name}
+                                  onChange={(e) => setEditingTelegram(prev => ({ ...prev, name: e.target.value }))}
+                                  disabled={loading}
+                                  placeholder="Name"
+                                  style={{
+                                    padding: '8px',
+                                    backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                    border: isDarkMode ? '1px solid #4b5563' : '1px solid #67e8f9',
+                                    borderRadius: '4px',
+                                    fontSize: '14px',
+                                    color: isDarkMode ? '#ffffff' : '#111827',
+                                    width: '120px'
+                                  }}
+                                />
+                                <input
+                                  type="text"
+                                  value={editingTelegram.channel_group}
+                                  onChange={(e) => setEditingTelegram(prev => ({ ...prev, channel_group: e.target.value }))}
+                                  disabled={loading}
+                                  placeholder="Channel/Group ID"
+                                  style={{
+                                    padding: '8px',
+                                    backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                    border: isDarkMode ? '1px solid #4b5563' : '1px solid #67e8f9',
+                                    borderRadius: '4px',
+                                    fontSize: '14px',
+                                    color: isDarkMode ? '#ffffff' : '#111827',
+                                    width: '150px'
+                                  }}
+                                />
+                                <input
+                                  type="text"
+                                  value={editingTelegram.thread_id || ''}
+                                  onChange={(e) => setEditingTelegram(prev => ({ ...prev, thread_id: e.target.value }))}
+                                  disabled={loading}
+                                  placeholder="Thread ID (optional)"
+                                  style={{
+                                    padding: '8px',
+                                    backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                    border: isDarkMode ? '1px solid #4b5563' : '1px solid #67e8f9',
+                                    borderRadius: '4px',
+                                    fontSize: '14px',
+                                    color: isDarkMode ? '#ffffff' : '#111827',
+                                    width: '120px'
+                                  }}
+                                />
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <button
+                                    onClick={saveTelegramEdit}
+                                    disabled={loading}
+                                    style={{
+                                      padding: '8px 12px',
+                                      backgroundColor: loading ? '#9ca3af' : '#10b981',
+                                      color: '#ffffff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: loading ? 'not-allowed' : 'pointer',
+                                      fontSize: '12px',
+                                      fontWeight: 'bold'
+                                    }}
+                                  >
+                                    💾 {loading ? 'Saving...' : 'Save'}
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingTelegram(null)}
+                                    disabled={loading}
+                                    style={{
+                                      padding: '8px 12px',
+                                      backgroundColor: '#6b7280',
+                                      color: '#ffffff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: loading ? 'not-allowed' : 'pointer',
+                                      fontSize: '12px',
+                                      fontWeight: 'bold'
+                                    }}
+                                  >
+                                    ❌ Cancel
+                                  </button>
+                                </div>
                               </div>
-                              <div style={{
-                                fontSize: '12px',
-                                color: isDarkMode ? '#9ca3af' : '#6b7280'
-                              }}>
-                                ID: {telegram.channel_group}
-                                {telegram.thread_id && ` • Thread: ${telegram.thread_id}`}
-                              </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <button
-                                onClick={() => setEditingTelegram(telegram)}
-                                disabled={loading}
-                                style={{
-                                  padding: '8px 12px',
-                                  backgroundColor: loading ? '#9ca3af' : '#f59e0b',
-                                  color: '#ffffff',
-                                  border: 'none',
-                                  borderRadius: '4px',
-                                  cursor: loading ? 'not-allowed' : 'pointer',
-                                  fontSize: '12px',
-                                  fontWeight: 'bold'
-                                }}
-                              >
-                                ✏️ Edit
-                              </button>
-                              <button
-                                onClick={() => deleteTelegram(telegram.id)}
-                                disabled={loading}
-                                style={{
-                                  padding: '8px 12px',
-                                  backgroundColor: loading ? '#9ca3af' : '#ef4444',
-                                  color: '#ffffff',
-                                  border: 'none',
-                                  borderRadius: '4px',
-                                  cursor: loading ? 'not-allowed' : 'pointer',
-                                  fontSize: '12px',
-                                  fontWeight: 'bold'
-                                }}
-                              >
-                                🗑️ Delete
-                              </button>
-                            </div>
+                            ) : (
+                              <>
+                                <div>
+                                  <div style={{
+                                    fontWeight: 'bold',
+                                    color: isDarkMode ? '#67e8f9' : '#0e7490',
+                                    marginBottom: '4px'
+                                  }}>
+                                    {telegram.name} ({telegram.type})
+                                  </div>
+                                  <div style={{
+                                    fontSize: '12px',
+                                    color: isDarkMode ? '#9ca3af' : '#6b7280'
+                                  }}>
+                                    ID: {telegram.channel_group}
+                                    {telegram.thread_id && ` • Thread: ${telegram.thread_id}`}
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <button
+                                    onClick={() => setEditingTelegram(telegram)}
+                                    disabled={loading}
+                                    style={{
+                                      padding: '8px 12px',
+                                      backgroundColor: loading ? '#9ca3af' : '#f59e0b',
+                                      color: '#ffffff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: loading ? 'not-allowed' : 'pointer',
+                                      fontSize: '12px',
+                                      fontWeight: 'bold'
+                                    }}
+                                  >
+                                    ✏️ Edit
+                                  </button>
+                                  <button
+                                    onClick={() => deleteTelegram(telegram.id)}
+                                    disabled={loading}
+                                    style={{
+                                      padding: '8px 12px',
+                                      backgroundColor: loading ? '#9ca3af' : '#ef4444',
+                                      color: '#ffffff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: loading ? 'not-allowed' : 'pointer',
+                                      fontSize: '12px',
+                                      fontWeight: 'bold'
+                                    }}
+                                  >
+                                    🗑️ Delete
+                                  </button>
+                                </div>
+                              </>
+                            )}
                           </div>
                         ))}
                       </div>
