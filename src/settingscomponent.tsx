@@ -723,10 +723,10 @@ function SettingsComponent() {
                       Add Telegram Channel/Group
                     </h3>
                     
-                    {/* First Row - Name, Channel ID, Type */}
+                    {/* First Row - Name and Channel ID only */}
                     <div style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: '1fr 1fr 120px', 
+                      gridTemplateColumns: '1fr 1fr', 
                       gap: '16px',
                       marginBottom: '16px'
                     }}>
@@ -786,6 +786,15 @@ function SettingsComponent() {
                           }}
                         />
                       </div>
+                    </div>
+                    
+                    {/* Second Row - Type, Thread ID (conditional), and Save Button */}
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: newTelegram.type === 'group' ? '120px 1fr auto' : '120px auto',
+                      gap: '16px',
+                      alignItems: 'end'
+                    }}>
                       <div>
                         <label style={{
                           display: 'block',
@@ -808,22 +817,21 @@ function SettingsComponent() {
                             borderRadius: '6px',
                             fontSize: '14px',
                             color: isDarkMode ? '#ffffff' : '#111827',
-                            outline: 'none'
+                            outline: 'none',
+                            cursor: 'pointer'
                           }}
                         >
-                          <option value="channel">Channel</option>
-                          <option value="group">Group</option>
+                          <option value="channel" style={{ 
+                            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                            color: isDarkMode ? '#ffffff' : '#111827'
+                          }}>Channel</option>
+                          <option value="group" style={{ 
+                            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                            color: isDarkMode ? '#ffffff' : '#111827'
+                          }}>Group</option>
                         </select>
                       </div>
-                    </div>
-                    
-                    {/* Second Row - Thread ID (conditional) and Save Button */}
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: newTelegram.type === 'group' ? '1fr auto' : 'auto',
-                      gap: '16px',
-                      alignItems: 'end'
-                    }}>
+                      
                       {newTelegram.type === 'group' && (
                         <div>
                           <label style={{
@@ -854,6 +862,7 @@ function SettingsComponent() {
                           />
                         </div>
                       )}
+                      
                       <button
                         onClick={addTelegram}
                         disabled={loading || !newTelegram.name.trim() || !newTelegram.channel_group.trim()}
@@ -869,7 +878,6 @@ function SettingsComponent() {
                           display: 'flex',
                           alignItems: 'center',
                           gap: '8px',
-                          justifySelf: newTelegram.type === 'channel' ? 'end' : 'auto',
                           minWidth: '100px'
                         }}
                       >
