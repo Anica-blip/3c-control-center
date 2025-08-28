@@ -111,21 +111,32 @@ function SettingsComponent() {
       // Load Telegram configs from scheduled_posts where we store channel_group and thread_id
       const { data, error } = await supabase
         .from('scheduled_posts')
-        .select('id, channel_group, thread_id, created_at')
+        .select('id, channel_group, thread_id, post_description, created_at')
         .not('channel_group', 'is', null)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
       // Transform the data to match our state structure
-      const telegramData = (data || []).map(item => ({
-        id: item.id,
-        name: item.channel_group || 'Unnamed',
-        channel_group: item.channel_group,
-        thread_id: item.thread_id,
-        type: item.thread_id ? 'group' : 'channel',
-        created_at: item.created_at
-      }));
+      const telegramData = (data || []).map(item => {
+        // Extract name from post_description or use fallback
+        let extractedName = 'Unnamed Channel';
+        if (item.post_description) {
+          const match = item.post_description.match(/Telegram (?:channel|group): (.+)/);
+          if (match && match[1]) {
+            extractedName = match[1];
+          }
+        }
+        
+        return {
+          id: item.id,
+          name: extractedName,
+          channel_group: item.channel_group,
+          thread_id: item.thread_id,
+          type: item.thread_id ? 'group' : 'channel',
+          created_at: item.created_at
+        };
+      });
       
       setTelegramChannels(telegramData);
     } catch (error) {
