@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || '';
-const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Initialize Supabase client with error handling
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+let supabase = null;
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey);
+}
 
 function SettingsComponent() {
   const [activeTab, setActiveTab] = useState('platforms');
@@ -57,6 +61,16 @@ function SettingsComponent() {
   }, []);
 
   const loadPlatforms = async () => {
+    if (!supabase) {
+      console.warn('Supabase not configured. Using mock data.');
+      // For testing without Supabase - remove this when env vars are set
+      setPlatforms([
+        { id: 1, name: 'Facebook', url: 'https://facebook.com', is_active: true, created_at: new Date().toISOString() },
+        { id: 2, name: 'Instagram', url: 'https://instagram.com', is_active: true, created_at: new Date().toISOString() }
+      ]);
+      return;
+    }
+
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -76,6 +90,11 @@ function SettingsComponent() {
   };
 
   const loadTelegramChannels = async () => {
+    if (!supabase) {
+      console.warn('Supabase not configured. Using empty Telegram list.');
+      return;
+    }
+
     try {
       // Load Telegram configs from scheduled_posts where we store channel_group and thread_id
       const { data, error } = await supabase
@@ -108,6 +127,11 @@ function SettingsComponent() {
   
   const addPlatform = async () => {
     if (!newPlatform.name.trim() || !newPlatform.url.trim()) return;
+    
+    if (!supabase) {
+      alert('Supabase not configured. Please set up environment variables.');
+      return;
+    }
     
     try {
       setLoading(true);
