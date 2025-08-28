@@ -108,35 +108,24 @@ function SettingsComponent() {
     }
 
     try {
-      // Load Telegram configs from scheduled_posts where we store channel_group and thread_id
+      // Load Telegram configs from the proper telegram_configurations table
       const { data, error } = await supabase
-        .from('scheduled_posts')
-        .select('id, channel_group, thread_id, post_description, created_at')
-        .not('channel_group', 'is', null)
+        .from('telegram_configurations')
+        .select('id, name, channel_group_id, thread_id, type, created_at')
+        .eq('is_active', true)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
       // Transform the data to match our state structure
-      const telegramData = (data || []).map(item => {
-        // Extract name from post_description or use fallback
-        let extractedName = 'Unnamed Channel';
-        if (item.post_description) {
-          const match = item.post_description.match(/Telegram (?:channel|group): (.+)/);
-          if (match && match[1]) {
-            extractedName = match[1];
-          }
-        }
-        
-        return {
-          id: item.id,
-          name: extractedName,
-          channel_group: item.channel_group,
-          thread_id: item.thread_id,
-          type: item.thread_id ? 'group' : 'channel',
-          created_at: item.created_at
-        };
-      });
+      const telegramData = (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        channel_group: item.channel_group_id, // Map from channel_group_id to channel_group for state
+        thread_id: item.thread_id,
+        type: item.type,
+        created_at: item.created_at
+      }));
       
       setTelegramChannels(telegramData);
     } catch (error) {
@@ -329,18 +318,24 @@ function SettingsComponent() {
   const addTelegram = async () => {
     if (!newTelegram.name.trim() || !newTelegram.channel_group.trim()) return;
     
+    if (!supabase) {
+      alert('Supabase not configured. Please set up environment variables.');
+      return;
+    }
+    
     try {
       setLoading(true);
       const telegramData = {
-        channel_group: newTelegram.channel_group.trim(),
+        name: newTelegram.name.trim(),
+        channel_group_id: newTelegram.channel_group.trim(),
         thread_id: newTelegram.thread_id.trim() || null,
-        status: 'draft', // Required field for scheduled_posts
-        post_description: `Telegram ${newTelegram.type}: ${newTelegram.name.trim()}`,
-        scheduled_time: new Date().toISOString()
+        type: newTelegram.type,
+        is_active: true,
+        user_id: null // Will add user context later
       };
       
       const { data, error } = await supabase
-        .from('scheduled_posts')
+        .from('telegram_configurations')
         .insert([telegramData])
         .select()
         .single();
@@ -349,10 +344,10 @@ function SettingsComponent() {
       
       const telegramEntry = {
         id: data.id,
-        name: newTelegram.name.trim(),
-        channel_group: data.channel_group,
+        name: data.name,
+        channel_group: data.channel_group_id, // Map back to state structure
         thread_id: data.thread_id,
-        type: newTelegram.type,
+        type: data.type,
         created_at: data.created_at
       };
       
@@ -370,28 +365,38 @@ function SettingsComponent() {
   const saveTelegramEdit = async () => {
     if (!editingTelegram || !editingTelegram.name.trim() || !editingTelegram.channel_group.trim()) return;
     
+    if (!supabase) {
+      alert('Supabase not configured. Please set up environment variables.');
+      return;
+    }
+    
     try {
       setLoading(true);
+      
+      const updateData = {
+        name: editingTelegram.name.trim(),
+        channel_group_id: editingTelegram.channel_group.trim(),
+        thread_id: editingTelegram.thread_id?.trim() || null,
+        type: editingTelegram.type
+      };
+      
       const { data, error } = await supabase
-        .from('scheduled_posts')
-        .update({
-          channel_group: editingTelegram.channel_group.trim(),
-          thread_id: editingTelegram.thread_id.trim() || null,
-          post_description: `Telegram ${editingTelegram.type}: ${editingTelegram.name.trim()}`,
-          updated_at: new Date().toISOString()
-        })
+        .from('telegram_configurations')
+        .update(updateData)
         .eq('id', editingTelegram.id)
         .select()
         .single();
       
       if (error) throw error;
       
+      // Update local state
       setTelegramChannels(prev => prev.map(t => 
         t.id === editingTelegram.id ? {
           ...t,
-          name: editingTelegram.name.trim(),
-          channel_group: data.channel_group,
-          thread_id: data.thread_id
+          name: data.name,
+          channel_group: data.channel_group_id,
+          thread_id: data.thread_id,
+          type: data.type
         } : t
       ));
       setEditingTelegram(null);
@@ -407,11 +412,35 @@ function SettingsComponent() {
   const deleteTelegram = async (id) => {
     if (!window.confirm('Are you sure you want to delete this Telegram channel/group?')) return;
     
+    if (!supabase) {
+      alert('Supabase not configured. Please set up environment variables.');
+      return;
+    }
+    
     try {
       setLoading(true);
+      console.log('Attempting to delete Telegram config with ID:', id);
+      
+      // Check if record exists first
+      const { data: existingRecord, error: checkError } = await supabase
+        .from('telegram_configurations')
+        .select('id, name')
+        .eq('id', id)
+        .single();
+      
+      if (checkError) {
+        console.error('Record not found or error checking:', checkError);
+        // If record doesn't exist, just remove from UI state
+        setTelegramChannels(prev => prev.filter(t => t.id !== id));
+        alert('Record removed from display (was not found in database)');
+        return;
+      }
+      
+      console.log('Found record to delete:', existingRecord);
+      
       const { error } = await supabase
-        .from('scheduled_posts')
-        .delete()
+        .from('telegram_configurations')
+        .update({ is_active: false })
         .eq('id', id);
       
       if (error) throw error;
@@ -420,7 +449,11 @@ function SettingsComponent() {
       alert('Telegram channel/group deleted successfully!');
     } catch (error) {
       console.error('Error deleting Telegram channel:', error);
-      alert('Error deleting Telegram channel. Please try again.');
+      console.error('Error details:', error.message, error.details);
+      
+      // Remove from UI anyway if it's an old record that doesn't exist in new table
+      setTelegramChannels(prev => prev.filter(t => t.id !== id));
+      alert('Removed from display. Check console for details.');
     } finally {
       setLoading(false);
     }
