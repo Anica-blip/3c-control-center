@@ -49,14 +49,14 @@ function SettingsComponent() {
   });
   const [editingTelegram, setEditingTelegram] = useState(null);
   
-  // Character Profiles State - Updated field mapping
+  // Character Profiles State - Fixed field mapping
   const [characters, setCharacters] = useState([]);
   const [newCharacter, setNewCharacter] = useState({ 
     name: '', 
     username: '', 
-    role: '',      // Changed from 'title' to match database
-    description: '', // Changed from 'bio' to match database
-    avatar_id: null  // Changed from 'image' to match database
+    role: '',        // Matches database column
+    description: '', // Matches database column  
+    image: null      // For UI preview (will convert to avatar_id)
   });
   const [editingCharacter, setEditingCharacter] = useState(null);
   
@@ -317,17 +317,19 @@ function SettingsComponent() {
     try {
       setLoading(true);
       
-      // TODO: Handle image upload to Supabase Storage properly
-      // For now, we'll store null and handle images later
+      // For now, store base64 image as placeholder until we implement Supabase Storage
+      // TODO: Upload to Supabase Storage and get UUID
       const characterData = {
         name: newCharacter.name.trim(),
         username: newCharacter.username.trim(),
-        role: newCharacter.role.trim(), // Maps to 'role' in database
-        description: newCharacter.description.trim(), // Maps to 'description' in database
+        role: newCharacter.role.trim() || null,           // Exact database column name
+        description: newCharacter.description.trim() || null, // Exact database column name
         avatar_id: null, // TODO: Upload image to Storage and get UUID
         is_active: true,
-        user_id: null // Will add user context later
+        user_id: null    // Set to null for now, can be removed later if not needed
       };
+      
+      console.log('Saving character data:', characterData); // Debug log
       
       const { data, error } = await supabase
         .from('character_profiles')
@@ -337,8 +339,14 @@ function SettingsComponent() {
       
       if (error) throw error;
       
-      setCharacters(prev => [data, ...prev]);
-      setNewCharacter({ name: '', username: '', role: '', description: '', avatar_id: null });
+      // Add the uploaded image back to the data for UI display
+      const characterWithImage = {
+        ...data,
+        image: newCharacter.image // Keep the base64 image for UI display
+      };
+      
+      setCharacters(prev => [characterWithImage, ...prev]);
+      setNewCharacter({ name: '', username: '', role: '', description: '', image: null });
       alert('Character profile created successfully!');
     } catch (error) {
       console.error('Error adding character:', error);
@@ -362,10 +370,12 @@ function SettingsComponent() {
       const updateData = {
         name: editingCharacter.name.trim(),
         username: editingCharacter.username.trim(), 
-        role: editingCharacter.role.trim(),
-        description: editingCharacter.description.trim()
+        role: editingCharacter.role?.trim() || null,           // Exact database column name
+        description: editingCharacter.description?.trim() || null // Exact database column name
         // TODO: Handle avatar_id updates when image upload is implemented
       };
+      
+      console.log('Updating character data:', updateData); // Debug log
       
       const { data, error } = await supabase
         .from('character_profiles')
@@ -1647,9 +1657,12 @@ function SettingsComponent() {
                                 color: isDarkMode ? '#c4b5fd' : '#7c3aed',
                                 fontWeight: 'bold',
                                 border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd',
-                                flexShrink: 0
+                                flexShrink: 0,
+                                backgroundImage: character.image ? `url(${character.image})` : 'none',
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center'
                               }}>
-                                {character.name.charAt(0)}
+                                {!character.image && character.name.charAt(0)}
                               </div>
                               <div style={{ flex: '1', display: 'grid', gap: '8px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -1767,9 +1780,12 @@ function SettingsComponent() {
                                 color: isDarkMode ? '#c4b5fd' : '#7c3aed',
                                 fontWeight: 'bold',
                                 border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd',
-                                flexShrink: 0
+                                flexShrink: 0,
+                                backgroundImage: character.image ? `url(${character.image})` : 'none',
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center'
                               }}>
-                                {character.name.charAt(0)}
+                                {!character.image && character.name.charAt(0)}
                               </div>
                               <div style={{ flex: '1' }}>
                                 <div style={{ marginBottom: '4px' }}>
