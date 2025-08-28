@@ -49,14 +49,14 @@ function SettingsComponent() {
   });
   const [editingTelegram, setEditingTelegram] = useState(null);
   
-  // Character Profiles State - EMPTY for now (will handle in next step)
+  // Character Profiles State - Updated field mapping
   const [characters, setCharacters] = useState([]);
   const [newCharacter, setNewCharacter] = useState({ 
     name: '', 
     username: '', 
-    role: '', 
-    description: '', 
-    avatar_url: null
+    role: '',      // Changed from 'title' to match database
+    description: '', // Changed from 'bio' to match database
+    avatar_id: null  // Changed from 'image' to match database
   });
   const [editingCharacter, setEditingCharacter] = useState(null);
   
@@ -70,6 +70,7 @@ function SettingsComponent() {
   useEffect(() => {
     loadPlatforms();
     loadTelegramChannels();
+    loadCharacters(); // Add character profiles loading
   }, []);
 
   const loadPlatforms = async () => {
@@ -98,6 +99,26 @@ function SettingsComponent() {
       alert('Error loading platforms. Please refresh.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCharacters = async () => {
+    if (!supabase) {
+      console.warn('Supabase not configured. Using empty character list.');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('character_profiles')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setCharacters(data || []);
+    } catch (error) {
+      console.error('Error loading characters:', error);
     }
   };
 
@@ -285,34 +306,114 @@ function SettingsComponent() {
   // CHARACTER PROFILES FUNCTIONS
   // =============================================================================
   
-  const addCharacter = () => {
+  const addCharacter = async () => {
     if (!newCharacter.name.trim() || !newCharacter.username.trim()) return;
-    const character = {
-      id: Date.now(),
-      name: newCharacter.name.trim(),
-      username: newCharacter.username.trim(),
-      title: newCharacter.title.trim(),
-      bio: newCharacter.bio.trim(),
-      image: newCharacter.image,
-      created_at: new Date().toISOString()
-    };
-    setCharacters(prev => [...prev, character]);
-    setNewCharacter({ name: '', username: '', title: '', bio: '', image: null });
-    console.log('Save to Supabase character_profiles table:', character);
+    
+    if (!supabase) {
+      alert('Supabase not configured. Please set up environment variables.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // TODO: Handle image upload to Supabase Storage properly
+      // For now, we'll store null and handle images later
+      const characterData = {
+        name: newCharacter.name.trim(),
+        username: newCharacter.username.trim(),
+        role: newCharacter.role.trim(), // Maps to 'role' in database
+        description: newCharacter.description.trim(), // Maps to 'description' in database
+        avatar_id: null, // TODO: Upload image to Storage and get UUID
+        is_active: true,
+        user_id: null // Will add user context later
+      };
+      
+      const { data, error } = await supabase
+        .from('character_profiles')
+        .insert([characterData])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      setCharacters(prev => [data, ...prev]);
+      setNewCharacter({ name: '', username: '', role: '', description: '', avatar_id: null });
+      alert('Character profile created successfully!');
+    } catch (error) {
+      console.error('Error adding character:', error);
+      alert('Error creating character profile. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const saveCharacterEdit = () => {
+  const saveCharacterEdit = async () => {
     if (!editingCharacter || !editingCharacter.name.trim() || !editingCharacter.username.trim()) return;
-    setCharacters(prev => prev.map(c => 
-      c.id === editingCharacter.id ? { ...editingCharacter } : c
-    ));
-    setEditingCharacter(null);
-    console.log('Update in Supabase character_profiles table:', editingCharacter);
+    
+    if (!supabase) {
+      alert('Supabase not configured. Please set up environment variables.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      const updateData = {
+        name: editingCharacter.name.trim(),
+        username: editingCharacter.username.trim(), 
+        role: editingCharacter.role.trim(),
+        description: editingCharacter.description.trim()
+        // TODO: Handle avatar_id updates when image upload is implemented
+      };
+      
+      const { data, error } = await supabase
+        .from('character_profiles')
+        .update(updateData)
+        .eq('id', editingCharacter.id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      setCharacters(prev => prev.map(c => 
+        c.id === editingCharacter.id ? data : c
+      ));
+      setEditingCharacter(null);
+      alert('Character profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating character:', error);
+      alert('Error updating character profile. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteCharacter = (id) => {
-    setCharacters(prev => prev.filter(c => c.id !== id));
-    console.log('Delete from Supabase character_profiles table, ID:', id);
+  const deleteCharacter = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this character profile?')) return;
+    
+    if (!supabase) {
+      alert('Supabase not configured. Please set up environment variables.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('character_profiles')
+        .update({ is_active: false })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setCharacters(prev => prev.filter(c => c.id !== id));
+      alert('Character profile deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting character:', error);
+      alert('Error deleting character profile. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
   
   const addTelegram = async () => {
@@ -1462,23 +1563,23 @@ function SettingsComponent() {
                     <div style={{ textAlign: 'right' }}>
                       <button
                         onClick={addCharacter}
-                        disabled={!newCharacter.name.trim() || !newCharacter.username.trim()}
+                        disabled={loading || !newCharacter.name.trim() || !newCharacter.username.trim()}
                         style={{
                           padding: '12px 20px',
-                          backgroundColor: (newCharacter.name.trim() && newCharacter.username.trim()) ? '#8b5cf6' : '#9ca3af',
+                          backgroundColor: (newCharacter.name.trim() && newCharacter.username.trim() && !loading) ? '#8b5cf6' : '#9ca3af',
                           color: '#ffffff',
                           border: 'none',
                           borderRadius: '6px',
                           fontSize: '14px',
                           fontWeight: 'bold',
-                          cursor: (newCharacter.name.trim() && newCharacter.username.trim()) ? 'pointer' : 'not-allowed',
+                          cursor: (newCharacter.name.trim() && newCharacter.username.trim() && !loading) ? 'pointer' : 'not-allowed',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '8px'
                         }}
                       >
-                        <span>💾</span>
-                        Save
+                        {loading ? '⏳' : '💾'}
+                        {loading ? 'Saving...' : 'Save'}
                       </button>
                     </div>
                   </div>
@@ -1568,14 +1669,14 @@ function SettingsComponent() {
                                 {character.username}
                               </span>
                             </div>
-                            {character.title && (
+                            {character.role && (
                               <div style={{
                                 fontSize: '14px',
                                 color: isDarkMode ? '#c4b5fd' : '#7c3aed',
                                 fontWeight: 'bold',
                                 marginBottom: '8px'
                               }}>
-                                {character.title}
+                                {character.role}
                               </div>
                             )}
                             <p style={{
@@ -1584,7 +1685,7 @@ function SettingsComponent() {
                               fontSize: '14px',
                               lineHeight: '1.4'
                             }}>
-                              {character.bio}
+                              {character.description || 'No description provided'}
                             </p>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
