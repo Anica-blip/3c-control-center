@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client with error handling
+// Initialize Supabase client with debugging
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+// Debug environment variables
+console.log('Environment check:', {
+  url: !!supabaseUrl,
+  key: !!supabaseKey,
+  urlValue: supabaseUrl ? 'set' : 'missing',
+  keyValue: supabaseKey ? 'set' : 'missing',
+  allEnvVars: Object.keys(import.meta.env).filter(key => key.includes('SUPABASE'))
+});
 
 let supabase = null;
 if (supabaseUrl && supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey);
-  console.log('Supabase initialized with URL:', supabaseUrl);
+  console.log('Supabase client created successfully');
 } else {
-  console.error('Missing Supabase environment variables:', { 
-    url: !!supabaseUrl, 
-    key: !!supabaseKey 
-  });
+  console.error('Missing Supabase environment variables');
 }
 
 function SettingsComponent() {
@@ -221,8 +227,93 @@ function SettingsComponent() {
   };
 
   // =============================================================================
-  // TELEGRAM FUNCTIONS (using scheduled_posts table)
+  // IMAGE PROCESSING FUNCTION
   // =============================================================================
+  
+  const resizeImage = (file, maxWidth = 200, maxHeight = 200) => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        const resizedImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(resizedImageDataUrl);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleImageUpload = async (file, isEditing = false) => {
+    if (file && file.type.startsWith('image/')) {
+      try {
+        const resizedImage = await resizeImage(file);
+        
+        if (isEditing) {
+          setEditingCharacter(prev => ({ ...prev, image: resizedImage }));
+        } else {
+          setNewCharacter(prev => ({ ...prev, image: resizedImage }));
+        }
+      } catch (error) {
+        console.error('Error processing image:', error);
+        alert('Error processing image. Please try again.');
+      }
+    } else {
+      alert('Please select a valid image file (JPG, PNG, GIF, etc.)');
+    }
+  };
+
+  // =============================================================================
+  // CHARACTER PROFILES FUNCTIONS
+  // =============================================================================
+  
+  const addCharacter = () => {
+    if (!newCharacter.name.trim() || !newCharacter.username.trim()) return;
+    const character = {
+      id: Date.now(),
+      name: newCharacter.name.trim(),
+      username: newCharacter.username.trim(),
+      title: newCharacter.title.trim(),
+      bio: newCharacter.bio.trim(),
+      image: newCharacter.image,
+      created_at: new Date().toISOString()
+    };
+    setCharacters(prev => [...prev, character]);
+    setNewCharacter({ name: '', username: '', title: '', bio: '', image: null });
+    console.log('Save to Supabase character_profiles table:', character);
+  };
+
+  const saveCharacterEdit = () => {
+    if (!editingCharacter || !editingCharacter.name.trim() || !editingCharacter.username.trim()) return;
+    setCharacters(prev => prev.map(c => 
+      c.id === editingCharacter.id ? { ...editingCharacter } : c
+    ));
+    setEditingCharacter(null);
+    console.log('Update in Supabase character_profiles table:', editingCharacter);
+  };
+
+  const deleteCharacter = (id) => {
+    setCharacters(prev => prev.filter(c => c.id !== id));
+    console.log('Delete from Supabase character_profiles table, ID:', id);
+  };
   
   const addTelegram = async () => {
     if (!newTelegram.name.trim() || !newTelegram.channel_group.trim()) return;
@@ -818,33 +909,17 @@ function SettingsComponent() {
                           style={{
                             width: '100%',
                             padding: '12px',
-                            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                            backgroundColor: isDarkMode ? '#334155' : '#ffffff',
                             border: isDarkMode ? '1px solid #4b5563' : '1px solid #67e8f9',
                             borderRadius: '6px',
                             fontSize: '14px',
                             color: isDarkMode ? '#ffffff' : '#111827',
                             outline: 'none',
-                            cursor: 'pointer',
-                            WebkitAppearance: 'none',
-                            MozAppearance: 'none',
-                            appearance: 'none',
-                            backgroundImage: isDarkMode 
-                              ? `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`
-                              : `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111827' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                            backgroundRepeat: 'no-repeat',
-                            backgroundPosition: 'right 12px center',
-                            backgroundSize: '16px',
-                            paddingRight: '40px'
+                            cursor: 'pointer'
                           }}
                         >
-                          <option value="channel" style={{ 
-                            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
-                            color: isDarkMode ? '#ffffff' : '#111827'
-                          }}>Channel</option>
-                          <option value="group" style={{ 
-                            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
-                            color: isDarkMode ? '#ffffff' : '#111827'
-                          }}>Group</option>
+                          <option value="channel">Channel</option>
+                          <option value="group">Group</option>
                         </select>
                       </div>
                       
@@ -1009,31 +1084,405 @@ function SettingsComponent() {
               </div>
             )}
 
-            {/* CHARACTER PROFILES TAB - Placeholder for next step */}
+            {/* 2. CHARACTER PROFILES TAB */}
             {activeTab === 'characters' && (
               <div style={{
-                padding: '64px',
-                textAlign: 'center',
-                backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.3)' : 'rgba(255, 255, 255, 0.5)',
-                borderRadius: '8px',
-                border: isDarkMode ? '2px dashed #a855f7' : '2px dashed #c4b5fd'
+                padding: '32px',
+                border: '2px solid #8b5cf6',
+                borderRadius: '12px',
+                background: isDarkMode 
+                  ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%)'
+                  : 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)'
               }}>
                 <h2 style={{
                   fontSize: '24px',
                   fontWeight: 'bold',
                   color: isDarkMode ? '#c4b5fd' : '#7c3aed',
-                  marginBottom: '16px',
-                  margin: '0 0 16px 0'
+                  marginBottom: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  margin: '0 0 24px 0'
                 }}>
-                  Character Profiles - Coming Next
+                  <span style={{ fontSize: '28px' }}>👥</span>
+                  Character Profiles
                 </h2>
-                <p style={{ 
-                  color: isDarkMode ? '#9ca3af' : '#9ca3af', 
-                  fontSize: '14px',
-                  margin: '0'
+                
+                {/* Add New Character Form */}
+                <div style={{
+                  padding: '24px',
+                  backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.5)' : 'rgba(255, 255, 255, 0.8)',
+                  borderRadius: '8px',
+                  border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+                  marginBottom: '32px'
                 }}>
-                  This section will be completed in the next step after platforms are working
-                </p>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    margin: '0 0 16px 0'
+                  }}>
+                    <span>➕</span>
+                    Add Profile
+                  </h3>
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                          marginBottom: '8px'
+                        }}>
+                          Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newCharacter.name}
+                          onChange={(e) => setNewCharacter(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="e.g., Dr. Sarah Chen"
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                            border: isDarkMode ? '1px solid #4b5563' : '1px solid #c4b5fd',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            color: isDarkMode ? '#ffffff' : '#111827',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                          marginBottom: '8px'
+                        }}>
+                          Username
+                        </label>
+                        <input
+                          type="text"
+                          value={newCharacter.username}
+                          onChange={(e) => setNewCharacter(prev => ({ ...prev, username: e.target.value }))}
+                          placeholder="e.g., @drsarahchen"
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                            border: isDarkMode ? '1px solid #4b5563' : '1px solid #c4b5fd',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            color: isDarkMode ? '#ffffff' : '#111827',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                        marginBottom: '8px'
+                      }}>
+                        Title
+                      </label>
+                      <input
+                        type="text"
+                        value={newCharacter.title}
+                        onChange={(e) => setNewCharacter(prev => ({ ...prev, title: e.target.value }))}
+                        placeholder="e.g., Wellness Expert & Mindfulness Coach"
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                          border: isDarkMode ? '1px solid #4b5563' : '1px solid #c4b5fd',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          color: isDarkMode ? '#ffffff' : '#111827',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                        marginBottom: '8px'
+                      }}>
+                        Bio
+                      </label>
+                      <textarea
+                        value={newCharacter.bio}
+                        onChange={(e) => setNewCharacter(prev => ({ ...prev, bio: e.target.value }))}
+                        placeholder="Detailed bio and expertise description..."
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                          border: isDarkMode ? '1px solid #4b5563' : '1px solid #c4b5fd',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          color: isDarkMode ? '#ffffff' : '#111827',
+                          minHeight: '80px',
+                          resize: 'vertical',
+                          outline: 'none',
+                          fontFamily: 'inherit'
+                        }}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                        marginBottom: '8px'
+                      }}>
+                        Upload Profile Image
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              handleImageUpload(file, false);
+                            }
+                          }}
+                          style={{
+                            flex: '1',
+                            padding: '12px',
+                            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                            border: isDarkMode ? '1px solid #4b5563' : '1px solid #c4b5fd',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            color: isDarkMode ? '#ffffff' : '#111827',
+                            outline: 'none'
+                          }}
+                        />
+                        {newCharacter.image && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <img
+                              src={newCharacter.image}
+                              alt="Preview"
+                              style={{
+                                width: '64px',
+                                height: '64px',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd'
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setNewCharacter(prev => ({ ...prev, image: null }))}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: '#ef4444',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <p style={{
+                        marginTop: '8px',
+                        fontSize: '12px',
+                        color: isDarkMode ? '#9ca3af' : '#6b7280',
+                        margin: '8px 0 0 0'
+                      }}>
+                        Upload an image from your computer. It will be automatically resized to fit 200x200 pixels.
+                      </p>
+                    </div>
+                    
+                    <div style={{ textAlign: 'right' }}>
+                      <button
+                        onClick={addCharacter}
+                        disabled={!newCharacter.name.trim() || !newCharacter.username.trim()}
+                        style={{
+                          padding: '12px 20px',
+                          backgroundColor: (newCharacter.name.trim() && newCharacter.username.trim()) ? '#8b5cf6' : '#9ca3af',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          cursor: (newCharacter.name.trim() && newCharacter.username.trim()) ? 'pointer' : 'not-allowed',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <span>💾</span>
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Characters List */}
+                <div>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    margin: '0 0 16px 0'
+                  }}>
+                    <span>📋</span>
+                    Your Character Profiles ({characters.length})
+                  </h3>
+                  {characters.length === 0 ? (
+                    <div style={{
+                      padding: '48px',
+                      textAlign: 'center',
+                      backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.3)' : 'rgba(255, 255, 255, 0.5)',
+                      borderRadius: '8px',
+                      border: isDarkMode ? '2px dashed #a855f7' : '2px dashed #c4b5fd'
+                    }}>
+                      <p style={{ 
+                        color: isDarkMode ? '#d1d5db' : '#6b7280', 
+                        fontSize: '16px', 
+                        marginBottom: '8px',
+                        margin: '0 0 8px 0'
+                      }}>No character profiles created yet</p>
+                      <p style={{ 
+                        color: isDarkMode ? '#9ca3af' : '#9ca3af', 
+                        fontSize: '14px',
+                        margin: '0'
+                      }}>Use the form above to create your first character profile</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: '16px' }}>
+                      {characters.map(character => (
+                        <div key={character.id} style={{
+                          padding: '24px',
+                          backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                          borderRadius: '8px',
+                          border: isDarkMode ? '1px solid #374151' : '1px solid #c4b5fd',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '16px'
+                        }}>
+                          <div style={{
+                            width: '80px',
+                            height: '80px',
+                            borderRadius: '50%',
+                            backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '32px',
+                            color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                            fontWeight: 'bold',
+                            border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd',
+                            flexShrink: 0,
+                            backgroundImage: character.image ? `url(${character.image})` : 'none',
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center'
+                          }}>
+                            {!character.image && character.name.charAt(0)}
+                          </div>
+                          <div style={{ flex: '1' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                              <h4 style={{
+                                margin: '0',
+                                color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                                fontSize: '18px',
+                                fontWeight: 'bold'
+                              }}>
+                                {character.name}
+                              </h4>
+                              <span style={{
+                                fontSize: '14px',
+                                color: isDarkMode ? '#9ca3af' : '#6b7280',
+                                fontStyle: 'italic'
+                              }}>
+                                {character.username}
+                              </span>
+                            </div>
+                            {character.title && (
+                              <div style={{
+                                fontSize: '14px',
+                                color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                                fontWeight: 'bold',
+                                marginBottom: '8px'
+                              }}>
+                                {character.title}
+                              </div>
+                            )}
+                            <p style={{
+                              margin: '0',
+                              color: isDarkMode ? '#d1d5db' : '#6b7280',
+                              fontSize: '14px',
+                              lineHeight: '1.4'
+                            }}>
+                              {character.bio}
+                            </p>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <button
+                              onClick={() => setEditingCharacter(character)}
+                              style={{
+                                padding: '8px 12px',
+                                backgroundColor: '#f59e0b',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              onClick={() => deleteCharacter(character.id)}
+                              style={{
+                                padding: '8px 12px',
+                                backgroundColor: '#ef4444',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
