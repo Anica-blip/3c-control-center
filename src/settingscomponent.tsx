@@ -1624,102 +1624,226 @@ function SettingsComponent() {
                     <div style={{ display: 'grid', gap: '16px' }}>
                       {characters.map(character => (
                         <div key={character.id} style={{
-                          padding: '24px',
+                          padding: '16px',
                           backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)',
                           borderRadius: '8px',
                           border: isDarkMode ? '1px solid #374151' : '1px solid #c4b5fd',
                           display: 'flex',
                           alignItems: 'flex-start',
-                          gap: '16px'
+                          gap: '12px'
                         }}>
-                          <div style={{
-                            width: '80px',
-                            height: '80px',
-                            borderRadius: '50%',
-                            backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '32px',
-                            color: isDarkMode ? '#c4b5fd' : '#7c3aed',
-                            fontWeight: 'bold',
-                            border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd',
-                            flexShrink: 0,
-                            backgroundImage: character.image ? `url(${character.image})` : 'none',
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center'
-                          }}>
-                            {!character.image && character.name.charAt(0)}
-                          </div>
-                          <div style={{ flex: '1' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                              <h4 style={{
-                                margin: '0',
-                                color: isDarkMode ? '#c4b5fd' : '#7c3aed',
-                                fontSize: '18px',
-                                fontWeight: 'bold'
-                              }}>
-                                {character.name}
-                              </h4>
-                              <span style={{
-                                fontSize: '14px',
-                                color: isDarkMode ? '#9ca3af' : '#6b7280',
-                                fontStyle: 'italic'
-                              }}>
-                                {character.username}
-                              </span>
-                            </div>
-                            {character.role && (
+                          {editingCharacter && editingCharacter.id === character.id ? (
+                            // EDIT MODE
+                            <>
                               <div style={{
-                                fontSize: '14px',
+                                width: '60px',
+                                height: '60px',
+                                borderRadius: '50%',
+                                backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '24px',
                                 color: isDarkMode ? '#c4b5fd' : '#7c3aed',
                                 fontWeight: 'bold',
-                                marginBottom: '8px'
+                                border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd',
+                                flexShrink: 0
                               }}>
-                                {character.role}
+                                {character.name.charAt(0)}
                               </div>
-                            )}
-                            <p style={{
-                              margin: '0',
-                              color: isDarkMode ? '#d1d5db' : '#6b7280',
-                              fontSize: '14px',
-                              lineHeight: '1.4'
-                            }}>
-                              {character.description || 'No description provided'}
-                            </p>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <button
-                              onClick={() => setEditingCharacter(character)}
-                              style={{
-                                padding: '8px 12px',
-                                backgroundColor: '#f59e0b',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                fontWeight: 'bold'
-                              }}
-                            >
-                              ✏️ Edit
-                            </button>
-                            <button
-                              onClick={() => deleteCharacter(character.id)}
-                              style={{
-                                padding: '8px 12px',
-                                backgroundColor: '#ef4444',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                fontWeight: 'bold'
-                              }}
-                            >
-                              🗑️ Delete
-                            </button>
-                          </div>
+                              <div style={{ flex: '1', display: 'grid', gap: '8px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                  <input
+                                    type="text"
+                                    value={editingCharacter.name}
+                                    onChange={(e) => setEditingCharacter(prev => ({ ...prev, name: e.target.value }))}
+                                    disabled={loading}
+                                    placeholder="Name"
+                                    style={{
+                                      padding: '6px 8px',
+                                      backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                      border: isDarkMode ? '1px solid #4b5563' : '1px solid #c4b5fd',
+                                      borderRadius: '4px',
+                                      fontSize: '13px',
+                                      color: isDarkMode ? '#ffffff' : '#111827'
+                                    }}
+                                  />
+                                  <input
+                                    type="text"
+                                    value={editingCharacter.username}
+                                    onChange={(e) => setEditingCharacter(prev => ({ ...prev, username: e.target.value }))}
+                                    disabled={loading}
+                                    placeholder="@username"
+                                    style={{
+                                      padding: '6px 8px',
+                                      backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                      border: isDarkMode ? '1px solid #4b5563' : '1px solid #c4b5fd',
+                                      borderRadius: '4px',
+                                      fontSize: '13px',
+                                      color: isDarkMode ? '#ffffff' : '#111827'
+                                    }}
+                                  />
+                                </div>
+                                <input
+                                  type="text"
+                                  value={editingCharacter.role || ''}
+                                  onChange={(e) => setEditingCharacter(prev => ({ ...prev, role: e.target.value }))}
+                                  disabled={loading}
+                                  placeholder="Role/Title"
+                                  style={{
+                                    padding: '6px 8px',
+                                    backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                    border: isDarkMode ? '1px solid #4b5563' : '1px solid #c4b5fd',
+                                    borderRadius: '4px',
+                                    fontSize: '13px',
+                                    color: isDarkMode ? '#ffffff' : '#111827'
+                                  }}
+                                />
+                                <textarea
+                                  value={editingCharacter.description || ''}
+                                  onChange={(e) => setEditingCharacter(prev => ({ ...prev, description: e.target.value }))}
+                                  disabled={loading}
+                                  placeholder="Description/Bio"
+                                  style={{
+                                    padding: '6px 8px',
+                                    backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                    border: isDarkMode ? '1px solid #4b5563' : '1px solid #c4b5fd',
+                                    borderRadius: '4px',
+                                    fontSize: '13px',
+                                    color: isDarkMode ? '#ffffff' : '#111827',
+                                    minHeight: '50px',
+                                    resize: 'vertical',
+                                    fontFamily: 'inherit'
+                                  }}
+                                />
+                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                  <button
+                                    onClick={saveCharacterEdit}
+                                    disabled={loading}
+                                    style={{
+                                      padding: '6px 12px',
+                                      backgroundColor: loading ? '#9ca3af' : '#10b981',
+                                      color: '#ffffff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: loading ? 'not-allowed' : 'pointer',
+                                      fontSize: '11px',
+                                      fontWeight: 'bold'
+                                    }}
+                                  >
+                                    {loading ? 'Saving...' : 'Save'}
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingCharacter(null)}
+                                    disabled={loading}
+                                    style={{
+                                      padding: '6px 12px',
+                                      backgroundColor: '#6b7280',
+                                      color: '#ffffff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: loading ? 'not-allowed' : 'pointer',
+                                      fontSize: '11px',
+                                      fontWeight: 'bold'
+                                    }}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            // DISPLAY MODE
+                            <>
+                              <div style={{
+                                width: '60px',
+                                height: '60px',
+                                borderRadius: '50%',
+                                backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '24px',
+                                color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                                fontWeight: 'bold',
+                                border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd',
+                                flexShrink: 0
+                              }}>
+                                {character.name.charAt(0)}
+                              </div>
+                              <div style={{ flex: '1' }}>
+                                <div style={{ marginBottom: '4px' }}>
+                                  <span style={{
+                                    color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                                    fontSize: '15px',
+                                    fontWeight: 'bold'
+                                  }}>
+                                    {character.name}
+                                  </span>
+                                  <span style={{
+                                    fontSize: '13px',
+                                    color: isDarkMode ? '#9ca3af' : '#6b7280',
+                                    fontStyle: 'italic',
+                                    marginLeft: '8px'
+                                  }}>
+                                    {character.username}
+                                  </span>
+                                </div>
+                                {character.role && (
+                                  <div style={{
+                                    fontSize: '12px',
+                                    color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                                    fontWeight: 'bold',
+                                    marginBottom: '4px'
+                                  }}>
+                                    {character.role}
+                                  </div>
+                                )}
+                                <p style={{
+                                  margin: '0',
+                                  color: isDarkMode ? '#d1d5db' : '#6b7280',
+                                  fontSize: '12px',
+                                  lineHeight: '1.4'
+                                }}>
+                                  {character.description || 'No description provided'}
+                                </p>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <button
+                                  onClick={() => setEditingCharacter(character)}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '6px 10px',
+                                    backgroundColor: loading ? '#9ca3af' : '#f59e0b',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    fontSize: '11px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => deleteCharacter(character.id)}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '6px 10px',
+                                    backgroundColor: loading ? '#9ca3af' : '#ef4444',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    fontSize: '11px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </>
+                          )}
                         </div>
                       ))}
                     </div>
