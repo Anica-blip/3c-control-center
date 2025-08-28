@@ -8,6 +8,12 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 let supabase = null;
 if (supabaseUrl && supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey);
+  console.log('Supabase initialized with URL:', supabaseUrl);
+} else {
+  console.error('Missing Supabase environment variables:', { 
+    url: !!supabaseUrl, 
+    key: !!supabaseKey 
+  });
 }
 
 function SettingsComponent() {
@@ -818,7 +824,17 @@ function SettingsComponent() {
                             fontSize: '14px',
                             color: isDarkMode ? '#ffffff' : '#111827',
                             outline: 'none',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            WebkitAppearance: 'none',
+                            MozAppearance: 'none',
+                            appearance: 'none',
+                            backgroundImage: isDarkMode 
+                              ? `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`
+                              : `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111827' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'right 12px center',
+                            backgroundSize: '16px',
+                            paddingRight: '40px'
                           }}
                         >
                           <option value="channel" style={{ 
