@@ -5,14 +5,10 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Backend service configuration
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-
 // Debug environment variables
 console.log('Environment check:', {
   url: !!supabaseUrl,
   key: !!supabaseKey,
-  backend: BACKEND_URL,
   urlValue: supabaseUrl ? 'set' : 'missing',
   keyValue: supabaseKey ? 'set' : 'missing',
   allEnvVars: Object.keys(import.meta.env).filter(key => key.includes('SUPABASE'))
@@ -53,14 +49,15 @@ function SettingsComponent() {
   });
   const [editingTelegram, setEditingTelegram] = useState(null);
   
-  // Character Profiles State - Fixed field mapping
+  // Character Profiles State
   const [characters, setCharacters] = useState([]);
   const [newCharacter, setNewCharacter] = useState({ 
     name: '', 
     username: '', 
-    role: '',        // Matches database column
-    description: '', // Matches database column  
-    image: null      // For UI preview
+    role: '',
+    description: '',
+    image: null,
+    avatarUrl: null
   });
   const [editingCharacter, setEditingCharacter] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -81,7 +78,6 @@ function SettingsComponent() {
   const loadPlatforms = async () => {
     if (!supabase) {
       console.warn('Supabase not configured. Using mock data.');
-      // For testing without Supabase - remove this when env vars are set
       setPlatforms([
         { id: 1, name: 'Facebook', url: 'https://facebook.com', is_active: true, created_at: new Date().toISOString() },
         { id: 2, name: 'Instagram', url: 'https://instagram.com', is_active: true, created_at: new Date().toISOString() }
@@ -134,7 +130,6 @@ function SettingsComponent() {
     }
 
     try {
-      // Load Telegram configs from the proper telegram_configurations table
       const { data, error } = await supabase
         .from('telegram_configurations')
         .select('id, name, channel_group_id, thread_id, type, created_at')
@@ -143,11 +138,10 @@ function SettingsComponent() {
       
       if (error) throw error;
       
-      // Transform the data to match our state structure
       const telegramData = (data || []).map(item => ({
         id: item.id,
         name: item.name,
-        channel_group: item.channel_group_id, // Map from channel_group_id to channel_group for state
+        channel_group: item.channel_group_id,
         thread_id: item.thread_id,
         type: item.type,
         created_at: item.created_at
@@ -177,7 +171,7 @@ function SettingsComponent() {
         name: newPlatform.name.trim(),
         url: newPlatform.url.trim(),
         is_active: true,
-        user_id: null // Will add user context later
+        user_id: null
       };
       
       const { data, error } = await supabase
@@ -253,7 +247,7 @@ function SettingsComponent() {
   };
 
   // =============================================================================
-  // TELEGRAM FUNCTIONS (using telegram_configurations table)
+  // TELEGRAM FUNCTIONS
   // =============================================================================
   
   const addTelegram = async () => {
@@ -272,7 +266,7 @@ function SettingsComponent() {
         thread_id: newTelegram.thread_id.trim() || null,
         type: newTelegram.type,
         is_active: true,
-        user_id: null // Will add user context later
+        user_id: null
       };
       
       const { data, error } = await supabase
@@ -286,7 +280,7 @@ function SettingsComponent() {
       const telegramEntry = {
         id: data.id,
         name: data.name,
-        channel_group: data.channel_group_id, // Map back to state structure
+        channel_group: data.channel_group_id,
         thread_id: data.thread_id,
         type: data.type,
         created_at: data.created_at
@@ -330,7 +324,6 @@ function SettingsComponent() {
       
       if (error) throw error;
       
-      // Update local state
       setTelegramChannels(prev => prev.map(t => 
         t.id === editingTelegram.id ? {
           ...t,
@@ -362,7 +355,6 @@ function SettingsComponent() {
       setLoading(true);
       console.log('Attempting to delete Telegram config with ID:', id);
       
-      // Check if record exists first
       const { data: existingRecord, error: checkError } = await supabase
         .from('telegram_configurations')
         .select('id, name')
@@ -371,7 +363,6 @@ function SettingsComponent() {
       
       if (checkError) {
         console.error('Record not found or error checking:', checkError);
-        // If record doesn't exist, just remove from UI state
         setTelegramChannels(prev => prev.filter(t => t.id !== id));
         alert('Record removed from display (was not found in database)');
         return;
@@ -392,7 +383,6 @@ function SettingsComponent() {
       console.error('Error deleting Telegram channel:', error);
       console.error('Error details:', error.message, error.details);
       
-      // Remove from UI anyway if it's an old record that doesn't exist in new table
       setTelegramChannels(prev => prev.filter(t => t.id !== id));
       alert('Removed from display. Check console for details.');
     } finally {
@@ -401,51 +391,30 @@ function SettingsComponent() {
   };
 
   // =============================================================================
-  // AVATAR UPLOAD FUNCTIONS (NEW BACKEND INTEGRATION)
+  // AVATAR UPLOAD FUNCTIONS (SUPABASE STORAGE)
   // =============================================================================
   
-  const uploadAvatarToGitHub = async (file, characterName) => {
-    const formData = new FormData();
-    formData.append('avatar', file);
-    formData.append('characterName', characterName);
-
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/upload-avatar`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upload avatar');
-      }
-
-      const result = await response.json();
-      return result.filePath; // This is the path to save in avatar_id
-    } catch (error) {
-      console.error('Avatar upload error:', error);
-      throw error;
-    }
-  };
-
   const handleImageUpload = async (file, isEditing = false) => {
     if (!file || !file.type.startsWith('image/')) {
-      alert('Please select a valid image file (JPG, PNG, GIF, etc.)');
+      alert('Please select a valid image file');
+      return;
+    }
+
+    if (!supabase) {
+      alert('Supabase not configured');
       return;
     }
 
     try {
       setUploadingAvatar(true);
       
-      // Get character name
       const characterName = isEditing ? editingCharacter.name : newCharacter.name;
-      
       if (!characterName.trim()) {
-        alert('Please enter a character name before uploading an image');
+        alert('Please enter a character name first');
         return;
       }
 
-      // Create preview image for immediate UI feedback
+      // Create preview for immediate UI feedback
       const reader = new FileReader();
       reader.onload = (e) => {
         const imageDataUrl = e.target.result;
@@ -457,30 +426,44 @@ function SettingsComponent() {
       };
       reader.readAsDataURL(file);
 
-      // Upload to GitHub through backend service
-      const avatarPath = await uploadAvatarToGitHub(file, characterName);
+      // Create filename
+      const fileName = `${characterName.replace(/[^a-zA-Z0-9]/g, '_')}_avatar.${file.name.split('.').pop()}`;
       
-      console.log('Avatar uploaded successfully:', avatarPath);
-      
-      // Store the GitHub path for database saving
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      console.log('Avatar uploaded successfully:', publicUrl);
+
+      // Update state with the public URL
       if (isEditing) {
-        setEditingCharacter(prev => ({ ...prev, githubAvatarPath: avatarPath }));
+        setEditingCharacter(prev => ({ ...prev, avatarUrl: publicUrl }));
       } else {
-        setNewCharacter(prev => ({ ...prev, githubAvatarPath: avatarPath }));
+        setNewCharacter(prev => ({ ...prev, avatarUrl: publicUrl }));
       }
 
-      alert('Avatar uploaded successfully to GitHub!');
-      
+      alert('Avatar uploaded successfully!');
     } catch (error) {
-      console.error('Error uploading avatar:', error);
-      alert(`Error uploading avatar: ${error.message}`);
+      console.error('Upload error:', error);
+      alert(`Upload failed: ${error.message}`);
     } finally {
       setUploadingAvatar(false);
     }
   };
 
   // =============================================================================
-  // CHARACTER PROFILES FUNCTIONS (UPDATED FOR GITHUB INTEGRATION)
+  // CHARACTER PROFILES FUNCTIONS
   // =============================================================================
   
   const addCharacter = async () => {
@@ -499,7 +482,7 @@ function SettingsComponent() {
         username: newCharacter.username.trim(),
         role: newCharacter.role.trim() || null,
         description: newCharacter.description.trim() || null,
-        avatar_id: newCharacter.githubAvatarPath || null, // Use GitHub path
+        avatar_id: newCharacter.avatarUrl || null,
         is_active: true,
         user_id: null
       };
@@ -520,7 +503,7 @@ function SettingsComponent() {
       console.log('Character saved successfully:', data);
       
       setCharacters(prev => [data, ...prev]);
-      setNewCharacter({ name: '', username: '', role: '', description: '', image: null, githubAvatarPath: null });
+      setNewCharacter({ name: '', username: '', role: '', description: '', image: null, avatarUrl: null });
       alert('Character profile created successfully!');
     } catch (error) {
       console.error('Error adding character:', error);
@@ -546,8 +529,7 @@ function SettingsComponent() {
         username: editingCharacter.username.trim(), 
         role: editingCharacter.role?.trim() || null,
         description: editingCharacter.description?.trim() || null,
-        // Only update avatar_id if a new GitHub path was set
-        ...(editingCharacter.githubAvatarPath && { avatar_id: editingCharacter.githubAvatarPath })
+        ...(editingCharacter.avatarUrl && { avatar_id: editingCharacter.avatarUrl })
       };
       
       console.log('Updating character data:', updateData);
@@ -609,7 +591,6 @@ function SettingsComponent() {
     }}>
       <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
         
-        {/* Settings Sub-Navigation - 3 TABS ONLY */}
         <div style={{
           backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
           borderRadius: '8px',
@@ -649,13 +630,10 @@ function SettingsComponent() {
             ))}
           </div>
 
-          {/* Tab Content */}
           <div style={{ padding: '32px' }}>
-            {/* 1. SOCIAL PLATFORMS TAB */}
             {activeTab === 'platforms' && (
               <div style={{ display: 'grid', gap: '32px' }}>
                 
-                {/* SOCIAL MEDIA PLATFORMS SECTION */}
                 <div style={{
                   padding: '32px',
                   border: '2px solid #3b82f6',
@@ -678,7 +656,6 @@ function SettingsComponent() {
                     Social Media Platforms
                   </h2>
                   
-                  {/* Add New Platform Form */}
                   <div style={{
                     padding: '24px',
                     backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.5)' : 'rgba(255, 255, 255, 0.8)',
@@ -787,7 +764,6 @@ function SettingsComponent() {
                     </div>
                   </div>
 
-                  {/* Platforms List */}
                   <div>
                     <h3 style={{
                       fontSize: '18px',
@@ -961,7 +937,6 @@ function SettingsComponent() {
                   </div>
                 </div>
 
-                {/* TELEGRAM SECTION - FIXED STYLING */}
                 <div style={{
                   padding: '32px',
                   border: '2px solid #0891b2',
@@ -984,7 +959,6 @@ function SettingsComponent() {
                     Telegram Channels & Groups
                   </h2>
                   
-                  {/* Add New Telegram Form - FIXED STYLING */}
                   <div style={{
                     padding: '24px',
                     backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.5)' : 'rgba(255, 255, 255, 0.8)',
@@ -1006,7 +980,6 @@ function SettingsComponent() {
                       Add Telegram Channel/Group
                     </h3>
                     
-                    {/* First Row - Name and Channel ID only */}
                     <div style={{ 
                       display: 'grid', 
                       gridTemplateColumns: '1fr 1fr', 
@@ -1071,7 +1044,6 @@ function SettingsComponent() {
                       </div>
                     </div>
                     
-                    {/* Second Row - Type, Thread ID (conditional), and Save Button */}
                     <div style={{ 
                       display: 'grid', 
                       gridTemplateColumns: newTelegram.type === 'group' ? '120px 1fr auto' : '120px auto',
@@ -1164,7 +1136,6 @@ function SettingsComponent() {
                     </div>
                   </div>
 
-                  {/* Telegram List */}
                   <div>
                     <h3 style={{
                       fontSize: '18px',
@@ -1359,7 +1330,6 @@ function SettingsComponent() {
               </div>
             )}
 
-            {/* 2. CHARACTER PROFILES TAB - UPDATED WITH BACKEND INTEGRATION */}
             {activeTab === 'characters' && (
               <div style={{
                 padding: '32px',
@@ -1383,7 +1353,6 @@ function SettingsComponent() {
                   Character Profiles
                 </h2>
                 
-                {/* Add New Character Form */}
                 <div style={{
                   padding: '24px',
                   backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.5)' : 'rgba(255, 255, 255, 0.8)',
@@ -1524,7 +1493,6 @@ function SettingsComponent() {
                       />
                     </div>
                     
-                    {/* UPDATED IMAGE UPLOAD SECTION */}
                     <div>
                       <label style={{
                         display: 'block',
@@ -1533,7 +1501,7 @@ function SettingsComponent() {
                         color: isDarkMode ? '#c4b5fd' : '#7c3aed',
                         marginBottom: '8px'
                       }}>
-                        Upload Profile Image to GitHub
+                        Upload Profile Image to Supabase Storage
                       </label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <input
@@ -1566,7 +1534,7 @@ function SettingsComponent() {
                             fontSize: '12px',
                             fontWeight: 'bold'
                           }}>
-                            Uploading to GitHub...
+                            Uploading...
                           </div>
                         )}
                         {newCharacter.image && (
@@ -1584,7 +1552,7 @@ function SettingsComponent() {
                             />
                             <button
                               type="button"
-                              onClick={() => setNewCharacter(prev => ({ ...prev, image: null, githubAvatarPath: null }))}
+                              onClick={() => setNewCharacter(prev => ({ ...prev, image: null, avatarUrl: null }))}
                               disabled={loading || uploadingAvatar}
                               style={{
                                 padding: '6px 12px',
@@ -1608,7 +1576,7 @@ function SettingsComponent() {
                         color: isDarkMode ? '#9ca3af' : '#6b7280',
                         margin: '8px 0 0 0'
                       }}>
-                        Upload an image to automatically save it to GitHub src/assets and link to Supabase avatar_id column.
+                        Upload an image to automatically save it to Supabase Storage and link to the avatar_id column.
                       </p>
                     </div>
                     
@@ -1637,7 +1605,6 @@ function SettingsComponent() {
                   </div>
                 </div>
 
-                {/* Characters List */}
                 <div>
                   <h3 style={{
                     fontSize: '18px',
@@ -1685,7 +1652,6 @@ function SettingsComponent() {
                           gap: '12px'
                         }}>
                           {editingCharacter && editingCharacter.id === character.id ? (
-                            // EDIT MODE
                             <>
                               <div style={{
                                 width: '60px',
@@ -1772,7 +1738,6 @@ function SettingsComponent() {
                                   }}
                                 />
                                 
-                                {/* UPDATE AVATAR IN EDIT MODE */}
                                 <div>
                                   <label style={{
                                     display: 'block',
@@ -1853,7 +1818,6 @@ function SettingsComponent() {
                               </div>
                             </>
                           ) : (
-                            // DISPLAY MODE
                             <>
                               <div style={{
                                 width: '60px',
@@ -1917,7 +1881,7 @@ function SettingsComponent() {
                                     color: isDarkMode ? '#9ca3af' : '#6b7280',
                                     fontStyle: 'italic'
                                   }}>
-                                    Avatar: {character.avatar_id}
+                                    Avatar: {character.avatar_id.substring(0, 40)}...
                                   </div>
                                 )}
                               </div>
@@ -1965,7 +1929,6 @@ function SettingsComponent() {
               </div>
             )}
 
-            {/* ERROR LOGS TAB - Placeholder */}
             {activeTab === 'logs' && (
               <div style={{
                 padding: '64px',
