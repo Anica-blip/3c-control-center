@@ -57,7 +57,8 @@ function SettingsComponent() {
     role: '',
     description: '',
     image: null,
-    avatarUrl: null
+    avatarUrl: null,
+    selectedFile: null
   });
   const [editingCharacter, setEditingCharacter] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -391,46 +392,45 @@ function SettingsComponent() {
   };
 
   // =============================================================================
-  // AVATAR UPLOAD FUNCTIONS (SUPABASE STORAGE)
+  // AVATAR UPLOAD FUNCTIONS - FIXED
   // =============================================================================
   
-  const handleImageUpload = async (file, isEditing = false) => {
+  const handleFileSelection = (file, isEditing = false) => {
     if (!file || !file.type.startsWith('image/')) {
       alert('Please select a valid image file');
       return;
     }
 
-    if (!supabase) {
-      alert('Supabase not configured');
-      return;
+    // Only create preview, don't upload yet
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageDataUrl = e.target.result;
+      if (isEditing) {
+        setEditingCharacter(prev => ({ 
+          ...prev, 
+          image: imageDataUrl,
+          selectedFile: file
+        }));
+      } else {
+        setNewCharacter(prev => ({ 
+          ...prev, 
+          image: imageDataUrl,
+          selectedFile: file
+        }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadImageToStorage = async (file, characterName) => {
+    if (!file || !supabase) {
+      return null;
     }
 
     try {
-      setUploadingAvatar(true);
-      
-      const characterName = isEditing ? editingCharacter.name : newCharacter.name;
-      if (!characterName.trim()) {
-        alert('Please enter a character name first');
-        return;
-      }
-
-      // Create preview for immediate UI feedback
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageDataUrl = e.target.result;
-        if (isEditing) {
-          setEditingCharacter(prev => ({ ...prev, image: imageDataUrl }));
-        } else {
-          setNewCharacter(prev => ({ ...prev, image: imageDataUrl }));
-        }
-      };
-      reader.readAsDataURL(file);
-
-      // Create simple filename
       const fileName = `${characterName.replace(/[^a-zA-Z0-9]/g, '_')}_avatar_${Date.now()}.png`;
       
-      // Upload to Supabase Storage (bucket name is "avatars")
-      console.log('Attempting storage upload with filename:', fileName);
+      console.log('Uploading to storage with filename:', fileName);
       const { data, error } = await supabase.storage
         .from('avatars')
         .upload(fileName, file, {
@@ -439,12 +439,9 @@ function SettingsComponent() {
         });
 
       if (error) {
-        console.error('Storage upload error details:', error);
-        alert(`Storage upload failed: ${error.message}`);
+        console.error('Storage upload error:', error);
         throw error;
       }
-
-      console.log('Storage upload successful:', data);
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
@@ -452,25 +449,15 @@ function SettingsComponent() {
         .getPublicUrl(fileName);
 
       console.log('Avatar uploaded successfully:', publicUrl);
-
-      // Update state with the public URL
-      if (isEditing) {
-        setEditingCharacter(prev => ({ ...prev, avatarUrl: publicUrl }));
-      } else {
-        setNewCharacter(prev => ({ ...prev, avatarUrl: publicUrl }));
-      }
-
-      alert('Avatar uploaded successfully!');
+      return publicUrl;
     } catch (error) {
       console.error('Upload error:', error);
-      alert(`Upload failed: ${error.message}`);
-    } finally {
-      setUploadingAvatar(false);
+      throw error;
     }
   };
 
   // =============================================================================
-  // CHARACTER PROFILES FUNCTIONS
+  // CHARACTER PROFILES FUNCTIONS - FIXED
   // =============================================================================
   
   const addCharacter = async () => {
@@ -484,15 +471,25 @@ function SettingsComponent() {
     setLoading(true);
     
     try {
+      let avatarUrl = null;
+      
+      // Upload image if one was selected
+      if (newCharacter.selectedFile) {
+        setUploadingAvatar(true);
+        avatarUrl = await uploadImageToStorage(newCharacter.selectedFile, newCharacter.name);
+      }
+      
       const characterData = {
         name: newCharacter.name.trim(),
         username: newCharacter.username.trim(),
         role: newCharacter.role.trim() || null,
         description: newCharacter.description.trim() || null,
-        avatar_id: newCharacter.avatarUrl || null,
+        avatar_id: avatarUrl,
         is_active: true,
         user_id: null
       };
+      
+      console.log('Saving character with data:', characterData);
       
       const { data, error } = await supabase
         .from('character_profiles')
@@ -503,20 +500,28 @@ function SettingsComponent() {
       if (error) {
         console.error('Database error:', error);
         alert(`Database error: ${error.message}`);
-        setLoading(false);
         return;
       }
       
       setCharacters(prev => [data, ...prev]);
-      setNewCharacter({ name: '', username: '', role: '', description: '', image: null, avatarUrl: null });
+      setNewCharacter({ 
+        name: '', 
+        username: '', 
+        role: '', 
+        description: '', 
+        image: null, 
+        avatarUrl: null,
+        selectedFile: null 
+      });
       alert('Character profile created successfully!');
       
     } catch (error) {
       console.error('Error:', error);
       alert('Error creating character profile. Please try again.');
+    } finally {
+      setLoading(false);
+      setUploadingAvatar(false);
     }
-    
-    setLoading(false);
   };
 
   const saveCharacterEdit = async () => {
@@ -530,13 +535,21 @@ function SettingsComponent() {
     try {
       setLoading(true);
       
+      let avatarUrl = null;
+      
+      // Upload new image if one was selected
+      if (editingCharacter.selectedFile) {
+        setUploadingAvatar(true);
+        avatarUrl = await uploadImageToStorage(editingCharacter.selectedFile, editingCharacter.name);
+      }
+      
       const updateData = {
         name: editingCharacter.name.trim(),
         username: editingCharacter.username.trim(), 
         role: editingCharacter.role?.trim() || null,
         description: editingCharacter.description?.trim() || null,
         // Only update avatar_id if a new avatar was uploaded
-        ...(editingCharacter.avatarUrl && { avatar_id: editingCharacter.avatarUrl })
+        ...(avatarUrl && { avatar_id: avatarUrl })
       };
       
       console.log('Updating character with ID:', editingCharacter.id, 'Data:', updateData);
@@ -565,6 +578,7 @@ function SettingsComponent() {
       alert('Error updating character profile. Please try again.');
     } finally {
       setLoading(false);
+      setUploadingAvatar(false);
     }
   };
 
@@ -1522,7 +1536,7 @@ function SettingsComponent() {
                           onChange={(e) => {
                             const file = e.target.files[0];
                             if (file) {
-                              handleImageUpload(file, false);
+                              handleFileSelection(file, false);
                             }
                           }}
                           disabled={loading || uploadingAvatar}
@@ -1552,7 +1566,7 @@ function SettingsComponent() {
                         {newCharacter.image && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <img
-                              src={newCharacter.avatarUrl || newCharacter.image}
+                              src={newCharacter.image}
                               alt="Preview"
                               style={{
                                 width: '64px',
@@ -1564,7 +1578,12 @@ function SettingsComponent() {
                             />
                             <button
                               type="button"
-                              onClick={() => setNewCharacter(prev => ({ ...prev, image: null, avatarUrl: null }))}
+                              onClick={() => setNewCharacter(prev => ({ 
+                                ...prev, 
+                                image: null, 
+                                avatarUrl: null,
+                                selectedFile: null 
+                              }))}
                               disabled={loading || uploadingAvatar}
                               style={{
                                 padding: '6px 12px',
@@ -1588,7 +1607,7 @@ function SettingsComponent() {
                         color: isDarkMode ? '#9ca3af' : '#6b7280',
                         margin: '8px 0 0 0'
                       }}>
-                        Upload an image to automatically save it to Supabase Storage and link to the avatar_id column.
+                        Select an image for preview. Upload will happen when you click Save.
                       </p>
                     </div>
                     
@@ -1610,8 +1629,8 @@ function SettingsComponent() {
                           gap: '8px'
                         }}
                       >
-                        {loading ? '⏳' : '💾'}
-                        {loading ? 'Saving...' : 'Save'}
+                        {(loading || uploadingAvatar) ? '⏳' : '💾'}
+                        {(loading || uploadingAvatar) ? 'Saving...' : 'Save'}
                       </button>
                     </div>
                   </div>
@@ -1678,11 +1697,11 @@ function SettingsComponent() {
                                 fontWeight: 'bold',
                                 border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd',
                                 flexShrink: 0,
-                                backgroundImage: character.avatar_id ? `url(${character.avatar_id})` : 'none',
+                                backgroundImage: (editingCharacter.image || character.avatar_id) ? `url(${editingCharacter.image || character.avatar_id})` : 'none',
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center'
                               }}>
-                                {!character.avatar_id && character.name.charAt(0)}
+                                {!(editingCharacter.image || character.avatar_id) && character.name.charAt(0)}
                               </div>
                               <div style={{ flex: '1', display: 'grid', gap: '8px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -1767,7 +1786,7 @@ function SettingsComponent() {
                                       onChange={(e) => {
                                         const file = e.target.files[0];
                                         if (file) {
-                                          handleImageUpload(file, true);
+                                          handleFileSelection(file, true);
                                         }
                                       }}
                                       disabled={loading || uploadingAvatar}
