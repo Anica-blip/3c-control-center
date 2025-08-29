@@ -57,10 +57,16 @@ function SettingsComponent() {
     role: '',
     description: '',
     image: null,
-    avatarUrl: null
+    avatarUrl: null,
+    userId: null
   });
   const [editingCharacter, setEditingCharacter] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  // Generate user_id for tracking
+  const generateUserId = () => {
+    return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  };
   
   // Error Logs State
   const [errorLogs, setErrorLogs] = useState([]);
@@ -426,10 +432,13 @@ function SettingsComponent() {
       };
       reader.readAsDataURL(file);
 
-      // Create filename
-      const fileName = `${characterName.replace(/[^a-zA-Z0-9]/g, '_')}_avatar.${file.name.split('.').pop()}`;
+      // Generate user_id if not editing
+      const userId = isEditing ? editingCharacter.user_id : generateUserId();
+
+      // Create filename with user_id
+      const fileName = `${userId}_${characterName.replace(/[^a-zA-Z0-9]/g, '_')}_avatar.png`;
       
-      // Upload to Supabase Storage
+      // Upload to Supabase Storage (bucket name is "avatars")
       const { data, error } = await supabase.storage
         .from('avatars')
         .upload(fileName, file, {
@@ -437,7 +446,10 @@ function SettingsComponent() {
           upsert: true
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Storage upload error:', error);
+        throw error;
+      }
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
@@ -446,11 +458,11 @@ function SettingsComponent() {
 
       console.log('Avatar uploaded successfully:', publicUrl);
 
-      // Update state with the public URL
+      // Update state with the public URL and user_id
       if (isEditing) {
-        setEditingCharacter(prev => ({ ...prev, avatarUrl: publicUrl }));
+        setEditingCharacter(prev => ({ ...prev, avatarUrl: publicUrl, user_id: userId }));
       } else {
-        setNewCharacter(prev => ({ ...prev, avatarUrl: publicUrl }));
+        setNewCharacter(prev => ({ ...prev, avatarUrl: publicUrl, userId: userId }));
       }
 
       alert('Avatar uploaded successfully!');
@@ -477,6 +489,9 @@ function SettingsComponent() {
     try {
       setLoading(true);
       
+      // Generate user_id if not already set
+      const userId = newCharacter.userId || generateUserId();
+      
       const characterData = {
         name: newCharacter.name.trim(),
         username: newCharacter.username.trim(),
@@ -484,10 +499,10 @@ function SettingsComponent() {
         description: newCharacter.description.trim() || null,
         avatar_id: newCharacter.avatarUrl || null,
         is_active: true,
-        user_id: null
+        user_id: userId
       };
       
-      console.log('Saving character with avatar_id:', characterData.avatar_id);
+      console.log('Saving character with data:', characterData);
       
       const { data, error } = await supabase
         .from('character_profiles')
@@ -503,7 +518,7 @@ function SettingsComponent() {
       console.log('Character saved successfully:', data);
       
       setCharacters(prev => [data, ...prev]);
-      setNewCharacter({ name: '', username: '', role: '', description: '', image: null, avatarUrl: null });
+      setNewCharacter({ name: '', username: '', role: '', description: '', image: null, avatarUrl: null, userId: null });
       alert('Character profile created successfully!');
     } catch (error) {
       console.error('Error adding character:', error);
@@ -529,10 +544,13 @@ function SettingsComponent() {
         username: editingCharacter.username.trim(), 
         role: editingCharacter.role?.trim() || null,
         description: editingCharacter.description?.trim() || null,
-        ...(editingCharacter.avatarUrl && { avatar_id: editingCharacter.avatarUrl })
+        // Only update avatar_id if a new avatar was uploaded
+        ...(editingCharacter.avatarUrl && { avatar_id: editingCharacter.avatarUrl }),
+        // Keep the existing user_id
+        user_id: editingCharacter.user_id
       };
       
-      console.log('Updating character data:', updateData);
+      console.log('Updating character with ID:', editingCharacter.id, 'Data:', updateData);
       
       const { data, error } = await supabase
         .from('character_profiles')
@@ -541,7 +559,12 @@ function SettingsComponent() {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
+      
+      console.log('Character updated successfully:', data);
       
       setCharacters(prev => prev.map(c => 
         c.id === editingCharacter.id ? data : c
@@ -1540,7 +1563,7 @@ function SettingsComponent() {
                         {newCharacter.image && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <img
-                              src={newCharacter.image}
+                              src={newCharacter.avatarUrl || newCharacter.image}
                               alt="Preview"
                               style={{
                                 width: '64px',
@@ -1552,7 +1575,7 @@ function SettingsComponent() {
                             />
                             <button
                               type="button"
-                              onClick={() => setNewCharacter(prev => ({ ...prev, image: null, avatarUrl: null }))}
+                              onClick={() => setNewCharacter(prev => ({ ...prev, image: null, avatarUrl: null, userId: null }))}
                               disabled={loading || uploadingAvatar}
                               style={{
                                 padding: '6px 12px',
