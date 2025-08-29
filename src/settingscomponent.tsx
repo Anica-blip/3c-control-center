@@ -1697,11 +1697,21 @@ function SettingsComponent() {
                                 fontWeight: 'bold',
                                 border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd',
                                 flexShrink: 0,
-                                backgroundImage: (editingCharacter.image || character.avatar_id) ? `url(${editingCharacter.image || character.avatar_id})` : 'none',
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center'
+                                overflow: 'hidden'
                               }}>
-                                {!(editingCharacter.image || character.avatar_id) && character.name.charAt(0)}
+                                {(editingCharacter.image || character.avatar_id) ? (
+                                  <img
+                                    src={editingCharacter.image || character.avatar_id}
+                                    alt={character.name}
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover'
+                                    }}
+                                  />
+                                ) : (
+                                  character.name.charAt(0)
+                                )}
                               </div>
                               <div style={{ flex: '1', display: 'grid', gap: '8px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -1863,11 +1873,21 @@ function SettingsComponent() {
                                 fontWeight: 'bold',
                                 border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd',
                                 flexShrink: 0,
-                                backgroundImage: character.avatar_id ? `url(${character.avatar_id})` : 'none',
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center'
+                                overflow: 'hidden'
                               }}>
-                                {!character.avatar_id && character.name.charAt(0)}
+                                {character.avatar_id ? (
+                                  <img
+                                    src={character.avatar_id}
+                                    alt={character.name}
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover'
+                                    }}
+                                  />
+                                ) : (
+                                  character.name.charAt(0)
+                                )}
                               </div>
                               <div style={{ flex: '1' }}>
                                 <div style={{ marginBottom: '4px' }}>
