@@ -481,10 +481,9 @@ function SettingsComponent() {
       return;
     }
     
+    setLoading(true);
+    
     try {
-      setLoading(true);
-      console.log('Starting character creation...');
-      
       const characterData = {
         name: newCharacter.name.trim(),
         username: newCharacter.username.trim(),
@@ -495,8 +494,6 @@ function SettingsComponent() {
         user_id: null
       };
       
-      console.log('Saving character with data:', characterData);
-      
       const { data, error } = await supabase
         .from('character_profiles')
         .insert([characterData])
@@ -504,25 +501,22 @@ function SettingsComponent() {
         .single();
       
       if (error) {
-        console.error('Database insert error details:', error);
-        console.error('Error code:', error.code);
-        console.error('Error hint:', error.hint);
+        console.error('Database error:', error);
         alert(`Database error: ${error.message}`);
-        return; // Exit without throwing to ensure loading state resets
+        setLoading(false);
+        return;
       }
-      
-      console.log('Character saved successfully to database:', data);
       
       setCharacters(prev => [data, ...prev]);
       setNewCharacter({ name: '', username: '', role: '', description: '', image: null, avatarUrl: null });
       alert('Character profile created successfully!');
+      
     } catch (error) {
-      console.error('Unexpected error adding character:', error);
+      console.error('Error:', error);
       alert('Error creating character profile. Please try again.');
-    } finally {
-      console.log('Resetting loading state...');
-      setLoading(false); // This ensures the button becomes clickable again
     }
+    
+    setLoading(false);
   };
 
   const saveCharacterEdit = async () => {
