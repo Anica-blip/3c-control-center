@@ -439,6 +439,7 @@ function SettingsComponent() {
       const fileName = `${userId}_${characterName.replace(/[^a-zA-Z0-9]/g, '_')}_avatar.png`;
       
       // Upload to Supabase Storage (bucket name is "avatars")
+      console.log('Attempting storage upload with filename:', fileName);
       const { data, error } = await supabase.storage
         .from('avatars')
         .upload(fileName, file, {
@@ -447,9 +448,12 @@ function SettingsComponent() {
         });
 
       if (error) {
-        console.error('Storage upload error:', error);
+        console.error('Storage upload error details:', error);
+        alert(`Storage upload failed: ${error.message}`);
         throw error;
       }
+
+      console.log('Storage upload successful:', data);
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
@@ -511,11 +515,12 @@ function SettingsComponent() {
         .single();
       
       if (error) {
-        console.error('Supabase error:', error);
+        console.error('Database insert error details:', error);
+        alert(`Database error: ${error.message}`);
         throw error;
       }
       
-      console.log('Character saved successfully:', data);
+      console.log('Character saved successfully to database:', data);
       
       setCharacters(prev => [data, ...prev]);
       setNewCharacter({ name: '', username: '', role: '', description: '', image: null, avatarUrl: null, userId: null });
