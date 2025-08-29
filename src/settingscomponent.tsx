@@ -5,10 +5,14 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+// Backend service configuration
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+
 // Debug environment variables
 console.log('Environment check:', {
   url: !!supabaseUrl,
   key: !!supabaseKey,
+  backend: BACKEND_URL,
   urlValue: supabaseUrl ? 'set' : 'missing',
   keyValue: supabaseKey ? 'set' : 'missing',
   allEnvVars: Object.keys(import.meta.env).filter(key => key.includes('SUPABASE'))
@@ -21,34 +25,6 @@ if (supabaseUrl && supabaseKey) {
 } else {
   console.error('Missing Supabase environment variables');
 }
-
-// Avatar mapping for pre-existing character avatars
-const AVATAR_MAPPING = {
-  'Anica': '/src/assets/Anica_avatar.png',
-  'Aurion': '/src/assets/Aurion_avatar.png', 
-  'Caelum': '/src/assets/Caelum_avatar.png'
-};
-
-// Helper function to find matching avatar based on character name
-const findMatchingAvatar = (characterName) => {
-  const normalizedName = characterName.trim();
-  
-  // First, check for exact matches (case-insensitive)
-  for (const [avatarName, avatarPath] of Object.entries(AVATAR_MAPPING)) {
-    if (normalizedName.toLowerCase() === avatarName.toLowerCase()) {
-      return avatarPath;
-    }
-  }
-  
-  // Then check if the character name contains any of the avatar names
-  for (const [avatarName, avatarPath] of Object.entries(AVATAR_MAPPING)) {
-    if (normalizedName.toLowerCase().includes(avatarName.toLowerCase())) {
-      return avatarPath;
-    }
-  }
-  
-  return null; // No matching avatar found
-};
 
 function SettingsComponent() {
   const [activeTab, setActiveTab] = useState('platforms');
@@ -84,9 +60,10 @@ function SettingsComponent() {
     username: '', 
     role: '',        // Matches database column
     description: '', // Matches database column  
-    image: null      // For UI preview (will convert to avatar_id)
+    image: null      // For UI preview
   });
   const [editingCharacter, setEditingCharacter] = useState(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   
   // Error Logs State
   const [errorLogs, setErrorLogs] = useState([]);
@@ -98,7 +75,7 @@ function SettingsComponent() {
   useEffect(() => {
     loadPlatforms();
     loadTelegramChannels();
-    loadCharacters(); // Add character profiles loading
+    loadCharacters();
   }, []);
 
   const loadPlatforms = async () => {
@@ -144,24 +121,7 @@ function SettingsComponent() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      
-      // Process characters to add display images
-      const charactersWithImages = (data || []).map(character => {
-        let displayImage = null;
-        
-        if (character.avatar_id && character.avatar_id.startsWith('/src/assets/')) {
-          displayImage = character.avatar_id; // Use GitHub avatar
-        } else {
-          displayImage = findMatchingAvatar(character.name); // Try to find matching avatar
-        }
-        
-        return {
-          ...character,
-          displayImage
-        };
-      });
-      
-      setCharacters(charactersWithImages);
+      setCharacters(data || []);
     } catch (error) {
       console.error('Error loading characters:', error);
     }
@@ -441,62 +401,86 @@ function SettingsComponent() {
   };
 
   // =============================================================================
-  // IMAGE PROCESSING FUNCTION
+  // AVATAR UPLOAD FUNCTIONS (NEW BACKEND INTEGRATION)
   // =============================================================================
   
-  const resizeImage = (file, maxWidth = 200, maxHeight = 200) => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      
-      img.onload = () => {
-        let { width, height } = img;
-        
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        ctx.drawImage(img, 0, 0, width, height);
-        const resizedImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        resolve(resizedImageDataUrl);
-      };
-      
-      img.src = URL.createObjectURL(file);
-    });
+  const uploadAvatarToGitHub = async (file, characterName) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    formData.append('characterName', characterName);
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/upload-avatar`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload avatar');
+      }
+
+      const result = await response.json();
+      return result.filePath; // This is the path to save in avatar_id
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      throw error;
+    }
   };
 
   const handleImageUpload = async (file, isEditing = false) => {
-    if (file && file.type.startsWith('image/')) {
-      try {
-        const resizedImage = await resizeImage(file);
-        
-        if (isEditing) {
-          setEditingCharacter(prev => ({ ...prev, image: resizedImage }));
-        } else {
-          setNewCharacter(prev => ({ ...prev, image: resizedImage }));
-        }
-      } catch (error) {
-        console.error('Error processing image:', error);
-        alert('Error processing image. Please try again.');
-      }
-    } else {
+    if (!file || !file.type.startsWith('image/')) {
       alert('Please select a valid image file (JPG, PNG, GIF, etc.)');
+      return;
+    }
+
+    try {
+      setUploadingAvatar(true);
+      
+      // Get character name
+      const characterName = isEditing ? editingCharacter.name : newCharacter.name;
+      
+      if (!characterName.trim()) {
+        alert('Please enter a character name before uploading an image');
+        return;
+      }
+
+      // Create preview image for immediate UI feedback
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageDataUrl = e.target.result;
+        if (isEditing) {
+          setEditingCharacter(prev => ({ ...prev, image: imageDataUrl }));
+        } else {
+          setNewCharacter(prev => ({ ...prev, image: imageDataUrl }));
+        }
+      };
+      reader.readAsDataURL(file);
+
+      // Upload to GitHub through backend service
+      const avatarPath = await uploadAvatarToGitHub(file, characterName);
+      
+      console.log('Avatar uploaded successfully:', avatarPath);
+      
+      // Store the GitHub path for database saving
+      if (isEditing) {
+        setEditingCharacter(prev => ({ ...prev, githubAvatarPath: avatarPath }));
+      } else {
+        setNewCharacter(prev => ({ ...prev, githubAvatarPath: avatarPath }));
+      }
+
+      alert('Avatar uploaded successfully to GitHub!');
+      
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      alert(`Error uploading avatar: ${error.message}`);
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
   // =============================================================================
-  // CHARACTER PROFILES FUNCTIONS
+  // CHARACTER PROFILES FUNCTIONS (UPDATED FOR GITHUB INTEGRATION)
   // =============================================================================
   
   const addCharacter = async () => {
@@ -507,42 +491,20 @@ function SettingsComponent() {
       return;
     }
     
-    // DEBUG: Log the current form state
-    console.log('Form state before save:', {
-      name: newCharacter.name,
-      username: newCharacter.username,
-      role: newCharacter.role,
-      description: newCharacter.description,
-      image: newCharacter.image ? 'has image' : 'no image'
-    });
-    
     try {
       setLoading(true);
-      
-      // Check for matching avatar based on character name
-      const matchingAvatar = findMatchingAvatar(newCharacter.name);
-      console.log('Matching avatar found:', matchingAvatar);
-      
-      // Determine avatar_id: use matching avatar path or uploaded image path
-      let avatarId = null;
-      if (matchingAvatar) {
-        avatarId = matchingAvatar; // Use the predefined avatar path
-      } else if (newCharacter.image) {
-        // Store base64 indicator for uploaded images (until Supabase Storage implemented)
-        avatarId = 'uploaded:' + Date.now(); // Temporary solution
-      }
       
       const characterData = {
         name: newCharacter.name.trim(),
         username: newCharacter.username.trim(),
-        role: newCharacter.role.trim() || null,           // Exact database column name
-        description: newCharacter.description.trim() || null, // Exact database column name
-        avatar_id: avatarId, // Now properly saves avatar reference
+        role: newCharacter.role.trim() || null,
+        description: newCharacter.description.trim() || null,
+        avatar_id: newCharacter.githubAvatarPath || null, // Use GitHub path
         is_active: true,
-        user_id: null    // Set to null for now, can be removed later if not needed
+        user_id: null
       };
       
-      console.log('Data being sent to Supabase:', characterData); // Debug log
+      console.log('Saving character with avatar_id:', characterData.avatar_id);
       
       const { data, error } = await supabase
         .from('character_profiles')
@@ -555,16 +517,10 @@ function SettingsComponent() {
         throw error;
       }
       
-      console.log('Data returned from Supabase:', data); // Debug log
+      console.log('Character saved successfully:', data);
       
-      // Add display image for UI
-      const characterWithImage = {
-        ...data,
-        displayImage: matchingAvatar || newCharacter.image // Keep the base64 image for UI display
-      };
-      
-      setCharacters(prev => [characterWithImage, ...prev]);
-      setNewCharacter({ name: '', username: '', role: '', description: '', image: null });
+      setCharacters(prev => [data, ...prev]);
+      setNewCharacter({ name: '', username: '', role: '', description: '', image: null, githubAvatarPath: null });
       alert('Character profile created successfully!');
     } catch (error) {
       console.error('Error adding character:', error);
@@ -585,25 +541,16 @@ function SettingsComponent() {
     try {
       setLoading(true);
       
-      // Check for matching avatar based on updated character name
-      const matchingAvatar = findMatchingAvatar(editingCharacter.name);
-      console.log('Matching avatar for edit:', matchingAvatar);
-      
-      // Determine avatar_id for the update
-      let avatarId = editingCharacter.avatar_id; // Keep existing if no change
-      if (matchingAvatar && matchingAvatar !== editingCharacter.avatar_id) {
-        avatarId = matchingAvatar; // Update to new matching avatar
-      }
-      
       const updateData = {
         name: editingCharacter.name.trim(),
         username: editingCharacter.username.trim(), 
-        role: editingCharacter.role?.trim() || null,           // Exact database column name
-        description: editingCharacter.description?.trim() || null, // Exact database column name
-        avatar_id: avatarId // Update avatar if changed
+        role: editingCharacter.role?.trim() || null,
+        description: editingCharacter.description?.trim() || null,
+        // Only update avatar_id if a new GitHub path was set
+        ...(editingCharacter.githubAvatarPath && { avatar_id: editingCharacter.githubAvatarPath })
       };
       
-      console.log('Updating character data:', updateData); // Debug log
+      console.log('Updating character data:', updateData);
       
       const { data, error } = await supabase
         .from('character_profiles')
@@ -614,14 +561,8 @@ function SettingsComponent() {
       
       if (error) throw error;
       
-      // Add display image for UI
-      const updatedCharacterWithImage = {
-        ...data,
-        displayImage: matchingAvatar || findMatchingAvatar(data.name)
-      };
-      
       setCharacters(prev => prev.map(c => 
-        c.id === editingCharacter.id ? updatedCharacterWithImage : c
+        c.id === editingCharacter.id ? data : c
       ));
       setEditingCharacter(null);
       alert('Character profile updated successfully!');
@@ -678,9 +619,9 @@ function SettingsComponent() {
         }}>
           <div style={{ display: 'flex', borderBottom: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb' }}>
             {[
-              { id: 'platforms', icon: 'ðŸ"±', label: 'Social Platforms' },
-              { id: 'characters', icon: 'ðŸ'¥', label: 'Character Profiles' },
-              { id: 'logs', icon: 'ðŸ"‹', label: 'Error Logs' }
+              { id: 'platforms', icon: '📱', label: 'Social Platforms' },
+              { id: 'characters', icon: '👥', label: 'Character Profiles' },
+              { id: 'logs', icon: '📋', label: 'Error Logs' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -733,7 +674,7 @@ function SettingsComponent() {
                     gap: '12px',
                     margin: '0 0 24px 0'
                   }}>
-                    <span style={{ fontSize: '28px' }}>ðŸ"±</span>
+                    <span style={{ fontSize: '28px' }}>📱</span>
                     Social Media Platforms
                   </h2>
                   
@@ -755,7 +696,7 @@ function SettingsComponent() {
                       gap: '8px',
                       margin: '0 0 16px 0'
                     }}>
-                      <span>âž•</span>
+                      <span>➕</span>
                       Create New Platform
                     </h3>
                     <div style={{ 
@@ -840,7 +781,7 @@ function SettingsComponent() {
                           minWidth: '100px'
                         }}
                       >
-                        {loading ? 'â³' : 'ðŸ'¾'}
+                        {loading ? '⏳' : '💾'}
                         {loading ? 'Saving...' : 'Save'}
                       </button>
                     </div>
@@ -858,7 +799,7 @@ function SettingsComponent() {
                       gap: '8px',
                       margin: '0 0 16px 0'
                     }}>
-                      <span>ðŸ"‹</span>
+                      <span>📋</span>
                       Your Platforms ({platforms.length})
                     </h3>
                     {platforms.length === 0 ? (
@@ -940,7 +881,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    ðŸ'¾ {loading ? 'Saving...' : 'Save'}
+                                    💾 {loading ? 'Saving...' : 'Save'}
                                   </button>
                                   <button
                                     onClick={() => setEditingPlatform(null)}
@@ -956,7 +897,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    âŒ Cancel
+                                    ❌ Cancel
                                   </button>
                                 </div>
                               </div>
@@ -992,7 +933,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    âœï¸ Edit
+                                    ✏️ Edit
                                   </button>
                                   <button
                                     onClick={() => deletePlatform(platform.id)}
@@ -1008,7 +949,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    ðŸ—'ï¸ Delete
+                                    🗑️ Delete
                                   </button>
                                 </div>
                               </>
@@ -1039,7 +980,7 @@ function SettingsComponent() {
                     gap: '12px',
                     margin: '0 0 24px 0'
                   }}>
-                    <span style={{ fontSize: '28px' }}>ðŸ"¡</span>
+                    <span style={{ fontSize: '28px' }}>📡</span>
                     Telegram Channels & Groups
                   </h2>
                   
@@ -1061,7 +1002,7 @@ function SettingsComponent() {
                       gap: '8px',
                       margin: '0 0 16px 0'
                     }}>
-                      <span>âž•</span>
+                      <span>➕</span>
                       Add Telegram Channel/Group
                     </h3>
                     
@@ -1217,7 +1158,7 @@ function SettingsComponent() {
                           minWidth: '100px'
                         }}
                       >
-                        {loading ? 'â³' : 'ðŸ'¾'}
+                        {loading ? '⏳' : '💾'}
                         {loading ? 'Saving...' : 'Save'}
                       </button>
                     </div>
@@ -1235,7 +1176,7 @@ function SettingsComponent() {
                       gap: '8px',
                       margin: '0 0 16px 0'
                     }}>
-                      <span>ðŸ"‹</span>
+                      <span>📋</span>
                       Your Telegram Channels/Groups ({telegramChannels.length})
                     </h3>
                     {telegramChannels.length === 0 ? (
@@ -1335,7 +1276,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    ðŸ'¾ {loading ? 'Saving...' : 'Save'}
+                                    💾 {loading ? 'Saving...' : 'Save'}
                                   </button>
                                   <button
                                     onClick={() => setEditingTelegram(null)}
@@ -1351,7 +1292,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    âŒ Cancel
+                                    ❌ Cancel
                                   </button>
                                 </div>
                               </div>
@@ -1370,7 +1311,7 @@ function SettingsComponent() {
                                     color: isDarkMode ? '#9ca3af' : '#6b7280'
                                   }}>
                                     ID: {telegram.channel_group}
-                                    {telegram.thread_id && ` â€¢ Thread: ${telegram.thread_id}`}
+                                    {telegram.thread_id && ` • Thread: ${telegram.thread_id}`}
                                   </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -1388,7 +1329,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    âœï¸ Edit
+                                    ✏️ Edit
                                   </button>
                                   <button
                                     onClick={() => deleteTelegram(telegram.id)}
@@ -1404,7 +1345,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    ðŸ—'ï¸ Delete
+                                    🗑️ Delete
                                   </button>
                                 </div>
                               </>
@@ -1418,7 +1359,7 @@ function SettingsComponent() {
               </div>
             )}
 
-            {/* 2. CHARACTER PROFILES TAB */}
+            {/* 2. CHARACTER PROFILES TAB - UPDATED WITH BACKEND INTEGRATION */}
             {activeTab === 'characters' && (
               <div style={{
                 padding: '32px',
@@ -1438,7 +1379,7 @@ function SettingsComponent() {
                   gap: '12px',
                   margin: '0 0 24px 0'
                 }}>
-                  <span style={{ fontSize: '28px' }}>ðŸ'¥</span>
+                  <span style={{ fontSize: '28px' }}>👥</span>
                   Character Profiles
                 </h2>
                 
@@ -1460,7 +1401,7 @@ function SettingsComponent() {
                     gap: '8px',
                     margin: '0 0 16px 0'
                   }}>
-                    <span>âž•</span>
+                    <span>➕</span>
                     Add Profile
                   </h3>
                   <div style={{ display: 'grid', gap: '16px' }}>
@@ -1583,6 +1524,7 @@ function SettingsComponent() {
                       />
                     </div>
                     
+                    {/* UPDATED IMAGE UPLOAD SECTION */}
                     <div>
                       <label style={{
                         display: 'block',
@@ -1591,7 +1533,7 @@ function SettingsComponent() {
                         color: isDarkMode ? '#c4b5fd' : '#7c3aed',
                         marginBottom: '8px'
                       }}>
-                        Upload Profile Image
+                        Upload Profile Image to GitHub
                       </label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <input
@@ -1603,7 +1545,7 @@ function SettingsComponent() {
                               handleImageUpload(file, false);
                             }
                           }}
-                          disabled={loading}
+                          disabled={loading || uploadingAvatar}
                           style={{
                             flex: '1',
                             padding: '12px',
@@ -1615,6 +1557,18 @@ function SettingsComponent() {
                             outline: 'none'
                           }}
                         />
+                        {uploadingAvatar && (
+                          <div style={{
+                            padding: '8px 16px',
+                            backgroundColor: isDarkMode ? '#f59e0b' : '#f59e0b',
+                            color: '#ffffff',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: 'bold'
+                          }}>
+                            Uploading to GitHub...
+                          </div>
+                        )}
                         {newCharacter.image && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <img
@@ -1630,15 +1584,15 @@ function SettingsComponent() {
                             />
                             <button
                               type="button"
-                              onClick={() => setNewCharacter(prev => ({ ...prev, image: null }))}
-                              disabled={loading}
+                              onClick={() => setNewCharacter(prev => ({ ...prev, image: null, githubAvatarPath: null }))}
+                              disabled={loading || uploadingAvatar}
                               style={{
                                 padding: '6px 12px',
                                 backgroundColor: '#ef4444',
                                 color: '#ffffff',
                                 border: 'none',
                                 borderRadius: '4px',
-                                cursor: loading ? 'not-allowed' : 'pointer',
+                                cursor: (loading || uploadingAvatar) ? 'not-allowed' : 'pointer',
                                 fontSize: '12px',
                                 fontWeight: 'bold'
                               }}
@@ -1654,29 +1608,29 @@ function SettingsComponent() {
                         color: isDarkMode ? '#9ca3af' : '#6b7280',
                         margin: '8px 0 0 0'
                       }}>
-                        Upload an image from your computer. It will be automatically resized to fit 200x200 pixels.
+                        Upload an image to automatically save it to GitHub src/assets and link to Supabase avatar_id column.
                       </p>
                     </div>
                     
                     <div style={{ textAlign: 'right' }}>
                       <button
                         onClick={addCharacter}
-                        disabled={loading || !newCharacter.name.trim() || !newCharacter.username.trim()}
+                        disabled={loading || uploadingAvatar || !newCharacter.name.trim() || !newCharacter.username.trim()}
                         style={{
                           padding: '12px 20px',
-                          backgroundColor: (newCharacter.name.trim() && newCharacter.username.trim() && !loading) ? '#8b5cf6' : '#9ca3af',
+                          backgroundColor: (newCharacter.name.trim() && newCharacter.username.trim() && !loading && !uploadingAvatar) ? '#8b5cf6' : '#9ca3af',
                           color: '#ffffff',
                           border: 'none',
                           borderRadius: '6px',
                           fontSize: '14px',
                           fontWeight: 'bold',
-                          cursor: (newCharacter.name.trim() && newCharacter.username.trim() && !loading) ? 'pointer' : 'not-allowed',
+                          cursor: (newCharacter.name.trim() && newCharacter.username.trim() && !loading && !uploadingAvatar) ? 'pointer' : 'not-allowed',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '8px'
                         }}
                       >
-                        {loading ? 'â³' : 'ðŸ'¾'}
+                        {loading ? '⏳' : '💾'}
                         {loading ? 'Saving...' : 'Save'}
                       </button>
                     </div>
@@ -1695,7 +1649,7 @@ function SettingsComponent() {
                     gap: '8px',
                     margin: '0 0 16px 0'
                   }}>
-                    <span>ðŸ"‹</span>
+                    <span>📋</span>
                     Your Character Profiles ({characters.length})
                   </h3>
                   {characters.length === 0 ? (
@@ -1746,11 +1700,11 @@ function SettingsComponent() {
                                 fontWeight: 'bold',
                                 border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd',
                                 flexShrink: 0,
-                                backgroundImage: character.displayImage ? `url(${character.displayImage})` : 'none',
+                                backgroundImage: character.avatar_id ? `url(${character.avatar_id})` : 'none',
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center'
                               }}>
-                                {!character.displayImage && character.name.charAt(0)}
+                                {!character.avatar_id && character.name.charAt(0)}
                               </div>
                               <div style={{ flex: '1', display: 'grid', gap: '8px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -1817,33 +1771,78 @@ function SettingsComponent() {
                                     fontFamily: 'inherit'
                                   }}
                                 />
+                                
+                                {/* UPDATE AVATAR IN EDIT MODE */}
+                                <div>
+                                  <label style={{
+                                    display: 'block',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                    color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                                    marginBottom: '4px'
+                                  }}>
+                                    Update Avatar
+                                  </label>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                          handleImageUpload(file, true);
+                                        }
+                                      }}
+                                      disabled={loading || uploadingAvatar}
+                                      style={{
+                                        flex: '1',
+                                        padding: '4px',
+                                        fontSize: '11px',
+                                        backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                        border: isDarkMode ? '1px solid #4b5563' : '1px solid #c4b5fd',
+                                        borderRadius: '4px',
+                                        color: isDarkMode ? '#ffffff' : '#111827'
+                                      }}
+                                    />
+                                    {uploadingAvatar && (
+                                      <span style={{
+                                        fontSize: '11px',
+                                        color: isDarkMode ? '#f59e0b' : '#f59e0b',
+                                        fontWeight: 'bold'
+                                      }}>
+                                        Uploading...
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                
                                 <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                                   <button
                                     onClick={saveCharacterEdit}
-                                    disabled={loading}
+                                    disabled={loading || uploadingAvatar}
                                     style={{
                                       padding: '6px 12px',
-                                      backgroundColor: loading ? '#9ca3af' : '#10b981',
+                                      backgroundColor: (loading || uploadingAvatar) ? '#9ca3af' : '#10b981',
                                       color: '#ffffff',
                                       border: 'none',
                                       borderRadius: '4px',
-                                      cursor: loading ? 'not-allowed' : 'pointer',
+                                      cursor: (loading || uploadingAvatar) ? 'not-allowed' : 'pointer',
                                       fontSize: '11px',
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    {loading ? 'Saving...' : 'Save'}
+                                    {(loading || uploadingAvatar) ? 'Saving...' : 'Save'}
                                   </button>
                                   <button
                                     onClick={() => setEditingCharacter(null)}
-                                    disabled={loading}
+                                    disabled={loading || uploadingAvatar}
                                     style={{
                                       padding: '6px 12px',
                                       backgroundColor: '#6b7280',
                                       color: '#ffffff',
                                       border: 'none',
                                       borderRadius: '4px',
-                                      cursor: loading ? 'not-allowed' : 'pointer',
+                                      cursor: (loading || uploadingAvatar) ? 'not-allowed' : 'pointer',
                                       fontSize: '11px',
                                       fontWeight: 'bold'
                                     }}
@@ -1869,11 +1868,11 @@ function SettingsComponent() {
                                 fontWeight: 'bold',
                                 border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd',
                                 flexShrink: 0,
-                                backgroundImage: character.displayImage ? `url(${character.displayImage})` : 'none',
+                                backgroundImage: character.avatar_id ? `url(${character.avatar_id})` : 'none',
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center'
                               }}>
-                                {!character.displayImage && character.name.charAt(0)}
+                                {!character.avatar_id && character.name.charAt(0)}
                               </div>
                               <div style={{ flex: '1' }}>
                                 <div style={{ marginBottom: '4px' }}>
@@ -1911,6 +1910,16 @@ function SettingsComponent() {
                                 }}>
                                   {character.description || 'No description provided'}
                                 </p>
+                                {character.avatar_id && (
+                                  <div style={{
+                                    marginTop: '8px',
+                                    fontSize: '11px',
+                                    color: isDarkMode ? '#9ca3af' : '#6b7280',
+                                    fontStyle: 'italic'
+                                  }}>
+                                    Avatar: {character.avatar_id}
+                                  </div>
+                                )}
                               </div>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 <button
