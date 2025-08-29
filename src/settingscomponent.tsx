@@ -57,16 +57,10 @@ function SettingsComponent() {
     role: '',
     description: '',
     image: null,
-    avatarUrl: null,
-    userId: null
+    avatarUrl: null
   });
   const [editingCharacter, setEditingCharacter] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-
-  // Generate user_id for tracking
-  const generateUserId = () => {
-    return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-  };
   
   // Error Logs State
   const [errorLogs, setErrorLogs] = useState([]);
@@ -432,11 +426,8 @@ function SettingsComponent() {
       };
       reader.readAsDataURL(file);
 
-      // Generate user_id if not editing
-      const userId = isEditing ? editingCharacter.user_id : generateUserId();
-
-      // Create filename with user_id
-      const fileName = `${userId}_${characterName.replace(/[^a-zA-Z0-9]/g, '_')}_avatar.png`;
+      // Create simple filename
+      const fileName = `${characterName.replace(/[^a-zA-Z0-9]/g, '_')}_avatar_${Date.now()}.png`;
       
       // Upload to Supabase Storage (bucket name is "avatars")
       console.log('Attempting storage upload with filename:', fileName);
@@ -462,11 +453,11 @@ function SettingsComponent() {
 
       console.log('Avatar uploaded successfully:', publicUrl);
 
-      // Update state with the public URL and user_id
+      // Update state with the public URL
       if (isEditing) {
-        setEditingCharacter(prev => ({ ...prev, avatarUrl: publicUrl, user_id: userId }));
+        setEditingCharacter(prev => ({ ...prev, avatarUrl: publicUrl }));
       } else {
-        setNewCharacter(prev => ({ ...prev, avatarUrl: publicUrl, userId: userId }));
+        setNewCharacter(prev => ({ ...prev, avatarUrl: publicUrl }));
       }
 
       alert('Avatar uploaded successfully!');
@@ -492,9 +483,7 @@ function SettingsComponent() {
     
     try {
       setLoading(true);
-      
-      // Generate user_id if not already set
-      const userId = newCharacter.userId || generateUserId();
+      console.log('Starting character creation...');
       
       const characterData = {
         name: newCharacter.name.trim(),
@@ -503,7 +492,7 @@ function SettingsComponent() {
         description: newCharacter.description.trim() || null,
         avatar_id: newCharacter.avatarUrl || null,
         is_active: true,
-        user_id: userId
+        user_id: null
       };
       
       console.log('Saving character with data:', characterData);
@@ -516,20 +505,23 @@ function SettingsComponent() {
       
       if (error) {
         console.error('Database insert error details:', error);
+        console.error('Error code:', error.code);
+        console.error('Error hint:', error.hint);
         alert(`Database error: ${error.message}`);
-        throw error;
+        return; // Exit without throwing to ensure loading state resets
       }
       
       console.log('Character saved successfully to database:', data);
       
       setCharacters(prev => [data, ...prev]);
-      setNewCharacter({ name: '', username: '', role: '', description: '', image: null, avatarUrl: null, userId: null });
+      setNewCharacter({ name: '', username: '', role: '', description: '', image: null, avatarUrl: null });
       alert('Character profile created successfully!');
     } catch (error) {
-      console.error('Error adding character:', error);
+      console.error('Unexpected error adding character:', error);
       alert('Error creating character profile. Please try again.');
     } finally {
-      setLoading(false);
+      console.log('Resetting loading state...');
+      setLoading(false); // This ensures the button becomes clickable again
     }
   };
 
@@ -550,9 +542,7 @@ function SettingsComponent() {
         role: editingCharacter.role?.trim() || null,
         description: editingCharacter.description?.trim() || null,
         // Only update avatar_id if a new avatar was uploaded
-        ...(editingCharacter.avatarUrl && { avatar_id: editingCharacter.avatarUrl }),
-        // Keep the existing user_id
-        user_id: editingCharacter.user_id
+        ...(editingCharacter.avatarUrl && { avatar_id: editingCharacter.avatarUrl })
       };
       
       console.log('Updating character with ID:', editingCharacter.id, 'Data:', updateData);
@@ -1580,7 +1570,7 @@ function SettingsComponent() {
                             />
                             <button
                               type="button"
-                              onClick={() => setNewCharacter(prev => ({ ...prev, image: null, avatarUrl: null, userId: null }))}
+                              onClick={() => setNewCharacter(prev => ({ ...prev, image: null, avatarUrl: null }))}
                               disabled={loading || uploadingAvatar}
                               style={{
                                 padding: '6px 12px',
