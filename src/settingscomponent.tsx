@@ -22,6 +22,34 @@ if (supabaseUrl && supabaseKey) {
   console.error('Missing Supabase environment variables');
 }
 
+// Avatar mapping for pre-existing character avatars
+const AVATAR_MAPPING = {
+  'Anica': '/src/assets/Anica_avatar.png',
+  'Aurion': '/src/assets/Aurion_avatar.png', 
+  'Caelum': '/src/assets/Caelum_avatar.png'
+};
+
+// Helper function to find matching avatar based on character name
+const findMatchingAvatar = (characterName) => {
+  const normalizedName = characterName.trim();
+  
+  // First, check for exact matches (case-insensitive)
+  for (const [avatarName, avatarPath] of Object.entries(AVATAR_MAPPING)) {
+    if (normalizedName.toLowerCase() === avatarName.toLowerCase()) {
+      return avatarPath;
+    }
+  }
+  
+  // Then check if the character name contains any of the avatar names
+  for (const [avatarName, avatarPath] of Object.entries(AVATAR_MAPPING)) {
+    if (normalizedName.toLowerCase().includes(avatarName.toLowerCase())) {
+      return avatarPath;
+    }
+  }
+  
+  return null; // No matching avatar found
+};
+
 function SettingsComponent() {
   const [activeTab, setActiveTab] = useState('platforms');
   
@@ -116,7 +144,24 @@ function SettingsComponent() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setCharacters(data || []);
+      
+      // Process characters to add display images
+      const charactersWithImages = (data || []).map(character => {
+        let displayImage = null;
+        
+        if (character.avatar_id && character.avatar_id.startsWith('/src/assets/')) {
+          displayImage = character.avatar_id; // Use GitHub avatar
+        } else {
+          displayImage = findMatchingAvatar(character.name); // Try to find matching avatar
+        }
+        
+        return {
+          ...character,
+          displayImage
+        };
+      });
+      
+      setCharacters(charactersWithImages);
     } catch (error) {
       console.error('Error loading characters:', error);
     }
@@ -474,14 +519,25 @@ function SettingsComponent() {
     try {
       setLoading(true);
       
-      // For now, store base64 image as placeholder until we implement Supabase Storage
-      // TODO: Upload to Supabase Storage and get UUID
+      // Check for matching avatar based on character name
+      const matchingAvatar = findMatchingAvatar(newCharacter.name);
+      console.log('Matching avatar found:', matchingAvatar);
+      
+      // Determine avatar_id: use matching avatar path or uploaded image path
+      let avatarId = null;
+      if (matchingAvatar) {
+        avatarId = matchingAvatar; // Use the predefined avatar path
+      } else if (newCharacter.image) {
+        // Store base64 indicator for uploaded images (until Supabase Storage implemented)
+        avatarId = 'uploaded:' + Date.now(); // Temporary solution
+      }
+      
       const characterData = {
         name: newCharacter.name.trim(),
         username: newCharacter.username.trim(),
         role: newCharacter.role.trim() || null,           // Exact database column name
         description: newCharacter.description.trim() || null, // Exact database column name
-        avatar_id: null, // TODO: Upload image to Storage and get UUID
+        avatar_id: avatarId, // Now properly saves avatar reference
         is_active: true,
         user_id: null    // Set to null for now, can be removed later if not needed
       };
@@ -501,10 +557,10 @@ function SettingsComponent() {
       
       console.log('Data returned from Supabase:', data); // Debug log
       
-      // Add the uploaded image back to the data for UI display
+      // Add display image for UI
       const characterWithImage = {
         ...data,
-        image: newCharacter.image // Keep the base64 image for UI display
+        displayImage: matchingAvatar || newCharacter.image // Keep the base64 image for UI display
       };
       
       setCharacters(prev => [characterWithImage, ...prev]);
@@ -529,12 +585,22 @@ function SettingsComponent() {
     try {
       setLoading(true);
       
+      // Check for matching avatar based on updated character name
+      const matchingAvatar = findMatchingAvatar(editingCharacter.name);
+      console.log('Matching avatar for edit:', matchingAvatar);
+      
+      // Determine avatar_id for the update
+      let avatarId = editingCharacter.avatar_id; // Keep existing if no change
+      if (matchingAvatar && matchingAvatar !== editingCharacter.avatar_id) {
+        avatarId = matchingAvatar; // Update to new matching avatar
+      }
+      
       const updateData = {
         name: editingCharacter.name.trim(),
         username: editingCharacter.username.trim(), 
         role: editingCharacter.role?.trim() || null,           // Exact database column name
-        description: editingCharacter.description?.trim() || null // Exact database column name
-        // TODO: Handle avatar_id updates when image upload is implemented
+        description: editingCharacter.description?.trim() || null, // Exact database column name
+        avatar_id: avatarId // Update avatar if changed
       };
       
       console.log('Updating character data:', updateData); // Debug log
@@ -548,8 +614,14 @@ function SettingsComponent() {
       
       if (error) throw error;
       
+      // Add display image for UI
+      const updatedCharacterWithImage = {
+        ...data,
+        displayImage: matchingAvatar || findMatchingAvatar(data.name)
+      };
+      
       setCharacters(prev => prev.map(c => 
-        c.id === editingCharacter.id ? data : c
+        c.id === editingCharacter.id ? updatedCharacterWithImage : c
       ));
       setEditingCharacter(null);
       alert('Character profile updated successfully!');
@@ -606,9 +678,9 @@ function SettingsComponent() {
         }}>
           <div style={{ display: 'flex', borderBottom: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb' }}>
             {[
-              { id: 'platforms', icon: '📱', label: 'Social Platforms' },
-              { id: 'characters', icon: '👥', label: 'Character Profiles' },
-              { id: 'logs', icon: '📋', label: 'Error Logs' }
+              { id: 'platforms', icon: 'ðŸ"±', label: 'Social Platforms' },
+              { id: 'characters', icon: 'ðŸ'¥', label: 'Character Profiles' },
+              { id: 'logs', icon: 'ðŸ"‹', label: 'Error Logs' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -661,7 +733,7 @@ function SettingsComponent() {
                     gap: '12px',
                     margin: '0 0 24px 0'
                   }}>
-                    <span style={{ fontSize: '28px' }}>📱</span>
+                    <span style={{ fontSize: '28px' }}>ðŸ"±</span>
                     Social Media Platforms
                   </h2>
                   
@@ -683,7 +755,7 @@ function SettingsComponent() {
                       gap: '8px',
                       margin: '0 0 16px 0'
                     }}>
-                      <span>➕</span>
+                      <span>âž•</span>
                       Create New Platform
                     </h3>
                     <div style={{ 
@@ -768,7 +840,7 @@ function SettingsComponent() {
                           minWidth: '100px'
                         }}
                       >
-                        {loading ? '⏳' : '💾'}
+                        {loading ? 'â³' : 'ðŸ'¾'}
                         {loading ? 'Saving...' : 'Save'}
                       </button>
                     </div>
@@ -786,7 +858,7 @@ function SettingsComponent() {
                       gap: '8px',
                       margin: '0 0 16px 0'
                     }}>
-                      <span>📋</span>
+                      <span>ðŸ"‹</span>
                       Your Platforms ({platforms.length})
                     </h3>
                     {platforms.length === 0 ? (
@@ -868,7 +940,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    💾 {loading ? 'Saving...' : 'Save'}
+                                    ðŸ'¾ {loading ? 'Saving...' : 'Save'}
                                   </button>
                                   <button
                                     onClick={() => setEditingPlatform(null)}
@@ -884,7 +956,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    ❌ Cancel
+                                    âŒ Cancel
                                   </button>
                                 </div>
                               </div>
@@ -920,7 +992,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    ✏️ Edit
+                                    âœï¸ Edit
                                   </button>
                                   <button
                                     onClick={() => deletePlatform(platform.id)}
@@ -936,7 +1008,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    🗑️ Delete
+                                    ðŸ—'ï¸ Delete
                                   </button>
                                 </div>
                               </>
@@ -967,7 +1039,7 @@ function SettingsComponent() {
                     gap: '12px',
                     margin: '0 0 24px 0'
                   }}>
-                    <span style={{ fontSize: '28px' }}>📡</span>
+                    <span style={{ fontSize: '28px' }}>ðŸ"¡</span>
                     Telegram Channels & Groups
                   </h2>
                   
@@ -989,7 +1061,7 @@ function SettingsComponent() {
                       gap: '8px',
                       margin: '0 0 16px 0'
                     }}>
-                      <span>➕</span>
+                      <span>âž•</span>
                       Add Telegram Channel/Group
                     </h3>
                     
@@ -1145,7 +1217,7 @@ function SettingsComponent() {
                           minWidth: '100px'
                         }}
                       >
-                        {loading ? '⏳' : '💾'}
+                        {loading ? 'â³' : 'ðŸ'¾'}
                         {loading ? 'Saving...' : 'Save'}
                       </button>
                     </div>
@@ -1163,7 +1235,7 @@ function SettingsComponent() {
                       gap: '8px',
                       margin: '0 0 16px 0'
                     }}>
-                      <span>📋</span>
+                      <span>ðŸ"‹</span>
                       Your Telegram Channels/Groups ({telegramChannels.length})
                     </h3>
                     {telegramChannels.length === 0 ? (
@@ -1263,7 +1335,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    💾 {loading ? 'Saving...' : 'Save'}
+                                    ðŸ'¾ {loading ? 'Saving...' : 'Save'}
                                   </button>
                                   <button
                                     onClick={() => setEditingTelegram(null)}
@@ -1279,7 +1351,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    ❌ Cancel
+                                    âŒ Cancel
                                   </button>
                                 </div>
                               </div>
@@ -1298,7 +1370,7 @@ function SettingsComponent() {
                                     color: isDarkMode ? '#9ca3af' : '#6b7280'
                                   }}>
                                     ID: {telegram.channel_group}
-                                    {telegram.thread_id && ` • Thread: ${telegram.thread_id}`}
+                                    {telegram.thread_id && ` â€¢ Thread: ${telegram.thread_id}`}
                                   </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -1316,7 +1388,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    ✏️ Edit
+                                    âœï¸ Edit
                                   </button>
                                   <button
                                     onClick={() => deleteTelegram(telegram.id)}
@@ -1332,7 +1404,7 @@ function SettingsComponent() {
                                       fontWeight: 'bold'
                                     }}
                                   >
-                                    🗑️ Delete
+                                    ðŸ—'ï¸ Delete
                                   </button>
                                 </div>
                               </>
@@ -1366,7 +1438,7 @@ function SettingsComponent() {
                   gap: '12px',
                   margin: '0 0 24px 0'
                 }}>
-                  <span style={{ fontSize: '28px' }}>👥</span>
+                  <span style={{ fontSize: '28px' }}>ðŸ'¥</span>
                   Character Profiles
                 </h2>
                 
@@ -1388,7 +1460,7 @@ function SettingsComponent() {
                     gap: '8px',
                     margin: '0 0 16px 0'
                   }}>
-                    <span>➕</span>
+                    <span>âž•</span>
                     Add Profile
                   </h3>
                   <div style={{ display: 'grid', gap: '16px' }}>
@@ -1604,7 +1676,7 @@ function SettingsComponent() {
                           gap: '8px'
                         }}
                       >
-                        {loading ? '⏳' : '💾'}
+                        {loading ? 'â³' : 'ðŸ'¾'}
                         {loading ? 'Saving...' : 'Save'}
                       </button>
                     </div>
@@ -1623,7 +1695,7 @@ function SettingsComponent() {
                     gap: '8px',
                     margin: '0 0 16px 0'
                   }}>
-                    <span>📋</span>
+                    <span>ðŸ"‹</span>
                     Your Character Profiles ({characters.length})
                   </h3>
                   {characters.length === 0 ? (
@@ -1674,11 +1746,11 @@ function SettingsComponent() {
                                 fontWeight: 'bold',
                                 border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd',
                                 flexShrink: 0,
-                                backgroundImage: character.image ? `url(${character.image})` : 'none',
+                                backgroundImage: character.displayImage ? `url(${character.displayImage})` : 'none',
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center'
                               }}>
-                                {!character.image && character.name.charAt(0)}
+                                {!character.displayImage && character.name.charAt(0)}
                               </div>
                               <div style={{ flex: '1', display: 'grid', gap: '8px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -1797,11 +1869,11 @@ function SettingsComponent() {
                                 fontWeight: 'bold',
                                 border: isDarkMode ? '2px solid #c4b5fd' : '2px solid #c4b5fd',
                                 flexShrink: 0,
-                                backgroundImage: character.image ? `url(${character.image})` : 'none',
+                                backgroundImage: character.displayImage ? `url(${character.displayImage})` : 'none',
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center'
                               }}>
-                                {!character.image && character.name.charAt(0)}
+                                {!character.displayImage && character.name.charAt(0)}
                               </div>
                               <div style={{ flex: '1' }}>
                                 <div style={{ marginBottom: '4px' }}>
