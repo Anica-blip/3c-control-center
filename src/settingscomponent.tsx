@@ -39,7 +39,7 @@ function SettingsComponent() {
   const [editingPlatform, setEditingPlatform] = useState(null);
   const [loading, setLoading] = useState(false);
   
-  // Telegram Channels/Groups State (stored in scheduled_posts for unique requirements)
+  // Telegram Channels/Groups State (stored in telegram_configurations table)
   const [telegramChannels, setTelegramChannels] = useState([]);
   const [newTelegram, setNewTelegram] = useState({ 
     name: '', 
@@ -248,183 +248,8 @@ function SettingsComponent() {
   };
 
   // =============================================================================
-  // IMAGE PROCESSING FUNCTION
+  // TELEGRAM FUNCTIONS (using telegram_configurations table)
   // =============================================================================
-  
-  const resizeImage = (file, maxWidth = 200, maxHeight = 200) => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      
-      img.onload = () => {
-        let { width, height } = img;
-        
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        ctx.drawImage(img, 0, 0, width, height);
-        const resizedImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        resolve(resizedImageDataUrl);
-      };
-      
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
-  const handleImageUpload = async (file, isEditing = false) => {
-    if (file && file.type.startsWith('image/')) {
-      try {
-        const resizedImage = await resizeImage(file);
-        
-        if (isEditing) {
-          setEditingCharacter(prev => ({ ...prev, image: resizedImage }));
-        } else {
-          setNewCharacter(prev => ({ ...prev, image: resizedImage }));
-        }
-      } catch (error) {
-        console.error('Error processing image:', error);
-        alert('Error processing image. Please try again.');
-      }
-    } else {
-      alert('Please select a valid image file (JPG, PNG, GIF, etc.)');
-    }
-  };
-
-  // =============================================================================
-  // CHARACTER PROFILES FUNCTIONS
-  // =============================================================================
-  
-  const addCharacter = async () => {
-    if (!newCharacter.name.trim() || !newCharacter.username.trim()) return;
-    
-    if (!supabase) {
-      alert('Supabase not configured. Please set up environment variables.');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      
-      // For now, store base64 image as placeholder until we implement Supabase Storage
-      // TODO: Upload to Supabase Storage and get UUID
-      const characterData = {
-        name: newCharacter.name.trim(),
-        username: newCharacter.username.trim(),
-        role: newCharacter.role.trim() || null,           // Exact database column name
-        description: newCharacter.description.trim() || null, // Exact database column name
-        avatar_id: null, // TODO: Upload image to Storage and get UUID
-        is_active: true,
-        user_id: null    // Set to null for now, can be removed later if not needed
-      };
-      
-      console.log('Saving character data:', characterData); // Debug log
-      
-      const { data, error } = await supabase
-        .from('character_profiles')
-        .insert([characterData])
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      // Add the uploaded image back to the data for UI display
-      const characterWithImage = {
-        ...data,
-        image: newCharacter.image // Keep the base64 image for UI display
-      };
-      
-      setCharacters(prev => [characterWithImage, ...prev]);
-      setNewCharacter({ name: '', username: '', role: '', description: '', image: null });
-      alert('Character profile created successfully!');
-    } catch (error) {
-      console.error('Error adding character:', error);
-      alert('Error creating character profile. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const saveCharacterEdit = async () => {
-    if (!editingCharacter || !editingCharacter.name.trim() || !editingCharacter.username.trim()) return;
-    
-    if (!supabase) {
-      alert('Supabase not configured. Please set up environment variables.');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      
-      const updateData = {
-        name: editingCharacter.name.trim(),
-        username: editingCharacter.username.trim(), 
-        role: editingCharacter.role?.trim() || null,           // Exact database column name
-        description: editingCharacter.description?.trim() || null // Exact database column name
-        // TODO: Handle avatar_id updates when image upload is implemented
-      };
-      
-      console.log('Updating character data:', updateData); // Debug log
-      
-      const { data, error } = await supabase
-        .from('character_profiles')
-        .update(updateData)
-        .eq('id', editingCharacter.id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      setCharacters(prev => prev.map(c => 
-        c.id === editingCharacter.id ? data : c
-      ));
-      setEditingCharacter(null);
-      alert('Character profile updated successfully!');
-    } catch (error) {
-      console.error('Error updating character:', error);
-      alert('Error updating character profile. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deleteCharacter = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this character profile?')) return;
-    
-    if (!supabase) {
-      alert('Supabase not configured. Please set up environment variables.');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      const { error } = await supabase
-        .from('character_profiles')
-        .update({ is_active: false })
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      setCharacters(prev => prev.filter(c => c.id !== id));
-      alert('Character profile deleted successfully!');
-    } catch (error) {
-      console.error('Error deleting character:', error);
-      alert('Error deleting character profile. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
   
   const addTelegram = async () => {
     if (!newTelegram.name.trim() || !newTelegram.channel_group.trim()) return;
@@ -565,6 +390,199 @@ function SettingsComponent() {
       // Remove from UI anyway if it's an old record that doesn't exist in new table
       setTelegramChannels(prev => prev.filter(t => t.id !== id));
       alert('Removed from display. Check console for details.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // =============================================================================
+  // IMAGE PROCESSING FUNCTION
+  // =============================================================================
+  
+  const resizeImage = (file, maxWidth = 200, maxHeight = 200) => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        const resizedImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(resizedImageDataUrl);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleImageUpload = async (file, isEditing = false) => {
+    if (file && file.type.startsWith('image/')) {
+      try {
+        const resizedImage = await resizeImage(file);
+        
+        if (isEditing) {
+          setEditingCharacter(prev => ({ ...prev, image: resizedImage }));
+        } else {
+          setNewCharacter(prev => ({ ...prev, image: resizedImage }));
+        }
+      } catch (error) {
+        console.error('Error processing image:', error);
+        alert('Error processing image. Please try again.');
+      }
+    } else {
+      alert('Please select a valid image file (JPG, PNG, GIF, etc.)');
+    }
+  };
+
+  // =============================================================================
+  // CHARACTER PROFILES FUNCTIONS
+  // =============================================================================
+  
+  const addCharacter = async () => {
+    if (!newCharacter.name.trim() || !newCharacter.username.trim()) return;
+    
+    if (!supabase) {
+      alert('Supabase not configured. Please set up environment variables.');
+      return;
+    }
+    
+    // DEBUG: Log the current form state
+    console.log('Form state before save:', {
+      name: newCharacter.name,
+      username: newCharacter.username,
+      role: newCharacter.role,
+      description: newCharacter.description,
+      image: newCharacter.image ? 'has image' : 'no image'
+    });
+    
+    try {
+      setLoading(true);
+      
+      // For now, store base64 image as placeholder until we implement Supabase Storage
+      // TODO: Upload to Supabase Storage and get UUID
+      const characterData = {
+        name: newCharacter.name.trim(),
+        username: newCharacter.username.trim(),
+        role: newCharacter.role.trim() || null,           // Exact database column name
+        description: newCharacter.description.trim() || null, // Exact database column name
+        avatar_id: null, // TODO: Upload image to Storage and get UUID
+        is_active: true,
+        user_id: null    // Set to null for now, can be removed later if not needed
+      };
+      
+      console.log('Data being sent to Supabase:', characterData); // Debug log
+      
+      const { data, error } = await supabase
+        .from('character_profiles')
+        .insert([characterData])
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('Data returned from Supabase:', data); // Debug log
+      
+      // Add the uploaded image back to the data for UI display
+      const characterWithImage = {
+        ...data,
+        image: newCharacter.image // Keep the base64 image for UI display
+      };
+      
+      setCharacters(prev => [characterWithImage, ...prev]);
+      setNewCharacter({ name: '', username: '', role: '', description: '', image: null });
+      alert('Character profile created successfully!');
+    } catch (error) {
+      console.error('Error adding character:', error);
+      alert('Error creating character profile. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveCharacterEdit = async () => {
+    if (!editingCharacter || !editingCharacter.name.trim() || !editingCharacter.username.trim()) return;
+    
+    if (!supabase) {
+      alert('Supabase not configured. Please set up environment variables.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      const updateData = {
+        name: editingCharacter.name.trim(),
+        username: editingCharacter.username.trim(), 
+        role: editingCharacter.role?.trim() || null,           // Exact database column name
+        description: editingCharacter.description?.trim() || null // Exact database column name
+        // TODO: Handle avatar_id updates when image upload is implemented
+      };
+      
+      console.log('Updating character data:', updateData); // Debug log
+      
+      const { data, error } = await supabase
+        .from('character_profiles')
+        .update(updateData)
+        .eq('id', editingCharacter.id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      setCharacters(prev => prev.map(c => 
+        c.id === editingCharacter.id ? data : c
+      ));
+      setEditingCharacter(null);
+      alert('Character profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating character:', error);
+      alert('Error updating character profile. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteCharacter = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this character profile?')) return;
+    
+    if (!supabase) {
+      alert('Supabase not configured. Please set up environment variables.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('character_profiles')
+        .update({ is_active: false })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setCharacters(prev => prev.filter(c => c.id !== id));
+      alert('Character profile deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting character:', error);
+      alert('Error deleting character profile. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -1070,19 +1088,11 @@ function SettingsComponent() {
                             fontSize: '14px',
                             color: isDarkMode ? '#ffffff' : '#111827',
                             outline: 'none',
-                            cursor: 'pointer',
-                            WebkitAppearance: 'auto',
-                            MozAppearance: 'auto'
+                            cursor: 'pointer'
                           }}
                         >
-                          <option value="channel" style={{ 
-                            backgroundColor: isDarkMode ? '#334155 !important' : '#ffffff !important',
-                            color: isDarkMode ? '#ffffff !important' : '#111827 !important'
-                          }}>Channel</option>
-                          <option value="group" style={{ 
-                            backgroundColor: isDarkMode ? '#334155 !important' : '#ffffff !important',
-                            color: isDarkMode ? '#ffffff !important' : '#111827 !important'
-                          }}>Group</option>
+                          <option value="channel">Channel</option>
+                          <option value="group">Group</option>
                         </select>
                       </div>
                       
@@ -1398,6 +1408,7 @@ function SettingsComponent() {
                           value={newCharacter.name}
                           onChange={(e) => setNewCharacter(prev => ({ ...prev, name: e.target.value }))}
                           placeholder="e.g., Dr. Sarah Chen"
+                          disabled={loading}
                           style={{
                             width: '100%',
                             padding: '12px',
@@ -1425,6 +1436,7 @@ function SettingsComponent() {
                           value={newCharacter.username}
                           onChange={(e) => setNewCharacter(prev => ({ ...prev, username: e.target.value }))}
                           placeholder="e.g., @drsarahchen"
+                          disabled={loading}
                           style={{
                             width: '100%',
                             padding: '12px',
@@ -1447,13 +1459,14 @@ function SettingsComponent() {
                         color: isDarkMode ? '#c4b5fd' : '#7c3aed',
                         marginBottom: '8px'
                       }}>
-                        Title
+                        Role/Title
                       </label>
                       <input
                         type="text"
-                        value={newCharacter.title}
-                        onChange={(e) => setNewCharacter(prev => ({ ...prev, title: e.target.value }))}
+                        value={newCharacter.role}
+                        onChange={(e) => setNewCharacter(prev => ({ ...prev, role: e.target.value }))}
                         placeholder="e.g., Wellness Expert & Mindfulness Coach"
+                        disabled={loading}
                         style={{
                           width: '100%',
                           padding: '12px',
@@ -1475,12 +1488,13 @@ function SettingsComponent() {
                         color: isDarkMode ? '#c4b5fd' : '#7c3aed',
                         marginBottom: '8px'
                       }}>
-                        Bio
+                        Description/Bio
                       </label>
                       <textarea
-                        value={newCharacter.bio}
-                        onChange={(e) => setNewCharacter(prev => ({ ...prev, bio: e.target.value }))}
+                        value={newCharacter.description}
+                        onChange={(e) => setNewCharacter(prev => ({ ...prev, description: e.target.value }))}
                         placeholder="Detailed bio and expertise description..."
+                        disabled={loading}
                         style={{
                           width: '100%',
                           padding: '12px',
@@ -1517,6 +1531,7 @@ function SettingsComponent() {
                               handleImageUpload(file, false);
                             }
                           }}
+                          disabled={loading}
                           style={{
                             flex: '1',
                             padding: '12px',
@@ -1544,13 +1559,14 @@ function SettingsComponent() {
                             <button
                               type="button"
                               onClick={() => setNewCharacter(prev => ({ ...prev, image: null }))}
+                              disabled={loading}
                               style={{
                                 padding: '6px 12px',
                                 backgroundColor: '#ef4444',
                                 color: '#ffffff',
                                 border: 'none',
                                 borderRadius: '4px',
-                                cursor: 'pointer',
+                                cursor: loading ? 'not-allowed' : 'pointer',
                                 fontSize: '12px',
                                 fontWeight: 'bold'
                               }}
