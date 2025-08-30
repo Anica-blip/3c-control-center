@@ -12,6 +12,7 @@ interface PendingPost {
   platforms: PlatformAssignment[];
   status: 'pending_schedule';
   createdDate: Date;
+  contentId?: string; // Added to track original content ID
 }
 
 interface ScheduledPost {
@@ -96,42 +97,63 @@ export default function ScheduleComponent() {
     { id: '5', name: 'Forum', icon: 'FR', color: '#4b5563' },
   ];
 
-  // Initialize with sample data
+  // Helper function to truncate description to first two lines (approximately 120 characters)
+  const truncateDescription = (description: string, maxLength: number = 120) => {
+    if (description.length <= maxLength) return description;
+    
+    const truncated = description.substring(0, maxLength);
+    const lastSpaceIndex = truncated.lastIndexOf(' ');
+    
+    if (lastSpaceIndex > maxLength * 0.8) {
+      return truncated.substring(0, lastSpaceIndex) + '...';
+    }
+    
+    return truncated + '...';
+  };
+
+  // Listen for posts from Content Manager
   useEffect(() => {
-    if (pendingPosts.length === 0) {
-      const samplePosts: PendingPost[] = [
-        {
-          id: 'pending-1',
-          characterProfile: 'Business Professional',
-          type: 'Announcement',
-          template: 'Standard Post',
-          description: 'Meet Jan our Admin Support and 3C Community Mentor',
-          mediaFiles: [{ id: '1', name: 'team-photo.jpg', type: 'image', size: 1024000, url: '#' }],
-          platforms: [
-            { platformId: '1', platformName: 'Telegram', platformIcon: 'TG', status: 'pending' },
-            { platformId: '5', platformName: 'Forum', platformIcon: 'FR', status: 'pending' }
-          ],
-          status: 'pending_schedule',
-          createdDate: new Date()
-        },
-        {
-          id: 'pending-2',
-          characterProfile: 'Marketing Expert',
-          type: 'Promotional',
-          template: 'Product Launch',
-          description: 'Exciting new features coming to our platform! Get ready for enhanced productivity tools.',
-          mediaFiles: [{ id: '2', name: 'feature-preview.png', type: 'image', size: 2048000, url: '#' }],
-          platforms: [
-            { platformId: '2', platformName: 'YouTube', platformIcon: 'YT', status: 'pending' },
-            { platformId: '3', platformName: 'Facebook', platformIcon: 'FB', status: 'pending' },
-            { platformId: '4', platformName: 'Twitter', platformIcon: 'TW', status: 'pending' }
-          ],
-          status: 'pending_schedule',
-          createdDate: new Date(Date.now() - 86400000)
+    const handleNewPendingPost = (event: CustomEvent) => {
+      const newPost = event.detail;
+      setPendingPosts(prev => {
+        // Check if post already exists to avoid duplicates
+        const exists = prev.some(p => p.contentId === newPost.contentId);
+        if (exists) return prev;
+        
+        return [newPost, ...prev];
+      });
+    };
+
+    // Load existing pending posts from localStorage
+    const loadPendingPosts = () => {
+      try {
+        const stored = localStorage.getItem('pendingSchedulePosts');
+        if (stored) {
+          const posts = JSON.parse(stored).map((post: any) => ({
+            ...post,
+            createdDate: new Date(post.createdDate)
+          }));
+          setPendingPosts(posts);
         }
-      ];
-      setPendingPosts(samplePosts);
-      
+      } catch (error) {
+        console.error('Error loading pending posts:', error);
+      }
+    };
+
+    // Initial load
+    loadPendingPosts();
+
+    // Listen for new posts from Content Manager
+    window.addEventListener('newPendingPost', handleNewPendingPost as EventListener);
+
+    return () => {
+      window.removeEventListener('newPendingPost', handleNewPendingPost as EventListener);
+    };
+  }, []);
+
+  // Initialize with sample data only if no real data exists
+  useEffect(() => {
+    if (pendingPosts.length === 0 && scheduledPosts.length === 0) {
       const sampleScheduled: ScheduledPost[] = [
         {
           id: 'scheduled-1',
@@ -182,7 +204,7 @@ export default function ScheduleComponent() {
       ];
       setSavedTemplates(sampleTemplates);
     }
-  }, [pendingPosts.length]);
+  }, [pendingPosts.length, scheduledPosts.length]);
 
   const getPlatformIcon = (platformId: string) => {
     const platform = platforms.find(p => p.id === platformId);
@@ -361,6 +383,11 @@ export default function ScheduleComponent() {
       setScheduledPosts(prev => [...prev, scheduledPost]);
       setPendingPosts(prev => prev.filter(p => p.id !== selectedPendingPost.id));
       
+      // Update localStorage
+      const remainingPending = JSON.parse(localStorage.getItem('pendingSchedulePosts') || '[]')
+        .filter((p: any) => p.id !== selectedPendingPost.id);
+      localStorage.setItem('pendingSchedulePosts', JSON.stringify(remainingPending));
+      
       alert(`Post scheduled for ${tomorrow.toLocaleString()}!`);
       setIsScheduleModalOpen(false);
       setSelectedPendingPost(null);
@@ -373,6 +400,11 @@ export default function ScheduleComponent() {
         setScheduledPosts(prev => prev.map(p => p.id === editingPost.id ? editingPost as ScheduledPost : p));
       } else {
         setPendingPosts(prev => prev.map(p => p.id === editingPost.id ? editingPost as PendingPost : p));
+        
+        // Update localStorage
+        const storedPosts = JSON.parse(localStorage.getItem('pendingSchedulePosts') || '[]');
+        const updatedPosts = storedPosts.map((p: any) => p.id === editingPost.id ? editingPost : p);
+        localStorage.setItem('pendingSchedulePosts', JSON.stringify(updatedPosts));
       }
       setIsEditModalOpen(false);
       setEditingPost(null);
@@ -1272,7 +1304,7 @@ export default function ScheduleComponent() {
                       fontWeight: 'bold',
                       margin: '4px 0 0 0'
                     }}>
-                      {template.description}
+                      {truncateDescription(template.description)}
                     </p>
                   </div>
                   
@@ -1403,8 +1435,8 @@ export default function ScheduleComponent() {
         gap: '16px'
       }}>
         <div style={{
-          backgroundColor: isDarkMode ? '#7c2d12' : '#fed7aa',
-          color: isDarkMode ? '#fed7aa' : '#9a3412',
+          backgroundColor: isDarkMode ? '#d97706' : '#fed7aa',
+          color: isDarkMode ? '#000000' : '#9a3412', // Fixed contrast for dark mode
           padding: '6px 12px',
           borderRadius: '12px',
           fontWeight: 'bold',
@@ -1483,8 +1515,8 @@ export default function ScheduleComponent() {
                 <span>{tab.label}</span>
                 {tab.id === 'pending' && pendingPosts.length > 0 && (
                   <span style={{
-                    backgroundColor: isDarkMode ? '#7c2d12' : '#fed7aa',
-                    color: isDarkMode ? '#fed7aa' : '#9a3412',
+                    backgroundColor: isDarkMode ? '#d97706' : '#fed7aa',
+                    color: isDarkMode ? '#000000' : '#9a3412', // Fixed contrast for dark mode
                     padding: '2px 8px',
                     fontSize: '11px',
                     borderRadius: '12px',
@@ -1619,8 +1651,8 @@ export default function ScheduleComponent() {
                             <span style={{
                               padding: '4px 12px',
                               fontSize: '11px',
-                              backgroundColor: isDarkMode ? '#7c2d12' : '#fed7aa',
-                              color: isDarkMode ? '#fed7aa' : '#9a3412',
+                              backgroundColor: isDarkMode ? '#d97706' : '#fed7aa',
+                              color: isDarkMode ? '#000000' : '#9a3412', // Fixed contrast for dark mode
                               borderRadius: '12px',
                               fontWeight: 'bold'
                             }}>
@@ -1640,6 +1672,19 @@ export default function ScheduleComponent() {
                             }}>
                               {post.characterProfile}
                             </span>
+                            {post.contentId && (
+                              <span style={{
+                                fontSize: '11px',
+                                color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                                fontFamily: 'monospace',
+                                backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontWeight: 'bold'
+                              }}>
+                                ID: {post.contentId}
+                              </span>
+                            )}
                           </div>
                           
                           <div style={{ marginBottom: '16px' }}>
@@ -1650,7 +1695,7 @@ export default function ScheduleComponent() {
                               fontWeight: 'bold',
                               margin: '0'
                             }}>
-                              {post.description}
+                              {truncateDescription(post.description)}
                             </p>
                           </div>
                           
@@ -1751,12 +1796,18 @@ export default function ScheduleComponent() {
                               e.currentTarget.style.backgroundColor = '#3b82f6';
                             }}
                           >
-                            🚀 Schedule
+                            Schedule
                           </button>
                           <button
                             onClick={() => {
                               if (confirm('Are you sure you want to delete this post?')) {
                                 setPendingPosts(prev => prev.filter(p => p.id !== post.id));
+                                
+                                // Update localStorage
+                                const storedPosts = JSON.parse(localStorage.getItem('pendingSchedulePosts') || '[]');
+                                const updatedPosts = storedPosts.filter((p: any) => p.id !== post.id);
+                                localStorage.setItem('pendingSchedulePosts', JSON.stringify(updatedPosts));
+                                
                                 alert('Post deleted successfully!');
                               }
                             }}
