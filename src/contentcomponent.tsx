@@ -1456,7 +1456,7 @@ const EnhancedContentCreationForm = ({
             <button
               type="button"
               onClick={() => {
-                const commonEmojis = ['😀', '😊', '😍', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙏', '💡', '📈', '📊'];
+                const commonEmojis = ['😀', '😊', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙏', '💡', '📈', '📊'];
                 const emoji = prompt(`Choose an emoji:\n${commonEmojis.join(' ')}\n\nOr enter any emoji:`);
                 if (emoji) {
                   setContent(prev => ({ ...prev, description: prev.description + emoji }));
@@ -2360,6 +2360,8 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
                       padding: '4px 8px',
                       borderRadius: '6px'
                     }}>
+                      From Template
+                    </span>
                   )}
                 </div>
                 
@@ -3497,7 +3499,8 @@ export default function ContentComponent() {
                   url: t.channel_group_id ? `https://t.me/${t.channel_group_id}` : '',
                   isActive: true,
                   isDefault: false
-                }))].filter(p => p.id && p.name)}                loadedTemplate={loadedTemplate}
+                }))].filter(p => p.id && p.name)}
+                loadedTemplate={loadedTemplate}
                 onTemplateLoaded={handleTemplateLoaded}
                 isSaving={isSaving}
                 isLoadingProfiles={isLoadingProfiles}
