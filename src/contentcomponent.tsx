@@ -1889,80 +1889,245 @@ const EnhancedContentCreationForm = ({
             border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
             overflow: 'hidden'
           }}>
-            {/* 1. Media Files Preview */}
+            {/* 1. Media Files Preview - Platform Responsive */}
             {mediaFiles.length > 0 && (
               <div style={{
                 padding: '16px',
                 backgroundColor: isDarkMode ? '#1e293b' : '#f9fafb',
                 borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
               }}>
+                {/* Platform Preview Info */}
                 <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: mediaFiles.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(120px, 1fr))',
+                  display: 'flex',
+                  alignItems: 'center',
                   gap: '8px',
-                  maxHeight: '200px',
-                  overflow: 'hidden'
+                  marginBottom: '12px',
+                  padding: '8px 12px',
+                  backgroundColor: isDarkMode ? '#334155' : '#e5e7eb',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#94a3b8' : '#6b7280'
                 }}>
-                  {mediaFiles.slice(0, 4).map((file) => (
-                    <div key={file.id} style={{
-                      position: 'relative',
-                      borderRadius: '6px',
-                      overflow: 'hidden',
-                      backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                  <Eye style={{ height: '14px', width: '14px' }} />
+                  {selections.platform ? (
+                    <span>Showing preview optimized for: {selections.platform.toUpperCase()}</span>
+                  ) : (
+                    <span>Generic preview (no platform optimization selected)</span>
+                  )}
+                </div>
+
+                {(() => {
+                  // Platform-specific dimensions and styling
+                  const getPlatformPreviewStyle = (platform: string) => {
+                    const styles = {
+                      instagram: {
+                        aspectRatio: '1 / 1', // Square posts
+                        maxWidth: '400px',
+                        label: 'Instagram Square Post (1:1)'
+                      },
+                      facebook: {
+                        aspectRatio: '1.91 / 1', // Facebook recommended
+                        maxWidth: '500px',
+                        label: 'Facebook Post (1.91:1)'
+                      },
+                      twitter: {
+                        aspectRatio: '16 / 9', // Twitter recommended
+                        maxWidth: '500px',
+                        label: 'Twitter/X Post (16:9)'
+                      },
+                      linkedin: {
+                        aspectRatio: '1.91 / 1', // LinkedIn recommended
+                        maxWidth: '500px',
+                        label: 'LinkedIn Post (1.91:1)'
+                      },
+                      youtube: {
+                        aspectRatio: '16 / 9', // YouTube thumbnail
+                        maxWidth: '480px',
+                        label: 'YouTube Thumbnail (16:9)'
+                      },
+                      tiktok: {
+                        aspectRatio: '9 / 16', // TikTok vertical
+                        maxWidth: '300px',
+                        label: 'TikTok Video (9:16)'
+                      },
+                      telegram: {
+                        aspectRatio: '1.91 / 1', // Similar to Facebook
+                        maxWidth: '500px',
+                        label: 'Telegram Post (1.91:1)'
+                      },
+                      pinterest: {
+                        aspectRatio: '2 / 3', // Pinterest vertical
+                        maxWidth: '400px',
+                        label: 'Pinterest Pin (2:3)'
+                      }
+                    };
+                    
+                    return styles[platform as keyof typeof styles] || {
+                      aspectRatio: 'auto',
+                      maxWidth: '100%',
+                      label: 'Original Size (No Platform Selected)'
+                    };
+                  };
+
+                  const platformStyle = getPlatformPreviewStyle(selections.platform);
+                  
+                  return (
+                    <div style={{
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      minHeight: '80px'
+                      gap: '12px'
                     }}>
-                      {file.type === 'image' ? (
-                        <img
-                          src={file.url}
-                          alt={file.name}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                      ) : (
-                        <div style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '4px',
-                          padding: '8px'
-                        }}>
-                          {getFileIcon(file.type)}
-                          <span style={{
-                            fontSize: '10px',
-                            color: isDarkMode ? '#94a3b8' : '#6b7280',
-                            textAlign: 'center'
+                      {/* Platform Label */}
+                      <div style={{
+                        fontSize: '11px',
+                        color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                        fontWeight: '600',
+                        textAlign: 'center'
+                      }}>
+                        {platformStyle.label}
+                      </div>
+
+                      {/* Media Grid */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: mediaFiles.length === 1 
+                          ? '1fr' 
+                          : selections.platform === 'tiktok' || selections.platform === 'pinterest'
+                            ? 'repeat(auto-fit, minmax(150px, 200px))'  // Smaller for vertical formats
+                            : 'repeat(auto-fit, minmax(200px, 300px))',
+                        gap: '12px',
+                        justifyContent: 'center',
+                        width: '100%',
+                        maxWidth: '800px'
+                      }}>
+                        {mediaFiles.slice(0, 4).map((file, index) => (
+                          <div key={file.id} style={{
+                            position: 'relative',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                            border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+                            aspectRatio: platformStyle.aspectRatio,
+                            maxWidth: platformStyle.maxWidth,
+                            margin: '0 auto'
                           }}>
-                            {file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}
-                          </span>
-                        </div>
-                      )}
-                      {mediaFiles.length > 4 && file.id === mediaFiles[3].id && (
+                            {file.type === 'image' || file.type === 'gif' ? (
+                              <img
+                                src={file.url}
+                                alt={file.name}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: selections.platform ? 'cover' : 'contain', // Cover for platforms, contain for generic
+                                  backgroundColor: isDarkMode ? '#1e293b' : 'white'
+                                }}
+                              />
+                            ) : file.type === 'video' ? (
+                              <video
+                                src={file.url}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: selections.platform ? 'cover' : 'contain',
+                                  backgroundColor: isDarkMode ? '#1e293b' : 'white'
+                                }}
+                                controls
+                                muted
+                              />
+                            ) : (
+                              <div style={{
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                padding: '16px'
+                              }}>
+                                {getFileIcon(file.type)}
+                                <span style={{
+                                  fontSize: '12px',
+                                  color: isDarkMode ? '#94a3b8' : '#6b7280',
+                                  textAlign: 'center',
+                                  fontWeight: '500'
+                                }}>
+                                  {file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name}
+                                </span>
+                                <span style={{
+                                  fontSize: '10px',
+                                  color: isDarkMode ? '#64748b' : '#9ca3af',
+                                  textAlign: 'center'
+                                }}>
+                                  {file.type.toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                            
+                            {/* Multiple files indicator */}
+                            {mediaFiles.length > 4 && index === 3 && (
+                              <div style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontSize: '16px',
+                                fontWeight: '700'
+                              }}>
+                                +{mediaFiles.length - 3} more
+                              </div>
+                            )}
+
+                            {/* File type badge */}
+                            <div style={{
+                              position: 'absolute',
+                              top: '8px',
+                              right: '8px',
+                              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: '12px',
+                              fontSize: '10px',
+                              fontWeight: '600',
+                              textTransform: 'uppercase'
+                            }}>
+                              {file.type}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Platform-specific notes */}
+                      {selections.platform && (
                         <div style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontSize: '14px',
-                          fontWeight: '600'
+                          fontSize: '11px',
+                          color: isDarkMode ? '#64748b' : '#9ca3af',
+                          textAlign: 'center',
+                          fontStyle: 'italic',
+                          maxWidth: '500px',
+                          lineHeight: '1.4'
                         }}>
-                          +{mediaFiles.length - 3} more
+                          {selections.platform === 'instagram' && 'Instagram will crop images to square format for feed posts. Stories use 9:16 ratio.'}
+                          {selections.platform === 'tiktok' && 'TikTok optimizes for vertical 9:16 video format for maximum engagement.'}
+                          {selections.platform === 'youtube' && 'YouTube thumbnails work best at 16:9 ratio with bold, readable visuals.'}
+                          {selections.platform === 'facebook' && 'Facebook recommends 1.91:1 ratio for optimal feed display and engagement.'}
+                          {selections.platform === 'twitter' && 'Twitter displays images best at 16:9 ratio in timeline feeds.'}
+                          {selections.platform === 'linkedin' && 'LinkedIn professional posts perform well with 1.91:1 landscape format.'}
+                          {selections.platform === 'telegram' && 'Telegram supports various formats but 1.91:1 provides consistent display.'}
+                          {selections.platform === 'pinterest' && 'Pinterest favors vertical 2:3 pins for discovery and engagement.'}
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
               </div>
             )}
 
