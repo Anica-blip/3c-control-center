@@ -449,14 +449,6 @@ const EnhancedContentCreationForm = ({
   };
 
   const handleSave = async () => {
-    // Store current form state before attempting save
-    const currentFormState = {
-      selections: { ...selections },
-      content: { ...content },
-      mediaFiles: [...mediaFiles],
-      selectedPlatforms: [...selectedPlatforms]
-    };
-
     const postData = {
       contentId,
       ...selections,
@@ -478,7 +470,7 @@ const EnhancedContentCreationForm = ({
         // Update local state
         setSavedPosts(prev => prev.map(post => 
           post.id === editingPost.id 
-            ? { ...editingPost, ...postData, createdDate: editingPost.createdDate }
+            ? { ...post, ...postData }
             : post
         ));
         
@@ -504,8 +496,24 @@ const EnhancedContentCreationForm = ({
   };
 
   const handleAddToSchedule = async () => {
-    // For now, this button is static as requested - will be connected to scheduler component later
-    alert('Schedule functionality coming next!\n\nThis button will be connected to the proper scheduling component once we finish synchronizing each component at a time.\n\nFor now, use "Save as Draft" to test the Notion database connection.');
+    const postData = {
+      contentId,
+      ...selections,
+      ...content,
+      mediaFiles,
+      selectedPlatforms,
+      status: 'scheduled' as const,
+      isFromTemplate: isEditingTemplate,
+      sourceTemplateId: loadedTemplate?.templateId
+    };
+
+    try {
+      await onAddToSchedule(postData);
+      resetForm();
+    } catch (error) {
+      console.error('Schedule failed:', error);
+      alert('Failed to schedule post. Your content is preserved.');
+    }
   };
 
   const resetForm = () => {
@@ -532,7 +540,7 @@ const EnhancedContentCreationForm = ({
     setFieldConfig(null);
   };
 
-  const activePlatforms = platforms.filter(p => p.isActive);
+  const activePlatforms = platforms?.filter(p => p?.isActive) || [];
   const canSave = selections.characterProfile && selections.theme && selections.audience && selections.mediaType && selections.templateType && content.description;
 
   const getFileIcon = (type: string) => {
@@ -3245,6 +3253,7 @@ export default function ContentComponent() {
   const loadTelegramChannels = async () => {
     if (!supabase) {
       console.warn('Supabase not configured. Using empty Telegram data.');
+      setTelegramChannels([]);
       return;
     }
 
@@ -3256,7 +3265,16 @@ export default function ContentComponent() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setTelegramChannels(data || []);
+      
+      // Ensure data has required fields
+      const safeData = (data || []).filter(item => 
+        item && 
+        item.id && 
+        item.name && 
+        typeof item.name === 'string'
+      );
+      
+      setTelegramChannels(safeData);
     } catch (error) {
       console.error('Error loading Telegram channels:', error);
       setTelegramChannels([]);
@@ -3474,13 +3492,12 @@ export default function ContentComponent() {
                 onAddToSchedule={handleAddToSchedule}
                 characterProfiles={characterProfiles}
                 platforms={[...platforms, ...telegramChannels.map(t => ({
-                  id: t.id.toString(),
-                  name: `${t.name} (Telegram)`,
-                  url: `https://t.me/${t.channel_group_id}`,
+                  id: t.id ? t.id.toString() : Math.random().toString(),
+                  name: t.name ? `${t.name} (Telegram)` : 'Telegram Channel',
+                  url: t.channel_group_id ? `https://t.me/${t.channel_group_id}` : '',
                   isActive: true,
                   isDefault: false
-                }))]}
-                loadedTemplate={loadedTemplate}
+                }))].filter(p => p.id && p.name)}                loadedTemplate={loadedTemplate}
                 onTemplateLoaded={handleTemplateLoaded}
                 isSaving={isSaving}
                 isLoadingProfiles={isLoadingProfiles}
