@@ -1435,8 +1435,8 @@ export default function ScheduleComponent() {
         gap: '16px'
       }}>
         <div style={{
-          backgroundColor: isDarkMode ? '#d97706' : '#fed7aa',
-          color: isDarkMode ? '#000000' : '#9a3412', // Fixed contrast for dark mode
+          backgroundColor: isDarkMode ? '#f59e0b' : '#fed7aa',
+          color: isDarkMode ? '#000000' : '#9a3412', // Black text for dark mode contrast
           padding: '6px 12px',
           borderRadius: '12px',
           fontWeight: 'bold',
@@ -1515,8 +1515,8 @@ export default function ScheduleComponent() {
                 <span>{tab.label}</span>
                 {tab.id === 'pending' && pendingPosts.length > 0 && (
                   <span style={{
-                    backgroundColor: isDarkMode ? '#d97706' : '#fed7aa',
-                    color: isDarkMode ? '#000000' : '#9a3412', // Fixed contrast for dark mode
+                    backgroundColor: isDarkMode ? '#f59e0b' : '#fed7aa',
+                    color: isDarkMode ? '#000000' : '#9a3412', // Black text for dark mode contrast
                     padding: '2px 8px',
                     fontSize: '11px',
                     borderRadius: '12px',
@@ -1651,8 +1651,8 @@ export default function ScheduleComponent() {
                             <span style={{
                               padding: '4px 12px',
                               fontSize: '11px',
-                              backgroundColor: isDarkMode ? '#d97706' : '#fed7aa',
-                              color: isDarkMode ? '#000000' : '#9a3412', // Fixed contrast for dark mode
+                              backgroundColor: isDarkMode ? '#f59e0b' : '#fed7aa',
+                              color: isDarkMode ? '#000000' : '#9a3412', // Black text for dark mode contrast
                               borderRadius: '12px',
                               fontWeight: 'bold'
                             }}>
