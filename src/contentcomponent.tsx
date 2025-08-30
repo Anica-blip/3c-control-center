@@ -1,5 +1,18 @@
 import React, { useState, useRef, createContext, useContext, useEffect } from 'react';
 import { Upload, X, Image, Video, FileText, Download, Eye, Trash2, Plus, Settings, ExternalLink, Database, CheckCircle, Circle, Check, Edit3, Copy, Calendar, User, Palette } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+let supabase = null;
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey);
+  console.log('Supabase client created successfully for Content Manager');
+} else {
+  console.error('Missing Supabase environment variables in Content Manager');
+}
 
 // Theme Context (assuming this comes from your App.tsx)
 const ThemeContext = createContext({
@@ -113,8 +126,12 @@ interface SocialPlatform {
 interface CharacterProfile {
   id: string;
   name: string;
+  username: string;
+  role: string;
   description: string;
-  avatar?: string;
+  avatar_id: string | null;
+  is_active: boolean;
+  created_at: string;
 }
 
 interface NotionTemplate {
@@ -144,7 +161,10 @@ const EnhancedContentCreationForm = ({
   platforms,
   loadedTemplate,
   onTemplateLoaded,
-  isSaving
+  isSaving,
+  isLoadingProfiles,
+  editingPost,
+  onEditComplete
 }: {
   onSave: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
   onAddToSchedule: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
@@ -153,6 +173,9 @@ const EnhancedContentCreationForm = ({
   loadedTemplate?: NotionTemplate | null;
   onTemplateLoaded?: () => void;
   isSaving?: boolean;
+  isLoadingProfiles?: boolean;
+  editingPost?: ContentPost | null;
+  onEditComplete?: () => void;
 }) => {
   const { isDarkMode } = useTheme();
   
@@ -178,6 +201,7 @@ const EnhancedContentCreationForm = ({
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [contentId, setContentId] = useState('');
   const [isEditingTemplate, setIsEditingTemplate] = useState(false);
+  const [isEditingPost, setIsEditingPost] = useState(false);
   const [hashtagInput, setHashtagInput] = useState('');
   const [fieldConfig, setFieldConfig] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -235,9 +259,39 @@ const EnhancedContentCreationForm = ({
     setContentId(newId);
   }, [selections.theme, selections.audience, selections.mediaType, selections.templateType]);
 
+  // Load editing post data when provided
+  useEffect(() => {
+    if (editingPost) {
+      setSelections({
+        characterProfile: editingPost.characterProfile,
+        theme: editingPost.theme,
+        audience: editingPost.audience,
+        mediaType: editingPost.mediaType,
+        templateType: editingPost.templateType,
+        platform: editingPost.platform
+      });
+      
+      setContent({
+        title: editingPost.title,
+        description: editingPost.description,
+        hashtags: [...editingPost.hashtags],
+        keywords: editingPost.keywords,
+        cta: editingPost.cta
+      });
+      
+      setMediaFiles([...editingPost.mediaFiles]);
+      setSelectedPlatforms([...editingPost.selectedPlatforms]);
+      setContentId(editingPost.contentId);
+      setIsEditingPost(true);
+      setupPlatformFields(editingPost.platform);
+      
+      console.log('Post loaded into form for editing:', editingPost.contentId);
+    }
+  }, [editingPost]);
+
   // Load template data when provided
   useEffect(() => {
-    if (loadedTemplate) {
+    if (loadedTemplate && !editingPost) { // Don't load template if editing a post
       setSelections({
         characterProfile: selections.characterProfile, // Keep selected character
         theme: loadedTemplate.theme,
@@ -415,14 +469,37 @@ const EnhancedContentCreationForm = ({
     };
 
     try {
-      // Focus specifically on Save as Draft - save to Notion database: 3C_Created_Content
-      await onSave(postData);
+      if (isEditingPost && editingPost) {
+        // Update existing post in Notion
+        if (editingPost.notionPageId) {
+          await updateNotionContent(editingPost.notionPageId, postData);
+        }
+        
+        // Update local state
+        setSavedPosts(prev => prev.map(post => 
+          post.id === editingPost.id 
+            ? { ...editingPost, ...postData, createdDate: editingPost.createdDate }
+            : post
+        ));
+        
+        alert('Content updated successfully!');
+        
+        // Reset editing state
+        setIsEditingPost(false);
+        if (onEditComplete) {
+          onEditComplete();
+        }
+      } else {
+        // Create new post - save to Notion database: 3C_Created_Content
+        await onSave(postData);
+      }
+      
       // Only reset form if save was successful
       resetForm();
     } catch (error) {
       // Don't reset form on error - preserve user's work
-      console.error('Save as Draft failed, preserving form data:', error);
-      alert('Failed to save draft to Notion database. Your content is preserved and not lost.\n\nError: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      console.error('Save failed, preserving form data:', error);
+      alert('Failed to save content. Your content is preserved and not lost.\n\nError: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -451,6 +528,7 @@ const EnhancedContentCreationForm = ({
     setSelectedPlatforms([]);
     setContentId(generateContentId());
     setIsEditingTemplate(false);
+    setIsEditingPost(false);
     setFieldConfig(null);
   };
 
@@ -499,16 +577,17 @@ const EnhancedContentCreationForm = ({
               color: isDarkMode ? '#60a5fa' : '#3b82f6',
               margin: '0 0 8px 0'
             }}>
-              {isEditingTemplate ? 'Editing Template Content' : 'Create New Content'}
+              {isEditingPost ? 'Editing Content' : 
+               isEditingTemplate ? 'Editing Template Content' : 'Create New Content'}
             </h2>
             <p style={{
               color: isDarkMode ? '#94a3b8' : '#6b7280',
               fontSize: '14px',
               margin: '0'
             }}>
-              {isEditingTemplate 
-                ? `Working from template: ${loadedTemplate?.templateId}`
-                : 'Design and prepare your social media content for publishing (UK English)'
+              {isEditingPost ? `Editing post: ${contentId}` :
+               isEditingTemplate ? `Working from template: ${loadedTemplate?.templateId}` :
+               'Design and prepare your social media content for publishing (UK English)'
               }
             </p>
           </div>
@@ -526,7 +605,7 @@ const EnhancedContentCreationForm = ({
         </div>
       </div>
 
-      {/* Character Profile Section */}
+      {/* Character Profile Section - Enhanced with Supabase Integration */}
       <div style={{
         backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
         borderRadius: '8px',
@@ -551,10 +630,11 @@ const EnhancedContentCreationForm = ({
           </h3>
         </div>
         
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: 'grid', gap: '12px' }}>
           <select
             value={selections.characterProfile}
             onChange={(e) => handleSelectionChange('characterProfile', e.target.value)}
+            disabled={isLoadingProfiles}
             style={{
               width: '100%',
               padding: '12px',
@@ -563,21 +643,103 @@ const EnhancedContentCreationForm = ({
               fontSize: '14px',
               backgroundColor: '#334155',
               color: '#ffffff',
-              fontFamily: 'inherit'
+              fontFamily: 'inherit',
+              opacity: isLoadingProfiles ? 0.7 : 1
             }}
           >
-            <option value="">Select character profile...</option>
-            {characterProfiles.map(profile => (
-              <option key={profile.id} value={profile.id}>{profile.name}</option>
+            <option value="">
+              {isLoadingProfiles ? 'Loading character profiles...' : 'Select character profile...'}
+            </option>
+            {!isLoadingProfiles && characterProfiles.map(profile => (
+              <option key={profile.id} value={profile.id}>
+                {profile.name} ({profile.username}) - {profile.role}
+              </option>
             ))}
           </select>
+          
+          {/* Character Profile Preview */}
+          {selections.characterProfile && (
+            <div style={{
+              padding: '12px',
+              backgroundColor: isDarkMode ? '#1e293b' : 'white',
+              borderRadius: '6px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
+            }}>
+              {(() => {
+                const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
+                if (!selectedProfile) return null;
+                
+                return (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                  }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                      fontWeight: 'bold',
+                      border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+                      flexShrink: 0,
+                      overflow: 'hidden'
+                    }}>
+                      {selectedProfile.avatar_id ? (
+                        <img
+                          src={selectedProfile.avatar_id}
+                          alt={selectedProfile.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        selectedProfile.name.charAt(0)
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: isDarkMode ? '#f8fafc' : '#111827',
+                        marginBottom: '2px'
+                      }}>
+                        {selectedProfile.name}
+                      </div>
+                      <div style={{
+                        fontSize: '12px',
+                        color: isDarkMode ? '#94a3b8' : '#6b7280',
+                        marginBottom: '2px'
+                      }}>
+                        {selectedProfile.username}
+                      </div>
+                      <div style={{
+                        fontSize: '11px',
+                        color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                        fontWeight: '500'
+                      }}>
+                        {selectedProfile.role}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
           
           <button
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '12px 16px',
+              padding: '8px 12px',
               backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
               color: isDarkMode ? '#f8fafc' : '#374151',
               border: 'none',
@@ -585,7 +747,8 @@ const EnhancedContentCreationForm = ({
               cursor: 'pointer',
               fontSize: '13px',
               fontWeight: '500',
-              fontFamily: 'inherit'
+              fontFamily: 'inherit',
+              alignSelf: 'flex-start'
             }}
             onMouseOver={(e) => {
               e.currentTarget.style.backgroundColor = isDarkMode ? '#60a5fa' : '#3b82f6';
@@ -595,29 +758,14 @@ const EnhancedContentCreationForm = ({
               e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#e5e7eb';
               e.currentTarget.style.color = isDarkMode ? '#f8fafc' : '#374151';
             }}
+            onClick={() => {
+              alert('Character Profile management available in Settings tab.\n\nTo add new profiles, go to Settings > Character Profiles');
+            }}
           >
             <Plus style={{ height: '16px', width: '16px' }} />
-            Add New Profile
+            Manage Profiles
           </button>
         </div>
-        
-        {selections.characterProfile && (
-          <div style={{
-            marginTop: '12px',
-            padding: '12px',
-            backgroundColor: isDarkMode ? '#1e293b' : 'white',
-            borderRadius: '6px',
-            border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
-          }}>
-            <p style={{
-              fontSize: '13px',
-              color: isDarkMode ? '#94a3b8' : '#6b7280',
-              margin: '0'
-            }}>
-              Profile: {characterProfiles.find(p => p.id === selections.characterProfile)?.description || 'Selected character profile'}
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Template Builder Style Selections - All Dropdowns Gray Background */}
@@ -633,46 +781,6 @@ const EnhancedContentCreationForm = ({
         border: `1px solid ${isDarkMode ? '#475569' : '#3b82f6'}`,
         marginBottom: '24px'
       }}>
-        {/* Character Profile */}
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '12px',
-            fontWeight: '600',
-            color: isDarkMode ? '#94a3b8' : '#1e40af',
-            marginBottom: '8px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em'
-          }}>
-            Character Profile
-          </label>
-          <select
-            value={selections.characterProfile}
-            onChange={(e) => handleSelectionChange('characterProfile', e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-              borderRadius: '6px',
-              fontSize: '14px',
-              backgroundColor: '#334155',
-              color: '#ffffff',
-              fontFamily: 'inherit',
-              appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 12px center',
-              backgroundSize: '16px',
-              paddingRight: '40px'
-            }}
-          >
-            <option value="">Select character profile...</option>
-            {characterProfiles.map(profile => (
-              <option key={profile.id} value={profile.id}>{profile.name}</option>
-            ))}
-          </select>
-        </div>
-
         {/* Theme Selection */}
         <div>
           <label style={{
@@ -1710,7 +1818,7 @@ const EnhancedContentCreationForm = ({
             opacity: isSaving ? 0.7 : 1
           }}
         >
-          {isSaving ? 'Saving...' : 'Save as Draft'}
+          {isSaving ? 'Saving...' : (isEditingPost ? 'Update Draft' : 'Save as Draft')}
         </button>
         
         <button
@@ -1732,6 +1840,325 @@ const EnhancedContentCreationForm = ({
           {isSaving ? 'Saving...' : 'Schedule Post'}
         </button>
       </div>
+
+      {/* Live Preview Section - Shows Exact Final Post Format */}
+      {(selections.characterProfile || content.title || content.description || mediaFiles.length > 0) && (
+        <div style={{
+          marginTop: '32px',
+          padding: '24px',
+          backgroundColor: isDarkMode ? '#1e293b' : '#f8fafc',
+          borderRadius: '12px',
+          border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '20px'
+          }}>
+            <Eye style={{ height: '24px', width: '24px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: isDarkMode ? '#60a5fa' : '#3b82f6',
+              margin: '0'
+            }}>
+              Live Preview - Final Post Format
+            </h3>
+            <div style={{
+              fontSize: '12px',
+              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              fontStyle: 'italic',
+              marginLeft: 'auto'
+            }}>
+              This is the exact format when the post is published
+            </div>
+          </div>
+          
+          <div style={{
+            backgroundColor: isDarkMode ? '#334155' : 'white',
+            borderRadius: '8px',
+            border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+            overflow: 'hidden'
+          }}>
+            {/* 1. Media Files Preview */}
+            {mediaFiles.length > 0 && (
+              <div style={{
+                padding: '16px',
+                backgroundColor: isDarkMode ? '#1e293b' : '#f9fafb',
+                borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+              }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: mediaFiles.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(120px, 1fr))',
+                  gap: '8px',
+                  maxHeight: '200px',
+                  overflow: 'hidden'
+                }}>
+                  {mediaFiles.slice(0, 4).map((file) => (
+                    <div key={file.id} style={{
+                      position: 'relative',
+                      borderRadius: '6px',
+                      overflow: 'hidden',
+                      backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minHeight: '80px'
+                    }}>
+                      {file.type === 'image' ? (
+                        <img
+                          src={file.url}
+                          alt={file.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '8px'
+                        }}>
+                          {getFileIcon(file.type)}
+                          <span style={{
+                            fontSize: '10px',
+                            color: isDarkMode ? '#94a3b8' : '#6b7280',
+                            textAlign: 'center'
+                          }}>
+                            {file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}
+                          </span>
+                        </div>
+                      )}
+                      {mediaFiles.length > 4 && file.id === mediaFiles[3].id && (
+                        <div style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontSize: '14px',
+                          fontWeight: '600'
+                        }}>
+                          +{mediaFiles.length - 3} more
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 2. Post Content */}
+            <div style={{ padding: '20px' }}>
+              {/* a) Character Profile Header */}
+              {selections.characterProfile && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginBottom: '16px',
+                  paddingBottom: '12px',
+                  borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+                }}>
+                  {(() => {
+                    const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
+                    if (!selectedProfile) return null;
+                    
+                    return (
+                      <>
+                        <div style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '50%',
+                          backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '20px',
+                          color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                          fontWeight: 'bold',
+                          border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+                          flexShrink: 0,
+                          overflow: 'hidden'
+                        }}>
+                          {selectedProfile.avatar_id ? (
+                            <img
+                              src={selectedProfile.avatar_id}
+                              alt={selectedProfile.name}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          ) : (
+                            selectedProfile.name.charAt(0)
+                          )}
+                        </div>
+                        <div>
+                          <div style={{
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            color: isDarkMode ? '#f8fafc' : '#111827',
+                            marginBottom: '2px'
+                          }}>
+                            {selectedProfile.name}
+                          </div>
+                          <div style={{
+                            fontSize: '13px',
+                            color: isDarkMode ? '#94a3b8' : '#6b7280',
+                            marginBottom: '2px'
+                          }}>
+                            {selectedProfile.username}
+                          </div>
+                          <div style={{
+                            fontSize: '12px',
+                            color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                            fontWeight: '500'
+                          }}>
+                            {selectedProfile.role}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* b) Title/Headline */}
+              {content.title && (
+                <h4 style={{
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  color: isDarkMode ? '#f8fafc' : '#111827',
+                  margin: '0 0 12px 0',
+                  lineHeight: '1.3'
+                }}>
+                  {content.title}
+                </h4>
+              )}
+
+              {/* c) Post Description */}
+              {content.description && (
+                <div style={{
+                  fontSize: '15px',
+                  color: isDarkMode ? '#e2e8f0' : '#374151',
+                  lineHeight: '1.6',
+                  marginBottom: '16px',
+                  whiteSpace: 'pre-wrap'
+                }}>
+                  {content.description}
+                </div>
+              )}
+
+              {/* d) Hashtags */}
+              {content.hashtags.length > 0 && (
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '6px',
+                  marginBottom: '16px'
+                }}>
+                  {content.hashtags.map((tag) => (
+                    <span key={tag} style={{
+                      fontSize: '14px',
+                      color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                      fontWeight: '500'
+                    }}>
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* e) Call to Action */}
+              {content.cta && (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: isDarkMode ? '#1e40af' : '#3b82f6',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  textAlign: 'center',
+                  marginTop: '16px'
+                }}>
+                  {content.cta}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 3. Platform/Telegram Distribution (Internal Dashboard Use Only) */}
+          {selectedPlatforms.length > 0 && (
+            <div style={{
+              marginTop: '20px',
+              padding: '16px',
+              backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
+              borderRadius: '8px',
+              border: `1px dashed ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '12px'
+              }}>
+                <Settings style={{ height: '16px', width: '16px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
+                <span style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#60a5fa' : '#3b82f6'
+                }}>
+                  Distribution Settings (Internal Dashboard Only)
+                </span>
+              </div>
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px'
+              }}>
+                {selectedPlatforms.map(platformId => {
+                  const platform = platforms.find(p => p.id === platformId);
+                  if (!platform) return null;
+                  
+                  return (
+                    <div key={platformId} style={{
+                      padding: '6px 12px',
+                      backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                      border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                      borderRadius: '16px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      color: isDarkMode ? '#94a3b8' : '#6b7280'
+                    }}>
+                      {platform.name}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{
+                fontSize: '11px',
+                color: isDarkMode ? '#64748b' : '#9ca3af',
+                fontStyle: 'italic',
+                marginTop: '8px'
+              }}>
+                * Platform links are for internal dashboard tracking only and will not appear in the public post
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -1925,8 +2352,6 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
                       padding: '4px 8px',
                       borderRadius: '6px'
                     }}>
-                      From Template: {post.sourceTemplateId}
-                    </span>
                   )}
                 </div>
                 
@@ -2693,7 +3118,7 @@ const SupabaseConnection = () => {
           lineHeight: '1.6',
           margin: '0'
         }}>
-          Your content and settings are being stored securely in Supabase. All data is encrypted and backed up automatically.
+          Character profiles, platforms, and Telegram configurations are being loaded from Supabase. All data is encrypted and backed up automatically.
         </p>
       </div>
       
@@ -2732,41 +3157,125 @@ export default function ContentComponent() {
   const [loadedTemplate, setLoadedTemplate] = useState<NotionTemplate | null>(null);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [editingPost, setEditingPost] = useState<ContentPost | null>(null);
+
+  // Supabase data states
+  const [characterProfiles, setCharacterProfiles] = useState<CharacterProfile[]>([]);
+  const [platforms, setPlatforms] = useState<SocialPlatform[]>([]);
+  const [telegramChannels, setTelegramChannels] = useState<any[]>([]);
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(true);
+
+  // Load data from Supabase on component mount
+  useEffect(() => {
+    loadCharacterProfiles();
+    loadPlatformsData();
+    loadTelegramChannels();
+    fetchNotionPosts();
+  }, []);
+
+  const loadCharacterProfiles = async () => {
+    if (!supabase) {
+      console.warn('Supabase not configured. Using mock character data.');
+      setCharacterProfiles([
+        { id: 'anica', name: 'Anica', username: '@anica', role: 'Community Manager', description: 'Empathetic and supportive communication style', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
+        { id: 'caelum', name: 'Caelum', username: '@caelum', role: 'Strategist', description: 'Analytical and strategic approach', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
+        { id: 'aurion', name: 'Aurion', username: '@aurion', role: 'Creative Director', description: 'Creative and inspiring messaging', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
+      ]);
+      setIsLoadingProfiles(false);
+      return;
+    }
+
+    try {
+      setIsLoadingProfiles(true);
+      const { data, error } = await supabase
+        .from('character_profiles')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setCharacterProfiles(data || []);
+    } catch (error) {
+      console.error('Error loading character profiles:', error);
+      // Fallback to mock data
+      setCharacterProfiles([
+        { id: 'anica', name: 'Anica', username: '@anica', role: 'Community Manager', description: 'Empathetic and supportive communication style', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
+        { id: 'caelum', name: 'Caelum', username: '@caelum', role: 'Strategist', description: 'Analytical and strategic approach', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
+        { id: 'aurion', name: 'Aurion', username: '@aurion', role: 'Creative Director', description: 'Creative and inspiring messaging', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
+      ]);
+    } finally {
+      setIsLoadingProfiles(false);
+    }
+  };
+
+  const loadPlatformsData = async () => {
+    if (!supabase) {
+      console.warn('Supabase not configured. Using mock platform data.');
+      setPlatforms([
+        { id: '1', name: 'Facebook', url: 'https://facebook.com/page', isActive: true, isDefault: false },
+        { id: '2', name: 'Instagram', url: 'https://instagram.com/page', isActive: true, isDefault: true },
+      ]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('social_platforms')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      const platformData = (data || []).map(item => ({
+        id: item.id.toString(),
+        name: item.name,
+        url: item.url,
+        isActive: item.is_active,
+        isDefault: false // You can add this field to your Supabase table if needed
+      }));
+      
+      setPlatforms(platformData);
+    } catch (error) {
+      console.error('Error loading platforms:', error);
+      setPlatforms([]);
+    }
+  };
+
+  const loadTelegramChannels = async () => {
+    if (!supabase) {
+      console.warn('Supabase not configured. Using empty Telegram data.');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('telegram_configurations')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setTelegramChannels(data || []);
+    } catch (error) {
+      console.error('Error loading Telegram channels:', error);
+      setTelegramChannels([]);
+    }
+  };
 
   // Load posts from Notion on component mount
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        setIsLoadingPosts(true);
-        const posts = await loadFromNotionDatabase();
-        setSavedPosts(posts);
-      } catch (error) {
-        console.error('Failed to load posts:', error);
-        // Fallback to empty array if Notion fails
-        setSavedPosts([]);
-      } finally {
-        setIsLoadingPosts(false);
-      }
-    };
-
-    fetchPosts();
-  }, []);
-  
-  // Mock character profiles
-  const [characterProfiles] = useState<CharacterProfile[]>([
-    { id: 'anica', name: 'Anica', description: 'Empathetic and supportive communication style' },
-    { id: 'caelum', name: 'Caelum', description: 'Analytical and strategic approach' },
-    { id: 'aurion', name: 'Aurion', description: 'Creative and inspiring messaging' },
-  ]);
-
-  // Mock platforms
-  const [platforms] = useState<SocialPlatform[]>([
-    { id: '1', name: 'Telegram Group 1', url: 'https://t.me/group1', isActive: true, isDefault: true },
-    { id: '2', name: 'Telegram Group 2', url: 'https://t.me/group2', isActive: true, isDefault: false },
-    { id: '3', name: 'Facebook Page', url: 'https://facebook.com/page', isActive: true, isDefault: false },
-    { id: '4', name: 'Forum', url: 'https://yourforum.com', isActive: true, isDefault: true },
-    { id: '5', name: 'Twitter', url: 'https://twitter.com/account', isActive: false, isDefault: false },
-  ]);
+  const fetchNotionPosts = async () => {
+    try {
+      setIsLoadingPosts(true);
+      const posts = await loadFromNotionDatabase();
+      setSavedPosts(posts);
+    } catch (error) {
+      console.error('Failed to load posts:', error);
+      setSavedPosts([]);
+    } finally {
+      setIsLoadingPosts(false);
+    }
+  };
 
   const handleSavePost = async (postData: Omit<ContentPost, 'id' | 'createdDate'>) => {
     try {
@@ -2786,6 +3295,7 @@ export default function ContentComponent() {
       // Update local state
       setSavedPosts(prev => [newPost, ...prev]);
       setLoadedTemplate(null);
+      setEditingPost(null); // Clear editing state
       
       alert('Content saved successfully to database!');
       
@@ -2829,8 +3339,25 @@ export default function ContentComponent() {
   };
 
   const handleEditPost = (postId: string) => {
-    // TODO: Load post data into form for editing
-    alert('Edit functionality coming next');
+    // Find the post to edit
+    const postToEdit = savedPosts.find(p => p.id === postId);
+    if (!postToEdit) {
+      alert('Post not found for editing.');
+      return;
+    }
+
+    // Set the post as currently being edited
+    setEditingPost(postToEdit);
+    
+    // Switch to create tab
+    setActiveTab('create');
+    
+    alert(`Loading "${postToEdit.title || 'Untitled Post'}" into the form for editing.\n\nYou can now modify the content and either save as draft (updates existing) or schedule the post.`);
+  };
+
+  const handleEditComplete = () => {
+    // Clear editing state when edit is complete or cancelled
+    setEditingPost(null);
   };
 
   const handleSchedulePost = (postId: string) => {
@@ -2946,10 +3473,19 @@ export default function ContentComponent() {
                 onSave={handleSavePost}
                 onAddToSchedule={handleAddToSchedule}
                 characterProfiles={characterProfiles}
-                platforms={platforms}
+                platforms={[...platforms, ...telegramChannels.map(t => ({
+                  id: t.id.toString(),
+                  name: `${t.name} (Telegram)`,
+                  url: `https://t.me/${t.channel_group_id}`,
+                  isActive: true,
+                  isDefault: false
+                }))]}
                 loadedTemplate={loadedTemplate}
                 onTemplateLoaded={handleTemplateLoaded}
                 isSaving={isSaving}
+                isLoadingProfiles={isLoadingProfiles}
+                editingPost={editingPost}
+                onEditComplete={handleEditComplete}
               />
               
               <SavedPostsList
