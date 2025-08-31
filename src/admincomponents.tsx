@@ -58,7 +58,7 @@ const notionAPI = {
       });
       
       console.log('🌐 API Response status:', response.status);
-      console.log('📊 Response OK:', response.ok);
+      console.log('📝 Response OK:', response.ok);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -68,7 +68,7 @@ const notionAPI = {
       
       const data = await response.json();
       console.log('📊 Full API response:', data);
-      console.log('🗃️ Found blocks:', data.results?.length || 0);
+      console.log('🏗️ Found blocks:', data.results?.length || 0);
       
       if (data.results) {
         data.results.forEach((block, index) => {
@@ -133,7 +133,7 @@ const notionAPI = {
       });
       
       console.log('🌐 Response status:', response.status);
-      console.log('📊 Response headers:', response.headers);
+      console.log('📝 Response headers:', response.headers);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -183,7 +183,6 @@ const notionAPI = {
       throw error;
     }
   },
-
   async saveGuidelines(section, content) {
     try {
       const databaseId = await this.findDatabase('Brand Guidelines');
@@ -208,42 +207,6 @@ const notionAPI = {
       return await response.json();
     } catch (error) {
       console.error('Error saving guidelines to Notion:', error);
-      throw error;
-    }
-  },
-
-  // FIXED: Added missing saveFont function for Typography System database
-  async saveFont(fontData) {
-    try {
-      const databaseId = await this.findDatabase('Typography System');
-      
-      const response = await fetch('https://api.notion.com/v1/pages', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${NOTION_CONFIG.token}`,
-          'Content-Type': 'application/json',
-          'Notion-Version': '2022-06-28',
-        },
-        body: JSON.stringify({
-          parent: { database_id: databaseId },
-          properties: {
-            'Name': { title: [{ text: { content: fontData.name } }] },
-            'Category': { select: { name: fontData.category } },
-            'Usage': { rich_text: [{ text: { content: fontData.usage } }] },
-            'Weight Range': { rich_text: [{ text: { content: fontData.weight } }] },
-            'Status': { select: { name: 'Active' } }
-          }
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Notion API error (${response.status}): ${errorText}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Error saving font to Notion:', error);
       throw error;
     }
   }
@@ -1156,6 +1119,24 @@ function AdminLibrariesTab({ theme }) {
           gap: '10px',
           maxWidth: '400px'
         }}>
+          {/* Clear All Button */}
+          <button
+            onClick={clearAllNotifications}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#6b7280',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              alignSelf: 'flex-end'
+            }}
+          >
+            Clear All ×
+          </button>
+          
           {notifications.map(notification => (
             <div key={notification.id} style={{
               padding: '12px 20px',
@@ -1170,6 +1151,28 @@ function AdminLibrariesTab({ theme }) {
               wordWrap: 'break-word'
             }}>
               {notification.message}
+              {/* Close button for individual notifications */}
+              <button
+                onClick={() => dismissNotification(notification.id)}
+                style={{
+                  position: 'absolute',
+                  top: '4px',
+                  right: '8px',
+                  background: 'rgba(255,255,255,0.3)',
+                  border: 'none',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '20px',
+                  height: '20px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>
@@ -1500,6 +1503,11 @@ function AdminBrandTab({ theme, isDarkMode }) {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
+  // Manual dismiss all notifications
+  const clearAllNotifications = () => {
+    setNotifications([]);
+  };
+
   // Color management functions
   const handleAddColor = () => {
     setShowColorForm(true);
@@ -1699,7 +1707,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
         ))}
       </div>
 
-      {/* COLORS SECTION - FIXED FOR DARK MODE VISIBILITY */}
+      {/* COLORS SECTION */}
       {activeSection === 'colors' && (
         <div style={{ 
           padding: '30px', 
@@ -1846,7 +1854,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                 />
               </div>
 
-              {/* FIXED: Enhanced color preview for dark mode visibility */}
+              {/* Color Preview */}
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -1917,7 +1925,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
             </div>
           )}
           
-          {/* FIXED: Color Grid with enhanced dark mode visibility */}
+          {/* Color Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
             {brandColors.map(color => (
               <div key={color.id} style={{
@@ -1933,12 +1941,10 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     height: '64px',
                     backgroundColor: color.hex,
                     borderRadius: '12px',
-                    border: isDarkMode 
-                      ? `3px solid #ffffff` 
-                      : `2px solid ${theme.borderColor}`,
+                    border: `2px solid ${theme.borderColor}`,
                     boxShadow: isDarkMode 
-                      ? '0 0 0 1px rgba(0,0,0,0.8), 0 4px 20px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.3)' 
-                      : '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      ? `0 2px 8px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2)` 
+                      : '0 2px 8px rgba(0, 0, 0, 0.15)',
                     position: 'relative'
                   }}>
                     {/* Color visibility indicator for dark colors in dark mode */}
@@ -2012,250 +2018,15 @@ function AdminBrandTab({ theme, isDarkMode }) {
               </div>
             ))}
           </div>
-        </div>
-      )}
 
-      {/* LOGOS SECTION - FIXED UPLOAD FUNCTIONALITY */}
-      {activeSection === 'logos' && (
-        <div style={{ 
-          padding: '30px', 
-          backgroundColor: theme.cardBackground, 
-          borderRadius: '0 0 12px 12px',
-          border: `1px solid ${theme.borderColor}`,
-          borderTop: 'none'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              🏷️ Logo Assets
-            </h3>
-            <button style={{
-              padding: '12px 20px',
-              backgroundColor: '#8b5cf6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 'bold'
-            }}>
-              ⬆️ Upload Logo
-            </button>
-          </div>
-          
-          <div style={{ display: 'grid', gap: '16px' }}>
-            {logos.map(logo => (
-              <div key={logo.id} style={{
-                padding: '25px',
-                border: `1px solid ${theme.borderColor}`,
-                borderRadius: '12px',
-                backgroundColor: theme.background,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                  <div style={{
-                    width: '80px',
-                    height: '60px',
-                    backgroundColor: theme.headerBackground,
-                    border: `2px dashed ${theme.borderColor}`,
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '24px'
-                  }}>
-                    🏷️
-                  </div>
-                  <div>
-                    <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
-                      {logo.name}
-                    </h4>
-                    <div style={{ fontSize: '12px', color: theme.textSecondary }}>
-                      {logo.type} • {logo.size} • {logo.usage}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button style={{
-                    padding: '10px 16px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                  }}>
-                    ⬇️ Download
-                  </button>
-                  <button style={{
-                    padding: '10px 16px',
-                    backgroundColor: theme.buttonPrimary,
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                  }}>
-                    👁️ Preview
-                  </button>
-                  <button 
-                    onClick={async () => {
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = 'image/*,.svg';
-                      input.onchange = async (e) => {
-                        const file = e.target.files[0];
-                        if (!file) return;
-
-                        // FIXED: Validate file size (max 10MB)
-                        if (file.size > 10 * 1024 * 1024) {
-                          showNotification('File size must be less than 10MB', 'error');
-                          return;
-                        }
-
-                        // FIXED: Validate file type
-                        const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
-                        if (!allowedTypes.includes(file.type)) {
-                          showNotification('Please upload PNG, JPG, SVG, or WebP files only', 'error');
-                          return;
-                        }
-
-                        showNotification(`Uploading ${file.name}...`, 'info');
-                        
-                        try {
-                          // FIXED: Create a data URL for the file
-                          const reader = new FileReader();
-                          reader.onload = async (event) => {
-                            try {
-                              const logoData = {
-                                name: file.name.split('.')[0] || 'Uploaded Logo',
-                                type: file.type.includes('svg') ? 'SVG' : file.type.includes('png') ? 'PNG' : 'JPG',
-                                size: `${(file.size / 1024).toFixed(1)} KB`,
-                                usage: 'Uploaded asset',
-                                fileUrl: event.target.result,
-                                category: 'Upload',
-                                originalName: file.name
-                              };
-                              
-                              // FIXED: Save to Notion
-                              await notionAPI.saveLogo(logoData);
-                              
-                              // Update local state
-                              const updatedLogos = logos.map(l => 
-                                l.id === logo.id ? { 
-                                  ...l, 
-                                  name: logoData.name, 
-                                  size: logoData.size,
-                                  type: logoData.type,
-                                  uploadedFile: event.target.result
-                                } : l
-                              );
-                              setLogos(updatedLogos);
-                              localStorage.setItem('brandLogos', JSON.stringify(updatedLogos));
-                              
-                              showNotification(`${file.name} uploaded and saved to Notion successfully!`, 'success');
-                            } catch (notionError) {
-                              console.error('Notion save error:', notionError);
-                              showNotification(`Upload completed but Notion save failed: ${notionError.message}`, 'error');
-                            }
-                          };
-                          
-                          reader.onerror = () => {
-                            showNotification('Failed to read file. Please try again.', 'error');
-                          };
-                          
-                          reader.readAsDataURL(file);
-                        } catch (error) {
-                          console.error('Upload error:', error);
-                          showNotification(`Upload failed: ${error.message}`, 'error');
-                        }
-                      };
-                      input.click();
-                    }}
-                    style={{
-                      padding: '10px 16px',
-                      backgroundColor: '#f59e0b',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🔄 Upload
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* TYPOGRAPHY SECTION - FIXED EDIT FUNCTIONALITY */}
-      {activeSection === 'fonts' && (
-        <div style={{ 
-          padding: '30px', 
-          backgroundColor: theme.cardBackground, 
-          borderRadius: '0 0 12px 12px',
-          border: `1px solid ${theme.borderColor}`,
-          borderTop: 'none'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              🔤 Typography System
-            </h3>
-            <button 
-              onClick={() => {
-                const newFont = {
-                  id: Math.max(...fonts.map(f => f.id)) + 1,
-                  name: 'New Font',
-                  category: 'Primary',
-                  usage: 'New font usage',
-                  weight: '400-600'
-                };
-                
-                const updatedFonts = [...fonts, newFont];
-                setFonts(updatedFonts);
-                localStorage.setItem('brandFonts', JSON.stringify(updatedFonts));
-                
-                setEditingFont(newFont);
-                setEditFontData({
-                  name: newFont.name,
-                  category: newFont.category,
-                  usage: newFont.usage,
-                  weight: newFont.weight
-                });
-                
-                showNotification('New font added - edit the details below', 'success');
-              }}
-              style={{
-                padding: '12px 20px',
-                backgroundColor: '#8b5cf6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}
-            >
-              ➕ Add Font
-            </button>
-          </div>
-
-          {/* FIXED: Font Editing Form */}
+          {/* Font Editing Form */}
           {editingFont && (
             <div style={{
               padding: '30px',
               border: '2px solid #3b82f6',
               borderRadius: '12px',
               backgroundColor: theme.background,
-              marginBottom: '30px',
+              marginTop: '20px',
               boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
             }}>
               <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
@@ -2379,7 +2150,6 @@ function AdminBrandTab({ theme, isDarkMode }) {
                 </div>
               </div>
 
-              {/* FIXED: Save function with proper Notion integration */}
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                 <button
                   onClick={() => {
@@ -2401,15 +2171,10 @@ function AdminBrandTab({ theme, isDarkMode }) {
                 </button>
                 <button
                   onClick={async () => {
-                    if (!editFontData.name.trim()) {
-                      showNotification('Please enter a font name', 'error');
-                      return;
-                    }
-
                     try {
-                      showNotification('Saving font to Notion...', 'info');
+                      showNotification('Saving font changes to Notion...', 'info');
                       
-                      // FIXED: Save to Notion using corrected database name
+                      // Save to Notion
                       await notionAPI.saveFont(editFontData);
                       
                       // Update local state
@@ -2423,15 +2188,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                       setEditingFont(null);
                       setEditFontData({ name: '', category: '', usage: '', weight: '' });
                     } catch (error) {
-                      console.error('Font save error:', error);
-                      // Fallback to local save
-                      const updatedFonts = fonts.map(f => 
-                        f.id === editingFont.id ? { ...f, ...editFontData } : f
-                      );
-                      setFonts(updatedFonts);
-                      localStorage.setItem('brandFonts', JSON.stringify(updatedFonts));
-                      
-                      showNotification(`Font saved locally - Notion sync failed: ${error.message}`, 'error');
+                      showNotification(`Failed to save font changes: ${error.message}`, 'error');
                     }
                   }}
                   style={{
@@ -2450,6 +2207,208 @@ function AdminBrandTab({ theme, isDarkMode }) {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* LOGOS SECTION */}
+      {activeSection === 'logos' && (
+        <div style={{ 
+          padding: '30px', 
+          backgroundColor: theme.cardBackground, 
+          borderRadius: '0 0 12px 12px',
+          border: `1px solid ${theme.borderColor}`,
+          borderTop: 'none'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              🏷️ Logo Assets
+            </h3>
+            <button style={{
+              padding: '12px 20px',
+              backgroundColor: '#8b5cf6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}>
+              ⬆️ Upload Logo
+            </button>
+          </div>
+          
+          <div style={{ display: 'grid', gap: '16px' }}>
+            {logos.map(logo => (
+              <div key={logo.id} style={{
+                padding: '25px',
+                border: `1px solid ${theme.borderColor}`,
+                borderRadius: '12px',
+                backgroundColor: theme.background,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div style={{
+                    width: '80px',
+                    height: '60px',
+                    backgroundColor: theme.headerBackground,
+                    border: `2px dashed ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '24px'
+                  }}>
+                    🏷️
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
+                      {logo.name}
+                    </h4>
+                    <div style={{ fontSize: '12px', color: theme.textSecondary }}>
+                      {logo.type} • {logo.size} • {logo.usage}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button style={{
+                    padding: '10px 16px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}>
+                    ⬇️ Download
+                  </button>
+                  <button style={{
+                    padding: '10px 16px',
+                    backgroundColor: theme.buttonPrimary,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}>
+                    👁️ Preview
+                  </button>
+                  <button style={{
+                    padding: '10px 16px',
+                    backgroundColor: '#f59e0b',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}
+                  onClick={async () => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*,.svg';
+                    input.onchange = async (e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        showNotification(`Uploading ${file.name} to Notion...`, 'info');
+                        
+                        try {
+                          // Create a URL for the file (in real app, you'd upload to cloud storage first)
+                          const fileUrl = URL.createObjectURL(file);
+                          
+                          const logoData = {
+                            name: file.name.split('.')[0],
+                            type: file.type.includes('svg') ? 'SVG' : 'PNG',
+                            size: `${(file.size / 1024).toFixed(1)} KB`,
+                            usage: logo.usage,
+                            fileUrl: fileUrl,
+                            category: 'Upload'
+                          };
+                          
+                          // Save to Notion
+                          await notionAPI.saveLogo(logoData);
+                          
+                          // Update local state
+                          const updatedLogos = logos.map(l => 
+                            l.id === logo.id ? { ...l, name: logoData.name, size: logoData.size } : l
+                          );
+                          setLogos(updatedLogos);
+                          localStorage.setItem('brandLogos', JSON.stringify(updatedLogos));
+                          
+                          showNotification(`${file.name} uploaded and saved to Notion!`, 'success');
+                        } catch (error) {
+                          showNotification(`Upload failed: ${error.message}`, 'error');
+                        }
+                      }
+                    };
+                    input.click();
+                  }}
+                  >
+                    📤 Upload
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TYPOGRAPHY SECTION */}
+      {activeSection === 'fonts' && (
+        <div style={{ 
+          padding: '30px', 
+          backgroundColor: theme.cardBackground, 
+          borderRadius: '0 0 12px 12px',
+          border: `1px solid ${theme.borderColor}`,
+          borderTop: 'none'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              🔤 Typography System
+            </h3>
+            <button style={{
+              padding: '12px 20px',
+              backgroundColor: '#8b5cf6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}
+            onClick={() => {
+              // Add new font functionality
+              const newFont = {
+                id: Math.max(...fonts.map(f => f.id)) + 1,
+                name: 'New Font',
+                category: 'Primary',
+                usage: 'New font usage',
+                weight: '400-600'
+              };
+              
+              const updatedFonts = [...fonts, newFont];
+              setFonts(updatedFonts);
+              localStorage.setItem('brandFonts', JSON.stringify(updatedFonts));
+              
+              // Open editor for the new font
+              setEditingFont(newFont);
+              setEditFontData({
+                name: newFont.name,
+                category: newFont.category,
+                usage: newFont.usage,
+                weight: newFont.weight
+              });
+              
+              showNotification('New font added - edit the details below', 'success');
+            }}
+            >
+              ➕ Add Font
+            </button>
+          </div>
           
           <div style={{ display: 'grid', gap: '25px' }}>
             {fonts.map(font => (
@@ -2474,48 +2433,46 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button 
-                      onClick={() => {
-                        const cssCode = `font-family: '${font.name}', sans-serif;\nfont-weight: ${font.weight.split('-')[0]};\nfont-size: 16px;`;
-                        navigator.clipboard.writeText(cssCode).then(() => {
-                          showNotification(`${font.name} CSS copied to clipboard!`, 'success');
-                        }).catch(() => {
-                          showNotification('Failed to copy CSS', 'error');
-                        });
-                      }}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: theme.buttonSecondary,
-                        color: theme.buttonSecondaryText,
-                        border: `1px solid ${theme.borderColor}`,
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
+                    <button style={{
+                      padding: '8px 16px',
+                      backgroundColor: theme.buttonSecondary,
+                      color: theme.buttonSecondaryText,
+                      border: `1px solid ${theme.borderColor}`,
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => {
+                      const cssCode = `font-family: '${font.name}', sans-serif;\nfont-weight: ${font.weight.split('-')[0]};\nfont-size: 16px;`;
+                      navigator.clipboard.writeText(cssCode).then(() => {
+                        showNotification(`${font.name} CSS copied to clipboard!`, 'success');
+                      }).catch(() => {
+                        showNotification('Failed to copy CSS', 'error');
+                      });
+                    }}
                     >
                       📋 Copy CSS
                     </button>
-                    <button 
-                      onClick={() => {
-                        setEditingFont(font);
-                        setEditFontData({
-                          name: font.name,
-                          category: font.category,
-                          usage: font.usage,
-                          weight: font.weight
-                        });
-                      }}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: theme.buttonPrimary,
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
+                    <button style={{
+                      padding: '8px 16px',
+                      backgroundColor: theme.buttonPrimary,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => {
+                      setEditingFont(font);
+                      setEditFontData({
+                        name: font.name,
+                        category: font.category,
+                        usage: font.usage,
+                        weight: font.weight
+                      });
+                    }}
                     >
                       ✏️ Edit
                     </button>
@@ -2891,5 +2848,5 @@ function AdminBrandTab({ theme, isDarkMode }) {
   );
 }
 
-// FIXED: Export with the correct name that App.tsx expects
+// Export the main component
 export default AdminComponents;
