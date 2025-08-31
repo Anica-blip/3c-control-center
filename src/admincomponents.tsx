@@ -7,15 +7,29 @@ import React, { useState } from 'react';
 // Parse the combined GitHub secret (format: "token,pageId" or "pageId,token")
 const parseNotionSecret = () => {
   const secret = process.env.REACT_APP_NOTION_BRAND_KIT;
-  if (!secret) return { token: null, pageId: null };
+  
+  // Debug: Show what we're getting from environment
+  console.log('🔍 Environment variable REACT_APP_NOTION_BRAND_KIT:', secret ? 'Found' : 'NOT FOUND');
+  console.log('🔍 Raw value (first 10 chars):', secret?.substring(0, 10) + '...' || 'undefined');
+  
+  if (!secret) {
+    console.error('❌ REACT_APP_NOTION_BRAND_KIT environment variable is not set');
+    return { token: null, pageId: null };
+  }
   
   const parts = secret.split(',');
-  if (parts.length !== 2) return { token: null, pageId: null };
+  if (parts.length !== 2) {
+    console.error('❌ GitHub secret should contain "token,pageId" - found:', parts.length, 'parts');
+    return { token: null, pageId: null };
+  }
   
   // Determine which is token (longer string starting with secret_) and which is pageId
   const [part1, part2] = parts.map(p => p.trim());
   const token = part1.length > part2.length ? part1 : part2;
   const pageId = part1.length < part2.length ? part1 : part2;
+  
+  console.log('✅ Parsed token length:', token?.length || 0);
+  console.log('✅ Parsed pageId length:', pageId?.length || 0);
   
   return { token, pageId };
 };
@@ -1105,6 +1119,24 @@ function AdminLibrariesTab({ theme }) {
           gap: '10px',
           maxWidth: '400px'
         }}>
+          {/* Clear All Button */}
+          <button
+            onClick={clearAllNotifications}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#6b7280',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              alignSelf: 'flex-end'
+            }}
+          >
+            Clear All ×
+          </button>
+          
           {notifications.map(notification => (
             <div key={notification.id} style={{
               padding: '12px 20px',
@@ -1119,7 +1151,7 @@ function AdminLibrariesTab({ theme }) {
               wordWrap: 'break-word'
             }}>
               {notification.message}
-              {/* Close button for all notifications */}
+              {/* Close button for individual notifications */}
               <button
                 onClick={() => dismissNotification(notification.id)}
                 style={{
@@ -1469,6 +1501,11 @@ function AdminBrandTab({ theme, isDarkMode }) {
   // Manual dismiss notification
   const dismissNotification = (id) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  // Manual dismiss all notifications
+  const clearAllNotifications = () => {
+    setNotifications([]);
   };
 
   // Color management functions
@@ -2342,7 +2379,33 @@ function AdminBrandTab({ theme, isDarkMode }) {
               cursor: 'pointer',
               fontSize: '14px',
               fontWeight: 'bold'
-            }}>
+            }}
+            onClick={() => {
+              // Add new font functionality
+              const newFont = {
+                id: Math.max(...fonts.map(f => f.id)) + 1,
+                name: 'New Font',
+                category: 'Primary',
+                usage: 'New font usage',
+                weight: '400-600'
+              };
+              
+              const updatedFonts = [...fonts, newFont];
+              setFonts(updatedFonts);
+              localStorage.setItem('brandFonts', JSON.stringify(updatedFonts));
+              
+              // Open editor for the new font
+              setEditingFont(newFont);
+              setEditFontData({
+                name: newFont.name,
+                category: newFont.category,
+                usage: newFont.usage,
+                weight: newFont.weight
+              });
+              
+              showNotification('New font added - edit the details below', 'success');
+            }}
+            >
               ➕ Add Font
             </button>
           </div>
