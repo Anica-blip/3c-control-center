@@ -95,7 +95,7 @@ function AdminComponents({ isDarkMode }) {
       <div style={{ backgroundColor: theme.background }}>
         {activeTab === 'templates' && <AdminTemplatesTab theme={theme} />}
         {activeTab === 'libraries' && <AdminLibrariesTab theme={theme} />}
-        {activeTab === 'brand' && <AdminBrandTab theme={theme} />}
+        {activeTab === 'brand' && <AdminBrandTab theme={theme} isDarkMode={isDarkMode} />}
       </div>
     </div>
   );
@@ -936,7 +936,7 @@ function AdminLibrariesTab({ theme }) {
         <IntegrationCard
           title="Notion Integration"
           subtitle="Content management and documentation"
-          emoji="📓"
+          emoji="📝"
           connected={notionConnected}
           onToggle={handleNotionToggle}
           gradientColor={theme.gradientBlue}
@@ -975,7 +975,7 @@ function AdminLibrariesTab({ theme }) {
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '40px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📓</div>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
               <p style={{ color: theme.textPrimary, fontSize: '16px', marginBottom: '8px', fontWeight: 'bold' }}>
                 Connect your Notion workspace
               </p>
@@ -1053,7 +1053,7 @@ function AdminLibrariesTab({ theme }) {
                         fontWeight: 'bold'
                       }}
                     >
-                      📁 Browse
+                      🔍 Browse
                     </button>
                     <button 
                       onClick={handleWasabiUpload}
@@ -1147,7 +1147,7 @@ function AdminLibrariesTab({ theme }) {
 // BRAND TAB - FUNCTIONAL BRAND KIT MANAGEMENT
 // =============================================================================
 
-function AdminBrandTab({ theme }) {
+function AdminBrandTab({ theme, isDarkMode }) {
   const [activeSection, setActiveSection] = useState('colors');
   const [notifications, setNotifications] = useState([]);
   
@@ -1487,8 +1487,10 @@ function AdminBrandTab({ theme }) {
                   height: '60px',
                   backgroundColor: newColor.hex,
                   borderRadius: '8px',
-                  border: `2px solid ${theme.borderColor}`,
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+                  border: isDarkMode ? `2px solid rgba(255, 255, 255, 0.2)` : `2px solid ${theme.borderColor}`,
+                  boxShadow: isDarkMode 
+                    ? '0 2px 8px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.1)' 
+                    : '0 2px 8px rgba(0, 0, 0, 0.15)'
                 }}></div>
                 <div>
                   <div style={{ fontSize: '16px', fontWeight: 'bold', color: theme.textPrimary, marginBottom: '4px' }}>
@@ -1552,8 +1554,10 @@ function AdminBrandTab({ theme }) {
                     height: '64px',
                     backgroundColor: color.hex,
                     borderRadius: '12px',
-                    border: `2px solid ${theme.borderColor}`,
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+                    border: isDarkMode ? `2px solid rgba(255, 255, 255, 0.2)` : `2px solid ${theme.borderColor}`,
+                    boxShadow: isDarkMode 
+                      ? '0 2px 8px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.1)' 
+                      : '0 2px 8px rgba(0, 0, 0, 0.15)'
                   }}></div>
                   <div>
                     <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
@@ -1615,7 +1619,7 @@ function AdminBrandTab({ theme }) {
         </div>
       )}
 
-      {/* OTHER SECTIONS - Simplified for now */}
+      {/* LOGOS SECTION */}
       {activeSection === 'logos' && (
         <div style={{ 
           padding: '30px', 
@@ -1624,18 +1628,104 @@ function AdminBrandTab({ theme }) {
           border: `1px solid ${theme.borderColor}`,
           borderTop: 'none'
         }}>
-          <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', marginBottom: '20px' }}>
-            🏷️ Logo Assets
-          </h3>
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <div style={{ fontSize: '64px', marginBottom: '16px' }}>🏷️</div>
-            <p style={{ color: theme.textPrimary, fontSize: '18px', margin: '0' }}>
-              Logo editing functionality ready for implementation
-            </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              🏷️ Logo Assets
+            </h3>
+            <button style={{
+              padding: '12px 20px',
+              backgroundColor: '#8b5cf6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}>
+              ⬆️ Upload Logo
+            </button>
+          </div>
+          
+          <div style={{ display: 'grid', gap: '16px' }}>
+            {logos.map(logo => (
+              <div key={logo.id} style={{
+                padding: '25px',
+                border: `1px solid ${theme.borderColor}`,
+                borderRadius: '12px',
+                backgroundColor: theme.background,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div style={{
+                    width: '80px',
+                    height: '60px',
+                    backgroundColor: theme.headerBackground,
+                    border: `2px dashed ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '24px'
+                  }}>
+                    🏷️
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
+                      {logo.name}
+                    </h4>
+                    <div style={{ fontSize: '12px', color: theme.textSecondary }}>
+                      {logo.type} • {logo.size} • {logo.usage}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button style={{
+                    padding: '10px 16px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}>
+                    ⬇️ Download
+                  </button>
+                  <button style={{
+                    padding: '10px 16px',
+                    backgroundColor: theme.buttonPrimary,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}>
+                    👁️ Preview
+                  </button>
+                  <button style={{
+                    padding: '10px 16px',
+                    backgroundColor: '#f59e0b',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}>
+                    ✏️ Edit
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
+      {/* TYPOGRAPHY SECTION */}
       {activeSection === 'fonts' && (
         <div style={{ 
           padding: '30px', 
@@ -1644,18 +1734,101 @@ function AdminBrandTab({ theme }) {
           border: `1px solid ${theme.borderColor}`,
           borderTop: 'none'
         }}>
-          <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', marginBottom: '20px' }}>
-            🔤 Typography System
-          </h3>
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <div style={{ fontSize: '64px', marginBottom: '16px' }}>🔤</div>
-            <p style={{ color: theme.textPrimary, fontSize: '18px', margin: '0' }}>
-              Font editing functionality ready for implementation
-            </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              🔤 Typography System
+            </h3>
+            <button style={{
+              padding: '12px 20px',
+              backgroundColor: '#8b5cf6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}>
+              ➕ Add Font
+            </button>
+          </div>
+          
+          <div style={{ display: 'grid', gap: '25px' }}>
+            {fonts.map(font => (
+              <div key={font.id} style={{
+                padding: '30px',
+                border: `1px solid ${theme.borderColor}`,
+                borderRadius: '12px',
+                backgroundColor: theme.background,
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px' }}>
+                  <div>
+                    <h4 style={{ margin: '0 0 10px 0', color: theme.textPrimary, fontSize: '20px', fontWeight: 'bold' }}>
+                      {font.name}
+                    </h4>
+                    <div style={{ display: 'flex', gap: '20px', fontSize: '14px', color: theme.textSecondary, marginBottom: '8px' }}>
+                      <span><strong>Category:</strong> {font.category}</span>
+                      <span><strong>Weight:</strong> {font.weight}</span>
+                    </div>
+                    <p style={{ margin: '0', fontSize: '14px', color: theme.textSecondary, lineHeight: '1.5' }}>
+                      {font.usage}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button style={{
+                      padding: '8px 16px',
+                      backgroundColor: theme.buttonSecondary,
+                      color: theme.buttonSecondaryText,
+                      border: `1px solid ${theme.borderColor}`,
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}>
+                      📋 Copy CSS
+                    </button>
+                    <button style={{
+                      padding: '8px 16px',
+                      backgroundColor: theme.buttonPrimary,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}>
+                      ✏️ Edit
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Font Preview */}
+                <div style={{
+                  padding: '25px',
+                  backgroundColor: theme.headerBackground,
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.borderColor}`,
+                  fontFamily: font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
+                             font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
+                             'ui-serif, Georgia'
+                }}>
+                  <div style={{ fontSize: '32px', marginBottom: '12px', fontWeight: 'bold', color: theme.textPrimary }}>
+                    The quick brown fox jumps
+                  </div>
+                  <div style={{ fontSize: '18px', marginBottom: '10px', color: theme.textPrimary }}>
+                    Regular weight sample text for {font.name}
+                  </div>
+                  <div style={{ fontSize: '14px', color: theme.textSecondary, fontWeight: '500' }}>
+                    ABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
+      {/* GUIDELINES SECTION */}
       {activeSection === 'guidelines' && (
         <div style={{ 
           padding: '30px', 
@@ -1664,14 +1837,100 @@ function AdminBrandTab({ theme }) {
           border: `1px solid ${theme.borderColor}`,
           borderTop: 'none'
         }}>
-          <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', marginBottom: '20px' }}>
+          <h3 style={{ 
+            marginBottom: '30px', 
+            color: theme.textPrimary, 
+            fontSize: '18px', 
+            fontWeight: 'bold' 
+          }}>
             📋 Brand Guidelines
           </h3>
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <div style={{ fontSize: '64px', marginBottom: '16px' }}>📋</div>
-            <p style={{ color: theme.textPrimary, fontSize: '18px', margin: '0' }}>
-              Brand guidelines section ready for content
-            </p>
+          
+          <div style={{ display: 'grid', gap: '30px' }}>
+            {/* Logo Usage Guidelines */}
+            <div style={{
+              padding: '30px',
+              border: `2px solid ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                🏷️ Logo Usage Guidelines
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                <div>
+                  <h5 style={{ color: '#10b981', fontSize: '14px', marginBottom: '12px', fontWeight: 'bold' }}>
+                    ✅ DO
+                  </h5>
+                  <ul style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8', paddingLeft: '20px' }}>
+                    <li>Use the primary logo on light backgrounds</li>
+                    <li>Maintain minimum clear space of 2x the logo height</li>
+                    <li>Use approved color variations only</li>
+                    <li>Ensure logo is legible at all sizes</li>
+                  </ul>
+                </div>
+                <div>
+                  <h5 style={{ color: '#ef4444', fontSize: '14px', marginBottom: '12px', fontWeight: 'bold' }}>
+                    ❌ DON'T
+                  </h5>
+                  <ul style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8', paddingLeft: '20px' }}>
+                    <li>Stretch, distort, or rotate the logo</li>
+                    <li>Use unauthorized colors or effects</li>
+                    <li>Place logo on busy backgrounds</li>
+                    <li>Use low-resolution versions</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Color Usage Guidelines */}
+            <div style={{
+              padding: '30px',
+              border: `2px solid ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                🎨 Color Usage Guidelines
+              </h4>
+              <div style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8' }}>
+                <p style={{ marginBottom: '16px' }}>
+                  <strong style={{ color: theme.textPrimary }}>Primary Blue (#3b82f6):</strong> Use for main call-to-action buttons, primary links, and key brand elements. Should comprise 60% of brand color usage.
+                </p>
+                <p style={{ marginBottom: '16px' }}>
+                  <strong style={{ color: theme.textPrimary }}>Secondary Green (#10b981):</strong> Reserved for success states, positive feedback, and completion indicators. Use sparingly for maximum impact.
+                </p>
+                <p style={{ marginBottom: '16px' }}>
+                  <strong style={{ color: theme.textPrimary }}>Supporting Colors:</strong> Purple, Orange, and Red should be used as accent colors for specific UI states and never as primary brand colors.
+                </p>
+                <p style={{ marginBottom: '0' }}>
+                  <strong style={{ color: theme.textPrimary }}>Accessibility:</strong> Ensure all color combinations meet WCAG AA contrast requirements (4.5:1 for normal text, 3:1 for large text).
+                </p>
+              </div>
+            </div>
+
+            {/* Typography Guidelines */}
+            <div style={{
+              padding: '30px',
+              border: `2px solid ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                🔤 Typography Guidelines
+              </h4>
+              <div style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8' }}>
+                <p style={{ marginBottom: '16px' }}>
+                  <strong style={{ color: theme.textPrimary }}>Hierarchy:</strong> Use Inter for all UI elements and primary headings. Roboto for body text and longer content. Playfair Display only for special occasions and creative headlines.
+                </p>
+                <p style={{ marginBottom: '16px' }}>
+                  <strong style={{ color: theme.textPrimary }}>Sizing:</strong> Maintain consistent sizing scale: H1 (32px), H2 (24px), H3 (20px), H4 (18px), Body (16px), Small (14px), Caption (12px).
+                </p>
+                <p style={{ marginBottom: '0' }}>
+                  <strong style={{ color: theme.textPrimary }}>Line Height:</strong> Use 1.5x line height for body text, 1.2x for headings. Ensure adequate spacing between elements for readability.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
