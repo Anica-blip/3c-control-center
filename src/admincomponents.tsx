@@ -1,6 +1,98 @@
 import React, { useState } from 'react';
 
 // =============================================================================
+// NOTION API INTEGRATION - GITHUB SECRETS
+// =============================================================================
+
+const NOTION_CONFIG = {
+  token: process.env.REACT_APP_NOTION_TOKEN,
+  pageId: process.env.REACT_APP_NOTION_BRAND_KIT
+};
+
+// Notion API Helper Functions
+const notionAPI = {
+  // Find database by title within the 3C_Brand_Kit page
+  async findDatabase(title) {
+    try {
+      const response = await fetch(`https://api.notion.com/v1/blocks/${NOTION_CONFIG.pageId}/children`, {
+        headers: {
+          'Authorization': `Bearer ${NOTION_CONFIG.token}`,
+          'Notion-Version': '2022-06-28',
+        }
+      });
+      const data = await response.json();
+      
+      const database = data.results.find(block => 
+        block.type === 'child_database' && 
+        block.child_database.title === title
+      );
+      
+      return database?.id;
+    } catch (error) {
+      console.error('Error finding database:', error);
+      throw error;
+    }
+  },
+
+  // Save color to Brand Colors database
+  async saveColor(colorData) {
+    try {
+      const databaseId = await this.findDatabase('Brand Colors');
+      
+      const response = await fetch('https://api.notion.com/v1/pages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_CONFIG.token}`,
+          'Content-Type': 'application/json',
+          'Notion-Version': '2022-06-28',
+        },
+        body: JSON.stringify({
+          parent: { database_id: databaseId },
+          properties: {
+            'Name': { title: [{ text: { content: colorData.name } }] },
+            'Hex Code': { rich_text: [{ text: { content: colorData.hex } }] },
+            'Usage': { rich_text: [{ text: { content: colorData.usage } }] }
+          }
+        })
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Error saving color to Notion:', error);
+      throw error;
+    }
+  },
+
+  // Save guidelines to Brand Guidelines database
+  async saveGuidelines(section, content) {
+    try {
+      const databaseId = await this.findDatabase('Brand Guidelines');
+      
+      const response = await fetch('https://api.notion.com/v1/pages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_CONFIG.token}`,
+          'Content-Type': 'application/json',
+          'Notion-Version': '2022-06-28',
+        },
+        body: JSON.stringify({
+          parent: { database_id: databaseId },
+          properties: {
+            'Section': { title: [{ text: { content: `${section.charAt(0).toUpperCase() + section.slice(1)} Guidelines` } }] },
+            'Content': { rich_text: [{ text: { content: typeof content === 'string' ? content : JSON.stringify(content) } }] },
+            'Type': { select: { name: `${section.charAt(0).toUpperCase() + section.slice(1)} Usage` } },
+            'Status': { select: { name: 'Active' } }
+          }
+        })
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Error saving guidelines to Notion:', error);
+      throw error;
+    }
+  }
+};
+
+// =============================================================================
 // ADMIN COMPONENTS - WITH FUNCTIONAL BUTTONS
 // =============================================================================
 
@@ -1242,12 +1334,24 @@ function AdminBrandTab({ theme, isDarkMode }) {
     showNotification(`Editing ${section} guidelines...`, 'info');
   };
 
-  const handleSaveGuideline = (section) => {
-    // Save guidelines to localStorage
-    localStorage.setItem('brandGuidelines', JSON.stringify(guidelinesContent));
+  const handleSaveGuideline = async (section) => {
+    showNotification('Saving guidelines to Notion...', 'info');
     
-    setEditingGuidelines(prev => ({ ...prev, [section]: false }));
-    showNotification(`${section.charAt(0).toUpperCase() + section.slice(1)} guidelines saved!`, 'success');
+    try {
+      // Save to Notion
+      await notionAPI.saveGuidelines(section, guidelinesContent[section]);
+      
+      // Save guidelines to localStorage as backup
+      localStorage.setItem('brandGuidelines', JSON.stringify(guidelinesContent));
+      
+      setEditingGuidelines(prev => ({ ...prev, [section]: false }));
+      showNotification(`${section.charAt(0).toUpperCase() + section.slice(1)} guidelines saved to Notion!`, 'success');
+    } catch (error) {
+      // Fallback to localStorage if Notion fails
+      localStorage.setItem('brandGuidelines', JSON.stringify(guidelinesContent));
+      setEditingGuidelines(prev => ({ ...prev, [section]: false }));
+      showNotification(`${section.charAt(0).toUpperCase() + section.slice(1)} guidelines saved locally (Notion sync failed)`, 'error');
+    }
   };
 
   const handleCancelEditGuideline = (section) => {
@@ -1265,36 +1369,67 @@ function AdminBrandTab({ theme, isDarkMode }) {
     setShowColorForm(true);
   };
 
-  const handleSaveColor = () => {
+  const handleSaveColor = async () => {
     if (!newColor.name.trim() || !newColor.hex.trim() || !newColor.usage.trim()) {
       showNotification('Please fill in all fields', 'error');
       return;
     }
 
-    let updatedColors;
-    if (editingColor) {
-      // Update existing color
-      updatedColors = brandColors.map(color => 
-        color.id === editingColor.id 
-          ? { ...color, name: newColor.name, hex: newColor.hex, usage: newColor.usage }
-          : color
-      );
-      showNotification(`Updated ${newColor.name}`, 'success');
-    } else {
-      // Add new color
-      const colorToAdd = {
-        id: Math.max(...brandColors.map(c => c.id)) + 1,
-        name: newColor.name,
-        hex: newColor.hex,
-        usage: newColor.usage
-      };
-      updatedColors = [...brandColors, colorToAdd];
-      showNotification(`Added ${newColor.name} to palette`, 'success');
+    showNotification('Saving to Notion...', 'info');
+
+    try {
+      let updatedColors;
+      if (editingColor) {
+        // Update existing color
+        updatedColors = brandColors.map(color => 
+          color.id === editingColor.id 
+            ? { ...color, name: newColor.name, hex: newColor.hex, usage: newColor.usage }
+            : color
+        );
+        showNotification(`Updated ${newColor.name}`, 'success');
+      } else {
+        // Add new color
+        const colorToAdd = {
+          id: Math.max(...brandColors.map(c => c.id)) + 1,
+          name: newColor.name,
+          hex: newColor.hex,
+          usage: newColor.usage
+        };
+        updatedColors = [...brandColors, colorToAdd];
+        
+        // Save to Notion
+        await notionAPI.saveColor(colorToAdd);
+        showNotification(`Added ${newColor.name} to palette and saved to Notion!`, 'success');
+      }
+      
+      // Save to localStorage as backup
+      localStorage.setItem('brandColors', JSON.stringify(updatedColors));
+      setBrandColors(updatedColors);
+      
+    } catch (error) {
+      // Fallback to localStorage if Notion fails
+      let updatedColors;
+      if (editingColor) {
+        updatedColors = brandColors.map(color => 
+          color.id === editingColor.id 
+            ? { ...color, name: newColor.name, hex: newColor.hex, usage: newColor.usage }
+            : color
+        );
+      } else {
+        const colorToAdd = {
+          id: Math.max(...brandColors.map(c => c.id)) + 1,
+          name: newColor.name,
+          hex: newColor.hex,
+          usage: newColor.usage
+        };
+        updatedColors = [...brandColors, colorToAdd];
+      }
+      
+      localStorage.setItem('brandColors', JSON.stringify(updatedColors));
+      setBrandColors(updatedColors);
+      
+      showNotification(`${editingColor ? 'Updated' : 'Added'} ${newColor.name} (saved locally - Notion sync failed)`, 'error');
     }
-    
-    // Save to localStorage
-    localStorage.setItem('brandColors', JSON.stringify(updatedColors));
-    setBrandColors(updatedColors);
     
     setNewColor({ name: '', hex: '#523474', usage: '' });
     setShowColorForm(false);
