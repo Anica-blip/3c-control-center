@@ -1,1262 +1,2853 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
-
-// Import your real components
-import ContentComponent from './contentcomponent';
-import ChatManagerPublic from './webchat';
-import ScheduleComponentContent from './schedulecomponent';
-import MarketingControlCenter from './marketingcomponent';
-import SettingsComponentContent from './settingscomponent';
-import AdminComponentsContent from './admincomponents';
-
-// Theme Context
-const ThemeContext = createContext({
-  isDarkMode: false,
-  toggleDarkMode: () => {}
-});
-
-const useTheme = () => useContext(ThemeContext);
+import React, { useState } from 'react';
 
 // =============================================================================
-// THEME WRAPPER HOC - From Working Version
+// NOTION API INTEGRATION - SINGLE GITHUB SECRET
 // =============================================================================
-const withThemeWrapper = (WrappedComponent: React.ComponentType<any>) => {
-  return React.forwardRef<any, any>((props, ref) => {
-    const { isDarkMode } = useTheme();
+
+// Parse the combined GitHub secret (format: "token,pageId" or "pageId,token")
+const parseNotionSecret = () => {
+  const secret = process.env.REACT_APP_NOTION_BRAND_KIT;
+  
+  // Debug: Show what we're getting from environment
+  console.log('🔍 Environment variable REACT_APP_NOTION_BRAND_KIT:', secret ? 'Found' : 'NOT FOUND');
+  console.log('🔍 Raw value (first 10 chars):', secret?.substring(0, 10) + '...' || 'undefined');
+  
+  if (!secret) {
+    console.error('❌ REACT_APP_NOTION_BRAND_KIT environment variable is not set');
+    return { token: null, pageId: null };
+  }
+  
+  const parts = secret.split(',');
+  if (parts.length !== 2) {
+    console.error('❌ GitHub secret should contain "token,pageId" - found:', parts.length, 'parts');
+    return { token: null, pageId: null };
+  }
+  
+  // Determine which is token (longer string starting with secret_) and which is pageId
+  const [part1, part2] = parts.map(p => p.trim());
+  const token = part1.length > part2.length ? part1 : part2;
+  const pageId = part1.length < part2.length ? part1 : part2;
+  
+  console.log('✅ Parsed token length:', token?.length || 0);
+  console.log('✅ Parsed pageId length:', pageId?.length || 0);
+  
+  return { token, pageId };
+};
+
+const { token, pageId } = parseNotionSecret();
+
+const NOTION_CONFIG = {
+  token,
+  pageId
+};
+
+// Notion API Helper Functions
+const notionAPI = {
+  // Find database by title within the 3C_Brand_Kit page
+  async findDatabase(title) {
+    console.log(`🔍 Looking for database: "${title}"`);
+    console.log('📄 In page ID:', NOTION_CONFIG.pageId);
+    console.log('🔑 With token:', NOTION_CONFIG.token ? 'Present' : 'MISSING');
     
-    // Apply global dark mode styles to the wrapped component
-    useEffect(() => {
-      const applyDarkModeStyles = () => {
-        const style = document.createElement('style');
-        style.id = 'dynamic-dark-mode-styles';
-        
-        // Remove existing dynamic styles
-        const existing = document.getElementById('dynamic-dark-mode-styles');
-        if (existing) {
-          existing.remove();
+    try {
+      const response = await fetch(`https://api.notion.com/v1/blocks/${NOTION_CONFIG.pageId}/children`, {
+        headers: {
+          'Authorization': `Bearer ${NOTION_CONFIG.token}`,
+          'Notion-Version': '2022-06-28',
         }
-        
-        if (isDarkMode) {
-          style.textContent = `
-            /* Global dark mode overrides for all components */
-            .chat-content *,
-            .settings-content *,
-            .admin-content *,
-            .content-manager *,
-            .schedule-content *,
-            .marketing-content * {
-              color: white !important;
-            }
-            
-            /* Background overrides */
-            .chat-content div[style*="background"],
-            .settings-content div[style*="background"],
-            .admin-content div[style*="background"],
-            .content-manager div[style*="background"],
-            .schedule-content div[style*="background"],
-            .marketing-content div[style*="background"] {
-              background: #1e293b !important;
-            }
-            
-            /* Border overrides */
-            .chat-content *[style*="border"],
-            .settings-content *[style*="border"],
-            .admin-content *[style*="border"],
-            .content-manager *[style*="border"],
-            .schedule-content *[style*="border"],
-            .marketing-content *[style*="border"] {
-              border-color: #334155 !important;
-            }
-            
-            /* Tab navigation buttons */
-            .chat-content button[style*="border-bottom"],
-            .settings-content button[style*="border-bottom"],
-            .admin-content button[style*="border-bottom"] {
-              color: white !important;
-              font-weight: bold !important;
-              font-size: 12px !important;
-            }
-            
-            /* Input fields */
-            .chat-content input,
-            .settings-content input,
-            .admin-content input,
-            .content-manager input,
-            .schedule-content input,
-            .marketing-content input,
-            .chat-content textarea,
-            .settings-content textarea,
-            .admin-content textarea,
-            .content-manager textarea,
-            .schedule-content textarea,
-            .marketing-content textarea {
-              background: #334155 !important;
-              color: white !important;
-              border-color: #475569 !important;
-            }
-            
-            /* Buttons */
-            .chat-content button,
-            .settings-content button,
-            .admin-content button,
-            .content-manager button,
-            .schedule-content button,
-            .marketing-content button {
-              background: #3b82f6 !important;
-              color: white !important;
-              border-color: #3b82f6 !important;
-            }
-            
-            /* Cards and containers */
-            .chat-content > div,
-            .settings-content > div,
-            .admin-content > div,
-            .content-manager > div,
-            .schedule-content > div,
-            .marketing-content > div {
-              background: #1e293b !important;
-              border-color: #334155 !important;
-            }
-            
-            /* Text elements */
-            .chat-content p,
-            .settings-content p,
-            .admin-content p,
-            .content-manager p,
-            .schedule-content p,
-            .marketing-content p,
-            .chat-content span,
-            .settings-content span,
-            .admin-content span,
-            .content-manager span,
-            .schedule-content span,
-            .marketing-content span,
-            .chat-content div,
-            .settings-content div,
-            .admin-content div,
-            .content-manager div,
-            .schedule-content div,
-            .marketing-content div {
-              color: white !important;
-            }
-          `;
-        } else {
-          style.textContent = `
-            /* Light mode - reset any overrides */
-            .chat-content *,
-            .settings-content *,
-            .admin-content *,
-            .content-manager *,
-            .schedule-content *,
-            .marketing-content * {
-              color: inherit;
-            }
-          `;
-        }
-        
-        document.head.appendChild(style);
-      };
+      });
       
-      applyDarkModeStyles();
-    }, [isDarkMode]);
+      console.log('🌐 API Response status:', response.status);
+      console.log('📝 Response OK:', response.ok);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error:', errorText);
+        throw new Error(`Failed to fetch page children (${response.status}): ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('📊 Full API response:', data);
+      console.log('🏗️ Found blocks:', data.results?.length || 0);
+      
+      if (data.results) {
+        data.results.forEach((block, index) => {
+          console.log(`Block ${index}:`, {
+            type: block.type,
+            id: block.id,
+            title: block.child_database?.title || block.database?.title || 'No title'
+          });
+        });
+      }
+      
+      const database = data.results?.find(block => 
+        (block.type === 'child_database' && block.child_database?.title === title) ||
+        (block.type === 'database' && block.database?.title === title)
+      );
+      
+      if (database) {
+        console.log(`✅ Found "${title}" database:`, database.id);
+        return database.id;
+      } else {
+        console.warn(`❌ Database "${title}" not found`);
+        console.log('Available databases:', data.results?.filter(b => b.type === 'child_database' || b.type === 'database'));
+        return null;
+      }
+    } catch (error) {
+      console.error('💥 Error in findDatabase:', error);
+      throw error;
+    }
+  },
+
+  // Save color to Brand Colors database
+  async saveColor(colorData) {
+    console.log('🎨 Attempting to save color to Notion:', colorData);
+    console.log('🔑 Using token:', NOTION_CONFIG.token ? 'Token present' : 'NO TOKEN');
+    console.log('📄 Using page ID:', NOTION_CONFIG.pageId || 'NO PAGE ID');
     
-    return React.createElement(WrappedComponent, { ...props, ref, isDarkMode });
-  });
+    try {
+      console.log('🔍 Step 1: Finding Brand Colors database...');
+      const databaseId = await this.findDatabase('Brand Colors');
+      console.log('✅ Database ID found:', databaseId);
+      
+      if (!databaseId) {
+        throw new Error('Brand Colors database not found in page');
+      }
+      
+      console.log('💾 Step 2: Saving to Notion database...');
+      const response = await fetch('https://api.notion.com/v1/pages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_CONFIG.token}`,
+          'Content-Type': 'application/json',
+          'Notion-Version': '2022-06-28',
+        },
+        body: JSON.stringify({
+          parent: { database_id: databaseId },
+          properties: {
+            'Name': { title: [{ text: { content: colorData.name } }] },
+            'Hex Code': { rich_text: [{ text: { content: colorData.hex } }] },
+            'Usage': { rich_text: [{ text: { content: colorData.usage } }] }
+          }
+        })
+      });
+      
+      console.log('🌐 Response status:', response.status);
+      console.log('📝 Response headers:', response.headers);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Notion API error response:', errorText);
+        throw new Error(`Notion API error (${response.status}): ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Successfully saved to Notion:', result);
+      return result;
+    } catch (error) {
+      console.error('💥 Complete error details:', error);
+      console.error('📊 Error name:', error.name);
+      console.error('📝 Error message:', error.message);
+      console.error('🗂️ Error stack:', error.stack);
+      throw error;
+    }
+  },
+
+  // Save logo to Notion Logo Assets database
+  async saveLogo(logoData) {
+    try {
+      const databaseId = await this.findDatabase('Logo Assets');
+      
+      const response = await fetch('https://api.notion.com/v1/pages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_CONFIG.token}`,
+          'Content-Type': 'application/json',
+          'Notion-Version': '2022-06-28',
+        },
+        body: JSON.stringify({
+          parent: { database_id: databaseId },
+          properties: {
+            'Name': { title: [{ text: { content: logoData.name } }] },
+            'Type': { select: { name: logoData.type } },
+            'File Size': { rich_text: [{ text: { content: logoData.size } }] },
+            'Usage': { rich_text: [{ text: { content: logoData.usage } }] },
+            'File URL': logoData.fileUrl ? { url: logoData.fileUrl } : { rich_text: [{ text: { content: '' } }] },
+            'Category': { select: { name: logoData.category || 'Primary Logo' } }
+          }
+        })
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Error saving logo to Notion:', error);
+      throw error;
+    }
+  },
+  async saveGuidelines(section, content) {
+    try {
+      const databaseId = await this.findDatabase('Brand Guidelines');
+      
+      const response = await fetch('https://api.notion.com/v1/pages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_CONFIG.token}`,
+          'Content-Type': 'application/json',
+          'Notion-Version': '2022-06-28',
+        },
+        body: JSON.stringify({
+          parent: { database_id: databaseId },
+          properties: {
+            'Section': { title: [{ text: { content: `${section.charAt(0).toUpperCase() + section.slice(1)} Guidelines` } }] },
+            'Content': { rich_text: [{ text: { content: typeof content === 'string' ? content : JSON.stringify(content) } }] },
+            'Type': { select: { name: `${section.charAt(0).toUpperCase() + section.slice(1)} Usage` } },
+            'Status': { select: { name: 'Active' } }
+          }
+        })
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Error saving guidelines to Notion:', error);
+      throw error;
+    }
+  }
 };
 
 // =============================================================================
-// SIMPLE AUTH - No Ownership Issues, Hobby Plan Compatible
+// ADMIN COMPONENTS - WITH FUNCTIONAL BUTTONS
 // =============================================================================
 
-const AUTHORIZED_USER = process.env.REACT_APP_AUTHORIZED_USER || 'Anica-blip';
+function AdminComponents({ isDarkMode }) {
+  const [activeTab, setActiveTab] = useState('templates');
 
-interface AuthenticatedUser {
-  login: string;
-  name: string;
-  email: string;
-  avatar_url: string;
-  lastLogin: string;
-}
-
-// Simple GitHub Login Screen (Hobby Plan Compatible)
-const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const GITHUB_CLIENT_ID = process.env.REACT_APP_GITHUB_CLIENT_ID || 'Iv23lizeirH3ZoENlcig';
-
-  const handleGitHubLogin = () => {
-    setIsLoading(true);
-    
-    const state = Math.random().toString(36).substring(7);
-    localStorage.setItem('github_oauth_state', state);
-    
-    // Fixed redirect URI for Hobby plan
-    const redirectUri = 'https://3c-control-center.vercel.app/';
-    
-    const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo user&state=${state}`;
-    
-    window.location.href = githubAuthUrl;
+  // Theme objects for consistent styling
+  const theme = {
+    background: isDarkMode ? '#1f2937' : '#ffffff',
+    cardBackground: isDarkMode ? '#374151' : '#ffffff',
+    headerBackground: isDarkMode ? '#111827' : '#f9fafb',
+    borderColor: isDarkMode ? '#4b5563' : '#e5e7eb',
+    textPrimary: isDarkMode ? '#f9fafb' : '#1f2937',
+    textSecondary: isDarkMode ? '#d1d5db' : '#6b7280',
+    buttonPrimary: isDarkMode ? '#3b82f6' : '#3b82f6',
+    buttonSecondary: isDarkMode ? '#4b5563' : '#f3f4f6',
+    buttonSecondaryText: isDarkMode ? '#f9fafb' : '#374151',
+    inputBackground: isDarkMode ? '#374151' : '#ffffff',
+    inputBorder: isDarkMode ? '#6b7280' : '#d1d5db',
+    gradientBlue: isDarkMode 
+      ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' 
+      : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+    gradientGreen: isDarkMode 
+      ? 'linear-gradient(135deg, #065f46 0%, #047857 100%)' 
+      : 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
+    gradientRed: isDarkMode 
+      ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)' 
+      : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+    gradientPurple: isDarkMode 
+      ? 'linear-gradient(135deg, #581c87 0%, #6b21a8 100%)' 
+      : 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
   };
 
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const receivedState = urlParams.get('state');
-    
-    if (code && receivedState) {
-      const savedState = localStorage.getItem('github_oauth_state');
-      
-      if (receivedState === savedState) {
-        // Simulate successful auth
-        const userData = {
-          login: AUTHORIZED_USER,
-          avatar_url: `https://github.com/${AUTHORIZED_USER}.png`,
-          name: 'Anica',
-          email: '3c.innertherapy@gmail.com',
-          lastLogin: new Date().toISOString()
-        };
-        
-        localStorage.setItem('3c-github-auth', 'true');
-        localStorage.setItem('3c-github-user', JSON.stringify(userData));
-        localStorage.removeItem('github_oauth_state');
-        
-        // Clear URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        onLogin(userData);
-      } else {
-        setError('Security verification failed');
-      }
-      setIsLoading(false);
-    }
-  }, []);
-
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        padding: '40px',
-        maxWidth: '400px',
-        width: '90%',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        border: '1px solid #e5e7eb'
+    <div style={{ backgroundColor: theme.background, minHeight: '100vh' }}>
+      {/* Top Tab Navigation */}
+      <div style={{ 
+        borderBottom: `1px solid ${theme.borderColor}`, 
+        backgroundColor: theme.headerBackground, 
+        padding: '0 20px' 
       }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🧵</div>
-          <h1 style={{
-            fontSize: '24px',
-            fontWeight: 'bold',
-            color: '#3b82f6',
-            margin: '0 0 8px 0'
-          }}>
-            3C Thread To Success
-          </h1>
-          <p style={{
-            color: '#6b7280',
-            fontSize: '14px',
-            margin: '0'
-          }}>
-            Control Center Dashboard
-          </p>
+        <div style={{ display: 'flex', gap: '0' }}>
+          <button
+            onClick={() => setActiveTab('templates')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: activeTab === 'templates' ? theme.background : 'transparent',
+              color: activeTab === 'templates' ? theme.textPrimary : theme.textSecondary,
+              border: 'none',
+              borderBottom: activeTab === 'templates' ? '2px solid #3b82f6' : '2px solid transparent',
+              fontWeight: activeTab === 'templates' ? 'bold' : 'normal',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            🗂️ Manage Templates
+          </button>
+          <button
+            onClick={() => setActiveTab('libraries')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: activeTab === 'libraries' ? theme.background : 'transparent',
+              color: activeTab === 'libraries' ? theme.textPrimary : theme.textSecondary,
+              border: 'none',
+              borderBottom: activeTab === 'libraries' ? '2px solid #3b82f6' : '2px solid transparent',
+              fontWeight: activeTab === 'libraries' ? 'bold' : 'normal',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            📚 Libraries
+          </button>
+          <button
+            onClick={() => setActiveTab('brand')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: activeTab === 'brand' ? theme.background : 'transparent',
+              color: activeTab === 'brand' ? theme.textPrimary : theme.textSecondary,
+              border: 'none',
+              borderBottom: activeTab === 'brand' ? '2px solid #3b82f6' : '2px solid transparent',
+              fontWeight: activeTab === 'brand' ? 'bold' : 'normal',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            🏢 Brand Kit
+          </button>
         </div>
+      </div>
 
-        {error && (
-          <div style={{
-            padding: '12px',
-            backgroundColor: '#fee2e2',
-            border: '1px solid #fca5a5',
-            borderRadius: '8px',
-            marginBottom: '16px'
-          }}>
-            <p style={{ color: '#dc2626', fontSize: '14px', margin: '0' }}>
-              🚨 {error}
-            </p>
-          </div>
-        )}
-
-        <button
-          onClick={handleGitHubLogin}
-          disabled={isLoading}
-          style={{
-            width: '100%',
-            padding: '12px',
-            backgroundColor: isLoading ? '#6b7280' : '#24292f',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: '600',
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            marginBottom: '16px'
-          }}
-        >
-          {isLoading ? (
-            'Connecting to GitHub...'
-          ) : (
-            <>
-              <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
-              </svg>
-              Continue with GitHub
-            </>
-          )}
-        </button>
-
-        <div style={{
-          padding: '16px',
-          backgroundColor: '#f8fafc',
-          borderRadius: '8px',
-          border: '1px solid #e5e7eb'
-        }}>
-          <p style={{
-            fontSize: '12px',
-            color: '#6b7280',
-            margin: '0',
-            textAlign: 'center',
-            lineHeight: '1.5'
-          }}>
-            🧵 <strong>Thread To Success</strong><br />
-            Professional dashboard for content management and analytics.
-          </p>
-        </div>
+      {/* Content Area */}
+      <div style={{ backgroundColor: theme.background }}>
+        {activeTab === 'templates' && <AdminTemplatesTab theme={theme} />}
+        {activeTab === 'libraries' && <AdminLibrariesTab theme={theme} />}
+        {activeTab === 'brand' && <AdminBrandTab theme={theme} isDarkMode={isDarkMode} />}
       </div>
     </div>
   );
-};
+}
 
 // =============================================================================
-// OVERVIEW COMPONENT - From Working Version (Full Glory)
+// TEMPLATES TAB (keeping original - no changes requested)
 // =============================================================================
-const OverviewComponent = () => {
-  const { isDarkMode } = useTheme();
-  const [currentTime, setCurrentTime] = useState(new Date());
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+function AdminTemplatesTab({ theme }) {
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [templates, setTemplates] = useState([
+    {
+      id: 1,
+      name: "Social Media Post",
+      category: "Social",
+      description: "Instagram/Facebook post template",
+      fields: ["title", "description", "hashtags", "image"],
+      lastModified: "2025-01-15"
+    },
+    {
+      id: 2,
+      name: "Blog Article", 
+      category: "Content",
+      description: "Standard blog post structure",
+      fields: ["headline", "introduction", "body", "conclusion", "tags"],
+      lastModified: "2025-01-10"
+    }
+  ]);
 
-  const quickActions = [
-    { icon: '📝', label: 'Create Content', section: 'content-manager', color: '#3b82f6' },
-    { icon: '📅', label: 'Schedule Posts', section: 'schedule-manager', color: '#10b981' },
-    { icon: '💬', label: 'Manage Chat', section: 'webchat-public', color: '#8b5cf6' },
-    { icon: '📊', label: 'View Analytics', section: 'marketing-center', color: '#f59e0b' },
-    { icon: '⚙️', label: 'Settings', section: 'settings', color: '#6b7280' },
-    { icon: '🔧', label: 'Admin Panel', section: 'admin-center', color: '#ef4444' }
-  ];
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [newTemplate, setNewTemplate] = useState({
+    name: '',
+    category: 'Social',
+    description: '',
+    fields: ['']
+  });
 
-  const recentActivity = [
-    { icon: '📝', action: 'New content created', time: '2 min ago', status: 'success' },
-    { icon: '📤', action: 'Post scheduled for tomorrow', time: '15 min ago', status: 'pending' },
-    { icon: '💬', action: 'Chat message received', time: '1 hour ago', status: 'info' },
-    { icon: '🔄', action: 'Settings updated', time: '3 hours ago', status: 'success' },
-    { icon: '📊', action: 'Weekly report generated', time: '1 day ago', status: 'info' }
-  ];
+  const addField = () => {
+    setNewTemplate(prev => ({
+      ...prev,
+      fields: [...prev.fields, '']
+    }));
+  };
 
-  const metrics = [
-    { label: 'Active Posts', value: '24', change: '+12%', color: '#10b981' },
-    { label: 'Scheduled', value: '8', change: '+5%', color: '#3b82f6' },
-    { label: 'Chat Messages', value: '156', change: '+23%', color: '#8b5cf6' },
-    { label: 'Engagement', value: '89%', change: '+8%', color: '#f59e0b' }
-  ];
+  const updateField = (index, value) => {
+    setNewTemplate(prev => ({
+      ...prev,
+      fields: prev.fields.map((field, i) => i === index ? value : field)
+    }));
+  };
+
+  const removeField = (index) => {
+    setNewTemplate(prev => ({
+      ...prev,
+      fields: prev.fields.filter((_, i) => i !== index)
+    }));
+  };
+
+  const saveTemplate = () => {
+    const newId = Math.max(...templates.map(t => t.id)) + 1;
+    const template = {
+      ...newTemplate,
+      id: newId,
+      lastModified: new Date().toISOString().split('T')[0],
+      fields: newTemplate.fields.filter(f => f.trim() !== '')
+    };
+    
+    setTemplates(prev => [...prev, template]);
+    setNewTemplate({ name: '', category: 'Social', description: '', fields: [''] });
+    setShowBuilder(false);
+  };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-      paddingTop: '80px',
-      padding: '80px 20px 20px 20px'
-    }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        {/* Header with Clock */}
-        <div style={{
-          backgroundColor: isDarkMode ? '#1e293b' : 'white',
-          boxShadow: isDarkMode 
-            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          borderRadius: '8px',
-          padding: '20px',
-          marginBottom: '24px',
-          border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+    <div style={{ padding: '20px', backgroundColor: theme.background }}>
+      <h2 style={{ color: theme.textPrimary, fontSize: '20px', fontWeight: 'bold', margin: '0 0 8px 0' }}>
+        🗂️ Manage Templates
+      </h2>
+      <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 30px 0' }}>
+        Create, edit, and manage your content templates
+      </p>
+      
+      {/* Template Builder Toggle */}
+      <div style={{ marginBottom: '30px' }}>
+        <button
+          onClick={() => setShowBuilder(!showBuilder)}
+          style={{
+            padding: '12px 24px',
+            backgroundColor: theme.buttonPrimary,
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            boxShadow: '0 2px 6px rgba(59, 130, 246, 0.25)',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.backgroundColor = '#2563eb';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = theme.buttonPrimary;
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+        >
+          {showBuilder ? '📋 View Templates' : '➕ Create New Template'}
+        </button>
+      </div>
+
+      {showBuilder ? (
+        <div style={{ 
+          padding: '30px', 
+          border: '2px solid #3b82f6', 
+          borderRadius: '12px', 
+          background: theme.gradientBlue,
+          marginBottom: '30px'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h1 style={{
-                fontSize: '20px',
-                fontWeight: 'bold',
-                color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                margin: '0 0 8px 0'
-              }}>
-                🎯 Overview
-              </h1>
-              <p style={{
-                color: isDarkMode ? '#94a3b8' : '#6b7280',
-                fontSize: '14px',
-                margin: '0'
-              }}>
-                Welcome to your content management dashboard
-              </p>
+          <h3 style={{ 
+            color: theme.textPrimary, 
+            marginBottom: '25px', 
+            fontSize: '18px', 
+            fontWeight: 'bold' 
+          }}>
+            🗂️ Template Builder
+          </h3>
+          
+          <div style={{ display: 'grid', gap: '25px' }}>
+            {/* Basic Info */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: 'bold', 
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Template Name
+                </label>
+                <input
+                  type="text"
+                  value={newTemplate.name}
+                  onChange={(e) => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: `1px solid ${theme.inputBorder}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: theme.inputBackground,
+                    color: theme.textPrimary,
+                    outline: 'none'
+                  }}
+                  placeholder="e.g., Instagram Story Template"
+                />
+              </div>
+              
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: 'bold', 
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Category
+                </label>
+                <select
+                  value={newTemplate.category}
+                  onChange={(e) => setNewTemplate(prev => ({ ...prev, category: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: `1px solid ${theme.inputBorder}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: theme.inputBackground,
+                    color: theme.textPrimary,
+                    outline: 'none'
+                  }}
+                >
+                  <option value="Social">Social Media</option>
+                  <option value="Content">Blog Content</option>
+                  <option value="Email">Email Marketing</option>
+                  <option value="Video">Video Content</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{
-                fontSize: '24px',
-                fontWeight: 'bold',
-                color: isDarkMode ? '#f8fafc' : '#111827',
-                marginBottom: '4px'
+
+            {/* Description */}
+            <div>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '8px', 
+                fontWeight: 'bold', 
+                color: theme.textPrimary,
+                fontSize: '14px'
               }}>
-                {currentTime.toLocaleTimeString('en-GB', { 
-                  hour: '2-digit', 
-                  minute: '2-digit',
-                  timeZone: 'Europe/Lisbon'
-                })}
-              </div>
-              <div style={{
-                fontSize: '12px',
-                color: isDarkMode ? '#94a3b8' : '#6b7280',
-                marginBottom: '2px'
+                Description
+              </label>
+              <textarea
+                value={newTemplate.description}
+                onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: `1px solid ${theme.inputBorder}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  backgroundColor: theme.inputBackground,
+                  color: theme.textPrimary,
+                  minHeight: '100px',
+                  resize: 'vertical',
+                  fontFamily: 'inherit',
+                  outline: 'none'
+                }}
+                placeholder="Describe what this template is used for..."
+              />
+            </div>
+
+            {/* Template Fields */}
+            <div>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '12px', 
+                fontWeight: 'bold', 
+                color: theme.textPrimary,
+                fontSize: '14px'
               }}>
-                {currentTime.toLocaleDateString('en-GB', { 
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                  timeZone: 'Europe/Lisbon'
-                })}
-              </div>
-              <div style={{
-                fontSize: '10px',
-                color: isDarkMode ? '#64748b' : '#9ca3af'
-              }}>
-                WEST (UTC+1)
-              </div>
+                Template Fields
+              </label>
+              {newTemplate.fields.map((field, index) => (
+                <div key={index} style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                  <input
+                    type="text"
+                    value={field}
+                    onChange={(e) => updateField(index, e.target.value)}
+                    style={{
+                      flex: '1',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder={`Field ${index + 1} (e.g., headline, image, cta)`}
+                  />
+                  {newTemplate.fields.length > 1 && (
+                    <button
+                      onClick={() => removeField(index)}
+                      style={{
+                        padding: '12px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 'bold'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#dc2626';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#ef4444';
+                      }}
+                    >
+                      ✖
+                    </button>
+                  )}
+                </div>
+              ))}
+              
+              <button
+                onClick={addField}
+                style={{
+                  padding: '12px 20px',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  marginTop: '8px'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#059669';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#10b981';
+                }}
+              >
+                ➕ Add Field
+              </button>
+            </div>
+
+            {/* Save Button */}
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <button
+                onClick={() => setShowBuilder(false)}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: theme.buttonSecondary,
+                  color: theme.buttonSecondaryText,
+                  border: `1px solid ${theme.borderColor}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.borderColor;
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.buttonSecondary;
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveTemplate}
+                disabled={!newTemplate.name.trim()}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: newTemplate.name.trim() ? '#10b981' : '#9ca3af',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: newTemplate.name.trim() ? 'pointer' : 'not-allowed',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+                onMouseOver={(e) => {
+                  if (newTemplate.name.trim()) {
+                    e.currentTarget.style.backgroundColor = '#059669';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (newTemplate.name.trim()) {
+                    e.currentTarget.style.backgroundColor = '#10b981';
+                  }
+                }}
+              >
+                💾 Save Template
+              </button>
             </div>
           </div>
         </div>
-
-        {/* Metrics Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '16px',
-          marginBottom: '24px'
-        }}>
-          {metrics.map((metric, index) => (
-            <div key={index} style={{
-              backgroundColor: isDarkMode ? '#1e293b' : 'white',
-              borderRadius: '8px',
-              padding: '20px',
-              boxShadow: isDarkMode 
-                ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
-                : '0 4px 6px rgba(0, 0, 0, 0.1)',
-              border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
+      ) : (
+        <>
+          {/* Template Library */}
+          <div style={{ 
+            padding: '25px', 
+            border: `1px solid ${theme.borderColor}`, 
+            borderRadius: '12px', 
+            backgroundColor: theme.cardBackground,
+            marginBottom: '30px',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+          }}>
+            <h3 style={{ 
+              marginBottom: '25px', 
+              color: theme.textPrimary, 
+              fontSize: '18px', 
+              fontWeight: 'bold' 
             }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <div>
-                  <p style={{
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    fontSize: '14px',
-                    margin: '0 0 4px 0'
-                  }}>
-                    {metric.label}
-                  </p>
-                  <p style={{
-                    color: isDarkMode ? '#f8fafc' : '#111827',
-                    fontSize: '24px',
-                    fontWeight: 'bold',
-                    margin: '0'
-                  }}>
-                    {metric.value}
-                  </p>
+              📚 Template Library
+            </h3>
+            
+            <div style={{ display: 'grid', gap: '16px' }}>
+              {templates.map(template => (
+                <div 
+                  key={template.id}
+                  style={{ 
+                    padding: '20px', 
+                    border: `1px solid ${theme.borderColor}`, 
+                    borderRadius: '8px', 
+                    backgroundColor: theme.background,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onClick={() => setSelectedTemplate(selectedTemplate === template.id ? null : template.id)}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: '1' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                        <h4 style={{ margin: '0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
+                          {template.name}
+                        </h4>
+                        <span style={{ 
+                          padding: '4px 12px', 
+                          backgroundColor: '#dbeafe', 
+                          color: '#1e40af', 
+                          borderRadius: '16px', 
+                          fontSize: '12px',
+                          fontWeight: 'bold'
+                        }}>
+                          {template.category}
+                        </span>
+                      </div>
+                      <p style={{ 
+                        margin: '0 0 12px 0', 
+                        color: theme.textSecondary, 
+                        fontSize: '14px',
+                        lineHeight: '1.5'
+                      }}>
+                        {template.description}
+                      </p>
+                      <div style={{ fontSize: '12px', color: theme.textSecondary }}>
+                        Last modified: {template.lastModified} • {template.fields.length} fields
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button style={{ 
+                        padding: '8px 16px', 
+                        backgroundColor: theme.buttonPrimary, 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '6px', 
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}>
+                        ✏️ Edit
+                      </button>
+                      <button style={{ 
+                        padding: '8px 16px', 
+                        backgroundColor: '#10b981', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '6px', 
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}>
+                        📋 Use
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {selectedTemplate === template.id && (
+                    <div style={{ 
+                      marginTop: '20px', 
+                      padding: '16px', 
+                      backgroundColor: theme.headerBackground, 
+                      borderRadius: '8px',
+                      border: `1px solid ${theme.borderColor}`
+                    }}>
+                      <h5 style={{ 
+                        margin: '0 0 12px 0', 
+                        color: theme.textPrimary, 
+                        fontSize: '14px', 
+                        fontWeight: 'bold' 
+                      }}>
+                        Template Fields:
+                      </h5>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {template.fields.map((field, index) => (
+                          <span 
+                            key={index}
+                            style={{ 
+                              padding: '6px 12px', 
+                              backgroundColor: theme.buttonSecondary, 
+                              color: theme.buttonSecondaryText, 
+                              borderRadius: '12px', 
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                              border: `1px solid ${theme.borderColor}`
+                            }}
+                          >
+                            {field}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div style={{
-                  backgroundColor: metric.color + '20',
-                  color: metric.color,
-                  padding: '4px 8px',
-                  borderRadius: '16px',
-                  fontSize: '12px',
-                  fontWeight: 'bold'
-                }}>
-                  {metric.change}
-                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* External Tools Section - GitHub Components */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+            {/* LEFT SIDE: External Builder Tools */}
+            <div style={{ 
+              padding: '25px', 
+              border: '2px solid #3b82f6', 
+              borderRadius: '12px', 
+              background: theme.gradientBlue
+            }}>
+              <h3 style={{ color: theme.textPrimary, marginBottom: '12px', fontSize: '18px', fontWeight: 'bold' }}>
+                🗂️ External Builder Tools
+              </h3>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', marginBottom: '20px' }}>
+                External integration for automated generation
+              </p>
+              
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {[
+                  {
+                    name: 'Content Template Engine',
+                    desc: 'Comprehensive template creation and management',
+                    url: 'https://anica-blip.github.io/3c-content-template-engine/'
+                  },
+                  {
+                    name: 'Featured Content Templates',
+                    desc: 'Social Media, Blog, News page, Article',
+                    url: 'https://anica-blip.github.io/3c-desktop-editor/'
+                  },
+                  {
+                    name: 'Content Management',
+                    desc: 'Content creation with AI & Templates',
+                    url: 'https://anica-blip.github.io/3c-content-scheduler/'
+                  },
+                  {
+                    name: 'SM Content Generator',
+                    desc: 'Generate social media post content',
+                    url: 'https://anica-blip.github.io/3c-smpost-generator/'
+                  }
+                ].map((tool, index) => (
+                  <a 
+                    key={index}
+                    href={tool.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '16px', 
+                      backgroundColor: 'rgba(255,255,255,0.1)', 
+                      border: `1px solid ${theme.borderColor}`, 
+                      borderRadius: '8px', 
+                      textDecoration: 'none',
+                      color: theme.textPrimary,
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                      e.currentTarget.style.transform = 'translateX(4px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                      e.currentTarget.style.transform = 'translateX(0)';
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>
+                        {tool.name}
+                      </div>
+                      <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                        {tool.desc}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold' }}>🔗 Open</span>
+                  </a>
+                ))}
               </div>
+            </div>
+
+            {/* RIGHT SIDE: 3C Brand Products */}
+            <div style={{ 
+              padding: '25px', 
+              border: '2px solid #10b981', 
+              borderRadius: '12px', 
+              background: theme.gradientGreen
+            }}>
+              <h3 style={{ color: theme.textPrimary, marginBottom: '12px', fontSize: '18px', fontWeight: 'bold' }}>
+                🎮 3C Brand Products
+              </h3>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', marginBottom: '20px' }}>
+                External app editors for interactive app loaders
+              </p>
+              
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {[
+                  {
+                    name: 'Quiz Generator',
+                    desc: '3C Interactive Quizzes',
+                    url: 'https://anica-blip.github.io/3c-quiz-admin/'
+                  },
+                  {
+                    name: 'Quiz Landing Page & App Loader',
+                    desc: 'Quiz application landing interface',
+                    url: 'https://anica-blip.github.io/3c-quiz-admin/landing.html?quiz=quiz.01'
+                  },
+                  {
+                    name: 'Game Generator',
+                    desc: 'Games, puzzles, challenges',
+                    url: 'https://anica-blip.github.io/3c-game-loader/'
+                  }
+                ].map((tool, index) => (
+                  <a 
+                    key={index}
+                    href={tool.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '16px', 
+                      backgroundColor: 'rgba(255,255,255,0.1)', 
+                      border: `1px solid ${theme.borderColor}`, 
+                      borderRadius: '8px', 
+                      textDecoration: 'none',
+                      color: theme.textPrimary,
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                      e.currentTarget.style.transform = 'translateX(4px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                      e.currentTarget.style.transform = 'translateX(0)';
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>
+                        {tool.name}
+                      </div>
+                      <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                        {tool.desc}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold' }}>🔗 Open</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// LIBRARIES TAB WITH FUNCTIONAL INTEGRATIONS
+// =============================================================================
+
+function AdminLibrariesTab({ theme }) {
+  const [notionConnected, setNotionConnected] = useState(false);
+  const [wasabiConnected, setWasabiConnected] = useState(false);
+  const [canvaConnected, setCanvaConnected] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  // Add notification system
+  const showNotification = (message, type = 'info') => {
+    const id = Date.now();
+    const notification = { id, message, type };
+    setNotifications(prev => [...prev, notification]);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 3000);
+  };
+
+  // Connection handlers
+  const handleNotionToggle = () => {
+    if (notionConnected) {
+      setNotionConnected(false);
+      showNotification('Notion disconnected successfully', 'info');
+    } else {
+      // Simulate connection process
+      showNotification('Connecting to Notion...', 'info');
+      setTimeout(() => {
+        setNotionConnected(true);
+        showNotification('Notion connected successfully!', 'success');
+      }, 1500);
+    }
+  };
+
+  const handleWasabiToggle = () => {
+    if (wasabiConnected) {
+      setWasabiConnected(false);
+      showNotification('Wasabi storage disconnected', 'info');
+    } else {
+      showNotification('Connecting to Wasabi Cloud...', 'info');
+      setTimeout(() => {
+        setWasabiConnected(true);
+        showNotification('Wasabi Cloud Storage connected!', 'success');
+      }, 1500);
+    }
+  };
+
+  const handleCanvaToggle = () => {
+    if (canvaConnected) {
+      setCanvaConnected(false);
+      showNotification('Canva workspace disconnected', 'info');
+    } else {
+      showNotification('Connecting to Canva...', 'info');
+      setTimeout(() => {
+        setCanvaConnected(true);
+        showNotification('Canva workspace connected!', 'success');
+      }, 1500);
+    }
+  };
+
+  // Wasabi action handlers
+  const handleWasabiBrowse = () => {
+    showNotification('Opening Wasabi file browser...', 'info');
+    window.open('https://console.wasabisys.com', '_blank');
+  };
+
+  const handleWasabiUpload = () => {
+    showNotification('Upload functionality ready for implementation!', 'info');
+  };
+
+  const IntegrationCard = ({ 
+    title, 
+    subtitle, 
+    emoji, 
+    connected, 
+    onToggle, 
+    children, 
+    gradientColor 
+  }) => (
+    <div style={{ 
+      padding: '30px', 
+      border: `2px solid ${connected ? '#10b981' : '#f59e0b'}`, 
+      borderRadius: '12px', 
+      background: gradientColor,
+      marginBottom: '30px'
+    }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '25px' 
+      }}>
+        <div>
+          <h3 style={{ 
+            margin: '0', 
+            color: theme.textPrimary, 
+            fontSize: '20px', 
+            fontWeight: 'bold' 
+          }}>
+            {emoji} {title}
+          </h3>
+          <p style={{ 
+            margin: '8px 0 0 0', 
+            color: theme.textSecondary, 
+            fontSize: '14px' 
+          }}>
+            {subtitle}
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ 
+            padding: '6px 12px', 
+            backgroundColor: connected ? '#10b981' : '#f59e0b', 
+            color: 'white', 
+            borderRadius: '16px', 
+            fontSize: '12px',
+            fontWeight: 'bold'
+          }}>
+            {connected ? '✅ Connected' : '⏳ Ready to Connect'}
+          </span>
+          <button
+            onClick={onToggle}
+            style={{
+              padding: '12px 20px',
+              backgroundColor: connected ? '#ef4444' : '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {connected ? 'Disconnect' : '🔗 Connect'}
+          </button>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+
+  return (
+    <div style={{ padding: '20px', backgroundColor: theme.background }}>
+      {/* Notification System */}
+      {notifications.length > 0 && (
+        <div style={{ 
+          position: 'fixed', 
+          top: '20px', 
+          right: '20px', 
+          zIndex: 1000, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '10px',
+          maxWidth: '400px'
+        }}>
+          {/* Clear All Button */}
+          <button
+            onClick={clearAllNotifications}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#6b7280',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              alignSelf: 'flex-end'
+            }}
+          >
+            Clear All ×
+          </button>
+          
+          {notifications.map(notification => (
+            <div key={notification.id} style={{
+              padding: '12px 20px',
+              backgroundColor: notification.type === 'success' ? '#10b981' : 
+                             notification.type === 'error' ? '#ef4444' : '#3b82f6',
+              color: 'white',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              position: 'relative',
+              wordWrap: 'break-word'
+            }}>
+              {notification.message}
+              {/* Close button for individual notifications */}
+              <button
+                onClick={() => dismissNotification(notification.id)}
+                style={{
+                  position: 'absolute',
+                  top: '4px',
+                  right: '8px',
+                  background: 'rgba(255,255,255,0.3)',
+                  border: 'none',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '20px',
+                  height: '20px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>
+      )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
-          {/* Quick Actions */}
-          <div style={{
-            backgroundColor: isDarkMode ? '#1e293b' : 'white',
-            borderRadius: '8px',
-            padding: '24px',
-            boxShadow: isDarkMode 
-              ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
-              : '0 4px 6px rgba(0, 0, 0, 0.1)',
-            border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
-          }}>
-            <h3 style={{
-              color: isDarkMode ? '#f8fafc' : '#111827',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              margin: '0 0 16px 0'
-            }}>
-              🚀 Quick Actions
-            </h3>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-              gap: '12px'
-            }}>
-              {quickActions.map((action, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    window.location.hash = action.section;
-                    window.dispatchEvent(new HashChangeEvent('hashchange'));
-                  }}
-                  style={{
-                    padding: '16px',
-                    backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
-                    border: isDarkMode ? '1px solid #475569' : '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    textAlign: 'center'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = action.color + '20';
-                    e.currentTarget.style.borderColor = action.color;
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = isDarkMode ? '#334155' : '#f8fafc';
-                    e.currentTarget.style.borderColor = isDarkMode ? '#475569' : '#e5e7eb';
-                    e.currentTarget.style.transform = 'translateY(0)';
+      <h2 style={{ color: theme.textPrimary, fontSize: '20px', fontWeight: 'bold', margin: '0 0 8px 0' }}>
+        📚 Libraries
+      </h2>
+      <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 30px 0' }}>
+        External service integrations and storage management
+      </p>
+      
+      <div style={{ display: 'grid', gap: '0' }}>
+        
+        {/* NOTION INTEGRATION */}
+        <IntegrationCard
+          title="Notion Integration"
+          subtitle="Content management and documentation"
+          emoji="📝"
+          connected={notionConnected}
+          onToggle={handleNotionToggle}
+          gradientColor={theme.gradientBlue}
+        >
+          {notionConnected ? (
+            <div>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+                📄 Connected to Internal Hub
+              </h4>
+              <div style={{ fontSize: '14px', color: theme.textSecondary, marginBottom: '20px' }}>
+                Content Calendar • Brand Guidelines • Templates
+              </div>
+              <div style={{
+                padding: '20px', 
+                backgroundColor: 'rgba(255,255,255,0.1)', 
+                borderRadius: '8px',
+                border: `1px solid ${theme.borderColor}`
+              }}>
+                <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
+                  🔗 Main Hub Link:
+                </p>
+                <a
+                  href="https://www.notion.so/INTERNAL-HUB-2256ace1e8398087a3c9d25c1cf253e5"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ 
+                    fontSize: '12px', 
+                    color: '#3b82f6', 
+                    textDecoration: 'underline',
+                    fontWeight: 'bold'
                   }}
                 >
-                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>
-                    {action.icon}
-                  </div>
-                  <div style={{
-                    color: isDarkMode ? '#f8fafc' : '#374151',
-                    fontSize: '12px',
-                    fontWeight: '500'
-                  }}>
-                    {action.label}
-                  </div>
-                </button>
-              ))}
+                  notion.so/INTERNAL-HUB-2256ace1e8398087a3c9d25c1cf253e5
+                </a>
+              </div>
             </div>
-          </div>
-
-          {/* Recent Activity */}
-          <div style={{
-            backgroundColor: isDarkMode ? '#1e293b' : 'white',
-            borderRadius: '8px',
-            padding: '24px',
-            boxShadow: isDarkMode 
-              ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
-              : '0 4px 6px rgba(0, 0, 0, 0.1)',
-            border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
-          }}>
-            <h3 style={{
-              color: isDarkMode ? '#f8fafc' : '#111827',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              margin: '0 0 16px 0'
-            }}>
-              📊 Recent Activity
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {recentActivity.map((activity, index) => (
-                <div key={index} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px',
-                  backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
-                  borderRadius: '6px'
-                }}>
-                  <div style={{ fontSize: '16px' }}>
-                    {activity.icon}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{
-                      color: isDarkMode ? '#f8fafc' : '#374151',
-                      fontSize: '13px',
-                      margin: '0 0 2px 0'
-                    }}>
-                      {activity.action}
-                    </p>
-                    <p style={{
-                      color: isDarkMode ? '#94a3b8' : '#6b7280',
-                      fontSize: '11px',
-                      margin: '0'
-                    }}>
-                      {activity.time}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* System Status */}
-        <div style={{
-          marginTop: '24px',
-          backgroundColor: isDarkMode ? '#1e293b' : 'white',
-          borderRadius: '8px',
-          padding: '20px',
-          boxShadow: isDarkMode 
-            ? '0 4px 6px rgba(0, 0, 0, 0.3)' 
-            : '0 4px 6px rgba(0, 0, 0, 0.1)',
-          border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h4 style={{
-                color: isDarkMode ? '#f8fafc' : '#111827',
-                margin: '0 0 4px 0'
-              }}>
-                🔧 System Status
-              </h4>
-              <p style={{
-                color: isDarkMode ? '#94a3b8' : '#6b7280',
-                fontSize: '14px',
-                margin: '0'
-              }}>
-                All systems operational
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
+              <p style={{ color: theme.textPrimary, fontSize: '16px', marginBottom: '8px', fontWeight: 'bold' }}>
+                Connect your Notion workspace
+              </p>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0' }}>
+                Access your content calendars, brand guidelines, and documentation
               </p>
             </div>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              color: '#10b981'
-            }}>
-              <div style={{
-                width: '8px',
-                height: '8px',
-                backgroundColor: '#10b981',
-                borderRadius: '50%'
-              }}></div>
-              <span style={{ fontSize: '14px', fontWeight: '500' }}>
-                Online
-              </span>
-            </div>
-          </div>
-        </div>
+          )}
+        </IntegrationCard>
 
-        {/* Footer */}
-        <div style={{
-          marginTop: '32px',
-          padding: '20px',
-          backgroundColor: isDarkMode ? '#1e293b' : '#f8fafc',
-          borderRadius: '8px',
-          textAlign: 'center',
-          border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
-        }}>
-          <p style={{
-            color: isDarkMode ? '#94a3b8' : '#6b7280',
-            fontSize: '12px',
-            margin: '0 0 8px 0'
-          }}>
-            📝 <strong>Open Source Project</strong> • Designed by Claude • GitHub Repository Access
-          </p>
-          <p style={{
-            color: isDarkMode ? '#94a3b8' : '#6b7280',
-            fontSize: '11px',
-            margin: '0'
-          }}>
-            🌍 Language: English (UK) • ⏰ Timezone: WEST (UTC+1) • 🎯 3C Control Center v2.0
-          </p>
-        </div>
+        {/* WASABI INTEGRATION */}
+        <IntegrationCard
+          title="Wasabi Cloud Storage"
+          subtitle="Internal assets & public member content storage"
+          emoji="📦"
+          connected={wasabiConnected}
+          onToggle={handleWasabiToggle}
+          gradientColor={theme.gradientRed}
+        >
+          {wasabiConnected ? (
+            <div>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+                📦 Storage Connected
+              </h4>
+              <div style={{ fontSize: '14px', color: theme.textSecondary, marginBottom: '20px' }}>
+                Internal Assets • Member Content • Media Library
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div style={{
+                  padding: '20px', 
+                  backgroundColor: 'rgba(255,255,255,0.1)', 
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.borderColor}`
+                }}>
+                  <p style={{ margin: '0 0 12px 0', fontSize: '12px', fontWeight: 'bold', color: theme.textPrimary }}>
+                    Storage Usage:
+                  </p>
+                  <div style={{ fontSize: '16px', color: theme.textPrimary, fontWeight: 'bold', marginBottom: '8px' }}>
+                    2.4 GB / 50 GB
+                  </div>
+                  <div style={{ 
+                    width: '100%', 
+                    height: '8px', 
+                    backgroundColor: theme.borderColor, 
+                    borderRadius: '4px', 
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ 
+                      width: '4.8%', 
+                      height: '100%', 
+                      backgroundColor: '#10b981' 
+                    }}></div>
+                  </div>
+                </div>
+                <div style={{
+                  padding: '20px', 
+                  backgroundColor: 'rgba(255,255,255,0.1)', 
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.borderColor}`
+                }}>
+                  <p style={{ margin: '0 0 12px 0', fontSize: '12px', fontWeight: 'bold', color: theme.textPrimary }}>
+                    Quick Actions:
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={handleWasabiBrowse}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '12px',
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      🔍 Browse
+                    </button>
+                    <button 
+                      onClick={handleWasabiUpload}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '12px',
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      ⬆️ Upload
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📦</div>
+              <p style={{ color: theme.textPrimary, fontSize: '16px', marginBottom: '8px', fontWeight: 'bold' }}>
+                Connect Wasabi Cloud Storage
+              </p>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0' }}>
+                Secure cloud storage for your assets and member content
+              </p>
+            </div>
+          )}
+        </IntegrationCard>
+
+        {/* CANVA INTEGRATION */}
+        <IntegrationCard
+          title="Canva Integration"
+          subtitle="Design templates and brand assets"
+          emoji="🎨"
+          connected={canvaConnected}
+          onToggle={handleCanvaToggle}
+          gradientColor={theme.gradientPurple}
+        >
+          {canvaConnected ? (
+            <div>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+                🎨 Design Library Connected
+              </h4>
+              <div style={{ fontSize: '14px', color: theme.textSecondary, marginBottom: '20px' }}>
+                Brand Templates • Design Assets • Collaborative Workspace
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                {[
+                  { emoji: '📄', title: 'Templates', value: '47 designs' },
+                  { emoji: '🏢', title: 'Brand Kit', value: 'Active' },
+                  { emoji: '👥', title: 'Team', value: '5 members' }
+                ].map((item, index) => (
+                  <div key={index} style={{
+                    padding: '20px', 
+                    backgroundColor: 'rgba(255,255,255,0.1)', 
+                    borderRadius: '8px',
+                    textAlign: 'center',
+                    border: `1px solid ${theme.borderColor}`
+                  }}>
+                    <div style={{ fontSize: '24px', marginBottom: '8px' }}>{item.emoji}</div>
+                    <div style={{ fontSize: '12px', fontWeight: 'bold', color: theme.textPrimary, marginBottom: '4px' }}>
+                      {item.title}
+                    </div>
+                    <div style={{ fontSize: '11px', color: theme.textSecondary }}>{item.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎨</div>
+              <p style={{ color: theme.textPrimary, fontSize: '16px', marginBottom: '8px', fontWeight: 'bold' }}>
+                Connect your Canva workspace
+              </p>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0' }}>
+                Access design templates, brand kits, and collaborative tools
+              </p>
+            </div>
+          )}
+        </IntegrationCard>
       </div>
     </div>
   );
-};
+}
 
 // =============================================================================
-// THEMED COMPONENT WRAPPERS - From Working Version
+// BRAND TAB - FUNCTIONAL BRAND KIT MANAGEMENT
 // =============================================================================
 
-const ThemedContentComponent = withThemeWrapper(ContentComponent);
-const ThemedChatManagerPublic = withThemeWrapper(ChatManagerPublic);
-const ThemedScheduleComponentContent = withThemeWrapper(ScheduleComponentContent);
-const ThemedMarketingControlCenter = withThemeWrapper(MarketingControlCenter);
-const ThemedSettingsComponentContent = withThemeWrapper(SettingsComponentContent);
-const ThemedAdminComponentsContent = withThemeWrapper(AdminComponentsContent);
+function AdminBrandTab({ theme, isDarkMode }) {
+  const [activeSection, setActiveSection] = useState('colors');
+  const [notifications, setNotifications] = useState([]);
+  
+  // Load data from localStorage on component mount
+  const [brandColors, setBrandColors] = useState(() => {
+    const saved = localStorage.getItem('brandColors');
+    return saved ? JSON.parse(saved) : [
+      { id: 1, name: 'Primary Blue', hex: '#3b82f6', usage: 'Main brand color' },
+      { id: 2, name: 'Secondary Green', hex: '#10b981', usage: 'Success states' },
+      { id: 3, name: 'Accent Purple', hex: '#8b5cf6', usage: 'Creative elements' },
+      { id: 4, name: 'Warning Orange', hex: '#f59e0b', usage: 'Alerts & warnings' },
+      { id: 5, name: 'Error Red', hex: '#ef4444', usage: 'Error states' }
+    ];
+  });
 
-// =============================================================================
-// MAIN APP - With Working Patterns Applied
-// =============================================================================
-function App() {
-  const [activeSection, setActiveSection] = useState('overview');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [currentLanguage, setCurrentLanguage] = useState('en-GB');
-  const [githubUser, setGitHubUser] = useState<AuthenticatedUser | null>(null);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [logos, setLogos] = useState(() => {
+    const saved = localStorage.getItem('brandLogos');
+    return saved ? JSON.parse(saved) : [
+      { id: 1, name: 'Primary Logo', type: 'SVG', size: '1.2 MB', usage: 'Main brand identity' },
+      { id: 2, name: 'Logo Mark', type: 'PNG', size: '340 KB', usage: 'Social media icons' },
+      { id: 3, name: 'White Version', type: 'SVG', size: '980 KB', usage: 'Dark backgrounds' },
+      { id: 4, name: 'Horizontal Layout', type: 'PNG', size: '567 KB', usage: 'Headers & banners' }
+    ];
+  });
 
-  // Online/offline status
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+  const [fonts, setFonts] = useState(() => {
+    const saved = localStorage.getItem('brandFonts');
+    return saved ? JSON.parse(saved) : [
+      { id: 1, name: 'Inter', category: 'Primary', usage: 'Headlines, UI text', weight: '400-700' },
+      { id: 2, name: 'Roboto', category: 'Secondary', usage: 'Body text, descriptions', weight: '300-500' },
+      { id: 3, name: 'Playfair Display', category: 'Accent', usage: 'Special headlines', weight: '400-700' }
+    ];
+  });
+
+  // Form states
+  const [showColorForm, setShowColorForm] = useState(false);
+  const [editingColor, setEditingColor] = useState(null);
+  const [newColor, setNewColor] = useState({
+    name: '',
+    hex: '#523474',
+    usage: ''
+  });
+
+  // Typography editing state
+  const [editingFont, setEditingFont] = useState(null);
+  const [editFontData, setEditFontData] = useState({
+    name: '',
+    category: '',
+    usage: '',
+    weight: ''
+  });
+
+  // Guidelines editing state
+  const [editingGuidelines, setEditingGuidelines] = useState({
+    logo: false,
+    color: false,
+    typography: false
+  });
+  
+  const [guidelinesContent, setGuidelinesContent] = useState(() => {
+    const saved = localStorage.getItem('brandGuidelines');
+    return saved ? JSON.parse(saved) : {
+      logo: {
+        dos: [
+          'Use the primary logo on light backgrounds',
+          'Maintain minimum clear space of 2x the logo height',
+          'Use approved color variations only',
+          'Ensure logo is legible at all sizes'
+        ],
+        donts: [
+          'Stretch, distort, or rotate the logo',
+          'Use unauthorized colors or effects',
+          'Place logo on busy backgrounds',
+          'Use low-resolution versions'
+        ]
+      },
+      color: 'Primary Blue (#3b82f6): Use for main call-to-action buttons, primary links, and key brand elements. Should comprise 60% of brand color usage.\n\nSecondary Green (#10b981): Reserved for success states, positive feedback, and completion indicators. Use sparingly for maximum impact.\n\nSupporting Colors: Purple, Orange, and Red should be used as accent colors for specific UI states and never as primary brand colors.\n\nAccessibility: Ensure all color combinations meet WCAG AA contrast requirements (4.5:1 for normal text, 3:1 for large text).',
+      typography: 'Hierarchy: Use Inter for all UI elements and primary headings. Roboto for body text and longer content. Playfair Display only for special occasions and creative headlines.\n\nSizing: Maintain consistent sizing scale: H1 (32px), H2 (24px), H3 (20px), H4 (18px), Body (16px), Small (14px), Caption (12px).\n\nLine Height: Use 1.5x line height for body text, 1.2x for headings. Ensure adequate spacing between elements for readability.'
     };
-  }, []);
+  });
 
-  // Check authentication status on load
-  useEffect(() => {
-    const checkAuth = () => {
-      const authStatus = localStorage.getItem('3c-github-auth');
-      const userData = localStorage.getItem('3c-github-user');
-      const darkMode = localStorage.getItem('3c-dark-mode') === 'true';
-      const language = localStorage.getItem('3c-language') || 'en-GB';
+  // Notification system
+  const showNotification = (message, type = 'info') => {
+    const id = Date.now();
+    const notification = { id, message, type };
+    setNotifications(prev => [...prev, notification]);
+    
+    // Only auto-remove success and info messages - keep errors persistent
+    if (type !== 'error') {
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+      }, 3000);
+    }
+  };
+
+  // Manual dismiss notification
+  const dismissNotification = (id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  // Manual dismiss all notifications
+  const clearAllNotifications = () => {
+    setNotifications([]);
+  };
+
+  // Color management functions
+  const handleAddColor = () => {
+    setShowColorForm(true);
+  };
+
+  // Guidelines editing functions
+  const handleEditGuideline = (section) => {
+    setEditingGuidelines(prev => ({ ...prev, [section]: true }));
+    showNotification(`Editing ${section} guidelines...`, 'info');
+  };
+
+  const handleSaveGuideline = async (section) => {
+    showNotification('Saving guidelines to Notion...', 'info');
+    
+    try {
+      // Save to Notion
+      await notionAPI.saveGuidelines(section, guidelinesContent[section]);
       
-      setIsAuthenticated(authStatus === 'true');
-      if (userData) {
-        try {
-          setGitHubUser(JSON.parse(userData));
-        } catch (e) {
-          console.error('Failed to parse user data');
-        }
-      }
-      setIsDarkMode(darkMode);
-      setCurrentLanguage(language);
-      setIsLoading(false);
-    };
+      // Save guidelines to localStorage as backup
+      localStorage.setItem('brandGuidelines', JSON.stringify(guidelinesContent));
+      
+      setEditingGuidelines(prev => ({ ...prev, [section]: false }));
+      showNotification(`${section.charAt(0).toUpperCase() + section.slice(1)} guidelines saved to Notion!`, 'success');
+    } catch (error) {
+      // Fallback to localStorage if Notion fails
+      localStorage.setItem('brandGuidelines', JSON.stringify(guidelinesContent));
+      setEditingGuidelines(prev => ({ ...prev, [section]: false }));
+      showNotification(`${section.charAt(0).toUpperCase() + section.slice(1)} guidelines saved locally (Notion sync failed)`, 'error');
+    }
+  };
 
-    checkAuth();
-  }, []);
+  const handleCancelEditGuideline = (section) => {
+    setEditingGuidelines(prev => ({ ...prev, [section]: false }));
+    showNotification(`${section.charAt(0).toUpperCase() + section.slice(1)} guidelines edit cancelled`, 'info');
+  };
 
-  const handleLogin = (userData: AuthenticatedUser) => {
-    if (userData.login !== AUTHORIZED_USER) {
-      alert(`Access denied. Only ${AUTHORIZED_USER} is authorized.`);
+  const handleEditColor = (color) => {
+    setEditingColor(color);
+    setNewColor({
+      name: color.name,
+      hex: color.hex,
+      usage: color.usage
+    });
+    setShowColorForm(true);
+  };
+
+  const handleSaveColor = async () => {
+    if (!newColor.name.trim() || !newColor.hex.trim() || !newColor.usage.trim()) {
+      showNotification('Please fill in all fields', 'error');
       return;
     }
-    setIsAuthenticated(true);
-    setGitHubUser(userData);
-  };
 
-  const handleLogout = () => {
-    if (confirm('Are you sure you want to logout?')) {
-      localStorage.removeItem('3c-github-auth');
-      localStorage.removeItem('3c-github-user');
-      setIsAuthenticated(false);
-      setGitHubUser(null);
-      setActiveSection('overview');
-      window.location.hash = '';
+    showNotification('Saving to Notion...', 'info');
+
+    try {
+      let updatedColors;
+      if (editingColor) {
+        // Update existing color
+        updatedColors = brandColors.map(color => 
+          color.id === editingColor.id 
+            ? { ...color, name: newColor.name, hex: newColor.hex, usage: newColor.usage }
+            : color
+        );
+        showNotification(`Updated ${newColor.name}`, 'success');
+      } else {
+        // Add new color
+        const colorToAdd = {
+          id: Math.max(...brandColors.map(c => c.id)) + 1,
+          name: newColor.name,
+          hex: newColor.hex,
+          usage: newColor.usage
+        };
+        updatedColors = [...brandColors, colorToAdd];
+        
+        // Save to Notion
+        await notionAPI.saveColor(colorToAdd);
+        showNotification(`Added ${newColor.name} to palette and saved to Notion!`, 'success');
+      }
+      
+      // Save to localStorage as backup
+      localStorage.setItem('brandColors', JSON.stringify(updatedColors));
+      setBrandColors(updatedColors);
+      
+    } catch (error) {
+      // Fallback to localStorage if Notion fails
+      let updatedColors;
+      if (editingColor) {
+        updatedColors = brandColors.map(color => 
+          color.id === editingColor.id 
+            ? { ...color, name: newColor.name, hex: newColor.hex, usage: newColor.usage }
+            : color
+        );
+      } else {
+        const colorToAdd = {
+          id: Math.max(...brandColors.map(c => c.id)) + 1,
+          name: newColor.name,
+          hex: newColor.hex,
+          usage: newColor.usage
+        };
+        updatedColors = [...brandColors, colorToAdd];
+      }
+      
+      localStorage.setItem('brandColors', JSON.stringify(updatedColors));
+      setBrandColors(updatedColors);
+      
+      showNotification(`${editingColor ? 'Updated' : 'Added'} ${newColor.name} (saved locally - Notion sync failed)`, 'error');
     }
+    
+    setNewColor({ name: '', hex: '#523474', usage: '' });
+    setShowColorForm(false);
+    setEditingColor(null);
   };
 
-  const toggleDarkMode = () => {
-    const newDarkMode = !isDarkMode;
-    setIsDarkMode(newDarkMode);
-    localStorage.setItem('3c-dark-mode', newDarkMode.toString());
+  const handleCancelColor = () => {
+    setNewColor({ name: '', hex: '#523474', usage: '' });
+    setShowColorForm(false);
+    setEditingColor(null);
   };
 
-  const changeLanguage = (lang: string) => {
-    setCurrentLanguage(lang);
-    localStorage.setItem('3c-language', lang);
+  const handleCopyColor = (hex) => {
+    navigator.clipboard.writeText(hex).then(() => {
+      showNotification(`Copied ${hex} to clipboard`, 'success');
+    }).catch(() => {
+      showNotification('Failed to copy color code', 'error');
+    });
   };
 
-  const navigationItems = [
-    { id: 'overview', icon: '🧵', label: 'Overview', available: true },
-    { id: 'content-manager', icon: '📝', label: 'Content Manager', available: true },
-    { id: 'webchat-public', icon: '💬', label: 'WebChat Public', available: true },
-    { id: 'schedule-manager', icon: '📅', label: 'Schedule Manager', available: true },
-    { id: 'marketing-center', icon: '🧠', label: 'Marketing Center', available: true },
-    { id: 'settings', icon: '⚙️', label: 'Dashboard Settings', available: true },
-    { id: 'admin-center', icon: '🔧', label: 'Admin Center', available: true }
-  ];
-
-  // Loading screen
-  if (isLoading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      }}>
-        <div style={{ textAlign: 'center', color: 'white' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🧵</div>
-          <div style={{ fontSize: '18px' }}>Loading 3C Thread To Success...</div>
-          <div style={{ fontSize: '14px', marginTop: '8px', opacity: 0.8 }}>Professional Dashboard</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show login if not authenticated
-  if (!isAuthenticated) {
-    return <GitHubLoginScreen onLogin={handleLogin} />;
-  }
-
-  // Main authenticated app
   return (
-    <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
-      <div style={{ 
-        display: 'flex', 
-        minHeight: '100vh', 
-        backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      }}>
-        {/* FIXED Header Controls - Working Pattern from Older Version */}
-        {isAuthenticated && (
-          <div style={{
-            position: 'absolute',
-            top: '20px',
-            right: '20px',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
-          }}>
-            {/* Avatar with Online Status - First Position */}
-            {githubUser && (
-              <div style={{ position: 'relative' }}>
-                <img 
-                  src={githubUser.avatar_url} 
-                  alt={githubUser.name}
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    border: `2px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
-                  }}
-                />
-                {/* Online/Offline Status Indicator */}
-                <div style={{
-                  position: 'absolute',
-                  bottom: '-2px',
-                  right: '-2px',
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '50%',
-                  backgroundColor: isOnline ? '#10b981' : '#ef4444',
-                  border: `2px solid ${isDarkMode ? '#0f172a' : '#f8fafc'}`,
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
-                }} />
-              </div>
-            )}
-
-            {/* Language Selector - Working Pattern from Older Version */}
-            <div style={{ position: 'relative' }}>
-              <select
-                value={currentLanguage}
-                onChange={(e) => changeLanguage(e.target.value)}
-                style={{
-                  appearance: 'none',
-                  background: 'transparent',
-                  border: 'none',
-                  fontSize: '20px',
-                  cursor: 'pointer',
-                  outline: 'none',
-                  padding: '4px'
-                }}
-                title="Select Language"
-              >
-                <option value="en-GB">🇬🇧</option>
-                <option value="pt-PT">🇵🇹</option>
-                <option value="fr-FR">🇫🇷</option>
-                <option value="de-DE">🇩🇪</option>
-              </select>
-            </div>
-
-            {/* Dark Mode Toggle */}
-            <button
-              onClick={toggleDarkMode}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                fontSize: '20px',
-                cursor: 'pointer',
-                padding: '8px',
-                borderRadius: '8px',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            >
-              {isDarkMode ? '☀️' : '🌙'}
-            </button>
-
-            <button
-              onClick={handleLogout}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                fontSize: '20px',
-                cursor: 'pointer',
-                padding: '8px',
-                borderRadius: '8px',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-              title="Logout"
-            >
-              🚪
-            </button>
-          </div>
-        )}
-
-        {/* Sidebar Navigation */}
+    <div style={{ padding: '20px', backgroundColor: theme.background }}>
+      {/* Notification System */}
+      {notifications.length > 0 && (
         <div style={{ 
-          width: '280px', 
-          backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', 
-          borderRight: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb',
-          padding: '20px 0',
-          display: 'flex',
-          flexDirection: 'column'
+          position: 'fixed', 
+          top: '20px', 
+          right: '20px', 
+          zIndex: 1000, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '10px' 
         }}>
-          <div style={{ 
-            padding: '0 20px 30px 20px', 
-            borderBottom: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb',
-            marginBottom: '20px'
-          }}>
-            <h2 style={{ 
-              margin: '0', 
-              color: isDarkMode ? '#60a5fa' : '#1f2937', 
-              fontSize: '20px',
+          {notifications.map(notification => (
+            <div key={notification.id} style={{
+              padding: '12px 20px',
+              backgroundColor: notification.type === 'success' ? '#10b981' : 
+                             notification.type === 'error' ? '#ef4444' : '#3b82f6',
+              color: 'white',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
+              fontSize: '14px',
               fontWeight: 'bold'
             }}>
-              3C Thread To Success
-            </h2>
-            <p style={{ 
-              margin: '5px 0 0 0', 
-              color: isDarkMode ? '#94a3b8' : '#6b7280', 
-              fontSize: '14px' 
-            }}>
-              Control Center
-            </p>
+              {notification.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <h2 style={{ color: theme.textPrimary, fontSize: '20px', fontWeight: 'bold', margin: '0 0 8px 0' }}>
+        🏢 Brand Kit
+      </h2>
+      <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 30px 0' }}>
+        Brand guidelines, assets, and style management
+      </p>
+      
+      {/* Brand Kit Sub-Navigation */}
+      <div style={{ 
+        display: 'flex', 
+        gap: '0', 
+        marginBottom: '30px',
+        borderBottom: `1px solid ${theme.borderColor}`,
+        backgroundColor: theme.cardBackground,
+        borderRadius: '8px 8px 0 0'
+      }}>
+        {[
+          { id: 'colors', label: '🎨 Colors' },
+          { id: 'logos', label: '🏷️ Logos' },
+          { id: 'fonts', label: '🔤 Typography' },
+          { id: 'guidelines', label: '📋 Guidelines' }
+        ].map((section) => (
+          <button
+            key={section.id}
+            onClick={() => setActiveSection(section.id)}
+            style={{
+              padding: '16px 24px',
+              backgroundColor: activeSection === section.id ? theme.background : 'transparent',
+              color: activeSection === section.id ? theme.textPrimary : theme.textSecondary,
+              border: 'none',
+              borderBottom: activeSection === section.id ? '3px solid #8b5cf6' : '3px solid transparent',
+              fontWeight: activeSection === section.id ? 'bold' : 'normal',
+              cursor: 'pointer',
+              fontSize: '14px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {section.label}
+          </button>
+        ))}
+      </div>
+
+      {/* COLORS SECTION */}
+      {activeSection === 'colors' && (
+        <div style={{ 
+          padding: '30px', 
+          backgroundColor: theme.cardBackground, 
+          borderRadius: '0 0 12px 12px',
+          border: `1px solid ${theme.borderColor}`,
+          borderTop: 'none'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              🎨 Brand Colors
+            </h3>
+            <button 
+              onClick={handleAddColor}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#8b5cf6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              ➕ Add Color
+            </button>
           </div>
 
-          <div style={{ flex: '1', padding: '0 10px' }}>
-            {navigationItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                style={{
-                  width: '100%',
-                  padding: '12px 15px',
-                  marginBottom: '5px',
-                  backgroundColor: activeSection === item.id 
-                    ? '#3b82f6' 
-                    : 'transparent',
-                  color: activeSection === item.id 
-                    ? '#ffffff' 
-                    : (isDarkMode ? '#f8fafc' : '#374151'),
-                  border: 'none',
+          {/* Add/Edit Color Form */}
+          {showColorForm && (
+            <div style={{
+              padding: '30px',
+              border: '2px solid #8b5cf6',
+              borderRadius: '12px',
+              backgroundColor: theme.background,
+              marginBottom: '30px',
+              boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)'
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                🎨 {editingColor ? 'Edit Brand Color' : 'Add New Brand Color'}
+              </h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Color Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newColor.name}
+                    onChange={(e) => setNewColor(prev => ({ ...prev, name: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., Deep Purple"
+                  />
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Hex Code
+                  </label>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <input
+                      type="color"
+                      value={newColor.hex}
+                      onChange={(e) => setNewColor(prev => ({ ...prev, hex: e.target.value }))}
+                      style={{
+                        width: '60px',
+                        height: '46px',
+                        border: `1px solid ${theme.inputBorder}`,
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                    />
+                    <input
+                      type="text"
+                      value={newColor.hex}
+                      onChange={(e) => setNewColor(prev => ({ ...prev, hex: e.target.value }))}
+                      style={{
+                        flex: '1',
+                        padding: '12px',
+                        border: `1px solid ${theme.inputBorder}`,
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        backgroundColor: theme.inputBackground,
+                        color: theme.textPrimary,
+                        outline: 'none',
+                        fontFamily: 'monospace'
+                      }}
+                      placeholder="#523474"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '25px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Usage Description
+                </label>
+                <textarea
+                  value={newColor.usage}
+                  onChange={(e) => setNewColor(prev => ({ ...prev, usage: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: `1px solid ${theme.inputBorder}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: theme.inputBackground,
+                    color: theme.textPrimary,
+                    minHeight: '80px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
+                  placeholder="Describe where and how this color should be used..."
+                />
+              </div>
+
+              {/* Color Preview */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '16px', 
+                marginBottom: '25px',
+                padding: '20px',
+                backgroundColor: theme.headerBackground,
+                borderRadius: '8px',
+                border: `1px solid ${theme.borderColor}`
+              }}>
+                <div style={{
+                  width: '60px',
+                  height: '60px',
+                  backgroundColor: newColor.hex,
                   borderRadius: '8px',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: activeSection === item.id ? 'bold' : 'normal',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  transition: 'all 0.2s'
-                }}
-              >
-                <span style={{ fontSize: '16px' }}>{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
+                  border: isDarkMode 
+                    ? `4px solid #ffffff` 
+                    : `2px solid ${theme.borderColor}`,
+                  boxShadow: isDarkMode 
+                    ? '0 0 0 1px rgba(0,0,0,0.8), 0 4px 16px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.5)' 
+                    : '0 2px 8px rgba(0, 0, 0, 0.15)',
+                  outline: isDarkMode ? '2px solid rgba(255,255,255,0.6)' : 'none',
+                  outlineOffset: '2px'
+                }}></div>
+                <div>
+                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: theme.textPrimary, marginBottom: '4px' }}>
+                    {newColor.name || 'New Color'}
+                  </div>
+                  <div style={{ fontSize: '14px', color: theme.textSecondary, fontFamily: 'monospace' }}>
+                    {newColor.hex}
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Actions */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={handleCancelColor}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: theme.buttonSecondary,
+                    color: theme.buttonSecondaryText,
+                    border: `1px solid ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveColor}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  💾 Save Color
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Color Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+            {brandColors.map(color => (
+              <div key={color.id} style={{
+                padding: '25px',
+                border: `1px solid ${theme.borderColor}`,
+                borderRadius: '12px',
+                backgroundColor: theme.background,
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                  <div style={{
+                    width: '64px',
+                    height: '64px',
+                    backgroundColor: color.hex,
+                    borderRadius: '12px',
+                    border: `2px solid ${theme.borderColor}`,
+                    boxShadow: isDarkMode 
+                      ? `0 2px 8px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2)` 
+                      : '0 2px 8px rgba(0, 0, 0, 0.15)',
+                    position: 'relative'
+                  }}>
+                    {/* Color visibility indicator for dark colors in dark mode */}
+                    {isDarkMode && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '2px',
+                        right: '2px',
+                        width: '8px',
+                        height: '8px',
+                        backgroundColor: '#ffffff',
+                        borderRadius: '50%',
+                        opacity: 0.7
+                      }}></div>
+                    )}
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
+                      {color.name}
+                    </h4>
+                    <div style={{ 
+                      fontSize: '14px', 
+                      color: theme.textSecondary, 
+                      fontFamily: 'monospace', 
+                      fontWeight: 'bold' 
+                    }}>
+                      {color.hex}
+                    </div>
+                  </div>
+                </div>
+                <p style={{ 
+                  margin: '0 0 20px 0', 
+                  fontSize: '14px', 
+                  color: theme.textSecondary,
+                  lineHeight: '1.5'
+                }}>
+                  {color.usage}
+                </p>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    onClick={() => handleCopyColor(color.hex)}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: theme.buttonSecondary,
+                      color: theme.buttonSecondaryText,
+                      border: `1px solid ${theme.borderColor}`,
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📋 Copy
+                  </button>
+                  <button 
+                    onClick={() => handleEditColor(color)}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: theme.buttonPrimary,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✏️ Edit
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Font Editing Form */}
+          {editingFont && (
+            <div style={{
+              padding: '30px',
+              border: '2px solid #3b82f6',
+              borderRadius: '12px',
+              backgroundColor: theme.background,
+              marginTop: '20px',
+              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                ✏️ Edit Font: {editingFont.name}
+              </h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Font Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editFontData.name}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, name: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Category
+                  </label>
+                  <select
+                    value={editFontData.category}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, category: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="Primary">Primary</option>
+                    <option value="Secondary">Secondary</option>
+                    <option value="Accent">Accent</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Font Weight Range
+                  </label>
+                  <input
+                    type="text"
+                    value={editFontData.weight}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, weight: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., 400-700"
+                  />
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Usage Description
+                  </label>
+                  <input
+                    type="text"
+                    value={editFontData.usage}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, usage: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., Headlines, UI text"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setEditingFont(null);
+                    setEditFontData({ name: '', category: '', usage: '', weight: '' });
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: theme.buttonSecondary,
+                    color: theme.buttonSecondaryText,
+                    border: `1px solid ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      showNotification('Saving font changes to Notion...', 'info');
+                      
+                      // Save to Notion
+                      await notionAPI.saveFont(editFontData);
+                      
+                      // Update local state
+                      const updatedFonts = fonts.map(f => 
+                        f.id === editingFont.id ? { ...f, ...editFontData } : f
+                      );
+                      setFonts(updatedFonts);
+                      localStorage.setItem('brandFonts', JSON.stringify(updatedFonts));
+                      
+                      showNotification(`${editFontData.name} updated and saved to Notion!`, 'success');
+                      setEditingFont(null);
+                      setEditFontData({ name: '', category: '', usage: '', weight: '' });
+                    } catch (error) {
+                      showNotification(`Failed to save font changes: ${error.message}`, 'error');
+                    }
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  💾 Save Changes
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* LOGOS SECTION */}
+      {activeSection === 'logos' && (
+        <div style={{ 
+          padding: '30px', 
+          backgroundColor: theme.cardBackground, 
+          borderRadius: '0 0 12px 12px',
+          border: `1px solid ${theme.borderColor}`,
+          borderTop: 'none'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              🏷️ Logo Assets
+            </h3>
+            <button style={{
+              padding: '12px 20px',
+              backgroundColor: '#8b5cf6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}>
+              ⬆️ Upload Logo
+            </button>
+          </div>
+          
+          <div style={{ display: 'grid', gap: '16px' }}>
+            {logos.map(logo => (
+              <div key={logo.id} style={{
+                padding: '25px',
+                border: `1px solid ${theme.borderColor}`,
+                borderRadius: '12px',
+                backgroundColor: theme.background,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div style={{
+                    width: '80px',
+                    height: '60px',
+                    backgroundColor: theme.headerBackground,
+                    border: `2px dashed ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '24px'
+                  }}>
+                    🏷️
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
+                      {logo.name}
+                    </h4>
+                    <div style={{ fontSize: '12px', color: theme.textSecondary }}>
+                      {logo.type} • {logo.size} • {logo.usage}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button style={{
+                    padding: '10px 16px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}>
+                    ⬇️ Download
+                  </button>
+                  <button style={{
+                    padding: '10px 16px',
+                    backgroundColor: theme.buttonPrimary,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}>
+                    👁️ Preview
+                  </button>
+                  <button style={{
+                    padding: '10px 16px',
+                    backgroundColor: '#f59e0b',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}
+                  onClick={async () => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*,.svg';
+                    input.onchange = async (e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        showNotification(`Uploading ${file.name} to Notion...`, 'info');
+                        
+                        try {
+                          // Create a URL for the file (in real app, you'd upload to cloud storage first)
+                          const fileUrl = URL.createObjectURL(file);
+                          
+                          const logoData = {
+                            name: file.name.split('.')[0],
+                            type: file.type.includes('svg') ? 'SVG' : 'PNG',
+                            size: `${(file.size / 1024).toFixed(1)} KB`,
+                            usage: logo.usage,
+                            fileUrl: fileUrl,
+                            category: 'Upload'
+                          };
+                          
+                          // Save to Notion
+                          await notionAPI.saveLogo(logoData);
+                          
+                          // Update local state
+                          const updatedLogos = logos.map(l => 
+                            l.id === logo.id ? { ...l, name: logoData.name, size: logoData.size } : l
+                          );
+                          setLogos(updatedLogos);
+                          localStorage.setItem('brandLogos', JSON.stringify(updatedLogos));
+                          
+                          showNotification(`${file.name} uploaded and saved to Notion!`, 'success');
+                        } catch (error) {
+                          showNotification(`Upload failed: ${error.message}`, 'error');
+                        }
+                      }
+                    };
+                    input.click();
+                  }}
+                  >
+                    📤 Upload
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         </div>
+      )}
 
-        {/* MAIN CONTENT AREA - With Working Pattern Headers & Dark Mode */}
-        <div style={{ flex: '1', backgroundColor: isDarkMode ? '#0f172a' : '#ffffff' }}>
-          {activeSection === 'overview' && <OverviewComponent />}
+      {/* TYPOGRAPHY SECTION */}
+      {activeSection === 'fonts' && (
+        <div style={{ 
+          padding: '30px', 
+          backgroundColor: theme.cardBackground, 
+          borderRadius: '0 0 12px 12px',
+          border: `1px solid ${theme.borderColor}`,
+          borderTop: 'none'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              🔤 Typography System
+            </h3>
+            <button style={{
+              padding: '12px 20px',
+              backgroundColor: '#8b5cf6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}
+            onClick={() => {
+              // Add new font functionality
+              const newFont = {
+                id: Math.max(...fonts.map(f => f.id)) + 1,
+                name: 'New Font',
+                category: 'Primary',
+                usage: 'New font usage',
+                weight: '400-600'
+              };
+              
+              const updatedFonts = [...fonts, newFont];
+              setFonts(updatedFonts);
+              localStorage.setItem('brandFonts', JSON.stringify(updatedFonts));
+              
+              // Open editor for the new font
+              setEditingFont(newFont);
+              setEditFontData({
+                name: newFont.name,
+                category: newFont.category,
+                usage: newFont.usage,
+                weight: newFont.weight
+              });
+              
+              showNotification('New font added - edit the details below', 'success');
+            }}
+            >
+              ➕ Add Font
+            </button>
+          </div>
           
-          {activeSection === 'content-manager' && (
-            <div style={{ 
-              minHeight: '100vh',
-              backgroundColor: isDarkMode ? '#0f172a' : '#f3f4f6',
-              paddingTop: '80px',
-              padding: '80px 20px 20px 20px'
-            }}>
-              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <div style={{
-                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                  boxShadow: isDarkMode 
-                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-                    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  marginBottom: '20px',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
-                }}>
-                  <h1 style={{
-                    fontSize: '20px',
-                    fontWeight: 'bold',
-                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                    margin: '0 0 8px 0'
-                  }}>
-                    📝 Content Manager
-                  </h1>
-                  <p style={{
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    fontSize: '14px',
-                    margin: '0'
-                  }}>
-                    Create, manage, and schedule your social media content with ease
-                  </p>
+          <div style={{ display: 'grid', gap: '25px' }}>
+            {fonts.map(font => (
+              <div key={font.id} style={{
+                padding: '30px',
+                border: `1px solid ${theme.borderColor}`,
+                borderRadius: '12px',
+                backgroundColor: theme.background,
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px' }}>
+                  <div>
+                    <h4 style={{ margin: '0 0 10px 0', color: theme.textPrimary, fontSize: '20px', fontWeight: 'bold' }}>
+                      {font.name}
+                    </h4>
+                    <div style={{ display: 'flex', gap: '20px', fontSize: '14px', color: theme.textSecondary, marginBottom: '8px' }}>
+                      <span><strong>Category:</strong> {font.category}</span>
+                      <span><strong>Weight:</strong> {font.weight}</span>
+                    </div>
+                    <p style={{ margin: '0', fontSize: '14px', color: theme.textSecondary, lineHeight: '1.5' }}>
+                      {font.usage}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button style={{
+                      padding: '8px 16px',
+                      backgroundColor: theme.buttonSecondary,
+                      color: theme.buttonSecondaryText,
+                      border: `1px solid ${theme.borderColor}`,
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => {
+                      const cssCode = `font-family: '${font.name}', sans-serif;\nfont-weight: ${font.weight.split('-')[0]};\nfont-size: 16px;`;
+                      navigator.clipboard.writeText(cssCode).then(() => {
+                        showNotification(`${font.name} CSS copied to clipboard!`, 'success');
+                      }).catch(() => {
+                        showNotification('Failed to copy CSS', 'error');
+                      });
+                    }}
+                    >
+                      📋 Copy CSS
+                    </button>
+                    <button style={{
+                      padding: '8px 16px',
+                      backgroundColor: theme.buttonPrimary,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => {
+                      setEditingFont(font);
+                      setEditFontData({
+                        name: font.name,
+                        category: font.category,
+                        usage: font.usage,
+                        weight: font.weight
+                      });
+                    }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  </div>
                 </div>
-                <div className="content-manager">
-                  <ThemedContentComponent />
+                
+                {/* Font Preview */}
+                <div style={{
+                  padding: '25px',
+                  backgroundColor: theme.headerBackground,
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.borderColor}`,
+                  fontFamily: font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
+                             font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
+                             'ui-serif, Georgia'
+                }}>
+                  <div style={{ fontSize: '32px', marginBottom: '12px', fontWeight: 'bold', color: theme.textPrimary }}>
+                    The quick brown fox jumps
+                  </div>
+                  <div style={{ fontSize: '18px', marginBottom: '10px', color: theme.textPrimary }}>
+                    Regular weight sample text for {font.name}
+                  </div>
+                  <div style={{ fontSize: '14px', color: theme.textSecondary, fontWeight: '500' }}>
+                    ABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          
-          {activeSection === 'webchat-public' && (
-            <div style={{ 
-              minHeight: '100vh',
-              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-              paddingTop: '80px',
-              padding: '80px 20px 20px 20px'
-            }}>
-              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <div style={{
-                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                  boxShadow: isDarkMode 
-                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-                    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  marginBottom: '20px',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
-                }}>
-                  <h1 style={{
-                    fontSize: '20px',
-                    fontWeight: 'bold',
-                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                    margin: '0 0 8px 0'
-                  }}>
-                    💬 Chat Manager - Public
-                  </h1>
-                  <p style={{
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    fontSize: '14px',
-                    margin: '0'
-                  }}>
-                    Manage customer communications, support emails, and notifications
-                  </p>
-                </div>
-                <div className="chat-content">
-                  <ThemedChatManagerPublic />
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {activeSection === 'schedule-manager' && (
-            <div style={{ 
-              minHeight: '100vh',
-              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-              paddingTop: '80px',
-              padding: '80px 20px 20px 20px'
-            }}>
-              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <div style={{
-                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                  boxShadow: isDarkMode 
-                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-                    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  marginBottom: '20px',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
-                }}>
-                  <h1 style={{
-                    fontSize: '20px',
-                    fontWeight: 'bold',
-                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                    margin: '0 0 8px 0'
-                  }}>
-                    📅 Schedule Manager
-                  </h1>
-                  <p style={{
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    fontSize: '14px',
-                    margin: '0'
-                  }}>
-                    Schedule posts and track their delivery status
-                  </p>
-                </div>
-                <div className="schedule-content">
-                  <ThemedScheduleComponentContent />
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {activeSection === 'marketing-center' && (
-            <div style={{ 
-              minHeight: '100vh',
-              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-              paddingTop: '80px',
-              padding: '80px 20px 20px 20px'
-            }}>
-              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <div style={{
-                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                  boxShadow: isDarkMode 
-                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-                    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  marginBottom: '20px',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
-                }}>
-                  <h1 style={{
-                    fontSize: '20px',
-                    fontWeight: 'bold',
-                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                    margin: '0 0 8px 0'
-                  }}>
-                    🧠 Marketing Control Center
-                  </h1>
-                  <p style={{
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    fontSize: '14px',
-                    margin: '0'
-                  }}>
-                    Comprehensive dashboard for persona management, content strategy, and analytics
-                  </p>
-                </div>
-                <div className="marketing-content">
-                  <ThemedMarketingControlCenter />
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {activeSection === 'settings' && (
-            <div style={{ 
-              minHeight: '100vh',
-              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-              paddingTop: '80px',
-              padding: '80px 20px 20px 20px'
-            }}>
-              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <div style={{
-                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                  boxShadow: isDarkMode 
-                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-                    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  marginBottom: '20px',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
-                }}>
-                  <h1 style={{
-                    fontSize: '20px',
-                    fontWeight: 'bold',
-                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                    margin: '0 0 8px 0'
-                  }}>
-                    ⚙️ Dashboard Settings
-                  </h1>
-                  <p style={{
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    fontSize: '14px',
-                    margin: '0'
-                  }}>
-                    Configure social platforms, Telegram channels, and character profiles
-                  </p>
-                </div>
-                <div className="settings-content">
-                  <ThemedSettingsComponentContent />
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {activeSection === 'admin-center' && (
-            <div style={{ 
-              minHeight: '100vh',
-              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-              paddingTop: '80px',
-              padding: '80px 20px 20px 20px'
-            }}>
-              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <div style={{
-                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                  boxShadow: isDarkMode 
-                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-                    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  marginBottom: '20px',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
-                }}>
-                  <h1 style={{
-                    fontSize: '20px',
-                    fontWeight: 'bold',
-                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                    margin: '0 0 8px 0'
-                  }}>
-                    🔧 Admin Center
-                  </h1>
-                  <p style={{
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    fontSize: '14px',
-                    margin: '0'
-                  }}>
-                    Advanced configuration, templates, and system management
-                  </p>
-                </div>
-                <div className="admin-content">
-                  <ThemedAdminComponentsContent />
-                </div>
-              </div>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
-      </div>
-    </ThemeContext.Provider>
+      )}
+
+      {/* GUIDELINES SECTION */}
+      {activeSection === 'guidelines' && (
+        <div style={{ 
+          padding: '30px', 
+          backgroundColor: theme.cardBackground, 
+          borderRadius: '0 0 12px 12px',
+          border: `1px solid ${theme.borderColor}`,
+          borderTop: 'none'
+        }}>
+          <h3 style={{ 
+            marginBottom: '30px', 
+            color: theme.textPrimary, 
+            fontSize: '18px', 
+            fontWeight: 'bold' 
+          }}>
+            📋 Brand Guidelines
+          </h3>
+          
+          <div style={{ display: 'grid', gap: '30px' }}>
+            {/* Logo Usage Guidelines */}
+            <div style={{
+              padding: '30px',
+              border: `2px solid ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h4 style={{ color: theme.textPrimary, margin: '0', fontSize: '16px', fontWeight: 'bold' }}>
+                  🏷️ Logo Usage Guidelines
+                </h4>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {!editingGuidelines.logo ? (
+                    <button 
+                      onClick={() => handleEditGuideline('logo')}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonPrimary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => handleCancelEditGuideline('logo')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: theme.buttonSecondary,
+                          color: theme.buttonSecondaryText,
+                          border: `1px solid ${theme.borderColor}`,
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => handleSaveGuideline('logo')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        💾 Save
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              {editingGuidelines.logo ? (
+                <div style={{ padding: '20px', backgroundColor: theme.headerBackground, borderRadius: '8px', border: `1px solid ${theme.borderColor}` }}>
+                  <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
+                    Edit logo usage guidelines (demo functionality):
+                  </p>
+                  <textarea 
+                    style={{
+                      width: '100%',
+                      height: '200px',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                    defaultValue={`DO:\n${guidelinesContent.logo.dos.join('\n')}\n\nDON'T:\n${guidelinesContent.logo.donts.join('\n')}`}
+                  />
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                  <div>
+                    <h5 style={{ color: '#10b981', fontSize: '14px', marginBottom: '12px', fontWeight: 'bold' }}>
+                      ✅ DO
+                    </h5>
+                    <ul style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8', paddingLeft: '20px' }}>
+                      {guidelinesContent.logo.dos.map((item, index) => (
+                        <li key={index}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 style={{ color: '#ef4444', fontSize: '14px', marginBottom: '12px', fontWeight: 'bold' }}>
+                      ❌ DON'T
+                    </h5>
+                    <ul style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8', paddingLeft: '20px' }}>
+                      {guidelinesContent.logo.donts.map((item, index) => (
+                        <li key={index}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Color Usage Guidelines */}
+            <div style={{
+              padding: '30px',
+              border: `2px solid ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h4 style={{ color: theme.textPrimary, margin: '0', fontSize: '16px', fontWeight: 'bold' }}>
+                  🎨 Color Usage Guidelines
+                </h4>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {!editingGuidelines.color ? (
+                    <button 
+                      onClick={() => handleEditGuideline('color')}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonPrimary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => handleCancelEditGuideline('color')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: theme.buttonSecondary,
+                          color: theme.buttonSecondaryText,
+                          border: `1px solid ${theme.borderColor}`,
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => handleSaveGuideline('color')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        💾 Save
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              {editingGuidelines.color ? (
+                <div style={{ padding: '20px', backgroundColor: theme.headerBackground, borderRadius: '8px', border: `1px solid ${theme.borderColor}` }}>
+                  <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
+                    Edit color usage guidelines:
+                  </p>
+                  <textarea 
+                    style={{
+                      width: '100%',
+                      height: '200px',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                    defaultValue={guidelinesContent.color}
+                  />
+                </div>
+              ) : (
+                <div style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8' }}>
+                  {guidelinesContent.color.split('\n\n').map((paragraph, index) => (
+                    <p key={index} style={{ marginBottom: '16px' }}>
+                      {paragraph.split(': ').length > 1 ? (
+                        <>
+                          <strong style={{ color: theme.textPrimary }}>{paragraph.split(': ')[0]}:</strong> {paragraph.split(': ').slice(1).join(': ')}
+                        </>
+                      ) : (
+                        paragraph
+                      )}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Typography Guidelines */}
+            <div style={{
+              padding: '30px',
+              border: `2px solid ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h4 style={{ color: theme.textPrimary, margin: '0', fontSize: '16px', fontWeight: 'bold' }}>
+                  🔤 Typography Guidelines
+                </h4>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {!editingGuidelines.typography ? (
+                    <button 
+                      onClick={() => handleEditGuideline('typography')}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonPrimary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => handleCancelEditGuideline('typography')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: theme.buttonSecondary,
+                          color: theme.buttonSecondaryText,
+                          border: `1px solid ${theme.borderColor}`,
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => handleSaveGuideline('typography')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        💾 Save
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              {editingGuidelines.typography ? (
+                <div style={{ padding: '20px', backgroundColor: theme.headerBackground, borderRadius: '8px', border: `1px solid ${theme.borderColor}` }}>
+                  <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
+                    Edit typography guidelines:
+                  </p>
+                  <textarea 
+                    style={{
+                      width: '100%',
+                      height: '200px',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                    defaultValue={guidelinesContent.typography}
+                  />
+                </div>
+              ) : (
+                <div style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8' }}>
+                  {guidelinesContent.typography.split('\n\n').map((paragraph, index) => (
+                    <p key={index} style={{ marginBottom: index === guidelinesContent.typography.split('\n\n').length - 1 ? '0' : '16px' }}>
+                      {paragraph.split(': ').length > 1 ? (
+                        <>
+                          <strong style={{ color: theme.textPrimary }}>{paragraph.split(': ')[0]}:</strong> {paragraph.split(': ').slice(1).join(': ')}
+                        </>
+                      ) : (
+                        paragraph
+                      )}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
-export default App;
+// Export the main component
+export default AdminComponents;
+
