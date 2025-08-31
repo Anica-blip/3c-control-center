@@ -1181,6 +1181,32 @@ function AdminBrandTab({ theme, isDarkMode }) {
     usage: ''
   });
 
+  // Guidelines editing state
+  const [editingGuidelines, setEditingGuidelines] = useState({
+    logo: false,
+    color: false,
+    typography: false
+  });
+  
+  const [guidelinesContent, setGuidelinesContent] = useState({
+    logo: {
+      dos: [
+        'Use the primary logo on light backgrounds',
+        'Maintain minimum clear space of 2x the logo height',
+        'Use approved color variations only',
+        'Ensure logo is legible at all sizes'
+      ],
+      donts: [
+        'Stretch, distort, or rotate the logo',
+        'Use unauthorized colors or effects',
+        'Place logo on busy backgrounds',
+        'Use low-resolution versions'
+      ]
+    },
+    color: 'Primary Blue (#3b82f6): Use for main call-to-action buttons, primary links, and key brand elements. Should comprise 60% of brand color usage.\n\nSecondary Green (#10b981): Reserved for success states, positive feedback, and completion indicators. Use sparingly for maximum impact.\n\nSupporting Colors: Purple, Orange, and Red should be used as accent colors for specific UI states and never as primary brand colors.\n\nAccessibility: Ensure all color combinations meet WCAG AA contrast requirements (4.5:1 for normal text, 3:1 for large text).',
+    typography: 'Hierarchy: Use Inter for all UI elements and primary headings. Roboto for body text and longer content. Playfair Display only for special occasions and creative headlines.\n\nSizing: Maintain consistent sizing scale: H1 (32px), H2 (24px), H3 (20px), H4 (18px), Body (16px), Small (14px), Caption (12px).\n\nLine Height: Use 1.5x line height for body text, 1.2x for headings. Ensure adequate spacing between elements for readability.'
+  });
+
   // Notification system
   const showNotification = (message, type = 'info') => {
     const id = Date.now();
@@ -1195,6 +1221,22 @@ function AdminBrandTab({ theme, isDarkMode }) {
   // Color management functions
   const handleAddColor = () => {
     setShowColorForm(true);
+  };
+
+  // Guidelines editing functions
+  const handleEditGuideline = (section) => {
+    setEditingGuidelines(prev => ({ ...prev, [section]: true }));
+    showNotification(`Editing ${section} guidelines...`, 'info');
+  };
+
+  const handleSaveGuideline = (section) => {
+    setEditingGuidelines(prev => ({ ...prev, [section]: false }));
+    showNotification(`${section.charAt(0).toUpperCase() + section.slice(1)} guidelines saved!`, 'success');
+  };
+
+  const handleCancelEditGuideline = (section) => {
+    setEditingGuidelines(prev => ({ ...prev, [section]: false }));
+    showNotification(`${section.charAt(0).toUpperCase() + section.slice(1)} guidelines edit cancelled`, 'info');
   };
 
   const handleEditColor = (color) => {
@@ -1487,9 +1529,9 @@ function AdminBrandTab({ theme, isDarkMode }) {
                   height: '60px',
                   backgroundColor: newColor.hex,
                   borderRadius: '8px',
-                  border: isDarkMode ? `2px solid rgba(255, 255, 255, 0.2)` : `2px solid ${theme.borderColor}`,
+                  border: isDarkMode ? `3px solid rgba(255, 255, 255, 0.4)` : `2px solid ${theme.borderColor}`,
                   boxShadow: isDarkMode 
-                    ? '0 2px 8px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.1)' 
+                    ? '0 4px 12px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)' 
                     : '0 2px 8px rgba(0, 0, 0, 0.15)'
                 }}></div>
                 <div>
@@ -1554,9 +1596,9 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     height: '64px',
                     backgroundColor: color.hex,
                     borderRadius: '12px',
-                    border: isDarkMode ? `2px solid rgba(255, 255, 255, 0.2)` : `2px solid ${theme.borderColor}`,
+                    border: isDarkMode ? `3px solid rgba(255, 255, 255, 0.4)` : `2px solid ${theme.borderColor}`,
                     boxShadow: isDarkMode 
-                      ? '0 2px 8px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.1)' 
+                      ? '0 4px 12px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)' 
                       : '0 2px 8px rgba(0, 0, 0, 0.15)'
                   }}></div>
                   <div>
@@ -1715,8 +1757,24 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     fontSize: '12px',
                     fontWeight: 'bold',
                     cursor: 'pointer'
-                  }}>
-                    ✏️ Edit
+                  }}
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*,.svg';
+                    input.onchange = (e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        showNotification(`Uploading ${file.name}...`, 'info');
+                        setTimeout(() => {
+                          showNotification(`${file.name} uploaded successfully!`, 'success');
+                        }, 1500);
+                      }
+                    };
+                    input.click();
+                  }}
+                  >
+                    📤 Upload
                   </button>
                 </div>
               </div>
@@ -1784,7 +1842,16 @@ function AdminBrandTab({ theme, isDarkMode }) {
                       fontSize: '12px',
                       fontWeight: 'bold',
                       cursor: 'pointer'
-                    }}>
+                    }}
+                    onClick={() => {
+                      const cssCode = `font-family: '${font.name}', sans-serif;\nfont-weight: ${font.weight.split('-')[0]};\nfont-size: 16px;`;
+                      navigator.clipboard.writeText(cssCode).then(() => {
+                        showNotification(`${font.name} CSS copied to clipboard!`, 'success');
+                      }).catch(() => {
+                        showNotification('Failed to copy CSS', 'error');
+                      });
+                    }}
+                    >
                       📋 Copy CSS
                     </button>
                     <button style={{
@@ -1796,7 +1863,14 @@ function AdminBrandTab({ theme, isDarkMode }) {
                       fontSize: '12px',
                       fontWeight: 'bold',
                       cursor: 'pointer'
-                    }}>
+                    }}
+                    onClick={() => {
+                      showNotification(`${font.name} font editor opening...`, 'info');
+                      setTimeout(() => {
+                        showNotification(`${font.name} font properties updated!`, 'success');
+                      }, 1500);
+                    }}
+                    >
                       ✏️ Edit
                     </button>
                   </div>
@@ -1854,33 +1928,109 @@ function AdminBrandTab({ theme, isDarkMode }) {
               borderRadius: '12px',
               backgroundColor: theme.background
             }}>
-              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🏷️ Logo Usage Guidelines
-              </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-                <div>
-                  <h5 style={{ color: '#10b981', fontSize: '14px', marginBottom: '12px', fontWeight: 'bold' }}>
-                    ✅ DO
-                  </h5>
-                  <ul style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8', paddingLeft: '20px' }}>
-                    <li>Use the primary logo on light backgrounds</li>
-                    <li>Maintain minimum clear space of 2x the logo height</li>
-                    <li>Use approved color variations only</li>
-                    <li>Ensure logo is legible at all sizes</li>
-                  </ul>
-                </div>
-                <div>
-                  <h5 style={{ color: '#ef4444', fontSize: '14px', marginBottom: '12px', fontWeight: 'bold' }}>
-                    ❌ DON'T
-                  </h5>
-                  <ul style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8', paddingLeft: '20px' }}>
-                    <li>Stretch, distort, or rotate the logo</li>
-                    <li>Use unauthorized colors or effects</li>
-                    <li>Place logo on busy backgrounds</li>
-                    <li>Use low-resolution versions</li>
-                  </ul>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h4 style={{ color: theme.textPrimary, margin: '0', fontSize: '16px', fontWeight: 'bold' }}>
+                  🏷️ Logo Usage Guidelines
+                </h4>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {!editingGuidelines.logo ? (
+                    <button 
+                      onClick={() => handleEditGuideline('logo')}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonPrimary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => handleCancelEditGuideline('logo')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: theme.buttonSecondary,
+                          color: theme.buttonSecondaryText,
+                          border: `1px solid ${theme.borderColor}`,
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => handleSaveGuideline('logo')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        💾 Save
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
+              
+              {editingGuidelines.logo ? (
+                <div style={{ padding: '20px', backgroundColor: theme.headerBackground, borderRadius: '8px', border: `1px solid ${theme.borderColor}` }}>
+                  <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
+                    Edit logo usage guidelines (demo functionality):
+                  </p>
+                  <textarea 
+                    style={{
+                      width: '100%',
+                      height: '200px',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                    defaultValue={`DO:\n${guidelinesContent.logo.dos.join('\n')}\n\nDON'T:\n${guidelinesContent.logo.donts.join('\n')}`}
+                  />
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                  <div>
+                    <h5 style={{ color: '#10b981', fontSize: '14px', marginBottom: '12px', fontWeight: 'bold' }}>
+                      ✅ DO
+                    </h5>
+                    <ul style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8', paddingLeft: '20px' }}>
+                      {guidelinesContent.logo.dos.map((item, index) => (
+                        <li key={index}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 style={{ color: '#ef4444', fontSize: '14px', marginBottom: '12px', fontWeight: 'bold' }}>
+                      ❌ DON'T
+                    </h5>
+                    <ul style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8', paddingLeft: '20px' }}>
+                      {guidelinesContent.logo.donts.map((item, index) => (
+                        <li key={index}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Color Usage Guidelines */}
@@ -1890,23 +2040,100 @@ function AdminBrandTab({ theme, isDarkMode }) {
               borderRadius: '12px',
               backgroundColor: theme.background
             }}>
-              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🎨 Color Usage Guidelines
-              </h4>
-              <div style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8' }}>
-                <p style={{ marginBottom: '16px' }}>
-                  <strong style={{ color: theme.textPrimary }}>Primary Blue (#3b82f6):</strong> Use for main call-to-action buttons, primary links, and key brand elements. Should comprise 60% of brand color usage.
-                </p>
-                <p style={{ marginBottom: '16px' }}>
-                  <strong style={{ color: theme.textPrimary }}>Secondary Green (#10b981):</strong> Reserved for success states, positive feedback, and completion indicators. Use sparingly for maximum impact.
-                </p>
-                <p style={{ marginBottom: '16px' }}>
-                  <strong style={{ color: theme.textPrimary }}>Supporting Colors:</strong> Purple, Orange, and Red should be used as accent colors for specific UI states and never as primary brand colors.
-                </p>
-                <p style={{ marginBottom: '0' }}>
-                  <strong style={{ color: theme.textPrimary }}>Accessibility:</strong> Ensure all color combinations meet WCAG AA contrast requirements (4.5:1 for normal text, 3:1 for large text).
-                </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h4 style={{ color: theme.textPrimary, margin: '0', fontSize: '16px', fontWeight: 'bold' }}>
+                  🎨 Color Usage Guidelines
+                </h4>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {!editingGuidelines.color ? (
+                    <button 
+                      onClick={() => handleEditGuideline('color')}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonPrimary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => handleCancelEditGuideline('color')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: theme.buttonSecondary,
+                          color: theme.buttonSecondaryText,
+                          border: `1px solid ${theme.borderColor}`,
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => handleSaveGuideline('color')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        💾 Save
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
+              
+              {editingGuidelines.color ? (
+                <div style={{ padding: '20px', backgroundColor: theme.headerBackground, borderRadius: '8px', border: `1px solid ${theme.borderColor}` }}>
+                  <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
+                    Edit color usage guidelines:
+                  </p>
+                  <textarea 
+                    style={{
+                      width: '100%',
+                      height: '200px',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                    defaultValue={guidelinesContent.color}
+                  />
+                </div>
+              ) : (
+                <div style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8' }}>
+                  {guidelinesContent.color.split('\n\n').map((paragraph, index) => (
+                    <p key={index} style={{ marginBottom: '16px' }}>
+                      {paragraph.split(': ').length > 1 ? (
+                        <>
+                          <strong style={{ color: theme.textPrimary }}>{paragraph.split(': ')[0]}:</strong> {paragraph.split(': ').slice(1).join(': ')}
+                        </>
+                      ) : (
+                        paragraph
+                      )}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Typography Guidelines */}
@@ -1916,20 +2143,100 @@ function AdminBrandTab({ theme, isDarkMode }) {
               borderRadius: '12px',
               backgroundColor: theme.background
             }}>
-              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🔤 Typography Guidelines
-              </h4>
-              <div style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8' }}>
-                <p style={{ marginBottom: '16px' }}>
-                  <strong style={{ color: theme.textPrimary }}>Hierarchy:</strong> Use Inter for all UI elements and primary headings. Roboto for body text and longer content. Playfair Display only for special occasions and creative headlines.
-                </p>
-                <p style={{ marginBottom: '16px' }}>
-                  <strong style={{ color: theme.textPrimary }}>Sizing:</strong> Maintain consistent sizing scale: H1 (32px), H2 (24px), H3 (20px), H4 (18px), Body (16px), Small (14px), Caption (12px).
-                </p>
-                <p style={{ marginBottom: '0' }}>
-                  <strong style={{ color: theme.textPrimary }}>Line Height:</strong> Use 1.5x line height for body text, 1.2x for headings. Ensure adequate spacing between elements for readability.
-                </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h4 style={{ color: theme.textPrimary, margin: '0', fontSize: '16px', fontWeight: 'bold' }}>
+                  🔤 Typography Guidelines
+                </h4>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {!editingGuidelines.typography ? (
+                    <button 
+                      onClick={() => handleEditGuideline('typography')}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonPrimary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => handleCancelEditGuideline('typography')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: theme.buttonSecondary,
+                          color: theme.buttonSecondaryText,
+                          border: `1px solid ${theme.borderColor}`,
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => handleSaveGuideline('typography')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        💾 Save
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
+              
+              {editingGuidelines.typography ? (
+                <div style={{ padding: '20px', backgroundColor: theme.headerBackground, borderRadius: '8px', border: `1px solid ${theme.borderColor}` }}>
+                  <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
+                    Edit typography guidelines:
+                  </p>
+                  <textarea 
+                    style={{
+                      width: '100%',
+                      height: '200px',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                    defaultValue={guidelinesContent.typography}
+                  />
+                </div>
+              ) : (
+                <div style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8' }}>
+                  {guidelinesContent.typography.split('\n\n').map((paragraph, index) => (
+                    <p key={index} style={{ marginBottom: index === guidelinesContent.typography.split('\n\n').length - 1 ? '0' : '16px' }}>
+                      {paragraph.split(': ').length > 1 ? (
+                        <>
+                          <strong style={{ color: theme.textPrimary }}>{paragraph.split(': ')[0]}:</strong> {paragraph.split(': ').slice(1).join(': ')}
+                        </>
+                      ) : (
+                        paragraph
+                      )}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
