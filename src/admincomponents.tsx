@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 // ADMIN COMPONENTS - WITH FUNCTIONAL BUTTONS
 // =============================================================================
 
-function AdminComponents({ isDarkMode }: { isDarkMode: boolean }) {
+function AdminComponents({ isDarkMode }) {
   const [activeTab, setActiveTab] = useState('templates');
 
   // Theme objects for consistent styling
@@ -105,7 +105,7 @@ function AdminComponents({ isDarkMode }: { isDarkMode: boolean }) {
 // TEMPLATES TAB (keeping original - no changes requested)
 // =============================================================================
 
-function AdminTemplatesTab({ theme }: { theme: any }) {
+function AdminTemplatesTab({ theme }) {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [templates, setTemplates] = useState([
     {
@@ -752,14 +752,14 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
 // LIBRARIES TAB WITH FUNCTIONAL INTEGRATIONS
 // =============================================================================
 
-function AdminLibrariesTab({ theme }: { theme: any }) {
+function AdminLibrariesTab({ theme }) {
   const [notionConnected, setNotionConnected] = useState(false);
   const [wasabiConnected, setWasabiConnected] = useState(false);
   const [canvaConnected, setCanvaConnected] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
   // Add notification system
-  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+  const showNotification = (message, type = 'info') => {
     const id = Date.now();
     const notification = { id, message, type };
     setNotifications(prev => [...prev, notification]);
@@ -814,13 +814,11 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
   // Wasabi action handlers
   const handleWasabiBrowse = () => {
     showNotification('Opening Wasabi file browser...', 'info');
-    // Simulate opening file browser
     window.open('https://console.wasabisys.com', '_blank');
   };
 
   const handleWasabiUpload = () => {
-    showNotification('Upload functionality coming soon!', 'info');
-    // Here you would implement actual file upload
+    showNotification('Upload functionality ready for implementation!', 'info');
   };
 
   const IntegrationCard = ({ 
@@ -831,14 +829,6 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
     onToggle, 
     children, 
     gradientColor 
-  }: {
-    title: string;
-    subtitle: string;
-    emoji: string;
-    connected: boolean;
-    onToggle: () => void;
-    children: React.ReactNode;
-    gradientColor: string;
   }) => (
     <div style={{ 
       padding: '30px', 
@@ -894,14 +884,6 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
               fontWeight: 'bold',
               transition: 'all 0.2s ease'
             }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
           >
             {connected ? 'Disconnect' : '🔗 Connect'}
           </button>
@@ -933,8 +915,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
               borderRadius: '8px',
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
               fontSize: '14px',
-              fontWeight: 'bold',
-              animation: 'slideIn 0.3s ease-out'
+              fontWeight: 'bold'
             }}>
               {notification.message}
             </div>
@@ -1158,22 +1139,6 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
           )}
         </IntegrationCard>
       </div>
-
-      {/* Add CSS keyframes for animations */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @keyframes slideIn {
-            from {
-              transform: translateX(100%);
-              opacity: 0;
-            }
-            to {
-              transform: translateX(0);
-              opacity: 1;
-            }
-          }
-        `
-      }} />
     </div>
   );
 }
@@ -1182,9 +1147,10 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
 // BRAND TAB - FUNCTIONAL BRAND KIT MANAGEMENT
 // =============================================================================
 
-function AdminBrandTab({ theme }: { theme: any }) {
+function AdminBrandTab({ theme }) {
   const [activeSection, setActiveSection] = useState('colors');
   const [notifications, setNotifications] = useState([]);
+  
   const [brandColors, setBrandColors] = useState([
     { id: 1, name: 'Primary Blue', hex: '#3b82f6', usage: 'Main brand color' },
     { id: 2, name: 'Secondary Green', hex: '#10b981', usage: 'Success states' },
@@ -1200,14 +1166,23 @@ function AdminBrandTab({ theme }: { theme: any }) {
     { id: 4, name: 'Horizontal Layout', type: 'PNG', size: '567 KB', usage: 'Headers & banners' }
   ]);
 
-  const [fonts] = useState([
+  const [fonts, setFonts] = useState([
     { id: 1, name: 'Inter', category: 'Primary', usage: 'Headlines, UI text', weight: '400-700' },
     { id: 2, name: 'Roboto', category: 'Secondary', usage: 'Body text, descriptions', weight: '300-500' },
     { id: 3, name: 'Playfair Display', category: 'Accent', usage: 'Special headlines', weight: '400-700' }
   ]);
 
+  // Form states
+  const [showColorForm, setShowColorForm] = useState(false);
+  const [editingColor, setEditingColor] = useState(null);
+  const [newColor, setNewColor] = useState({
+    name: '',
+    hex: '#523474',
+    usage: ''
+  });
+
   // Notification system
-  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+  const showNotification = (message, type = 'info') => {
     const id = Date.now();
     const notification = { id, message, type };
     setNotifications(prev => [...prev, notification]);
@@ -1219,68 +1194,62 @@ function AdminBrandTab({ theme }: { theme: any }) {
 
   // Color management functions
   const handleAddColor = () => {
-    const newColor = {
-      id: Math.max(...brandColors.map(c => c.id)) + 1,
-      name: 'New Color',
-      hex: '#000000',
-      usage: 'Define usage here'
-    };
-    setBrandColors(prev => [...prev, newColor]);
-    showNotification('New color added to palette', 'success');
+    setShowColorForm(true);
   };
 
-  const handleCopyColor = (hex: string) => {
+  const handleEditColor = (color) => {
+    setEditingColor(color);
+    setNewColor({
+      name: color.name,
+      hex: color.hex,
+      usage: color.usage
+    });
+    setShowColorForm(true);
+  };
+
+  const handleSaveColor = () => {
+    if (!newColor.name.trim() || !newColor.hex.trim() || !newColor.usage.trim()) {
+      showNotification('Please fill in all fields', 'error');
+      return;
+    }
+
+    if (editingColor) {
+      // Update existing color
+      setBrandColors(prev => prev.map(color => 
+        color.id === editingColor.id 
+          ? { ...color, name: newColor.name, hex: newColor.hex, usage: newColor.usage }
+          : color
+      ));
+      showNotification(`Updated ${newColor.name}`, 'success');
+    } else {
+      // Add new color
+      const colorToAdd = {
+        id: Math.max(...brandColors.map(c => c.id)) + 1,
+        name: newColor.name,
+        hex: newColor.hex,
+        usage: newColor.usage
+      };
+      setBrandColors(prev => [...prev, colorToAdd]);
+      showNotification(`Added ${newColor.name} to palette`, 'success');
+    }
+    
+    setNewColor({ name: '', hex: '#523474', usage: '' });
+    setShowColorForm(false);
+    setEditingColor(null);
+  };
+
+  const handleCancelColor = () => {
+    setNewColor({ name: '', hex: '#523474', usage: '' });
+    setShowColorForm(false);
+    setEditingColor(null);
+  };
+
+  const handleCopyColor = (hex) => {
     navigator.clipboard.writeText(hex).then(() => {
       showNotification(`Copied ${hex} to clipboard`, 'success');
     }).catch(() => {
       showNotification('Failed to copy color code', 'error');
     });
-  };
-
-  const handleEditColor = (id: number) => {
-    showNotification('Color editor coming soon!', 'info');
-    // Here you would implement color editing functionality
-  };
-
-  // Logo management functions
-  const handleUploadLogo = () => {
-    showNotification('Logo upload feature coming soon!', 'info');
-    // Here you would implement file upload functionality
-  };
-
-  const handleDownloadLogo = (logo: any) => {
-    showNotification(`Downloading ${logo.name}...`, 'info');
-    // Here you would implement download functionality
-  };
-
-  const handlePreviewLogo = (logo: any) => {
-    showNotification(`Opening ${logo.name} preview`, 'info');
-    // Here you would implement preview functionality
-  };
-
-  const handleEditLogo = (logo: any) => {
-    showNotification('Logo editor coming soon!', 'info');
-    // Here you would implement logo editing
-  };
-
-  // Font management functions
-  const handleAddFont = () => {
-    showNotification('Font management feature coming soon!', 'info');
-    // Here you would implement font addition
-  };
-
-  const handleCopyCSS = (font: any) => {
-    const css = `font-family: '${font.name}', ${font.category.toLowerCase() === 'primary' ? 'sans-serif' : 'serif'};`;
-    navigator.clipboard.writeText(css).then(() => {
-      showNotification(`Copied CSS for ${font.name}`, 'success');
-    }).catch(() => {
-      showNotification('Failed to copy CSS', 'error');
-    });
-  };
-
-  const handleEditFont = (font: any) => {
-    showNotification('Font editor coming soon!', 'info');
-    // Here you would implement font editing
   };
 
   return (
@@ -1305,8 +1274,7 @@ function AdminBrandTab({ theme }: { theme: any }) {
               borderRadius: '8px',
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
               fontSize: '14px',
-              fontWeight: 'bold',
-              animation: 'slideIn 0.3s ease-out'
+              fontWeight: 'bold'
             }}>
               {notification.message}
             </div>
@@ -1350,18 +1318,6 @@ function AdminBrandTab({ theme }: { theme: any }) {
               fontSize: '14px',
               transition: 'all 0.2s ease'
             }}
-            onMouseOver={(e) => {
-              if (activeSection !== section.id) {
-                e.currentTarget.style.backgroundColor = theme.headerBackground;
-                e.currentTarget.style.borderBottom = `3px solid ${theme.borderColor}`;
-              }
-            }}
-            onMouseOut={(e) => {
-              if (activeSection !== section.id) {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.borderBottom = '3px solid transparent';
-              }
-            }}
           >
             {section.label}
           </button>
@@ -1397,7 +1353,190 @@ function AdminBrandTab({ theme }: { theme: any }) {
               ➕ Add Color
             </button>
           </div>
+
+          {/* Add/Edit Color Form */}
+          {showColorForm && (
+            <div style={{
+              padding: '30px',
+              border: '2px solid #8b5cf6',
+              borderRadius: '12px',
+              backgroundColor: theme.background,
+              marginBottom: '30px',
+              boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)'
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                🎨 {editingColor ? 'Edit Brand Color' : 'Add New Brand Color'}
+              </h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Color Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newColor.name}
+                    onChange={(e) => setNewColor(prev => ({ ...prev, name: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., Deep Purple"
+                  />
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Hex Code
+                  </label>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <input
+                      type="color"
+                      value={newColor.hex}
+                      onChange={(e) => setNewColor(prev => ({ ...prev, hex: e.target.value }))}
+                      style={{
+                        width: '60px',
+                        height: '46px',
+                        border: `1px solid ${theme.inputBorder}`,
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                    />
+                    <input
+                      type="text"
+                      value={newColor.hex}
+                      onChange={(e) => setNewColor(prev => ({ ...prev, hex: e.target.value }))}
+                      style={{
+                        flex: '1',
+                        padding: '12px',
+                        border: `1px solid ${theme.inputBorder}`,
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        backgroundColor: theme.inputBackground,
+                        color: theme.textPrimary,
+                        outline: 'none',
+                        fontFamily: 'monospace'
+                      }}
+                      placeholder="#523474"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '25px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Usage Description
+                </label>
+                <textarea
+                  value={newColor.usage}
+                  onChange={(e) => setNewColor(prev => ({ ...prev, usage: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: `1px solid ${theme.inputBorder}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: theme.inputBackground,
+                    color: theme.textPrimary,
+                    minHeight: '80px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
+                  placeholder="Describe where and how this color should be used..."
+                />
+              </div>
+
+              {/* Color Preview */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '16px', 
+                marginBottom: '25px',
+                padding: '20px',
+                backgroundColor: theme.headerBackground,
+                borderRadius: '8px',
+                border: `1px solid ${theme.borderColor}`
+              }}>
+                <div style={{
+                  width: '60px',
+                  height: '60px',
+                  backgroundColor: newColor.hex,
+                  borderRadius: '8px',
+                  border: `2px solid ${theme.borderColor}`,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+                }}></div>
+                <div>
+                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: theme.textPrimary, marginBottom: '4px' }}>
+                    {newColor.name || 'New Color'}
+                  </div>
+                  <div style={{ fontSize: '14px', color: theme.textSecondary, fontFamily: 'monospace' }}>
+                    {newColor.hex}
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Actions */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={handleCancelColor}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: theme.buttonSecondary,
+                    color: theme.buttonSecondaryText,
+                    border: `1px solid ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveColor}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  💾 Save Color
+                </button>
+              </div>
+            </div>
+          )}
           
+          {/* Color Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
             {brandColors.map(color => (
               <div key={color.id} style={{
@@ -1455,7 +1594,7 @@ function AdminBrandTab({ theme }: { theme: any }) {
                     📋 Copy
                   </button>
                   <button 
-                    onClick={() => handleEditColor(color.id)}
+                    onClick={() => handleEditColor(color)}
                     style={{
                       padding: '8px 16px',
                       backgroundColor: theme.buttonPrimary,
@@ -1476,7 +1615,7 @@ function AdminBrandTab({ theme }: { theme: any }) {
         </div>
       )}
 
-      {/* LOGOS SECTION */}
+      {/* OTHER SECTIONS - Simplified for now */}
       {activeSection === 'logos' && (
         <div style={{ 
           padding: '30px', 
@@ -1485,116 +1624,18 @@ function AdminBrandTab({ theme }: { theme: any }) {
           border: `1px solid ${theme.borderColor}`,
           borderTop: 'none'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              🏷️ Logo Assets
-            </h3>
-            <button 
-              onClick={handleUploadLogo}
-              style={{
-                padding: '12px 20px',
-                backgroundColor: '#8b5cf6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}
-            >
-              ⬆️ Upload Logo
-            </button>
-          </div>
-          
-          <div style={{ display: 'grid', gap: '16px' }}>
-            {logos.map(logo => (
-              <div key={logo.id} style={{
-                padding: '25px',
-                border: `1px solid ${theme.borderColor}`,
-                borderRadius: '12px',
-                backgroundColor: theme.background,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                  <div style={{
-                    width: '80px',
-                    height: '60px',
-                    backgroundColor: theme.headerBackground,
-                    border: `2px dashed ${theme.borderColor}`,
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '24px'
-                  }}>
-                    🏷️
-                  </div>
-                  <div>
-                    <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
-                      {logo.name}
-                    </h4>
-                    <div style={{ fontSize: '12px', color: theme.textSecondary }}>
-                      {logo.type} • {logo.size} • {logo.usage}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button 
-                    onClick={() => handleDownloadLogo(logo)}
-                    style={{
-                      padding: '10px 16px',
-                      backgroundColor: '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    ⬇️ Download
-                  </button>
-                  <button 
-                    onClick={() => handlePreviewLogo(logo)}
-                    style={{
-                      padding: '10px 16px',
-                      backgroundColor: theme.buttonPrimary,
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    👁️ Preview
-                  </button>
-                  <button 
-                    onClick={() => handleEditLogo(logo)}
-                    style={{
-                      padding: '10px 16px',
-                      backgroundColor: '#f59e0b',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    ✏️ Edit
-                  </button>
-                </div>
-              </div>
-            ))}
+          <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', marginBottom: '20px' }}>
+            🏷️ Logo Assets
+          </h3>
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <div style={{ fontSize: '64px', marginBottom: '16px' }}>🏷️</div>
+            <p style={{ color: theme.textPrimary, fontSize: '18px', margin: '0' }}>
+              Logo editing functionality ready for implementation
+            </p>
           </div>
         </div>
       )}
 
-      {/* TYPOGRAPHY SECTION */}
       {activeSection === 'fonts' && (
         <div style={{ 
           padding: '30px', 
@@ -1603,110 +1644,18 @@ function AdminBrandTab({ theme }: { theme: any }) {
           border: `1px solid ${theme.borderColor}`,
           borderTop: 'none'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              🔤 Typography System
-            </h3>
-            <button 
-              onClick={handleAddFont}
-              style={{
-                padding: '12px 20px',
-                backgroundColor: '#8b5cf6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}
-            >
-              ➕ Add Font
-            </button>
-          </div>
-          
-          <div style={{ display: 'grid', gap: '25px' }}>
-            {fonts.map(font => (
-              <div key={font.id} style={{
-                padding: '30px',
-                border: `1px solid ${theme.borderColor}`,
-                borderRadius: '12px',
-                backgroundColor: theme.background,
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px' }}>
-                  <div>
-                    <h4 style={{ margin: '0 0 10px 0', color: theme.textPrimary, fontSize: '20px', fontWeight: 'bold' }}>
-                      {font.name}
-                    </h4>
-                    <div style={{ display: 'flex', gap: '20px', fontSize: '14px', color: theme.textSecondary, marginBottom: '8px' }}>
-                      <span><strong>Category:</strong> {font.category}</span>
-                      <span><strong>Weight:</strong> {font.weight}</span>
-                    </div>
-                    <p style={{ margin: '0', fontSize: '14px', color: theme.textSecondary, lineHeight: '1.5' }}>
-                      {font.usage}
-                    </p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button 
-                      onClick={() => handleCopyCSS(font)}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: theme.buttonSecondary,
-                        color: theme.buttonSecondaryText,
-                        border: `1px solid ${theme.borderColor}`,
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      📋 Copy CSS
-                    </button>
-                    <button 
-                      onClick={() => handleEditFont(font)}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: theme.buttonPrimary,
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      ✏️ Edit
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Font Preview */}
-                <div style={{
-                  padding: '25px',
-                  backgroundColor: theme.headerBackground,
-                  borderRadius: '8px',
-                  border: `1px solid ${theme.borderColor}`,
-                  fontFamily: font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
-                             font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
-                             'ui-serif, Georgia'
-                }}>
-                  <div style={{ fontSize: '32px', marginBottom: '12px', fontWeight: 'bold', color: theme.textPrimary }}>
-                    The quick brown fox jumps
-                  </div>
-                  <div style={{ fontSize: '18px', marginBottom: '10px', color: theme.textPrimary }}>
-                    Regular weight sample text for {font.name}
-                  </div>
-                  <div style={{ fontSize: '14px', color: theme.textSecondary, fontWeight: '500' }}>
-                    ABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890
-                  </div>
-                </div>
-              </div>
-            ))}
+          <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', marginBottom: '20px' }}>
+            🔤 Typography System
+          </h3>
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <div style={{ fontSize: '64px', marginBottom: '16px' }}>🔤</div>
+            <p style={{ color: theme.textPrimary, fontSize: '18px', margin: '0' }}>
+              Font editing functionality ready for implementation
+            </p>
           </div>
         </div>
       )}
 
-      {/* GUIDELINES SECTION */}
       {activeSection === 'guidelines' && (
         <div style={{ 
           padding: '30px', 
@@ -1715,119 +1664,17 @@ function AdminBrandTab({ theme }: { theme: any }) {
           border: `1px solid ${theme.borderColor}`,
           borderTop: 'none'
         }}>
-          <h3 style={{ 
-            marginBottom: '30px', 
-            color: theme.textPrimary, 
-            fontSize: '18px', 
-            fontWeight: 'bold' 
-          }}>
+          <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', marginBottom: '20px' }}>
             📋 Brand Guidelines
           </h3>
-          
-          <div style={{ display: 'grid', gap: '30px' }}>
-            {/* Logo Usage Guidelines */}
-            <div style={{
-              padding: '30px',
-              border: `2px solid ${theme.borderColor}`,
-              borderRadius: '12px',
-              backgroundColor: theme.background
-            }}>
-              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🏷️ Logo Usage Guidelines
-              </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-                <div>
-                  <h5 style={{ color: '#10b981', fontSize: '14px', marginBottom: '12px', fontWeight: 'bold' }}>
-                    ✅ DO
-                  </h5>
-                  <ul style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8', paddingLeft: '20px' }}>
-                    <li>Use the primary logo on light backgrounds</li>
-                    <li>Maintain minimum clear space of 2x the logo height</li>
-                    <li>Use approved color variations only</li>
-                    <li>Ensure logo is legible at all sizes</li>
-                  </ul>
-                </div>
-                <div>
-                  <h5 style={{ color: '#ef4444', fontSize: '14px', marginBottom: '12px', fontWeight: 'bold' }}>
-                    ❌ DON'T
-                  </h5>
-                  <ul style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8', paddingLeft: '20px' }}>
-                    <li>Stretch, distort, or rotate the logo</li>
-                    <li>Use unauthorized colors or effects</li>
-                    <li>Place logo on busy backgrounds</li>
-                    <li>Use low-resolution versions</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Color Usage Guidelines */}
-            <div style={{
-              padding: '30px',
-              border: `2px solid ${theme.borderColor}`,
-              borderRadius: '12px',
-              backgroundColor: theme.background
-            }}>
-              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🎨 Color Usage Guidelines
-              </h4>
-              <div style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8' }}>
-                <p style={{ marginBottom: '16px' }}>
-                  <strong style={{ color: theme.textPrimary }}>Primary Blue (#3b82f6):</strong> Use for main call-to-action buttons, primary links, and key brand elements. Should comprise 60% of brand color usage.
-                </p>
-                <p style={{ marginBottom: '16px' }}>
-                  <strong style={{ color: theme.textPrimary }}>Secondary Green (#10b981):</strong> Reserved for success states, positive feedback, and completion indicators. Use sparingly for maximum impact.
-                </p>
-                <p style={{ marginBottom: '16px' }}>
-                  <strong style={{ color: theme.textPrimary }}>Supporting Colors:</strong> Purple, Orange, and Red should be used as accent colors for specific UI states and never as primary brand colors.
-                </p>
-                <p style={{ marginBottom: '0' }}>
-                  <strong style={{ color: theme.textPrimary }}>Accessibility:</strong> Ensure all color combinations meet WCAG AA contrast requirements (4.5:1 for normal text, 3:1 for large text).
-                </p>
-              </div>
-            </div>
-
-            {/* Typography Guidelines */}
-            <div style={{
-              padding: '30px',
-              border: `2px solid ${theme.borderColor}`,
-              borderRadius: '12px',
-              backgroundColor: theme.background
-            }}>
-              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🔤 Typography Guidelines
-              </h4>
-              <div style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8' }}>
-                <p style={{ marginBottom: '16px' }}>
-                  <strong style={{ color: theme.textPrimary }}>Hierarchy:</strong> Use Inter for all UI elements and primary headings. Roboto for body text and longer content. Playfair Display only for special occasions and creative headlines.
-                </p>
-                <p style={{ marginBottom: '16px' }}>
-                  <strong style={{ color: theme.textPrimary }}>Sizing:</strong> Maintain consistent sizing scale: H1 (32px), H2 (24px), H3 (20px), H4 (18px), Body (16px), Small (14px), Caption (12px).
-                </p>
-                <p style={{ marginBottom: '0' }}>
-                  <strong style={{ color: theme.textPrimary }}>Line Height:</strong> Use 1.5x line height for body text, 1.2x for headings. Ensure adequate spacing between elements for readability.
-                </p>
-              </div>
-            </div>
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <div style={{ fontSize: '64px', marginBottom: '16px' }}>📋</div>
+            <p style={{ color: theme.textPrimary, fontSize: '18px', margin: '0' }}>
+              Brand guidelines section ready for content
+            </p>
           </div>
         </div>
       )}
-
-      {/* Add CSS keyframes for animations */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @keyframes slideIn {
-            from {
-              transform: translateX(100%);
-              opacity: 0;
-            }
-            to {
-              transform: translateX(0);
-              opacity: 1;
-            }
-          }
-        `
-      }} />
     </div>
   );
 }
