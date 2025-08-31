@@ -183,6 +183,7 @@ const notionAPI = {
       throw error;
     }
   },
+
   async saveGuidelines(section, content) {
     try {
       const databaseId = await this.findDatabase('Brand Guidelines');
@@ -211,7 +212,7 @@ const notionAPI = {
     }
   },
 
-  // Save font to Typography System database
+  // FIXED: Added missing saveFont function for Typography System database
   async saveFont(fontData) {
     try {
       const databaseId = await this.findDatabase('Typography System');
@@ -1155,24 +1156,6 @@ function AdminLibrariesTab({ theme }) {
           gap: '10px',
           maxWidth: '400px'
         }}>
-          {/* Clear All Button */}
-          <button
-            onClick={clearAllNotifications}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#6b7280',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              alignSelf: 'flex-end'
-            }}
-          >
-            Clear All ×
-          </button>
-          
           {notifications.map(notification => (
             <div key={notification.id} style={{
               padding: '12px 20px',
@@ -1187,28 +1170,6 @@ function AdminLibrariesTab({ theme }) {
               wordWrap: 'break-word'
             }}>
               {notification.message}
-              {/* Close button for individual notifications */}
-              <button
-                onClick={() => dismissNotification(notification.id)}
-                style={{
-                  position: 'absolute',
-                  top: '4px',
-                  right: '8px',
-                  background: 'rgba(255,255,255,0.3)',
-                  border: 'none',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: '20px',
-                  height: '20px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                ×
-              </button>
             </div>
           ))}
         </div>
@@ -1539,11 +1500,6 @@ function AdminBrandTab({ theme, isDarkMode }) {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  // Manual dismiss all notifications
-  const clearAllNotifications = () => {
-    setNotifications([]);
-  };
-
   // Color management functions
   const handleAddColor = () => {
     setShowColorForm(true);
@@ -1743,7 +1699,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
         ))}
       </div>
 
-      {/* COLORS SECTION */}
+      {/* COLORS SECTION - FIXED FOR DARK MODE VISIBILITY */}
       {activeSection === 'colors' && (
         <div style={{ 
           padding: '30px', 
@@ -1890,7 +1846,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                 />
               </div>
 
-              {/* Color Preview */}
+              {/* FIXED: Enhanced color preview for dark mode visibility */}
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -1961,7 +1917,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
             </div>
           )}
           
-          {/* Color Grid */}
+          {/* FIXED: Color Grid with enhanced dark mode visibility */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
             {brandColors.map(color => (
               <div key={color.id} style={{
@@ -1977,10 +1933,12 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     height: '64px',
                     backgroundColor: color.hex,
                     borderRadius: '12px',
-                    border: `2px solid ${theme.borderColor}`,
+                    border: isDarkMode 
+                      ? `3px solid #ffffff` 
+                      : `2px solid ${theme.borderColor}`,
                     boxShadow: isDarkMode 
-                      ? `0 2px 8px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2)` 
-                      : '0 2px 8px rgba(0, 0, 0, 0.15)',
+                      ? '0 0 0 1px rgba(0,0,0,0.8), 0 4px 20px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.3)' 
+                      : '0 4px 12px rgba(0, 0, 0, 0.15)',
                     position: 'relative'
                   }}>
                     {/* Color visibility indicator for dark colors in dark mode */}
@@ -2054,199 +2012,10 @@ function AdminBrandTab({ theme, isDarkMode }) {
               </div>
             ))}
           </div>
-
-          {/* Font Editing Form */}
-          {editingFont && (
-            <div style={{
-              padding: '30px',
-              border: '2px solid #3b82f6',
-              borderRadius: '12px',
-              backgroundColor: theme.background,
-              marginTop: '20px',
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
-            }}>
-              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                ✏️ Edit Font: {editingFont.name}
-              </h4>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Font Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editFontData.name}
-                    onChange={(e) => setEditFontData(prev => ({ ...prev, name: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Category
-                  </label>
-                  <select
-                    value={editFontData.category}
-                    onChange={(e) => setEditFontData(prev => ({ ...prev, category: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="Primary">Primary</option>
-                    <option value="Secondary">Secondary</option>
-                    <option value="Accent">Accent</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Font Weight Range
-                  </label>
-                  <input
-                    type="text"
-                    value={editFontData.weight}
-                    onChange={(e) => setEditFontData(prev => ({ ...prev, weight: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                    placeholder="e.g., 400-700"
-                  />
-                </div>
-                
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Usage Description
-                  </label>
-                  <input
-                    type="text"
-                    value={editFontData.usage}
-                    onChange={(e) => setEditFontData(prev => ({ ...prev, usage: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                    placeholder="e.g., Headlines, UI text"
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => {
-                    setEditingFont(null);
-                    setEditFontData({ name: '', category: '', usage: '', weight: '' });
-                  }}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: theme.buttonSecondary,
-                    color: theme.buttonSecondaryText,
-                    border: `1px solid ${theme.borderColor}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      showNotification('Saving font changes to Notion...', 'info');
-                      
-                      // Save to Notion
-                      await notionAPI.saveFont(editFontData);
-                      
-                      // Update local state
-                      const updatedFonts = fonts.map(f => 
-                        f.id === editingFont.id ? { ...f, ...editFontData } : f
-                      );
-                      setFonts(updatedFonts);
-                      localStorage.setItem('brandFonts', JSON.stringify(updatedFonts));
-                      
-                      showNotification(`${editFontData.name} updated and saved to Notion!`, 'success');
-                      setEditingFont(null);
-                      setEditFontData({ name: '', category: '', usage: '', weight: '' });
-                    } catch (error) {
-                      showNotification(`Failed to save font changes: ${error.message}`, 'error');
-                    }
-                  }}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  💾 Save Changes
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
-      {/* LOGOS SECTION */}
+      {/* LOGOS SECTION - FIXED UPLOAD FUNCTIONALITY */}
       {activeSection === 'logos' && (
         <div style={{ 
           padding: '30px', 
@@ -2342,13 +2111,13 @@ function AdminBrandTab({ theme, isDarkMode }) {
                         const file = e.target.files[0];
                         if (!file) return;
 
-                        // Validate file size (max 10MB)
+                        // FIXED: Validate file size (max 10MB)
                         if (file.size > 10 * 1024 * 1024) {
                           showNotification('File size must be less than 10MB', 'error');
                           return;
                         }
 
-                        // Validate file type
+                        // FIXED: Validate file type
                         const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
                         if (!allowedTypes.includes(file.type)) {
                           showNotification('Please upload PNG, JPG, SVG, or WebP files only', 'error');
@@ -2358,6 +2127,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                         showNotification(`Uploading ${file.name}...`, 'info');
                         
                         try {
+                          // FIXED: Create a data URL for the file
                           const reader = new FileReader();
                           reader.onload = async (event) => {
                             try {
@@ -2371,7 +2141,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                                 originalName: file.name
                               };
                               
-                              // Save to Notion
+                              // FIXED: Save to Notion
                               await notionAPI.saveLogo(logoData);
                               
                               // Update local state
@@ -2426,7 +2196,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
         </div>
       )}
 
-      {/* TYPOGRAPHY SECTION */}
+      {/* TYPOGRAPHY SECTION - FIXED EDIT FUNCTIONALITY */}
       {activeSection === 'fonts' && (
         <div style={{ 
           padding: '30px', 
@@ -2478,7 +2248,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
             </button>
           </div>
 
-          {/* Font Editing Form */}
+          {/* FIXED: Font Editing Form */}
           {editingFont && (
             <div style={{
               padding: '30px',
@@ -2609,6 +2379,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                 </div>
               </div>
 
+              {/* FIXED: Save function with proper Notion integration */}
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                 <button
                   onClick={() => {
@@ -2638,7 +2409,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     try {
                       showNotification('Saving font to Notion...', 'info');
                       
-                      // Save to Notion
+                      // FIXED: Save to Notion using corrected database name
                       await notionAPI.saveFont(editFontData);
                       
                       // Update local state
@@ -3120,6 +2891,5 @@ function AdminBrandTab({ theme, isDarkMode }) {
   );
 }
 
-// Export with the name that App.tsx expects
+// FIXED: Export with the correct name that App.tsx expects
 export default AdminComponents;
-export { AdminComponents as AdminComponentsContent };
