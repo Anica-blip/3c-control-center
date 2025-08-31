@@ -31,6 +31,10 @@ const NOTION_CONFIG = {
 const notionAPI = {
   // Find database by title within the 3C_Brand_Kit page
   async findDatabase(title) {
+    console.log(`🔍 Looking for database: "${title}"`);
+    console.log('📄 In page ID:', NOTION_CONFIG.pageId);
+    console.log('🔑 With token:', NOTION_CONFIG.token ? 'Present' : 'MISSING');
+    
     try {
       const response = await fetch(`https://api.notion.com/v1/blocks/${NOTION_CONFIG.pageId}/children`, {
         headers: {
@@ -38,25 +42,65 @@ const notionAPI = {
           'Notion-Version': '2022-06-28',
         }
       });
-      const data = await response.json();
       
-      const database = data.results.find(block => 
-        block.type === 'child_database' && 
-        block.child_database.title === title
+      console.log('🌐 API Response status:', response.status);
+      console.log('📝 Response OK:', response.ok);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error:', errorText);
+        throw new Error(`Failed to fetch page children (${response.status}): ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('📊 Full API response:', data);
+      console.log('🏗️ Found blocks:', data.results?.length || 0);
+      
+      if (data.results) {
+        data.results.forEach((block, index) => {
+          console.log(`Block ${index}:`, {
+            type: block.type,
+            id: block.id,
+            title: block.child_database?.title || block.database?.title || 'No title'
+          });
+        });
+      }
+      
+      const database = data.results?.find(block => 
+        (block.type === 'child_database' && block.child_database?.title === title) ||
+        (block.type === 'database' && block.database?.title === title)
       );
       
-      return database?.id;
+      if (database) {
+        console.log(`✅ Found "${title}" database:`, database.id);
+        return database.id;
+      } else {
+        console.warn(`❌ Database "${title}" not found`);
+        console.log('Available databases:', data.results?.filter(b => b.type === 'child_database' || b.type === 'database'));
+        return null;
+      }
     } catch (error) {
-      console.error('Error finding database:', error);
+      console.error('💥 Error in findDatabase:', error);
       throw error;
     }
   },
 
   // Save color to Brand Colors database
   async saveColor(colorData) {
+    console.log('🎨 Attempting to save color to Notion:', colorData);
+    console.log('🔑 Using token:', NOTION_CONFIG.token ? 'Token present' : 'NO TOKEN');
+    console.log('📄 Using page ID:', NOTION_CONFIG.pageId || 'NO PAGE ID');
+    
     try {
+      console.log('🔍 Step 1: Finding Brand Colors database...');
       const databaseId = await this.findDatabase('Brand Colors');
+      console.log('✅ Database ID found:', databaseId);
       
+      if (!databaseId) {
+        throw new Error('Brand Colors database not found in page');
+      }
+      
+      console.log('💾 Step 2: Saving to Notion database...');
       const response = await fetch('https://api.notion.com/v1/pages', {
         method: 'POST',
         headers: {
@@ -73,9 +117,24 @@ const notionAPI = {
           }
         })
       });
-      return await response.json();
+      
+      console.log('🌐 Response status:', response.status);
+      console.log('📝 Response headers:', response.headers);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Notion API error response:', errorText);
+        throw new Error(`Notion API error (${response.status}): ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Successfully saved to Notion:', result);
+      return result;
     } catch (error) {
-      console.error('Error saving color to Notion:', error);
+      console.error('💥 Complete error details:', error);
+      console.error('📊 Error name:', error.name);
+      console.error('📝 Error message:', error.message);
+      console.error('🗂️ Error stack:', error.stack);
       throw error;
     }
   },
@@ -1043,7 +1102,8 @@ function AdminLibrariesTab({ theme }) {
           zIndex: 1000, 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: '10px' 
+          gap: '10px',
+          maxWidth: '400px'
         }}>
           {notifications.map(notification => (
             <div key={notification.id} style={{
@@ -1054,9 +1114,33 @@ function AdminLibrariesTab({ theme }) {
               borderRadius: '8px',
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
               fontSize: '14px',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              position: 'relative',
+              wordWrap: 'break-word'
             }}>
               {notification.message}
+              {/* Close button for all notifications */}
+              <button
+                onClick={() => dismissNotification(notification.id)}
+                style={{
+                  position: 'absolute',
+                  top: '4px',
+                  right: '8px',
+                  background: 'rgba(255,255,255,0.3)',
+                  border: 'none',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '20px',
+                  height: '20px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>
@@ -1374,9 +1458,17 @@ function AdminBrandTab({ theme, isDarkMode }) {
     const notification = { id, message, type };
     setNotifications(prev => [...prev, notification]);
     
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
-    }, 3000);
+    // Only auto-remove success and info messages - keep errors persistent
+    if (type !== 'error') {
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+      }, 3000);
+    }
+  };
+
+  // Manual dismiss notification
+  const dismissNotification = (id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   // Color management functions
