@@ -1584,36 +1584,16 @@ function AdminBrandTab({ theme, isDarkMode }) {
         
         // Save to Notion
         await notionAPI.saveColor(colorToAdd);
-        showNotification(`Added ${newColor.name} to palette and saved to Notion!`, 'success');
+        showNotification(`Added ${newColor.name} to Notion Brand Colors database!`, 'success');
       }
       
-      // Save to localStorage as backup
+      // Update local state
       localStorage.setItem('brandColors', JSON.stringify(updatedColors));
       setBrandColors(updatedColors);
       
     } catch (error) {
-      // Fallback to localStorage if Notion fails
-      let updatedColors;
-      if (editingColor) {
-        updatedColors = brandColors.map(color => 
-          color.id === editingColor.id 
-            ? { ...color, name: newColor.name, hex: newColor.hex, usage: newColor.usage }
-            : color
-        );
-      } else {
-        const colorToAdd = {
-          id: Math.max(...brandColors.map(c => c.id)) + 1,
-          name: newColor.name,
-          hex: newColor.hex,
-          usage: newColor.usage
-        };
-        updatedColors = [...brandColors, colorToAdd];
-      }
-      
-      localStorage.setItem('brandColors', JSON.stringify(updatedColors));
-      setBrandColors(updatedColors);
-      
-      showNotification(`${editingColor ? 'Updated' : 'Added'} ${newColor.name} (saved locally - Notion sync failed)`, 'error');
+      showNotification(`Notion save failed: ${error.message}. Check console for details.`, 'error');
+      console.error('Detailed error:', error);
     }
     
     setNewColor({ name: '', hex: '#523474', usage: '' });
@@ -1941,26 +1921,9 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     height: '64px',
                     backgroundColor: color.hex,
                     borderRadius: '12px',
-                    border: `2px solid ${theme.borderColor}`,
-                    boxShadow: isDarkMode 
-                      ? `0 2px 8px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2)` 
-                      : '0 2px 8px rgba(0, 0, 0, 0.15)',
-                    position: 'relative'
-                  }}>
-                    {/* Color visibility indicator for dark colors in dark mode */}
-                    {isDarkMode && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '2px',
-                        right: '2px',
-                        width: '8px',
-                        height: '8px',
-                        backgroundColor: '#ffffff',
-                        borderRadius: '50%',
-                        opacity: 0.7
-                      }}></div>
-                    )}
-                  </div>
+                    border: `1px solid ${theme.borderColor}`,
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+                  }}></div>
                   <div>
                     <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
                       {color.name}
@@ -2030,7 +1993,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
               boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
             }}>
               <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                ✏️ Edit Font: {editingFont.name}
+                Edit Font: {editingFont.name}
               </h4>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
@@ -2174,7 +2137,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     try {
                       showNotification('Saving font changes to Notion...', 'info');
                       
-                      // Save to Notion
+                      // Save to Notion Typography System database
                       await notionAPI.saveFont(editFontData);
                       
                       // Update local state
@@ -2184,11 +2147,12 @@ function AdminBrandTab({ theme, isDarkMode }) {
                       setFonts(updatedFonts);
                       localStorage.setItem('brandFonts', JSON.stringify(updatedFonts));
                       
-                      showNotification(`${editFontData.name} updated and saved to Notion!`, 'success');
+                      showNotification(`${editFontData.name} saved to Notion Typography System!`, 'success');
                       setEditingFont(null);
                       setEditFontData({ name: '', category: '', usage: '', weight: '' });
                     } catch (error) {
-                      showNotification(`Failed to save font changes: ${error.message}`, 'error');
+                      showNotification(`Font save failed: ${error.message}. Check console for details.`, 'error');
+                      console.error('Font save error:', error);
                     }
                   }}
                   style={{
@@ -2202,7 +2166,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     fontWeight: 'bold'
                   }}
                 >
-                  💾 Save Changes
+                  Save Changes
                 </button>
               </div>
             </div>
@@ -2317,38 +2281,36 @@ function AdminBrandTab({ theme, isDarkMode }) {
                         showNotification(`Uploading ${file.name} to Notion...`, 'info');
                         
                         try {
-                          // Create a URL for the file (in real app, you'd upload to cloud storage first)
-                          const fileUrl = URL.createObjectURL(file);
-                          
                           const logoData = {
                             name: file.name.split('.')[0],
-                            type: file.type.includes('svg') ? 'SVG' : 'PNG',
+                            type: file.name.split('.').pop().toUpperCase(),
                             size: `${(file.size / 1024).toFixed(1)} KB`,
                             usage: logo.usage,
-                            fileUrl: fileUrl,
+                            fileUrl: URL.createObjectURL(file),
                             category: 'Upload'
                           };
                           
-                          // Save to Notion
+                          // Save to Notion Logo Assets database
                           await notionAPI.saveLogo(logoData);
                           
                           // Update local state
                           const updatedLogos = logos.map(l => 
-                            l.id === logo.id ? { ...l, name: logoData.name, size: logoData.size } : l
+                            l.id === logo.id ? { ...l, ...logoData } : l
                           );
                           setLogos(updatedLogos);
                           localStorage.setItem('brandLogos', JSON.stringify(updatedLogos));
                           
-                          showNotification(`${file.name} uploaded and saved to Notion!`, 'success');
+                          showNotification(`${file.name} uploaded to Notion Logo Assets!`, 'success');
                         } catch (error) {
-                          showNotification(`Upload failed: ${error.message}`, 'error');
+                          showNotification(`Upload failed: ${error.message}. Check console for details.`, 'error');
+                          console.error('Upload error:', error);
                         }
                       }
                     };
                     input.click();
                   }}
                   >
-                    📤 Upload
+                    Upload
                   </button>
                 </div>
               </div>
@@ -2394,19 +2356,10 @@ function AdminBrandTab({ theme, isDarkMode }) {
               setFonts(updatedFonts);
               localStorage.setItem('brandFonts', JSON.stringify(updatedFonts));
               
-              // Open editor for the new font
-              setEditingFont(newFont);
-              setEditFontData({
-                name: newFont.name,
-                category: newFont.category,
-                usage: newFont.usage,
-                weight: newFont.weight
-              });
-              
-              showNotification('New font added - edit the details below', 'success');
+              showNotification('New font added successfully!', 'success');
             }}
             >
-              ➕ Add Font
+              Add Font
             </button>
           </div>
           
@@ -2474,7 +2427,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                       });
                     }}
                     >
-                      ✏️ Edit
+                      Edit
                     </button>
                   </div>
                 </div>
