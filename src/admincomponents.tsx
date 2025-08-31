@@ -1151,26 +1151,36 @@ function AdminBrandTab({ theme, isDarkMode }) {
   const [activeSection, setActiveSection] = useState('colors');
   const [notifications, setNotifications] = useState([]);
   
-  const [brandColors, setBrandColors] = useState([
-    { id: 1, name: 'Primary Blue', hex: '#3b82f6', usage: 'Main brand color' },
-    { id: 2, name: 'Secondary Green', hex: '#10b981', usage: 'Success states' },
-    { id: 3, name: 'Accent Purple', hex: '#8b5cf6', usage: 'Creative elements' },
-    { id: 4, name: 'Warning Orange', hex: '#f59e0b', usage: 'Alerts & warnings' },
-    { id: 5, name: 'Error Red', hex: '#ef4444', usage: 'Error states' }
-  ]);
+  // Load data from localStorage on component mount
+  const [brandColors, setBrandColors] = useState(() => {
+    const saved = localStorage.getItem('brandColors');
+    return saved ? JSON.parse(saved) : [
+      { id: 1, name: 'Primary Blue', hex: '#3b82f6', usage: 'Main brand color' },
+      { id: 2, name: 'Secondary Green', hex: '#10b981', usage: 'Success states' },
+      { id: 3, name: 'Accent Purple', hex: '#8b5cf6', usage: 'Creative elements' },
+      { id: 4, name: 'Warning Orange', hex: '#f59e0b', usage: 'Alerts & warnings' },
+      { id: 5, name: 'Error Red', hex: '#ef4444', usage: 'Error states' }
+    ];
+  });
 
-  const [logos, setLogos] = useState([
-    { id: 1, name: 'Primary Logo', type: 'SVG', size: '1.2 MB', usage: 'Main brand identity' },
-    { id: 2, name: 'Logo Mark', type: 'PNG', size: '340 KB', usage: 'Social media icons' },
-    { id: 3, name: 'White Version', type: 'SVG', size: '980 KB', usage: 'Dark backgrounds' },
-    { id: 4, name: 'Horizontal Layout', type: 'PNG', size: '567 KB', usage: 'Headers & banners' }
-  ]);
+  const [logos, setLogos] = useState(() => {
+    const saved = localStorage.getItem('brandLogos');
+    return saved ? JSON.parse(saved) : [
+      { id: 1, name: 'Primary Logo', type: 'SVG', size: '1.2 MB', usage: 'Main brand identity' },
+      { id: 2, name: 'Logo Mark', type: 'PNG', size: '340 KB', usage: 'Social media icons' },
+      { id: 3, name: 'White Version', type: 'SVG', size: '980 KB', usage: 'Dark backgrounds' },
+      { id: 4, name: 'Horizontal Layout', type: 'PNG', size: '567 KB', usage: 'Headers & banners' }
+    ];
+  });
 
-  const [fonts, setFonts] = useState([
-    { id: 1, name: 'Inter', category: 'Primary', usage: 'Headlines, UI text', weight: '400-700' },
-    { id: 2, name: 'Roboto', category: 'Secondary', usage: 'Body text, descriptions', weight: '300-500' },
-    { id: 3, name: 'Playfair Display', category: 'Accent', usage: 'Special headlines', weight: '400-700' }
-  ]);
+  const [fonts, setFonts] = useState(() => {
+    const saved = localStorage.getItem('brandFonts');
+    return saved ? JSON.parse(saved) : [
+      { id: 1, name: 'Inter', category: 'Primary', usage: 'Headlines, UI text', weight: '400-700' },
+      { id: 2, name: 'Roboto', category: 'Secondary', usage: 'Body text, descriptions', weight: '300-500' },
+      { id: 3, name: 'Playfair Display', category: 'Accent', usage: 'Special headlines', weight: '400-700' }
+    ];
+  });
 
   // Form states
   const [showColorForm, setShowColorForm] = useState(false);
@@ -1188,23 +1198,26 @@ function AdminBrandTab({ theme, isDarkMode }) {
     typography: false
   });
   
-  const [guidelinesContent, setGuidelinesContent] = useState({
-    logo: {
-      dos: [
-        'Use the primary logo on light backgrounds',
-        'Maintain minimum clear space of 2x the logo height',
-        'Use approved color variations only',
-        'Ensure logo is legible at all sizes'
-      ],
-      donts: [
-        'Stretch, distort, or rotate the logo',
-        'Use unauthorized colors or effects',
-        'Place logo on busy backgrounds',
-        'Use low-resolution versions'
-      ]
-    },
-    color: 'Primary Blue (#3b82f6): Use for main call-to-action buttons, primary links, and key brand elements. Should comprise 60% of brand color usage.\n\nSecondary Green (#10b981): Reserved for success states, positive feedback, and completion indicators. Use sparingly for maximum impact.\n\nSupporting Colors: Purple, Orange, and Red should be used as accent colors for specific UI states and never as primary brand colors.\n\nAccessibility: Ensure all color combinations meet WCAG AA contrast requirements (4.5:1 for normal text, 3:1 for large text).',
-    typography: 'Hierarchy: Use Inter for all UI elements and primary headings. Roboto for body text and longer content. Playfair Display only for special occasions and creative headlines.\n\nSizing: Maintain consistent sizing scale: H1 (32px), H2 (24px), H3 (20px), H4 (18px), Body (16px), Small (14px), Caption (12px).\n\nLine Height: Use 1.5x line height for body text, 1.2x for headings. Ensure adequate spacing between elements for readability.'
+  const [guidelinesContent, setGuidelinesContent] = useState(() => {
+    const saved = localStorage.getItem('brandGuidelines');
+    return saved ? JSON.parse(saved) : {
+      logo: {
+        dos: [
+          'Use the primary logo on light backgrounds',
+          'Maintain minimum clear space of 2x the logo height',
+          'Use approved color variations only',
+          'Ensure logo is legible at all sizes'
+        ],
+        donts: [
+          'Stretch, distort, or rotate the logo',
+          'Use unauthorized colors or effects',
+          'Place logo on busy backgrounds',
+          'Use low-resolution versions'
+        ]
+      },
+      color: 'Primary Blue (#3b82f6): Use for main call-to-action buttons, primary links, and key brand elements. Should comprise 60% of brand color usage.\n\nSecondary Green (#10b981): Reserved for success states, positive feedback, and completion indicators. Use sparingly for maximum impact.\n\nSupporting Colors: Purple, Orange, and Red should be used as accent colors for specific UI states and never as primary brand colors.\n\nAccessibility: Ensure all color combinations meet WCAG AA contrast requirements (4.5:1 for normal text, 3:1 for large text).',
+      typography: 'Hierarchy: Use Inter for all UI elements and primary headings. Roboto for body text and longer content. Playfair Display only for special occasions and creative headlines.\n\nSizing: Maintain consistent sizing scale: H1 (32px), H2 (24px), H3 (20px), H4 (18px), Body (16px), Small (14px), Caption (12px).\n\nLine Height: Use 1.5x line height for body text, 1.2x for headings. Ensure adequate spacing between elements for readability.'
+    };
   });
 
   // Notification system
@@ -1230,6 +1243,9 @@ function AdminBrandTab({ theme, isDarkMode }) {
   };
 
   const handleSaveGuideline = (section) => {
+    // Save guidelines to localStorage
+    localStorage.setItem('brandGuidelines', JSON.stringify(guidelinesContent));
+    
     setEditingGuidelines(prev => ({ ...prev, [section]: false }));
     showNotification(`${section.charAt(0).toUpperCase() + section.slice(1)} guidelines saved!`, 'success');
   };
@@ -1255,13 +1271,14 @@ function AdminBrandTab({ theme, isDarkMode }) {
       return;
     }
 
+    let updatedColors;
     if (editingColor) {
       // Update existing color
-      setBrandColors(prev => prev.map(color => 
+      updatedColors = brandColors.map(color => 
         color.id === editingColor.id 
           ? { ...color, name: newColor.name, hex: newColor.hex, usage: newColor.usage }
           : color
-      ));
+      );
       showNotification(`Updated ${newColor.name}`, 'success');
     } else {
       // Add new color
@@ -1271,9 +1288,13 @@ function AdminBrandTab({ theme, isDarkMode }) {
         hex: newColor.hex,
         usage: newColor.usage
       };
-      setBrandColors(prev => [...prev, colorToAdd]);
+      updatedColors = [...brandColors, colorToAdd];
       showNotification(`Added ${newColor.name} to palette`, 'success');
     }
+    
+    // Save to localStorage
+    localStorage.setItem('brandColors', JSON.stringify(updatedColors));
+    setBrandColors(updatedColors);
     
     setNewColor({ name: '', hex: '#523474', usage: '' });
     setShowColorForm(false);
@@ -1529,10 +1550,14 @@ function AdminBrandTab({ theme, isDarkMode }) {
                   height: '60px',
                   backgroundColor: newColor.hex,
                   borderRadius: '8px',
-                  border: isDarkMode ? `3px solid rgba(255, 255, 255, 0.4)` : `2px solid ${theme.borderColor}`,
+                  border: isDarkMode 
+                    ? `4px solid #ffffff` 
+                    : `2px solid ${theme.borderColor}`,
                   boxShadow: isDarkMode 
-                    ? '0 4px 12px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)' 
-                    : '0 2px 8px rgba(0, 0, 0, 0.15)'
+                    ? '0 0 0 1px rgba(0,0,0,0.8), 0 4px 16px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.5)' 
+                    : '0 2px 8px rgba(0, 0, 0, 0.15)',
+                  outline: isDarkMode ? '2px solid rgba(255,255,255,0.6)' : 'none',
+                  outlineOffset: '2px'
                 }}></div>
                 <div>
                   <div style={{ fontSize: '16px', fontWeight: 'bold', color: theme.textPrimary, marginBottom: '4px' }}>
@@ -1596,10 +1621,14 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     height: '64px',
                     backgroundColor: color.hex,
                     borderRadius: '12px',
-                    border: isDarkMode ? `3px solid rgba(255, 255, 255, 0.4)` : `2px solid ${theme.borderColor}`,
+                    border: isDarkMode 
+                      ? `4px solid #ffffff` 
+                      : `2px solid ${theme.borderColor}`,
                     boxShadow: isDarkMode 
-                      ? '0 4px 12px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)' 
-                      : '0 2px 8px rgba(0, 0, 0, 0.15)'
+                      ? '0 0 0 1px rgba(0,0,0,0.8), 0 4px 16px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.5)' 
+                      : '0 2px 8px rgba(0, 0, 0, 0.15)',
+                    outline: isDarkMode ? '2px solid rgba(255,255,255,0.6)' : 'none',
+                    outlineOffset: '2px'
                   }}></div>
                   <div>
                     <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
