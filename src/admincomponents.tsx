@@ -92,20 +92,21 @@ const notionAPI = {
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}`;
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (jsonError) {
-          errorMessage = `${errorMessage} - Invalid JSON response`;
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            const errorText = await response.text();
+            errorMessage = `${errorMessage} - ${errorText.substring(0, 100)}`;
+          }
+        } catch (parseError) {
+          errorMessage = `${errorMessage} - Response parsing failed`;
         }
         throw new Error(`API error: ${errorMessage}`);
       }
       
-      const responseText = await response.text();
-      if (!responseText) {
-        throw new Error('Empty response from server');
-      }
-      
-      const result = JSON.parse(responseText);
+      const result = await response.json();
       console.log('✅ Successfully saved logo:', result);
       return result;
     } catch (error) {
