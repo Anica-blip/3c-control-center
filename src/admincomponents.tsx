@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 // =============================================================================
 // NOTION API INTEGRATION - SINGLE GITHUB SECRET
@@ -149,10 +149,40 @@ const notionAPI = {
 };
 
 // =============================================================================
+// SAFE LOCALSTORAGE OPERATIONS
+// =============================================================================
+
+const safeLocalStorage = {
+  getItem: (key, fallback = null) => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : fallback;
+      }
+    } catch (error) {
+      console.warn('localStorage getItem failed:', error);
+    }
+    return fallback;
+  },
+  
+  setItem: (key, value) => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(key, JSON.stringify(value));
+        return true;
+      }
+    } catch (error) {
+      console.warn('localStorage setItem failed:', error);
+    }
+    return false;
+  }
+};
+
+// =============================================================================
 // ADMIN COMPONENTS - WITH FUNCTIONAL BUTTONS
 // =============================================================================
 
-function AdminComponents({ isDarkMode }) {
+function AdminComponents({ isDarkMode = false }) {
   const [activeTab, setActiveTab] = useState('templates');
 
   // Theme objects for consistent styling
@@ -250,7 +280,7 @@ function AdminComponents({ isDarkMode }) {
 }
 
 // =============================================================================
-// TEMPLATES TAB (keeping original - no changes requested)
+// TEMPLATES TAB
 // =============================================================================
 
 function AdminTemplatesTab({ theme }) {
@@ -304,7 +334,7 @@ function AdminTemplatesTab({ theme }) {
   };
 
   const saveTemplate = () => {
-    const newId = Math.max(...templates.map(t => t.id)) + 1;
+    const newId = templates.length > 0 ? Math.max(...templates.map(t => t.id)) + 1 : 1;
     const template = {
       ...newTemplate,
       id: newId,
@@ -739,7 +769,7 @@ function AdminTemplatesTab({ theme }) {
             </div>
           </div>
 
-          {/* External Tools Section - GitHub Components */}
+          {/* External Tools Section */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
             {/* LEFT SIDE: External Builder Tools */}
             <div style={{ 
@@ -962,7 +992,9 @@ function AdminLibrariesTab({ theme }) {
   // Wasabi action handlers
   const handleWasabiBrowse = () => {
     showNotification('Opening Wasabi file browser...', 'info');
-    window.open('https://console.wasabisys.com', '_blank');
+    if (typeof window !== 'undefined') {
+      window.open('https://console.wasabisys.com', '_blank');
+    }
   };
 
   const handleWasabiUpload = () => {
@@ -1087,7 +1119,7 @@ function AdminLibrariesTab({ theme }) {
         <IntegrationCard
           title="Notion Integration"
           subtitle="Content management and documentation"
-          emoji="📝"
+          emoji="📑"
           connected={notionConnected}
           onToggle={handleNotionToggle}
           gradientColor={theme.gradientBlue}
@@ -1126,7 +1158,7 @@ function AdminLibrariesTab({ theme }) {
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '40px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📑</div>
               <p style={{ color: theme.textPrimary, fontSize: '16px', marginBottom: '8px', fontWeight: 'bold' }}>
                 Connect your Notion workspace
               </p>
@@ -1302,35 +1334,32 @@ function AdminBrandTab({ theme, isDarkMode }) {
   const [activeSection, setActiveSection] = useState('colors');
   const [notifications, setNotifications] = useState([]);
   
-  // Load data from localStorage on component mount
+  // Load data from localStorage on component mount with safe fallbacks
   const [brandColors, setBrandColors] = useState(() => {
-    const saved = localStorage.getItem('brandColors');
-    return saved ? JSON.parse(saved) : [
+    return safeLocalStorage.getItem('brandColors', [
       { id: 1, name: 'Primary Blue', hex: '#3b82f6', usage: 'Main brand color' },
       { id: 2, name: 'Secondary Green', hex: '#10b981', usage: 'Success states' },
       { id: 3, name: 'Accent Purple', hex: '#8b5cf6', usage: 'Creative elements' },
       { id: 4, name: 'Warning Orange', hex: '#f59e0b', usage: 'Alerts & warnings' },
       { id: 5, name: 'Error Red', hex: '#ef4444', usage: 'Error states' }
-    ];
+    ]);
   });
 
   const [logos, setLogos] = useState(() => {
-    const saved = localStorage.getItem('brandLogos');
-    return saved ? JSON.parse(saved) : [
+    return safeLocalStorage.getItem('brandLogos', [
       { id: 1, name: 'Primary Logo', type: 'SVG', size: '1.2 MB', usage: 'Main brand identity' },
       { id: 2, name: 'Logo Mark', type: 'PNG', size: '340 KB', usage: 'Social media icons' },
       { id: 3, name: 'White Version', type: 'SVG', size: '980 KB', usage: 'Dark backgrounds' },
       { id: 4, name: 'Horizontal Layout', type: 'PNG', size: '567 KB', usage: 'Headers & banners' }
-    ];
+    ]);
   });
 
   const [fonts, setFonts] = useState(() => {
-    const saved = localStorage.getItem('brandFonts');
-    return saved ? JSON.parse(saved) : [
+    return safeLocalStorage.getItem('brandFonts', [
       { id: 1, name: 'Inter', category: 'Primary', usage: 'Headlines, UI text', weight: '400-700' },
       { id: 2, name: 'Roboto', category: 'Secondary', usage: 'Body text, descriptions', weight: '300-500' },
       { id: 3, name: 'Playfair Display', category: 'Accent', usage: 'Special headlines', weight: '400-700' }
-    ];
+    ]);
   });
 
   // Form states
@@ -1359,8 +1388,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
   });
   
   const [guidelinesContent, setGuidelinesContent] = useState(() => {
-    const saved = localStorage.getItem('brandGuidelines');
-    return saved ? JSON.parse(saved) : {
+    return safeLocalStorage.getItem('brandGuidelines', {
       logo: {
         dos: [
           'Use the primary logo on light backgrounds',
@@ -1377,7 +1405,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
       },
       color: 'Primary Blue (#3b82f6): Use for main call-to-action buttons, primary links, and key brand elements. Should comprise 60% of brand color usage.\n\nSecondary Green (#10b981): Reserved for success states, positive feedback, and completion indicators. Use sparingly for maximum impact.\n\nSupporting Colors: Purple, Orange, and Red should be used as accent colors for specific UI states and never as primary brand colors.\n\nAccessibility: Ensure all color combinations meet WCAG AA contrast requirements (4.5:1 for normal text, 3:1 for large text).',
       typography: 'Hierarchy: Use Inter for all UI elements and primary headings. Roboto for body text and longer content. Playfair Display only for special occasions and creative headlines.\n\nSizing: Maintain consistent sizing scale: H1 (32px), H2 (24px), H3 (20px), H4 (18px), Body (16px), Small (14px), Caption (12px).\n\nLine Height: Use 1.5x line height for body text, 1.2x for headings. Ensure adequate spacing between elements for readability.'
-    };
+    });
   });
 
   // Notification system
@@ -1392,11 +1420,6 @@ function AdminBrandTab({ theme, isDarkMode }) {
         setNotifications(prev => prev.filter(n => n.id !== id));
       }, 3000);
     }
-  };
-
-  // Manual dismiss notification
-  const dismissNotification = (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   // Color management functions
@@ -1418,13 +1441,13 @@ function AdminBrandTab({ theme, isDarkMode }) {
       await notionAPI.saveGuidelines(section, guidelinesContent[section]);
       
       // Save guidelines to localStorage as backup
-      localStorage.setItem('brandGuidelines', JSON.stringify(guidelinesContent));
+      safeLocalStorage.setItem('brandGuidelines', guidelinesContent);
       
       setEditingGuidelines(prev => ({ ...prev, [section]: false }));
       showNotification(`${section.charAt(0).toUpperCase() + section.slice(1)} guidelines saved to Notion!`, 'success');
     } catch (error) {
       // Fallback to localStorage if Notion fails
-      localStorage.setItem('brandGuidelines', JSON.stringify(guidelinesContent));
+      safeLocalStorage.setItem('brandGuidelines', guidelinesContent);
       setEditingGuidelines(prev => ({ ...prev, [section]: false }));
       showNotification(`${section.charAt(0).toUpperCase() + section.slice(1)} guidelines saved locally (Notion sync failed)`, 'error');
     }
@@ -1466,7 +1489,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
       } else {
         // Add new color
         const colorToAdd = {
-          id: Math.max(...brandColors.map(c => c.id)) + 1,
+          id: brandColors.length > 0 ? Math.max(...brandColors.map(c => c.id)) + 1 : 1,
           name: newColor.name,
           hex: newColor.hex,
           usage: newColor.usage
@@ -1479,7 +1502,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
       }
       
       // Save to localStorage as backup
-      localStorage.setItem('brandColors', JSON.stringify(updatedColors));
+      safeLocalStorage.setItem('brandColors', updatedColors);
       setBrandColors(updatedColors);
       
     } catch (error) {
@@ -1493,7 +1516,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
         );
       } else {
         const colorToAdd = {
-          id: Math.max(...brandColors.map(c => c.id)) + 1,
+          id: brandColors.length > 0 ? Math.max(...brandColors.map(c => c.id)) + 1 : 1,
           name: newColor.name,
           hex: newColor.hex,
           usage: newColor.usage
@@ -1501,7 +1524,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
         updatedColors = [...brandColors, colorToAdd];
       }
       
-      localStorage.setItem('brandColors', JSON.stringify(updatedColors));
+      safeLocalStorage.setItem('brandColors', updatedColors);
       setBrandColors(updatedColors);
       
       showNotification(`${editingColor ? 'Updated' : 'Added'} ${newColor.name} (saved locally - Notion sync failed)`, 'error');
@@ -1519,11 +1542,15 @@ function AdminBrandTab({ theme, isDarkMode }) {
   };
 
   const handleCopyColor = (hex) => {
-    navigator.clipboard.writeText(hex).then(() => {
-      showNotification(`Copied ${hex} to clipboard`, 'success');
-    }).catch(() => {
-      showNotification('Failed to copy color code', 'error');
-    });
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(hex).then(() => {
+        showNotification(`Copied ${hex} to clipboard`, 'success');
+      }).catch(() => {
+        showNotification('Failed to copy color code', 'error');
+      });
+    } else {
+      showNotification('Clipboard not available', 'error');
+    }
   };
 
   return (
@@ -1598,7 +1625,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
         ))}
       </div>
 
-      {/* COLORS SECTION - FIXED FOR DARK MODE VISIBILITY */}
+      {/* COLORS SECTION */}
       {activeSection === 'colors' && (
         <div style={{ 
           padding: '30px', 
@@ -1745,7 +1772,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                 />
               </div>
 
-              {/* FIXED: Enhanced color preview for dark mode visibility */}
+              {/* Enhanced color preview for dark mode visibility */}
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -1816,7 +1843,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
             </div>
           )}
           
-          {/* FIXED: Color Grid with enhanced dark mode visibility */}
+          {/* Color Grid with enhanced dark mode visibility */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
             {brandColors.map(color => (
               <div key={color.id} style={{
@@ -1914,7 +1941,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
         </div>
       )}
 
-      {/* LOGOS SECTION - FIXED UPLOAD FUNCTIONALITY */}
+      {/* LOGOS SECTION */}
       {activeSection === 'logos' && (
         <div style={{ 
           padding: '30px', 
@@ -1927,16 +1954,73 @@ function AdminBrandTab({ theme, isDarkMode }) {
             <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
               🏷️ Logo Assets
             </h3>
-            <button style={{
-              padding: '12px 20px',
-              backgroundColor: '#8b5cf6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 'bold'
-            }}>
+            <button 
+              onClick={() => {
+                if (typeof document !== 'undefined') {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*,.svg';
+                  input.onchange = async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+
+                    // Validate file size (max 10MB)
+                    if (file.size > 10 * 1024 * 1024) {
+                      showNotification('File size must be less than 10MB', 'error');
+                      return;
+                    }
+
+                    // Validate file type
+                    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
+                    if (!allowedTypes.includes(file.type)) {
+                      showNotification('Please upload PNG, JPG, SVG, or WebP files only', 'error');
+                      return;
+                    }
+
+                    showNotification(`Uploading ${file.name}...`, 'info');
+                    
+                    try {
+                      const logoData = {
+                        name: file.name.split('.')[0] || 'Uploaded Logo',
+                        type: file.type.includes('svg') ? 'SVG' : file.type.includes('png') ? 'PNG' : 'JPG',
+                        size: `${(file.size / 1024).toFixed(1)} KB`,
+                        usage: 'Uploaded asset',
+                        category: 'Upload',
+                        originalName: file.name
+                      };
+                      
+                      // Save to Notion
+                      await notionAPI.saveLogo(logoData);
+                      
+                      // Add to local state
+                      const newLogo = {
+                        id: logos.length > 0 ? Math.max(...logos.map(l => l.id)) + 1 : 1,
+                        ...logoData
+                      };
+                      const updatedLogos = [...logos, newLogo];
+                      setLogos(updatedLogos);
+                      safeLocalStorage.setItem('brandLogos', updatedLogos);
+                      
+                      showNotification(`${file.name} uploaded and saved to Notion successfully!`, 'success');
+                    } catch (notionError) {
+                      console.error('Notion save error:', notionError);
+                      showNotification(`Upload completed but Notion save failed: ${notionError.message}`, 'error');
+                    }
+                  };
+                  input.click();
+                }
+              }}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#8b5cf6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
               ⬆️ Upload Logo
             </button>
           </div>
@@ -2001,93 +2085,6 @@ function AdminBrandTab({ theme, isDarkMode }) {
                   }}>
                     👁️ Preview
                   </button>
-                  <button 
-                    onClick={async () => {
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = 'image/*,.svg';
-                      input.onchange = async (e) => {
-                        const file = e.target.files[0];
-                        if (!file) return;
-
-                        // FIXED: Validate file size (max 10MB)
-                        if (file.size > 10 * 1024 * 1024) {
-                          showNotification('File size must be less than 10MB', 'error');
-                          return;
-                        }
-
-                        // FIXED: Validate file type
-                        const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
-                        if (!allowedTypes.includes(file.type)) {
-                          showNotification('Please upload PNG, JPG, SVG, or WebP files only', 'error');
-                          return;
-                        }
-
-                        showNotification(`Uploading ${file.name}...`, 'info');
-                        
-                        try {
-                          // FIXED: Create a data URL for the file
-                          const reader = new FileReader();
-                          reader.onload = async (event) => {
-                            try {
-                              const logoData = {
-                                name: file.name.split('.')[0] || 'Uploaded Logo',
-                                type: file.type.includes('svg') ? 'SVG' : file.type.includes('png') ? 'PNG' : 'JPG',
-                                size: `${(file.size / 1024).toFixed(1)} KB`,
-                                usage: 'Uploaded asset',
-                                fileUrl: event.target.result,
-                                category: 'Upload',
-                                originalName: file.name
-                              };
-                              
-                              // FIXED: Save to Notion
-                              await notionAPI.saveLogo(logoData);
-                              
-                              // Update local state
-                              const updatedLogos = logos.map(l => 
-                                l.id === logo.id ? { 
-                                  ...l, 
-                                  name: logoData.name, 
-                                  size: logoData.size,
-                                  type: logoData.type,
-                                  uploadedFile: event.target.result
-                                } : l
-                              );
-                              setLogos(updatedLogos);
-                              localStorage.setItem('brandLogos', JSON.stringify(updatedLogos));
-                              
-                              showNotification(`${file.name} uploaded and saved to Notion successfully!`, 'success');
-                            } catch (notionError) {
-                              console.error('Notion save error:', notionError);
-                              showNotification(`Upload completed but Notion save failed: ${notionError.message}`, 'error');
-                            }
-                          };
-                          
-                          reader.onerror = () => {
-                            showNotification('Failed to read file. Please try again.', 'error');
-                          };
-                          
-                          reader.readAsDataURL(file);
-                        } catch (error) {
-                          console.error('Upload error:', error);
-                          showNotification(`Upload failed: ${error.message}`, 'error');
-                        }
-                      };
-                      input.click();
-                    }}
-                    style={{
-                      padding: '10px 16px',
-                      backgroundColor: '#f59e0b',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🔄 Upload
-                  </button>
                 </div>
               </div>
             ))}
@@ -2095,7 +2092,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
         </div>
       )}
 
-      {/* TYPOGRAPHY SECTION - FIXED EDIT FUNCTIONALITY */}
+      {/* TYPOGRAPHY SECTION */}
       {activeSection === 'fonts' && (
         <div style={{ 
           padding: '30px', 
@@ -2111,7 +2108,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
             <button 
               onClick={() => {
                 const newFont = {
-                  id: Math.max(...fonts.map(f => f.id)) + 1,
+                  id: fonts.length > 0 ? Math.max(...fonts.map(f => f.id)) + 1 : 1,
                   name: 'New Font',
                   category: 'Primary',
                   usage: 'New font usage',
@@ -2120,7 +2117,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                 
                 const updatedFonts = [...fonts, newFont];
                 setFonts(updatedFonts);
-                localStorage.setItem('brandFonts', JSON.stringify(updatedFonts));
+                safeLocalStorage.setItem('brandFonts', updatedFonts);
                 
                 setEditingFont(newFont);
                 setEditFontData({
@@ -2147,7 +2144,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
             </button>
           </div>
 
-          {/* FIXED: Font Editing Form */}
+          {/* Font Editing Form */}
           {editingFont && (
             <div style={{
               padding: '30px',
@@ -2278,7 +2275,6 @@ function AdminBrandTab({ theme, isDarkMode }) {
                 </div>
               </div>
 
-              {/* FIXED: Save function with proper Notion integration */}
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                 <button
                   onClick={() => {
@@ -2308,7 +2304,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     try {
                       showNotification('Saving font to Notion...', 'info');
                       
-                      // FIXED: Save to Notion using corrected database name
+                      // Save to Notion
                       await notionAPI.saveFont(editFontData);
                       
                       // Update local state
@@ -2316,7 +2312,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                         f.id === editingFont.id ? { ...f, ...editFontData } : f
                       );
                       setFonts(updatedFonts);
-                      localStorage.setItem('brandFonts', JSON.stringify(updatedFonts));
+                      safeLocalStorage.setItem('brandFonts', updatedFonts);
                       
                       showNotification(`${editFontData.name} updated and saved to Notion!`, 'success');
                       setEditingFont(null);
@@ -2328,7 +2324,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                         f.id === editingFont.id ? { ...f, ...editFontData } : f
                       );
                       setFonts(updatedFonts);
-                      localStorage.setItem('brandFonts', JSON.stringify(updatedFonts));
+                      safeLocalStorage.setItem('brandFonts', updatedFonts);
                       
                       showNotification(`Font saved locally - Notion sync failed: ${error.message}`, 'error');
                     }
@@ -2376,11 +2372,15 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     <button 
                       onClick={() => {
                         const cssCode = `font-family: '${font.name}', sans-serif;\nfont-weight: ${font.weight.split('-')[0]};\nfont-size: 16px;`;
-                        navigator.clipboard.writeText(cssCode).then(() => {
-                          showNotification(`${font.name} CSS copied to clipboard!`, 'success');
-                        }).catch(() => {
-                          showNotification('Failed to copy CSS', 'error');
-                        });
+                        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                          navigator.clipboard.writeText(cssCode).then(() => {
+                            showNotification(`${font.name} CSS copied to clipboard!`, 'success');
+                          }).catch(() => {
+                            showNotification('Failed to copy CSS', 'error');
+                          });
+                        } else {
+                          showNotification('Clipboard not available', 'error');
+                        }
                       }}
                       style={{
                         padding: '8px 16px',
@@ -2534,7 +2534,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
               {editingGuidelines.logo ? (
                 <div style={{ padding: '20px', backgroundColor: theme.headerBackground, borderRadius: '8px', border: `1px solid ${theme.borderColor}` }}>
                   <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
-                    Edit logo usage guidelines (demo functionality):
+                    Edit logo usage guidelines:
                   </p>
                   <textarea 
                     style={{
@@ -2790,5 +2790,5 @@ function AdminBrandTab({ theme, isDarkMode }) {
   );
 }
 
-// FIXED: Export with the correct name that App.tsx expects
+// Export with the correct name that App.tsx expects
 export default AdminComponents;
