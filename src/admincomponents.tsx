@@ -4,240 +4,145 @@ import React, { useState } from 'react';
 // NOTION API INTEGRATION - SINGLE GITHUB SECRET
 // =============================================================================
 
-// Parse the combined GitHub secret (format: "token,pageId" or "pageId,token")
-const parseNotionSecret = () => {
-  const secret = process.env.REACT_APP_NOTION_BRAND_KIT;
-  
-  // Debug: Show what we're getting from environment
-  console.log('🔍 Environment variable REACT_APP_NOTION_BRAND_KIT:', secret ? 'Found' : 'NOT FOUND');
-  console.log('🔍 Raw value (first 10 chars):', secret?.substring(0, 10) + '...' || 'undefined');
-  
-  if (!secret) {
-    console.error('❌ REACT_APP_NOTION_BRAND_KIT environment variable is not set');
-    return { token: null, pageId: null };
-  }
-  
-  const parts = secret.split(',');
-  if (parts.length !== 2) {
-    console.error('❌ GitHub secret should contain "token,pageId" - found:', parts.length, 'parts');
-    return { token: null, pageId: null };
-  }
-  
-  // Determine which is token (longer string starting with secret_) and which is pageId
-  const [part1, part2] = parts.map(p => p.trim());
-  const token = part1.length > part2.length ? part1 : part2;
-  const pageId = part1.length < part2.length ? part1 : part2;
-  
-  console.log('✅ Parsed token length:', token?.length || 0);
-  console.log('✅ Parsed pageId length:', pageId?.length || 0);
-  
-  return { token, pageId };
-};
-
-// Notion API Helper Functions
+// Notion API Helper Functions - Using Vercel API Routes
 const notionAPI = {
-  // Find database by title within the 3C_Brand_Kit page
+  // Find database by title using API route
   async findDatabase(title) {
-    // ... existing code ...
-  },
-  // ... other functions ...
-};
+    console.log(`🔍 Looking for database: "${title}"`);
     
     try {
-      const response = await fetch(`https://api.notion.com/v1/blocks/${NOTION_CONFIG.pageId}/children`, {
+      const response = await fetch('/api/notion/find-database', {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${NOTION_CONFIG.token}`,
-          'Notion-Version': '2022-06-28',
-        }
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title })
       });
       
       console.log('🌐 API Response status:', response.status);
-      console.log('📊 Response OK:', response.ok);
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error:', errorText);
-        throw new Error(`Failed to fetch page children (${response.status}): ${errorText}`);
+        const errorData = await response.json();
+        console.error('❌ API Error:', errorData.error);
+        throw new Error(`Failed to find database: ${errorData.error}`);
       }
       
       const data = await response.json();
-      console.log('📊 Full API response:', data);
-      console.log('🗃️ Found blocks:', data.results?.length || 0);
-      
-      if (data.results) {
-        data.results.forEach((block, index) => {
-          console.log(`Block ${index}:`, {
-            type: block.type,
-            id: block.id,
-            title: block.child_database?.title || block.database?.title || 'No title'
-          });
-        });
-      }
-      
-      const database = data.results?.find(block => 
-        (block.type === 'child_database' && block.child_database?.title === title) ||
-        (block.type === 'database' && block.database?.title === title)
-      );
-      
-      if (database) {
-        console.log(`✅ Found "${title}" database:`, database.id);
-        return database.id;
-      } else {
-        console.warn(`❌ Database "${title}" not found`);
-        console.log('Available databases:', data.results?.filter(b => b.type === 'child_database' || b.type === 'database'));
-        return null;
-      }
+      console.log(`✅ Found "${title}" database:`, data.databaseId);
+      return data.databaseId;
     } catch (error) {
       console.error('💥 Error in findDatabase:', error);
       throw error;
     }
   },
 
-  // Save color to Brand Colors database
+  // Save color using API route
   async saveColor(colorData) {
-    console.log('🎨 Attempting to save color to Notion:', colorData);
-    console.log('🔑 Using token:', NOTION_CONFIG.token ? 'Token present' : 'NO TOKEN');
-    console.log('📄 Using page ID:', NOTION_CONFIG.pageId || 'NO PAGE ID');
+    console.log('🎨 Attempting to save color via API route:', colorData);
     
     try {
-      console.log('🔍 Step 1: Finding Brand Colors database...');
-      const databaseId = await this.findDatabase('Brand Colors');
-      console.log('✅ Database ID found:', databaseId);
-      
-      if (!databaseId) {
-        throw new Error('Brand Colors database not found in page');
-      }
-      
-      console.log('💾 Step 2: Saving to Notion database...');
-      const response = await fetch('https://api.notion.com/v1/pages', {
+      const response = await fetch('/api/notion/save-color', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${NOTION_CONFIG.token}`,
           'Content-Type': 'application/json',
-          'Notion-Version': '2022-06-28',
         },
-        body: JSON.stringify({
-          parent: { database_id: databaseId },
-          properties: {
-            'Name': { title: [{ text: { content: colorData.name } }] },
-            'Hex Code': { rich_text: [{ text: { content: colorData.hex } }] },
-            'Usage': { rich_text: [{ text: { content: colorData.usage } }] }
-          }
-        })
+        body: JSON.stringify({ colorData })
       });
       
       console.log('🌐 Response status:', response.status);
-      console.log('📊 Response headers:', response.headers);
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Notion API error response:', errorText);
-        throw new Error(`Notion API error (${response.status}): ${errorText}`);
+        const errorData = await response.json();
+        console.error('❌ API error response:', errorData.error);
+        throw new Error(`API error (${response.status}): ${errorData.error}`);
       }
       
       const result = await response.json();
-      console.log('✅ Successfully saved to Notion:', result);
+      console.log('✅ Successfully saved color:', result);
       return result;
     } catch (error) {
       console.error('💥 Complete error details:', error);
-      console.error('📊 Error name:', error.name);
-      console.error('📝 Error message:', error.message);
-      console.error('🗂️ Error stack:', error.stack);
       throw error;
     }
   },
 
-  // Save logo to Notion Logo Assets database
+  // Save logo using API route
   async saveLogo(logoData) {
+    console.log('🏷️ Attempting to save logo via API route:', logoData);
+    
     try {
-      const databaseId = await this.findDatabase('Logo Assets');
-      
-      const response = await fetch('https://api.notion.com/v1/pages', {
+      const response = await fetch('/api/notion/save-logo', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${NOTION_CONFIG.token}`,
           'Content-Type': 'application/json',
-          'Notion-Version': '2022-06-28',
         },
-        body: JSON.stringify({
-          parent: { database_id: databaseId },
-          properties: {
-            'Name': { title: [{ text: { content: logoData.name } }] },
-            'Type': { select: { name: logoData.type } },
-            'File Size': { rich_text: [{ text: { content: logoData.size } }] },
-            'Usage': { rich_text: [{ text: { content: logoData.usage } }] },
-            'File URL': logoData.fileUrl ? { url: logoData.fileUrl } : { rich_text: [{ text: { content: '' } }] },
-            'Category': { select: { name: logoData.category || 'Primary Logo' } }
-          }
-        })
-      });
-      return await response.json();
-    } catch (error) {
-      console.error('Error saving logo to Notion:', error);
-      throw error;
-    }
-  },
-
-  async saveGuidelines(section, content) {
-    try {
-      const databaseId = await this.findDatabase('Brand Guidelines');
-      
-      const response = await fetch('https://api.notion.com/v1/pages', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${NOTION_CONFIG.token}`,
-          'Content-Type': 'application/json',
-          'Notion-Version': '2022-06-28',
-        },
-        body: JSON.stringify({
-          parent: { database_id: databaseId },
-          properties: {
-            'Section': { title: [{ text: { content: `${section.charAt(0).toUpperCase() + section.slice(1)} Guidelines` } }] },
-            'Content': { rich_text: [{ text: { content: typeof content === 'string' ? content : JSON.stringify(content) } }] },
-            'Type': { select: { name: `${section.charAt(0).toUpperCase() + section.slice(1)} Usage` } },
-            'Status': { select: { name: 'Active' } }
-          }
-        })
-      });
-      return await response.json();
-    } catch (error) {
-      console.error('Error saving guidelines to Notion:', error);
-      throw error;
-    }
-  },
-
-  // FIXED: Added missing saveFont function for Typography System database
-  async saveFont(fontData) {
-    try {
-      const databaseId = await this.findDatabase('Typography System');
-      
-      const response = await fetch('https://api.notion.com/v1/pages', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${NOTION_CONFIG.token}`,
-          'Content-Type': 'application/json',
-          'Notion-Version': '2022-06-28',
-        },
-        body: JSON.stringify({
-          parent: { database_id: databaseId },
-          properties: {
-            'Name': { title: [{ text: { content: fontData.name } }] },
-            'Category': { select: { name: fontData.category } },
-            'Usage': { rich_text: [{ text: { content: fontData.usage } }] },
-            'Weight Range': { rich_text: [{ text: { content: fontData.weight } }] },
-            'Status': { select: { name: 'Active' } }
-          }
-        })
+        body: JSON.stringify({ logoData })
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Notion API error (${response.status}): ${errorText}`);
+        const errorData = await response.json();
+        throw new Error(`API error (${response.status}): ${errorData.error}`);
       }
       
-      return await response.json();
+      const result = await response.json();
+      console.log('✅ Successfully saved logo:', result);
+      return result;
     } catch (error) {
-      console.error('Error saving font to Notion:', error);
+      console.error('Error saving logo:', error);
+      throw error;
+    }
+  },
+
+  // Save font using API route
+  async saveFont(fontData) {
+    console.log('🔤 Attempting to save font via API route:', fontData);
+    
+    try {
+      const response = await fetch('/api/notion/save-font', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ fontData })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`API error (${response.status}): ${errorData.error}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Successfully saved font:', result);
+      return result;
+    } catch (error) {
+      console.error('Error saving font:', error);
+      throw error;
+    }
+  },
+
+  // Save guidelines using API route
+  async saveGuidelines(section, content) {
+    console.log('📋 Attempting to save guidelines via API route:', { section, content });
+    
+    try {
+      const response = await fetch('/api/notion/save-guidelines', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ section, content })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`API error (${response.status}): ${errorData.error}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Successfully saved guidelines:', result);
+      return result;
+    } catch (error) {
+      console.error('Error saving guidelines:', error);
       throw error;
     }
   }
