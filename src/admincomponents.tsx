@@ -52,12 +52,22 @@ const notionAPI = {
       console.log('🌐 Response status:', response.status);
       
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ API error response:', errorData.error);
-        throw new Error(`API error (${response.status}): ${errorData.error}`);
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (jsonError) {
+          errorMessage = `${errorMessage} - Invalid JSON response`;
+        }
+        throw new Error(`API error: ${errorMessage}`);
       }
       
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error('Empty response from server');
+      }
+      
+      const result = JSON.parse(responseText);
       console.log('✅ Successfully saved color:', result);
       return result;
     } catch (error) {
@@ -80,11 +90,22 @@ const notionAPI = {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`API error (${response.status}): ${errorData.error}`);
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (jsonError) {
+          errorMessage = `${errorMessage} - Invalid JSON response`;
+        }
+        throw new Error(`API error: ${errorMessage}`);
       }
       
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error('Empty response from server');
+      }
+      
+      const result = JSON.parse(responseText);
       console.log('✅ Successfully saved logo:', result);
       return result;
     } catch (error) {
@@ -107,11 +128,22 @@ const notionAPI = {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`API error (${response.status}): ${errorData.error}`);
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (jsonError) {
+          errorMessage = `${errorMessage} - Invalid JSON response`;
+        }
+        throw new Error(`API error: ${errorMessage}`);
       }
       
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error('Empty response from server');
+      }
+      
+      const result = JSON.parse(responseText);
       console.log('✅ Successfully saved font:', result);
       return result;
     } catch (error) {
@@ -134,11 +166,22 @@ const notionAPI = {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`API error (${response.status}): ${errorData.error}`);
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (jsonError) {
+          errorMessage = `${errorMessage} - Invalid JSON response`;
+        }
+        throw new Error(`API error: ${errorMessage}`);
       }
       
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error('Empty response from server');
+      }
+      
+      const result = JSON.parse(responseText);
       console.log('✅ Successfully saved guidelines:', result);
       return result;
     } catch (error) {
@@ -1362,12 +1405,20 @@ function AdminBrandTab({ theme, isDarkMode }) {
     ]);
   });
 
-  // Form states
+  // Form states for colors
   const [showColorForm, setShowColorForm] = useState(false);
   const [editingColor, setEditingColor] = useState(null);
   const [newColor, setNewColor] = useState({
     name: '',
     hex: '#523474',
+    usage: ''
+  });
+
+  // Form states for logos
+  const [editingLogo, setEditingLogo] = useState(null);
+  const [editLogoData, setEditLogoData] = useState({
+    name: '',
+    type: '',
     usage: ''
   });
 
@@ -1414,12 +1465,17 @@ function AdminBrandTab({ theme, isDarkMode }) {
     const notification = { id, message, type };
     setNotifications(prev => [...prev, notification]);
     
-    // Only auto-remove success and info messages - keep errors persistent
+    // Only auto-remove success and info messages - keep errors persistent until manually dismissed
     if (type !== 'error') {
       setTimeout(() => {
         setNotifications(prev => prev.filter(n => n.id !== id));
       }, 3000);
     }
+  };
+
+  // Manual dismiss notification
+  const dismissNotification = (id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   // Color management functions
@@ -1553,6 +1609,56 @@ function AdminBrandTab({ theme, isDarkMode }) {
     }
   };
 
+  // Logo management functions
+  const handleEditLogo = (logo) => {
+    setEditingLogo(logo);
+    setEditLogoData({
+      name: logo.name,
+      type: logo.type,
+      usage: logo.usage
+    });
+  };
+
+  const handleSaveLogo = async () => {
+    if (!editLogoData.name.trim() || !editLogoData.usage.trim()) {
+      showNotification('Please fill in all fields', 'error');
+      return;
+    }
+
+    showNotification('Saving logo to Notion...', 'info');
+
+    try {
+      // Save to Notion
+      await notionAPI.saveLogo(editLogoData);
+      
+      // Update local state
+      const updatedLogos = logos.map(logo => 
+        logo.id === editingLogo.id ? { ...logo, ...editLogoData } : logo
+      );
+      setLogos(updatedLogos);
+      safeLocalStorage.setItem('brandLogos', updatedLogos);
+      
+      showNotification(`${editLogoData.name} updated and saved to Notion!`, 'success');
+      setEditingLogo(null);
+      setEditLogoData({ name: '', type: '', usage: '' });
+    } catch (error) {
+      console.error('Logo save error:', error);
+      // Fallback to local save
+      const updatedLogos = logos.map(logo => 
+        logo.id === editingLogo.id ? { ...logo, ...editLogoData } : logo
+      );
+      setLogos(updatedLogos);
+      safeLocalStorage.setItem('brandLogos', updatedLogos);
+      
+      showNotification(`Logo saved locally - Notion sync failed: ${error.message}`, 'error');
+    }
+  };
+
+  const handleCancelLogo = () => {
+    setEditingLogo(null);
+    setEditLogoData({ name: '', type: '', usage: '' });
+  };
+
   return (
     <div style={{ padding: '20px', backgroundColor: theme.background }}>
       {/* Notification System */}
@@ -1575,9 +1681,36 @@ function AdminBrandTab({ theme, isDarkMode }) {
               borderRadius: '8px',
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
               fontSize: '14px',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              minWidth: '300px'
             }}>
-              {notification.message}
+              <span>{notification.message}</span>
+              <button
+                onClick={() => dismissNotification(notification.id)}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  marginLeft: '12px',
+                  borderRadius: '4px',
+                  fontWeight: 'bold'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                ✕
+              </button>
             </div>
           ))}
         </div>
@@ -2024,6 +2157,146 @@ function AdminBrandTab({ theme, isDarkMode }) {
               ⬆️ Upload Logo
             </button>
           </div>
+
+          {/* Logo Editing Form */}
+          {editingLogo && (
+            <div style={{
+              padding: '30px',
+              border: '2px solid #8b5cf6',
+              borderRadius: '12px',
+              backgroundColor: theme.background,
+              marginBottom: '30px',
+              boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)'
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                ✏️ Edit Logo: {editingLogo.name}
+              </h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Logo Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editLogoData.name}
+                    onChange={(e) => setEditLogoData(prev => ({ ...prev, name: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    File Type
+                  </label>
+                  <select
+                    value={editLogoData.type}
+                    onChange={(e) => setEditLogoData(prev => ({ ...prev, type: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="SVG">SVG</option>
+                    <option value="PNG">PNG</option>
+                    <option value="JPG">JPG</option>
+                    <option value="WebP">WebP</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '25px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Usage Description
+                </label>
+                <textarea
+                  value={editLogoData.usage}
+                  onChange={(e) => setEditLogoData(prev => ({ ...prev, usage: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: `1px solid ${theme.inputBorder}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: theme.inputBackground,
+                    color: theme.textPrimary,
+                    minHeight: '80px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
+                  placeholder="Describe where and how this logo should be used..."
+                />
+              </div>
+
+              {/* Form Actions */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={handleCancelLogo}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: theme.buttonSecondary,
+                    color: theme.buttonSecondaryText,
+                    border: `1px solid ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveLogo}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  💾 Save Logo
+                </button>
+              </div>
+            </div>
+          )}
           
           <div style={{ display: 'grid', gap: '16px' }}>
             {logos.map(logo => (
@@ -2084,6 +2357,21 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     cursor: 'pointer'
                   }}>
                     👁️ Preview
+                  </button>
+                  <button 
+                    onClick={() => handleEditLogo(logo)}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#f59e0b',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✏️ Edit
                   </button>
                 </div>
               </div>
