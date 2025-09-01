@@ -34,20 +34,14 @@ const parseNotionSecret = () => {
   return { token, pageId };
 };
 
-const { token, pageId } = parseNotionSecret();
-
-const NOTION_CONFIG = {
-  token,
-  pageId
-};
-
 // Notion API Helper Functions
 const notionAPI = {
   // Find database by title within the 3C_Brand_Kit page
   async findDatabase(title) {
-    console.log(`🔍 Looking for database: "${title}"`);
-    console.log('📄 In page ID:', NOTION_CONFIG.pageId);
-    console.log('🔑 With token:', NOTION_CONFIG.token ? 'Present' : 'MISSING');
+    // ... existing code ...
+  },
+  // ... other functions ...
+};
     
     try {
       const response = await fetch(`https://api.notion.com/v1/blocks/${NOTION_CONFIG.pageId}/children`, {
