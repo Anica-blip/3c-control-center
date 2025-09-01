@@ -2091,104 +2091,42 @@ function AdminBrandTab({ theme, isDarkMode }) {
             <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
               🏷️ Logo Assets
             </h3>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
-                onClick={() => {
-                  // Generate downloadable logo template
-                  const logoTemplate = logos.map(logo => ({
-                    Name: logo.name,
-                    Type: logo.type,
-                    Size: logo.size,
-                    Usage: logo.usage,
-                    'File URL': '',
-                    Notes: 'Replace with your logo details'
-                  }));
-                  
-                  const csvContent = "data:text/csv;charset=utf-8," 
-                    + "Name,Type,Size,Usage,File URL,Notes\n"
-                    + logoTemplate.map(row => 
-                        `"${row.Name}","${row.Type}","${row.Size}","${row.Usage}","${row['File URL']}","${row.Notes}"`
-                      ).join("\n");
-                  
-                  const encodedUri = encodeURI(csvContent);
-                  const link = document.createElement("a");
-                  link.setAttribute("href", encodedUri);
-                  link.setAttribute("download", "logo-template.csv");
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  
-                  showNotification('Logo template downloaded - edit and use manual entry below', 'success');
-                }}
-                style={{
-                  padding: '12px 20px',
-                  backgroundColor: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}
-              >
-                📥 Download Template
-              </button>
-              <button 
-                onClick={() => {
-                  const newLogo = {
-                    id: logos.length > 0 ? Math.max(...logos.map(l => l.id)) + 1 : 1,
-                    name: 'New Logo',
-                    type: 'PNG',
-                    size: '',
-                    usage: 'Enter usage description'
-                  };
-                  
-                  const updatedLogos = [...logos, newLogo];
-                  setLogos(updatedLogos);
-                  safeLocalStorage.setItem('brandLogos', updatedLogos);
-                  
-                  setEditingLogo(newLogo);
-                  setEditLogoData({
-                    name: newLogo.name,
-                    type: newLogo.type,
-                    usage: newLogo.usage
-                  });
-                  
-                  showNotification('New logo entry added - edit details below', 'success');
-                }}
-                style={{
-                  padding: '12px 20px',
-                  backgroundColor: '#8b5cf6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}
-              >
-                ➕ Manual Entry
-              </button>
-            </div>
-          </div>
-
-          {/* Instructions Box */}
-          <div style={{
-            padding: '20px',
-            backgroundColor: theme.headerBackground,
-            borderRadius: '8px',
-            border: `1px solid ${theme.borderColor}`,
-            marginBottom: '25px'
-          }}>
-            <h4 style={{ color: theme.textPrimary, margin: '0 0 12px 0', fontSize: '16px', fontWeight: 'bold' }}>
-              📋 How to Manage Your Logos:
-            </h4>
-            <ol style={{ color: theme.textSecondary, fontSize: '14px', lineHeight: '1.6', paddingLeft: '20px', margin: '0' }}>
-              <li><strong>Download Template:</strong> Get a CSV template with your current logos</li>
-              <li><strong>Manual Entry:</strong> Add logos directly using the form below</li>
-              <li><strong>Edit Existing:</strong> Click "Edit" on any logo to modify details</li>
-              <li><strong>Store Files:</strong> Keep your actual logo files organized separately</li>
-            </ol>
+            <button 
+              onClick={() => {
+                const newLogo = {
+                  id: logos.length > 0 ? Math.max(...logos.map(l => l.id)) + 1 : 1,
+                  name: 'New Logo',
+                  type: 'PNG',
+                  size: '',
+                  usage: 'Enter usage description'
+                };
+                
+                const updatedLogos = [...logos, newLogo];
+                setLogos(updatedLogos);
+                safeLocalStorage.setItem('brandLogos', updatedLogos);
+                
+                setEditingLogo(newLogo);
+                setEditLogoData({
+                  name: newLogo.name,
+                  type: newLogo.type,
+                  usage: newLogo.usage
+                });
+                
+                showNotification('New logo entry added - add image and edit details below', 'success');
+              }}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#8b5cf6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              ➕ Add New Logo
+            </button>
           </div>
 
           {/* Logo Editing Form */}
@@ -2204,6 +2142,75 @@ function AdminBrandTab({ theme, isDarkMode }) {
               <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
                 ✏️ Edit Logo: {editingLogo.name}
               </h4>
+              
+              {/* Image Upload Section */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Logo Image
+                </label>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <button
+                    onClick={() => {
+                      if (typeof document !== 'undefined') {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*,.svg';
+                        input.onchange = (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            // Validate file
+                            if (file.size > 10 * 1024 * 1024) {
+                              showNotification('File size must be less than 10MB', 'error');
+                              return;
+                            }
+                            
+                            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
+                            if (!allowedTypes.includes(file.type)) {
+                              showNotification('Please upload PNG, JPG, SVG, or WebP files only', 'error');
+                              return;
+                            }
+                            
+                            // Update the logo data
+                            setEditLogoData(prev => ({
+                              ...prev,
+                              name: prev.name || file.name.split('.')[0],
+                              type: file.type.includes('svg') ? 'SVG' : file.type.includes('png') ? 'PNG' : 'JPG',
+                              size: `${(file.size / 1024).toFixed(1)} KB`,
+                              fileName: file.name
+                            }));
+                            
+                            showNotification(`${file.name} selected successfully`, 'success');
+                          }
+                        };
+                        input.click();
+                      }
+                    }}
+                    style={{
+                      padding: '12px 20px',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    📁 Choose Image File
+                  </button>
+                  {editLogoData.fileName && (
+                    <span style={{ color: theme.textSecondary, fontSize: '14px' }}>
+                      Selected: {editLogoData.fileName}
+                    </span>
+                  )}
+                </div>
+              </div>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                 <div>
@@ -2314,18 +2321,18 @@ function AdminBrandTab({ theme, isDarkMode }) {
                 </button>
                 <button
                   onClick={() => {
-                    // Save locally first, then try Notion
+                    // Save locally first
                     const updatedLogos = logos.map(logo => 
                       logo.id === editingLogo.id ? { ...logo, ...editLogoData } : logo
                     );
                     setLogos(updatedLogos);
                     safeLocalStorage.setItem('brandLogos', updatedLogos);
                     
-                    showNotification(`${editLogoData.name} saved locally successfully!`, 'success');
+                    showNotification(`${editLogoData.name} saved successfully!`, 'success');
                     
-                    // Try Notion save in background (won't block user)
-                    notionAPI.saveLogo(editLogoData).catch(error => {
-                      console.log('Notion sync failed, but local save successful:', error);
+                    // Try Notion save in background (silent)
+                    notionAPI.saveLogo(editLogoData).catch(() => {
+                      // Silent failure - user doesn't see this
                     });
                     
                     setEditingLogo(null);
@@ -2635,33 +2642,26 @@ function AdminBrandTab({ theme, isDarkMode }) {
                       return;
                     }
 
+                    // Save locally first
+                    const updatedFonts = fonts.map(f => 
+                      f.id === editingFont.id ? { ...f, ...editFontData } : f
+                    );
+                    setFonts(updatedFonts);
+                    safeLocalStorage.setItem('brandFonts', updatedFonts);
+                    
+                    showNotification(`${editFontData.name} saved successfully!`, 'success');
+                    
+                    // Try Notion save in background (silent)
                     try {
-                      showNotification('Saving font to Notion...', 'info');
-                      
-                      // Save to Notion
                       await notionAPI.saveFont(editFontData);
-                      
-                      // Update local state
-                      const updatedFonts = fonts.map(f => 
-                        f.id === editingFont.id ? { ...f, ...editFontData } : f
-                      );
-                      setFonts(updatedFonts);
-                      safeLocalStorage.setItem('brandFonts', updatedFonts);
-                      
-                      showNotification(`${editFontData.name} updated and saved to Notion!`, 'success');
-                      setEditingFont(null);
-                      setEditFontData({ name: '', category: '', usage: '', weight: '' });
                     } catch (error) {
-                      console.error('Font save error:', error);
-                      // Fallback to local save
-                      const updatedFonts = fonts.map(f => 
-                        f.id === editingFont.id ? { ...f, ...editFontData } : f
-                      );
-                      setFonts(updatedFonts);
-                      safeLocalStorage.setItem('brandFonts', updatedFonts);
-                      
-                      showNotification(`Font saved locally - Notion sync failed: ${error.message}`, 'error');
+                      // Silent failure - user doesn't see this
+                      console.log('Background Notion sync failed:', error);
                     }
+                    
+                    // Close the editor
+                    setEditingFont(null);
+                    setEditFontData({ name: '', category: '', usage: '', weight: '' });
                   }}
                   style={{
                     padding: '12px 24px',
@@ -2751,6 +2751,26 @@ function AdminBrandTab({ theme, isDarkMode }) {
                       }}
                     >
                       ✏️ Edit
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const updatedFonts = fonts.filter(f => f.id !== font.id);
+                        setFonts(updatedFonts);
+                        safeLocalStorage.setItem('brandFonts', updatedFonts);
+                        showNotification(`${font.name} deleted successfully`, 'success');
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🗑️ Delete
                     </button>
                   </div>
                 </div>
