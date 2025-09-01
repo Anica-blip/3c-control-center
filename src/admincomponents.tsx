@@ -54,20 +54,21 @@ const notionAPI = {
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}`;
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (jsonError) {
-          errorMessage = `${errorMessage} - Invalid JSON response`;
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            const errorText = await response.text();
+            errorMessage = `${errorMessage} - ${errorText.substring(0, 100)}`;
+          }
+        } catch (parseError) {
+          errorMessage = `${errorMessage} - Response parsing failed`;
         }
         throw new Error(`API error: ${errorMessage}`);
       }
       
-      const responseText = await response.text();
-      if (!responseText) {
-        throw new Error('Empty response from server');
-      }
-      
-      const result = JSON.parse(responseText);
+      const result = await response.json();
       console.log('✅ Successfully saved color:', result);
       return result;
     } catch (error) {
@@ -131,20 +132,21 @@ const notionAPI = {
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}`;
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (jsonError) {
-          errorMessage = `${errorMessage} - Invalid JSON response`;
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            const errorText = await response.text();
+            errorMessage = `${errorMessage} - ${errorText.substring(0, 100)}`;
+          }
+        } catch (parseError) {
+          errorMessage = `${errorMessage} - Response parsing failed`;
         }
         throw new Error(`API error: ${errorMessage}`);
       }
       
-      const responseText = await response.text();
-      if (!responseText) {
-        throw new Error('Empty response from server');
-      }
-      
-      const result = JSON.parse(responseText);
+      const result = await response.json();
       console.log('✅ Successfully saved font:', result);
       return result;
     } catch (error) {
@@ -169,20 +171,21 @@ const notionAPI = {
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}`;
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (jsonError) {
-          errorMessage = `${errorMessage} - Invalid JSON response`;
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            const errorText = await response.text();
+            errorMessage = `${errorMessage} - ${errorText.substring(0, 100)}`;
+          }
+        } catch (parseError) {
+          errorMessage = `${errorMessage} - Response parsing failed`;
         }
         throw new Error(`API error: ${errorMessage}`);
       }
       
-      const responseText = await response.text();
-      if (!responseText) {
-        throw new Error('Empty response from server');
-      }
-      
-      const result = JSON.parse(responseText);
+      const result = await response.json();
       console.log('✅ Successfully saved guidelines:', result);
       return result;
     } catch (error) {
@@ -2088,75 +2091,104 @@ function AdminBrandTab({ theme, isDarkMode }) {
             <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
               🏷️ Logo Assets
             </h3>
-            <button 
-              onClick={() => {
-                if (typeof document !== 'undefined') {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = 'image/*,.svg';
-                  input.onchange = async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-
-                    // Validate file size (max 10MB)
-                    if (file.size > 10 * 1024 * 1024) {
-                      showNotification('File size must be less than 10MB', 'error');
-                      return;
-                    }
-
-                    // Validate file type
-                    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
-                    if (!allowedTypes.includes(file.type)) {
-                      showNotification('Please upload PNG, JPG, SVG, or WebP files only', 'error');
-                      return;
-                    }
-
-                    showNotification(`Uploading ${file.name}...`, 'info');
-                    
-                    try {
-                      const logoData = {
-                        name: file.name.split('.')[0] || 'Uploaded Logo',
-                        type: file.type.includes('svg') ? 'SVG' : file.type.includes('png') ? 'PNG' : 'JPG',
-                        size: `${(file.size / 1024).toFixed(1)} KB`,
-                        usage: 'Uploaded asset',
-                        category: 'Upload',
-                        originalName: file.name
-                      };
-                      
-                      // Save to Notion
-                      await notionAPI.saveLogo(logoData);
-                      
-                      // Add to local state
-                      const newLogo = {
-                        id: logos.length > 0 ? Math.max(...logos.map(l => l.id)) + 1 : 1,
-                        ...logoData
-                      };
-                      const updatedLogos = [...logos, newLogo];
-                      setLogos(updatedLogos);
-                      safeLocalStorage.setItem('brandLogos', updatedLogos);
-                      
-                      showNotification(`${file.name} uploaded and saved to Notion successfully!`, 'success');
-                    } catch (notionError) {
-                      console.error('Notion save error:', notionError);
-                      showNotification(`Upload completed but Notion save failed: ${notionError.message}`, 'error');
-                    }
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={() => {
+                  // Generate downloadable logo template
+                  const logoTemplate = logos.map(logo => ({
+                    Name: logo.name,
+                    Type: logo.type,
+                    Size: logo.size,
+                    Usage: logo.usage,
+                    'File URL': '',
+                    Notes: 'Replace with your logo details'
+                  }));
+                  
+                  const csvContent = "data:text/csv;charset=utf-8," 
+                    + "Name,Type,Size,Usage,File URL,Notes\n"
+                    + logoTemplate.map(row => 
+                        `"${row.Name}","${row.Type}","${row.Size}","${row.Usage}","${row['File URL']}","${row.Notes}"`
+                      ).join("\n");
+                  
+                  const encodedUri = encodeURI(csvContent);
+                  const link = document.createElement("a");
+                  link.setAttribute("href", encodedUri);
+                  link.setAttribute("download", "logo-template.csv");
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  
+                  showNotification('Logo template downloaded - edit and use manual entry below', 'success');
+                }}
+                style={{
+                  padding: '12px 20px',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                📥 Download Template
+              </button>
+              <button 
+                onClick={() => {
+                  const newLogo = {
+                    id: logos.length > 0 ? Math.max(...logos.map(l => l.id)) + 1 : 1,
+                    name: 'New Logo',
+                    type: 'PNG',
+                    size: '',
+                    usage: 'Enter usage description'
                   };
-                  input.click();
-                }
-              }}
-              style={{
-                padding: '12px 20px',
-                backgroundColor: '#8b5cf6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}
-            >
-              ⬆️ Upload Logo
-            </button>
+                  
+                  const updatedLogos = [...logos, newLogo];
+                  setLogos(updatedLogos);
+                  safeLocalStorage.setItem('brandLogos', updatedLogos);
+                  
+                  setEditingLogo(newLogo);
+                  setEditLogoData({
+                    name: newLogo.name,
+                    type: newLogo.type,
+                    usage: newLogo.usage
+                  });
+                  
+                  showNotification('New logo entry added - edit details below', 'success');
+                }}
+                style={{
+                  padding: '12px 20px',
+                  backgroundColor: '#8b5cf6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                ➕ Manual Entry
+              </button>
+            </div>
+          </div>
+
+          {/* Instructions Box */}
+          <div style={{
+            padding: '20px',
+            backgroundColor: theme.headerBackground,
+            borderRadius: '8px',
+            border: `1px solid ${theme.borderColor}`,
+            marginBottom: '25px'
+          }}>
+            <h4 style={{ color: theme.textPrimary, margin: '0 0 12px 0', fontSize: '16px', fontWeight: 'bold' }}>
+              📋 How to Manage Your Logos:
+            </h4>
+            <ol style={{ color: theme.textSecondary, fontSize: '14px', lineHeight: '1.6', paddingLeft: '20px', margin: '0' }}>
+              <li><strong>Download Template:</strong> Get a CSV template with your current logos</li>
+              <li><strong>Manual Entry:</strong> Add logos directly using the form below</li>
+              <li><strong>Edit Existing:</strong> Click "Edit" on any logo to modify details</li>
+              <li><strong>Store Files:</strong> Keep your actual logo files organized separately</li>
+            </ol>
           </div>
 
           {/* Logo Editing Form */}
@@ -2281,7 +2313,24 @@ function AdminBrandTab({ theme, isDarkMode }) {
                   Cancel
                 </button>
                 <button
-                  onClick={handleSaveLogo}
+                  onClick={() => {
+                    // Save locally first, then try Notion
+                    const updatedLogos = logos.map(logo => 
+                      logo.id === editingLogo.id ? { ...logo, ...editLogoData } : logo
+                    );
+                    setLogos(updatedLogos);
+                    safeLocalStorage.setItem('brandLogos', updatedLogos);
+                    
+                    showNotification(`${editLogoData.name} saved locally successfully!`, 'success');
+                    
+                    // Try Notion save in background (won't block user)
+                    notionAPI.saveLogo(editLogoData).catch(error => {
+                      console.log('Notion sync failed, but local save successful:', error);
+                    });
+                    
+                    setEditingLogo(null);
+                    setEditLogoData({ name: '', type: '', usage: '' });
+                  }}
                   style={{
                     padding: '12px 24px',
                     backgroundColor: '#10b981',
@@ -2335,30 +2384,6 @@ function AdminBrandTab({ theme, isDarkMode }) {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button style={{
-                    padding: '10px 16px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                  }}>
-                    ⬇️ Download
-                  </button>
-                  <button style={{
-                    padding: '10px 16px',
-                    backgroundColor: theme.buttonPrimary,
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                  }}>
-                    👁️ Preview
-                  </button>
                   <button 
                     onClick={() => handleEditLogo(logo)}
                     style={{
@@ -2373,6 +2398,26 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     }}
                   >
                     ✏️ Edit
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const updatedLogos = logos.filter(l => l.id !== logo.id);
+                      setLogos(updatedLogos);
+                      safeLocalStorage.setItem('brandLogos', updatedLogos);
+                      showNotification(`${logo.name} deleted`, 'success');
+                    }}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🗑️ Delete
                   </button>
                 </div>
               </div>
