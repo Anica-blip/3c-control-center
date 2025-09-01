@@ -2384,14 +2384,18 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     width: '80px',
                     height: '60px',
                     backgroundColor: theme.headerBackground,
-                    border: `2px dashed ${theme.borderColor}`,
+                    border: `2px solid ${theme.borderColor}`,
                     borderRadius: '8px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '24px'
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    color: theme.textSecondary,
+                    textAlign: 'center',
+                    padding: '4px'
                   }}>
-                    🏷️
+                    {logo.fileName ? `📁 ${logo.fileName.substring(0, 8)}...` : `${logo.type} Logo`}
                   </div>
                   <div>
                     <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
@@ -2400,6 +2404,11 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     <div style={{ fontSize: '12px', color: theme.textSecondary }}>
                       {logo.type} • {logo.size} • {logo.usage}
                     </div>
+                    {logo.fileName && (
+                      <div style={{ fontSize: '11px', color: theme.textSecondary, marginTop: '2px' }}>
+                        File: {logo.fileName}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -2792,21 +2801,36 @@ function AdminBrandTab({ theme, isDarkMode }) {
                   padding: '25px',
                   backgroundColor: theme.headerBackground,
                   borderRadius: '8px',
-                  border: `1px solid ${theme.borderColor}`,
-                  fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
-                             font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
-                             font.name.toLowerCase().includes('playfair') ? 'serif' :
-                             'ui-sans-serif'}, sans-serif`
+                  border: `1px solid ${theme.borderColor}`
                 }}>
+                  <div style={{
+                    marginBottom: '15px',
+                    padding: '10px',
+                    backgroundColor: theme.background,
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    color: theme.textSecondary,
+                    fontStyle: 'italic'
+                  }}>
+                    Preview using system font approximation for: {font.name}
+                  </div>
+                  
                   <div style={{ 
                     fontSize: '32px', 
                     marginBottom: '12px', 
                     fontWeight: 'bold', 
                     color: theme.textPrimary,
-                    fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
-                               font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
-                               font.name.toLowerCase().includes('playfair') ? 'serif' :
-                               'ui-sans-serif'}, sans-serif`
+                    fontFamily: font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
+                               font.name.toLowerCase().includes('roboto') ? 'Roboto, -apple-system, system-ui' : 
+                               font.name.toLowerCase().includes('playfair') ? 'Georgia, Times, serif' :
+                               font.name.toLowerCase().includes('arial') ? 'Arial, sans-serif' :
+                               font.name.toLowerCase().includes('helvetica') ? 'Helvetica, Arial, sans-serif' :
+                               font.name.toLowerCase().includes('times') ? 'Times, Georgia, serif' :
+                               font.name.toLowerCase().includes('courier') ? 'Courier, monospace' :
+                               font.name.toLowerCase().includes('verdana') ? 'Verdana, sans-serif' :
+                               font.name.toLowerCase().includes('georgia') ? 'Georgia, serif' :
+                               font.name.toLowerCase().includes('tahoma') ? 'Tahoma, sans-serif' :
+                               'ui-sans-serif, system-ui, sans-serif'
                   }}>
                     The quick brown fox jumps
                   </div>
@@ -2814,10 +2838,17 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     fontSize: '18px', 
                     marginBottom: '10px', 
                     color: theme.textPrimary,
-                    fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
-                               font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
-                               font.name.toLowerCase().includes('playfair') ? 'serif' :
-                               'ui-sans-serif'}, sans-serif`
+                    fontFamily: font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
+                               font.name.toLowerCase().includes('roboto') ? 'Roboto, -apple-system, system-ui' : 
+                               font.name.toLowerCase().includes('playfair') ? 'Georgia, Times, serif' :
+                               font.name.toLowerCase().includes('arial') ? 'Arial, sans-serif' :
+                               font.name.toLowerCase().includes('helvetica') ? 'Helvetica, Arial, sans-serif' :
+                               font.name.toLowerCase().includes('times') ? 'Times, Georgia, serif' :
+                               font.name.toLowerCase().includes('courier') ? 'Courier, monospace' :
+                               font.name.toLowerCase().includes('verdana') ? 'Verdana, sans-serif' :
+                               font.name.toLowerCase().includes('georgia') ? 'Georgia, serif' :
+                               font.name.toLowerCase().includes('tahoma') ? 'Tahoma, sans-serif' :
+                               'ui-sans-serif, system-ui, sans-serif'
                   }}>
                     Regular weight sample text for {font.name}
                   </div>
@@ -2825,24 +2856,19 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     fontSize: '14px', 
                     color: theme.textSecondary, 
                     fontWeight: '500',
-                    fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
-                               font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
-                               font.name.toLowerCase().includes('playfair') ? 'serif' :
-                               'ui-sans-serif'}, sans-serif`
+                    fontFamily: font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
+                               font.name.toLowerCase().includes('roboto') ? 'Roboto, -apple-system, system-ui' : 
+                               font.name.toLowerCase().includes('playfair') ? 'Georgia, Times, serif' :
+                               font.name.toLowerCase().includes('arial') ? 'Arial, sans-serif' :
+                               font.name.toLowerCase().includes('helvetica') ? 'Helvetica, Arial, sans-serif' :
+                               font.name.toLowerCase().includes('times') ? 'Times, Georgia, serif' :
+                               font.name.toLowerCase().includes('courier') ? 'Courier, monospace' :
+                               font.name.toLowerCase().includes('verdana') ? 'Verdana, sans-serif' :
+                               font.name.toLowerCase().includes('georgia') ? 'Georgia, serif' :
+                               font.name.toLowerCase().includes('tahoma') ? 'Tahoma, sans-serif' :
+                               'ui-sans-serif, system-ui, sans-serif'
                   }}>
                     ABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890
-                  </div>
-                  <div style={{
-                    marginTop: '15px',
-                    padding: '10px',
-                    backgroundColor: theme.background,
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    color: theme.textSecondary,
-                    fontStyle: 'italic',
-                    fontFamily: 'ui-sans-serif, system-ui, sans-serif'
-                  }}>
-                    Preview uses: font-family: '{font.name}' with system fallbacks
                   </div>
                 </div>
               </div>
