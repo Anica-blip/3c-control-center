@@ -2161,18 +2161,22 @@ function AdminBrandTab({ theme, isDarkMode }) {
                         const input = document.createElement('input');
                         input.type = 'file';
                         input.accept = 'image/*,.svg';
+                        input.style.display = 'none';
+                        
                         input.onchange = (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
                             // Validate file
                             if (file.size > 10 * 1024 * 1024) {
                               showNotification('File size must be less than 10MB', 'error');
+                              document.body.removeChild(input);
                               return;
                             }
                             
                             const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
                             if (!allowedTypes.includes(file.type)) {
                               showNotification('Please upload PNG, JPG, SVG, or WebP files only', 'error');
+                              document.body.removeChild(input);
                               return;
                             }
                             
@@ -2187,7 +2191,15 @@ function AdminBrandTab({ theme, isDarkMode }) {
                             
                             showNotification(`${file.name} selected successfully`, 'success');
                           }
+                          // Clean up
+                          document.body.removeChild(input);
                         };
+                        
+                        input.oncancel = () => {
+                          document.body.removeChild(input);
+                        };
+                        
+                        document.body.appendChild(input);
                         input.click();
                       }
                     }}
@@ -2781,18 +2793,56 @@ function AdminBrandTab({ theme, isDarkMode }) {
                   backgroundColor: theme.headerBackground,
                   borderRadius: '8px',
                   border: `1px solid ${theme.borderColor}`,
-                  fontFamily: font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
+                  fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
                              font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
-                             'ui-serif, Georgia'
+                             font.name.toLowerCase().includes('playfair') ? 'serif' :
+                             'ui-sans-serif'}, sans-serif`
                 }}>
-                  <div style={{ fontSize: '32px', marginBottom: '12px', fontWeight: 'bold', color: theme.textPrimary }}>
+                  <div style={{ 
+                    fontSize: '32px', 
+                    marginBottom: '12px', 
+                    fontWeight: 'bold', 
+                    color: theme.textPrimary,
+                    fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
+                               font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
+                               font.name.toLowerCase().includes('playfair') ? 'serif' :
+                               'ui-sans-serif'}, sans-serif`
+                  }}>
                     The quick brown fox jumps
                   </div>
-                  <div style={{ fontSize: '18px', marginBottom: '10px', color: theme.textPrimary }}>
+                  <div style={{ 
+                    fontSize: '18px', 
+                    marginBottom: '10px', 
+                    color: theme.textPrimary,
+                    fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
+                               font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
+                               font.name.toLowerCase().includes('playfair') ? 'serif' :
+                               'ui-sans-serif'}, sans-serif`
+                  }}>
                     Regular weight sample text for {font.name}
                   </div>
-                  <div style={{ fontSize: '14px', color: theme.textSecondary, fontWeight: '500' }}>
+                  <div style={{ 
+                    fontSize: '14px', 
+                    color: theme.textSecondary, 
+                    fontWeight: '500',
+                    fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
+                               font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
+                               font.name.toLowerCase().includes('playfair') ? 'serif' :
+                               'ui-sans-serif'}, sans-serif`
+                  }}>
                     ABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890
+                  </div>
+                  <div style={{
+                    marginTop: '15px',
+                    padding: '10px',
+                    backgroundColor: theme.background,
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    color: theme.textSecondary,
+                    fontStyle: 'italic',
+                    fontFamily: 'ui-sans-serif, system-ui, sans-serif'
+                  }}>
+                    Preview uses: font-family: '{font.name}' with system fallbacks
                   </div>
                 </div>
               </div>
