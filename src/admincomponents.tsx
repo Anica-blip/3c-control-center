@@ -2137,7 +2137,1069 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
         </div>
       )}
 
-      {/* Other sections would go here - keeping code concise for this fix */}
+      {/* LOGOS SECTION */}
+      {activeSection === 'logos' && (
+        <div style={{ 
+          padding: '30px', 
+          backgroundColor: theme.cardBackground, 
+          borderRadius: '0 0 12px 12px',
+          border: `1px solid ${theme.borderColor}`,
+          borderTop: 'none'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              🏷️ Logo Assets
+            </h3>
+            <button 
+              onClick={() => {
+                const newLogo = {
+                  id: logos.length > 0 ? Math.max(...logos.map(l => l.id)) + 1 : 1,
+                  name: 'New Logo',
+                  type: 'PNG',
+                  size: '',
+                  usage: 'Enter usage description'
+                };
+                
+                const updatedLogos = [...logos, newLogo];
+                setLogos(updatedLogos);
+                safeLocalStorage.setItem('brandLogos', updatedLogos);
+                
+                setEditingLogo(newLogo);
+                setEditLogoData({
+                  name: newLogo.name,
+                  type: newLogo.type,
+                  usage: newLogo.usage
+                });
+                
+                showNotification('New logo entry added - add image and edit details below', 'success');
+              }}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#8b5cf6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              ➕ Add New Logo
+            </button>
+          </div>
+
+          {/* Logo Editing Form */}
+          {editingLogo && (
+            <div style={{
+              padding: '30px',
+              border: '2px solid #8b5cf6',
+              borderRadius: '12px',
+              backgroundColor: theme.background,
+              marginBottom: '30px',
+              boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)'
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                ✏️ Edit Logo: {editingLogo.name}
+              </h4>
+              
+              {/* Image Upload Section */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Logo Image
+                </label>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <button
+                    onClick={() => {
+                      if (typeof document !== 'undefined') {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*,.svg';
+                        input.style.display = 'none';
+                        input.onchange = handleLogoFileSelect;
+                        document.body.appendChild(input);
+                        input.click();
+                        document.body.removeChild(input);
+                      }
+                    }}
+                    style={{
+                      padding: '12px 20px',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    📁 Choose Image File
+                  </button>
+                  {logoFile && (
+                    <span style={{ color: theme.textSecondary, fontSize: '14px' }}>
+                      Selected: {logoFile.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Logo Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editLogoData.name}
+                    onChange={(e) => setEditLogoData(prev => ({ ...prev, name: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    File Type
+                  </label>
+                  <select
+                    value={editLogoData.type}
+                    onChange={(e) => setEditLogoData(prev => ({ ...prev, type: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="SVG">SVG</option>
+                    <option value="PNG">PNG</option>
+                    <option value="JPG">JPG</option>
+                    <option value="WebP">WebP</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '25px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Usage Description
+                </label>
+                <textarea
+                  value={editLogoData.usage}
+                  onChange={(e) => setEditLogoData(prev => ({ ...prev, usage: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: `1px solid ${theme.inputBorder}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: theme.inputBackground,
+                    color: theme.textPrimary,
+                    minHeight: '80px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
+                  placeholder="Describe where and how this logo should be used..."
+                />
+              </div>
+
+              {/* Form Actions */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={handleCancelLogo}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: theme.buttonSecondary,
+                    color: theme.buttonSecondaryText,
+                    border: `1px solid ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteLogo(editingLogo.id)}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  🗑️ Delete
+                </button>
+                <button
+                  onClick={handleSaveLogo}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  💾 Save Logo
+                </button>
+              </div>
+            </div>
+          )}
+          
+          <div style={{ display: 'grid', gap: '16px' }}>
+            {logos.map(logo => (
+              <div key={logo.id} style={{
+                padding: '25px',
+                border: `1px solid ${theme.borderColor}`,
+                borderRadius: '12px',
+                backgroundColor: theme.background,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div style={{
+                    width: '80px',
+                    height: '60px',
+                    backgroundColor: theme.headerBackground,
+                    border: `2px dashed ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '24px'
+                  }}>
+                    🏷️
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
+                      {logo.name}
+                    </h4>
+                    <div style={{ fontSize: '12px', color: theme.textSecondary }}>
+                      {logo.type} • {logo.size} • {logo.usage}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    onClick={() => handleEditLogo(logo)}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#f59e0b',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const updatedLogos = logos.filter(l => l.id !== logo.id);
+                      setLogos(updatedLogos);
+                      safeLocalStorage.setItem('brandLogos', updatedLogos);
+                      showNotification(`${logo.name} deleted`, 'success');
+                    }}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TYPOGRAPHY SECTION */}
+      {activeSection === 'fonts' && (
+        <div style={{ 
+          padding: '30px', 
+          backgroundColor: theme.cardBackground, 
+          borderRadius: '0 0 12px 12px',
+          border: `1px solid ${theme.borderColor}`,
+          borderTop: 'none'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              🔤 Typography System
+            </h3>
+            <button 
+              onClick={() => {
+                const newFont = {
+                  id: fonts.length > 0 ? Math.max(...fonts.map(f => f.id)) + 1 : 1,
+                  name: 'New Font',
+                  category: 'Primary',
+                  usage: 'New font usage',
+                  weight: '400-600'
+                };
+                
+                const updatedFonts = [...fonts, newFont];
+                setFonts(updatedFonts);
+                safeLocalStorage.setItem('brandFonts', updatedFonts);
+                
+                setEditingFont(newFont);
+                setEditFontData({
+                  name: newFont.name,
+                  category: newFont.category,
+                  usage: newFont.usage,
+                  weight: newFont.weight
+                });
+                
+                showNotification('New font added - edit the details below', 'success');
+              }}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#8b5cf6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              ➕ Add Font
+            </button>
+          </div>
+
+          {/* Font Editing Form */}
+          {editingFont && (
+            <div style={{
+              padding: '30px',
+              border: '2px solid #3b82f6',
+              borderRadius: '12px',
+              backgroundColor: theme.background,
+              marginBottom: '30px',
+              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                ✏️ Edit Font: {editingFont.name}
+              </h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Font Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editFontData.name}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, name: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Category
+                  </label>
+                  <select
+                    value={editFontData.category}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, category: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="Primary">Primary</option>
+                    <option value="Secondary">Secondary</option>
+                    <option value="Accent">Accent</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Font Weight Range
+                  </label>
+                  <input
+                    type="text"
+                    value={editFontData.weight}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, weight: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., 400-700"
+                  />
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Usage Description
+                  </label>
+                  <input
+                    type="text"
+                    value={editFontData.usage}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, usage: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., Headlines, UI text"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setEditingFont(null);
+                    setEditFontData({ name: '', category: '', usage: '', weight: '' });
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: theme.buttonSecondary,
+                    color: theme.buttonSecondaryText,
+                    border: `1px solid ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const updatedFonts = fonts.filter(f => f.id !== editingFont.id);
+                    setFonts(updatedFonts);
+                    safeLocalStorage.setItem('brandFonts', updatedFonts);
+                    setEditingFont(null);
+                    setEditFontData({ name: '', category: '', usage: '', weight: '' });
+                    showNotification('Font deleted successfully', 'success');
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  🗑️ Delete
+                </button>
+                <button
+                  onClick={handleSaveFont}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  💾 Save Changes
+                </button>
+              </div>
+            </div>
+          )}
+          
+          <div style={{ display: 'grid', gap: '25px' }}>
+            {fonts.map(font => (
+              <div key={font.id} style={{
+                padding: '30px',
+                border: `1px solid ${theme.borderColor}`,
+                borderRadius: '12px',
+                backgroundColor: theme.background,
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px' }}>
+                  <div>
+                    <h4 style={{ margin: '0 0 10px 0', color: theme.textPrimary, fontSize: '20px', fontWeight: 'bold' }}>
+                      {font.name}
+                    </h4>
+                    <div style={{ display: 'flex', gap: '20px', fontSize: '14px', color: theme.textSecondary, marginBottom: '8px' }}>
+                      <span><strong>Category:</strong> {font.category}</span>
+                      <span><strong>Weight:</strong> {font.weight}</span>
+                    </div>
+                    <p style={{ margin: '0', fontSize: '14px', color: theme.textSecondary, lineHeight: '1.5' }}>
+                      {font.usage}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={() => {
+                        const cssCode = `font-family: '${font.name}', sans-serif;\nfont-weight: ${font.weight.split('-')[0]};\nfont-size: 16px;`;
+                        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                          navigator.clipboard.writeText(cssCode).then(() => {
+                            showNotification(`${font.name} CSS copied to clipboard!`, 'success');
+                          }).catch(() => {
+                            showNotification('Failed to copy CSS', 'error');
+                          });
+                        } else {
+                          showNotification('Clipboard not available', 'error');
+                        }
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonSecondary,
+                        color: theme.buttonSecondaryText,
+                        border: `1px solid ${theme.borderColor}`,
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      📋 Copy CSS
+                    </button>
+                    <button 
+                      onClick={() => handleEditFont(font)}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonPrimary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const updatedFonts = fonts.filter(f => f.id !== font.id);
+                        setFonts(updatedFonts);
+                        safeLocalStorage.setItem('brandFonts', updatedFonts);
+                        showNotification(`${font.name} deleted successfully`, 'success');
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Font Preview */}
+                <div style={{
+                  padding: '25px',
+                  backgroundColor: theme.headerBackground,
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.borderColor}`,
+                  fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
+                             font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
+                             font.name.toLowerCase().includes('playfair') ? 'serif' :
+                             'ui-sans-serif'}, sans-serif`
+                }}>
+                  <div style={{ 
+                    fontSize: '32px', 
+                    marginBottom: '12px', 
+                    fontWeight: 'bold', 
+                    color: theme.textPrimary,
+                    fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
+                               font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
+                               font.name.toLowerCase().includes('playfair') ? 'serif' :
+                               'ui-sans-serif'}, sans-serif`
+                  }}>
+                    The quick brown fox jumps
+                  </div>
+                  <div style={{ 
+                    fontSize: '18px', 
+                    marginBottom: '10px', 
+                    color: theme.textPrimary,
+                    fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
+                               font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
+                               font.name.toLowerCase().includes('playfair') ? 'serif' :
+                               'ui-sans-serif'}, sans-serif`
+                  }}>
+                    Regular weight sample text for {font.name}
+                  </div>
+                  <div style={{ 
+                    fontSize: '14px', 
+                    color: theme.textSecondary, 
+                    fontWeight: '500',
+                    fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
+                               font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
+                               font.name.toLowerCase().includes('playfair') ? 'serif' :
+                               'ui-sans-serif'}, sans-serif`
+                  }}>
+                    ABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890
+                  </div>
+                  <div style={{
+                    marginTop: '15px',
+                    padding: '10px',
+                    backgroundColor: theme.background,
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    color: theme.textSecondary,
+                    fontStyle: 'italic',
+                    fontFamily: 'ui-sans-serif, system-ui, sans-serif'
+                  }}>
+                    Preview uses: font-family: '{font.name}' with system fallbacks
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* GUIDELINES SECTION */}
+      {activeSection === 'guidelines' && (
+        <div style={{ 
+          padding: '30px', 
+          backgroundColor: theme.cardBackground, 
+          borderRadius: '0 0 12px 12px',
+          border: `1px solid ${theme.borderColor}`,
+          borderTop: 'none'
+        }}>
+          <h3 style={{ 
+            marginBottom: '30px', 
+            color: theme.textPrimary, 
+            fontSize: '18px', 
+            fontWeight: 'bold' 
+          }}>
+            📋 Brand Guidelines
+          </h3>
+          
+          <div style={{ display: 'grid', gap: '30px' }}>
+            {/* Logo Usage Guidelines */}
+            <div style={{
+              padding: '30px',
+              border: `2px solid ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h4 style={{ color: theme.textPrimary, margin: '0', fontSize: '16px', fontWeight: 'bold' }}>
+                  🏷️ Logo Usage Guidelines
+                </h4>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {!editingGuidelines.logo ? (
+                    <button 
+                      onClick={() => handleEditGuideline('logo')}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonPrimary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => handleCancelEditGuideline('logo')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: theme.buttonSecondary,
+                          color: theme.buttonSecondaryText,
+                          border: `1px solid ${theme.borderColor}`,
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => handleSaveGuideline('logo')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        💾 Save
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              {editingGuidelines.logo ? (
+                <div style={{ padding: '20px', backgroundColor: theme.headerBackground, borderRadius: '8px', border: `1px solid ${theme.borderColor}` }}>
+                  <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
+                    Edit logo usage guidelines:
+                  </p>
+                  <textarea 
+                    style={{
+                      width: '100%',
+                      height: '200px',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                    defaultValue={`DO:\n${guidelinesContent.logo.dos.join('\n')}\n\nDON'T:\n${guidelinesContent.logo.donts.join('\n')}`}
+                  />
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                  <div>
+                    <h5 style={{ color: '#10b981', fontSize: '14px', marginBottom: '12px', fontWeight: 'bold' }}>
+                      ✅ DO
+                    </h5>
+                    <ul style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8', paddingLeft: '20px' }}>
+                      {guidelinesContent.logo.dos.map((item, index) => (
+                        <li key={index}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 style={{ color: '#ef4444', fontSize: '14px', marginBottom: '12px', fontWeight: 'bold' }}>
+                      ❌ DON'T
+                    </h5>
+                    <ul style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8', paddingLeft: '20px' }}>
+                      {guidelinesContent.logo.donts.map((item, index) => (
+                        <li key={index}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Color Usage Guidelines */}
+            <div style={{
+              padding: '30px',
+              border: `2px solid ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h4 style={{ color: theme.textPrimary, margin: '0', fontSize: '16px', fontWeight: 'bold' }}>
+                  🎨 Color Usage Guidelines
+                </h4>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {!editingGuidelines.color ? (
+                    <button 
+                      onClick={() => handleEditGuideline('color')}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonPrimary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => handleCancelEditGuideline('color')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: theme.buttonSecondary,
+                          color: theme.buttonSecondaryText,
+                          border: `1px solid ${theme.borderColor}`,
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => handleSaveGuideline('color')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        💾 Save
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              {editingGuidelines.color ? (
+                <div style={{ padding: '20px', backgroundColor: theme.headerBackground, borderRadius: '8px', border: `1px solid ${theme.borderColor}` }}>
+                  <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
+                    Edit color usage guidelines:
+                  </p>
+                  <textarea 
+                    style={{
+                      width: '100%',
+                      height: '200px',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                    defaultValue={guidelinesContent.color}
+                  />
+                </div>
+              ) : (
+                <div style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8' }}>
+                  {guidelinesContent.color.split('\n\n').map((paragraph, index) => (
+                    <p key={index} style={{ marginBottom: '16px' }}>
+                      {paragraph.split(': ').length > 1 ? (
+                        <>
+                          <strong style={{ color: theme.textPrimary }}>{paragraph.split(': ')[0]}:</strong> {paragraph.split(': ').slice(1).join(': ')}
+                        </>
+                      ) : (
+                        paragraph
+                      )}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Typography Guidelines */}
+            <div style={{
+              padding: '30px',
+              border: `2px solid ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h4 style={{ color: theme.textPrimary, margin: '0', fontSize: '16px', fontWeight: 'bold' }}>
+                  🔤 Typography Guidelines
+                </h4>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {!editingGuidelines.typography ? (
+                    <button 
+                      onClick={() => handleEditGuideline('typography')}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonPrimary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => handleCancelEditGuideline('typography')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: theme.buttonSecondary,
+                          color: theme.buttonSecondaryText,
+                          border: `1px solid ${theme.borderColor}`,
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => handleSaveGuideline('typography')}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        💾 Save
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              {editingGuidelines.typography ? (
+                <div style={{ padding: '20px', backgroundColor: theme.headerBackground, borderRadius: '8px', border: `1px solid ${theme.borderColor}` }}>
+                  <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
+                    Edit typography guidelines:
+                  </p>
+                  <textarea 
+                    style={{
+                      width: '100%',
+                      height: '200px',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                    defaultValue={guidelinesContent.typography}
+                  />
+                </div>
+              ) : (
+                <div style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8' }}>
+                  {guidelinesContent.typography.split('\n\n').map((paragraph, index) => (
+                    <p key={index} style={{ marginBottom: index === guidelinesContent.typography.split('\n\n').length - 1 ? '0' : '16px' }}>
+                      {paragraph.split(': ').length > 1 ? (
+                        <>
+                          <strong style={{ color: theme.textPrimary }}>{paragraph.split(': ')[0]}:</strong> {paragraph.split(': ').slice(1).join(': ')}
+                        </>
+                      ) : (
+                        paragraph
+                      )}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
