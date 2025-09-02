@@ -24,6 +24,7 @@ const supabaseAPI = {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+          'x-upsert': 'true'
         },
         body: formData
       });
@@ -1689,7 +1690,11 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
     showNotification('Saving font to Supabase...', 'info');
     
     try {
-      await supabaseAPI.saveFont(editFontData);
+      const fontData = {
+        ...editFontData,
+        id: editingFont.id
+      };
+      await supabaseAPI.saveFont(fontData);
       
       const updatedFonts = fonts.map(f => 
         f.id === editingFont.id ? { ...f, ...editFontData } : f
@@ -2130,6 +2135,26 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                   >
                     ✏️ Edit
                   </button>
+                  <button 
+                    onClick={() => {
+                      const updatedColors = brandColors.filter(c => c.id !== color.id);
+                      setBrandColors(updatedColors);
+                      safeLocalStorage.setItem('brandColors', updatedColors);
+                      showNotification(`${color.name} deleted`, 'success');
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🗑️ Delete
+                  </button>
                 </div>
               </div>
             ))}
@@ -2411,9 +2436,13 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '24px'
+                    fontSize: '24px',
+                    backgroundImage: logoFile ? `url(${URL.createObjectURL(logoFile)})` : 'none',
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center'
                   }}>
-                    🏷️
+                    {!logoFile && '🏷️'}
                   </div>
                   <div>
                     <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
@@ -2803,20 +2832,14 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                   backgroundColor: theme.headerBackground,
                   borderRadius: '8px',
                   border: `1px solid ${theme.borderColor}`,
-                  fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
-                             font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
-                             font.name.toLowerCase().includes('playfair') ? 'serif' :
-                             'ui-sans-serif'}, sans-serif`
+                  fontFamily: `'${font.name}', sans-serif`
                 }}>
                   <div style={{ 
                     fontSize: '32px', 
                     marginBottom: '12px', 
                     fontWeight: 'bold', 
                     color: theme.textPrimary,
-                    fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
-                               font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
-                               font.name.toLowerCase().includes('playfair') ? 'serif' :
-                               'ui-sans-serif'}, sans-serif`
+                    fontFamily: `'${font.name}', sans-serif`
                   }}>
                     The quick brown fox jumps
                   </div>
@@ -2824,10 +2847,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                     fontSize: '18px', 
                     marginBottom: '10px', 
                     color: theme.textPrimary,
-                    fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
-                               font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
-                               font.name.toLowerCase().includes('playfair') ? 'serif' :
-                               'ui-sans-serif'}, sans-serif`
+                    fontFamily: `'${font.name}', sans-serif`
                   }}>
                     Regular weight sample text for {font.name}
                   </div>
@@ -2835,10 +2855,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                     fontSize: '14px', 
                     color: theme.textSecondary, 
                     fontWeight: '500',
-                    fontFamily: `'${font.name}', ${font.name.toLowerCase().includes('inter') ? 'ui-sans-serif, system-ui' : 
-                               font.name.toLowerCase().includes('roboto') ? 'Roboto, sans-serif' : 
-                               font.name.toLowerCase().includes('playfair') ? 'serif' :
-                               'ui-sans-serif'}, sans-serif`
+                    fontFamily: `'${font.name}', sans-serif`
                   }}>
                     ABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890
                   </div>
