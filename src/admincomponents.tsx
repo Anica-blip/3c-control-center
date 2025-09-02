@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 // =============================================================================
-// SUPABASE INTEGRATION WITH BUCKET → TABLE WORKFLOW
+// COMPLETE SUPABASE INTEGRATION WITH BUCKET → TABLE WORKFLOW
 // =============================================================================
 
 // Supabase Client Configuration
@@ -85,6 +85,76 @@ const supabaseAPI = {
     } catch (error) {
       console.error('💥 Metadata save error:', error);
       throw error;
+    }
+  },
+
+  // Upload custom font files to Supabase bucket (BONUS FEATURE)
+  async uploadCustomFont(fontFile, fontName) {
+    console.log('🔤 Uploading custom font to Supabase bucket:', fontName);
+    
+    try {
+      // Validate font file types
+      const fileExtension = fontFile.name.split('.').pop().toLowerCase();
+      const validExtensions = ['woff', 'woff2', 'ttf', 'otf'];
+      
+      if (!validExtensions.includes(fileExtension)) {
+        throw new Error('Please upload WOFF, WOFF2, TTF, or OTF font files only');
+      }
+      
+      if (fontFile.size > 5 * 1024 * 1024) { // 5MB limit for font files
+        throw new Error('Font file size must be less than 5MB');
+      }
+      
+      const timestamp = Date.now();
+      const fileName = `fonts/${timestamp}_${fontFile.name}`;
+      
+      const uploadResult = await this.uploadFileToBucket(fontFile, fileName);
+      
+      // Generate @font-face CSS for the custom font
+      const fontFaceCSS = this.generateFontFaceCSS(fontName, uploadResult.publicUrl, fileExtension);
+      
+      console.log('✅ Custom font uploaded:', { uploadResult, fontFaceCSS });
+      return {
+        path: fileName,
+        publicUrl: uploadResult.publicUrl,
+        fontFaceCSS: fontFaceCSS
+      };
+    } catch (error) {
+      console.error('💥 Custom font upload error:', error);
+      throw error;
+    }
+  },
+
+  // Generate @font-face CSS for custom fonts (BONUS FEATURE)
+  generateFontFaceCSS(fontName, fontUrl, fileExtension) {
+    let format = 'woff2';
+    if (fileExtension === 'woff') format = 'woff';
+    if (fileExtension === 'ttf') format = 'truetype';
+    if (fileExtension === 'otf') format = 'opentype';
+    
+    return `@font-face {
+  font-family: '${fontName}';
+  src: url('${fontUrl}') format('${format}');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}`;
+  },
+
+  // Load custom font from uploaded file (BONUS FEATURE)
+  loadCustomFont(fontFaceCSS, fontName) {
+    if (typeof document !== 'undefined') {
+      // Check if font is already loaded
+      const existingStyle = document.querySelector(`style[data-font="${fontName}"]`);
+      if (existingStyle) return;
+      
+      // Create and inject @font-face CSS
+      const style = document.createElement('style');
+      style.setAttribute('data-font', fontName);
+      style.textContent = fontFaceCSS;
+      document.head.appendChild(style);
+      
+      console.log(`✅ Custom font loaded: ${fontName}`);
     }
   },
 
@@ -216,6 +286,7 @@ const supabaseAPI = {
           google_fonts_url: googleFontsUrl,
           css_import: cssImport,
           font_family_css: fontFamilyCSS,
+          font_source: 'google',
           status: 'Active'
         })
       });
@@ -229,12 +300,76 @@ const supabaseAPI = {
       
       // Load the font for immediate preview
       if (googleFontsUrl) {
-        this.loadGoogleFont(googleFontsUrl);
+        this.loadGoogleFont(googleFontsUrl, fontData.name);
       }
       
       return result;
     } catch (error) {
       console.error('💥 Font save error:', error);
+      throw error;
+    }
+  },
+
+  // Enhanced font save with custom upload support (BONUS FEATURE)
+  async saveFontWithUpload(fontData, fontFile = null) {
+    console.log('🔤 Saving font with optional file upload:', fontData);
+    
+    try {
+      let customFontUrl = null;
+      let fontFaceCSS = null;
+      let googleFontsUrl = null;
+      let fontSource = 'system';
+      
+      if (fontFile) {
+        // Upload custom font file
+        const uploadResult = await this.uploadCustomFont(fontFile, fontData.name);
+        customFontUrl = uploadResult.publicUrl;
+        fontFaceCSS = uploadResult.fontFaceCSS;
+        fontSource = 'custom';
+        
+        // Load the custom font immediately for preview
+        this.loadCustomFont(fontFaceCSS, fontData.name);
+      } else {
+        // Try Google Fonts
+        googleFontsUrl = this.generateGoogleFontsUrl(fontData.name);
+        if (googleFontsUrl) {
+          fontSource = 'google';
+          this.loadGoogleFont(googleFontsUrl, fontData.name);
+        }
+      }
+      
+      // Save to database with both custom and Google Fonts URLs
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/typography_system`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseConfig.anonKey,
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          name: fontData.name,
+          category: fontData.category,
+          usage: fontData.usage,
+          weight_range: fontData.weight || '400-600',
+          google_fonts_url: googleFontsUrl,
+          css_import: fontFaceCSS || (googleFontsUrl ? `@import url("${googleFontsUrl}");` : null),
+          font_family_css: `font-family: "${fontData.name}", ui-sans-serif, system-ui, sans-serif;`,
+          custom_font_url: customFontUrl,
+          font_source: fontSource,
+          status: 'Active'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Font save failed: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Font saved with upload:', result);
+      return result;
+    } catch (error) {
+      console.error('💥 Font save with upload error:', error);
       throw error;
     }
   },
@@ -275,24 +410,17 @@ const supabaseAPI = {
     }
   },
 
-  // Generate Google Fonts URL
+  // Generate Google Fonts URL - Supports 1000+ fonts
   generateGoogleFontsUrl(fontName) {
-    const commonGoogleFonts = {
-      'Inter': 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
-      'Roboto': 'https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap',
-      'Playfair Display': 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap',
-      'Open Sans': 'https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&display=swap',
-      'Poppins': 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap',
-      'Lato': 'https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap',
-      'Montserrat': 'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap',
-      'Source Sans Pro': 'https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap'
-    };
+    // Clean the font name for URL
+    const cleanFontName = fontName.trim().replace(/\s+/g, '+');
     
-    return commonGoogleFonts[fontName] || null;
+    // Generate Google Fonts URL for ANY font name
+    return `https://fonts.googleapis.com/css2?family=${cleanFontName}:wght@300;400;500;600;700&display=swap`;
   },
 
-  // Load Google Font for preview
-  loadGoogleFont(url) {
+  // Load Google Font for preview - Enhanced with error handling
+  loadGoogleFont(url, fontName) {
     if (typeof document !== 'undefined') {
       // Check if font is already loaded
       const existingLink = document.querySelector(`link[href="${url}"]`);
@@ -302,16 +430,24 @@ const supabaseAPI = {
       link.href = url;
       link.rel = 'stylesheet';
       link.type = 'text/css';
-      document.head.appendChild(link);
       
-      console.log('🔤 Google Font loaded for preview:', url);
+      // Handle font load success/failure
+      link.onload = () => {
+        console.log(`✅ Google Font loaded successfully: ${fontName}`);
+      };
+      
+      link.onerror = () => {
+        console.log(`⚠️ Could not load Google Font: ${fontName} (may be system font or unavailable)`);
+      };
+      
+      document.head.appendChild(link);
     }
   },
 
   // Load all fonts from database for preview
   async loadAllFontsForPreview() {
     try {
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/typography_system?select=name,google_fonts_url&is_active=eq.true`, {
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/typography_system?select=name,google_fonts_url,css_import&is_active=eq.true`, {
         headers: {
           'apikey': supabaseConfig.anonKey,
           'Authorization': `Bearer ${supabaseConfig.anonKey}`
@@ -322,7 +458,9 @@ const supabaseAPI = {
         const fonts = await response.json();
         fonts.forEach(font => {
           if (font.google_fonts_url) {
-            this.loadGoogleFont(font.google_fonts_url);
+            this.loadGoogleFont(font.google_fonts_url, font.name);
+          } else if (font.css_import && font.css_import.includes('@font-face')) {
+            this.loadCustomFont(font.css_import, font.name);
           }
         });
         console.log('✅ All fonts loaded for preview:', fonts.length);
@@ -470,6 +608,993 @@ function AdminComponents({ isDarkMode = false }) {
 }
 
 // =============================================================================
+// TEMPLATES TAB (KEEP YOUR EXISTING CODE)
+// =============================================================================
+
+function AdminTemplatesTab({ theme }) {
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [templates, setTemplates] = useState([
+    {
+      id: 1,
+      name: "Social Media Post",
+      category: "Social",
+      description: "Instagram/Facebook post template",
+      fields: ["title", "description", "hashtags", "image"],
+      lastModified: "2025-01-15"
+    },
+    {
+      id: 2,
+      name: "Blog Article", 
+      category: "Content",
+      description: "Standard blog post structure",
+      fields: ["headline", "introduction", "body", "conclusion", "tags"],
+      lastModified: "2025-01-10"
+    }
+  ]);
+
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [newTemplate, setNewTemplate] = useState({
+    name: '',
+    category: 'Social',
+    description: '',
+    fields: ['']
+  });
+
+  const addField = () => {
+    setNewTemplate(prev => ({
+      ...prev,
+      fields: [...prev.fields, '']
+    }));
+  };
+
+  const updateField = (index, value) => {
+    setNewTemplate(prev => ({
+      ...prev,
+      fields: prev.fields.map((field, i) => i === index ? value : field)
+    }));
+  };
+
+  const removeField = (index) => {
+    setNewTemplate(prev => ({
+      ...prev,
+      fields: prev.fields.filter((_, i) => i !== index)
+    }));
+  };
+
+  const saveTemplate = () => {
+    const newId = templates.length > 0 ? Math.max(...templates.map(t => t.id)) + 1 : 1;
+    const template = {
+      ...newTemplate,
+      id: newId,
+      lastModified: new Date().toISOString().split('T')[0],
+      fields: newTemplate.fields.filter(f => f.trim() !== '')
+    };
+    
+    setTemplates(prev => [...prev, template]);
+    setNewTemplate({ name: '', category: 'Social', description: '', fields: [''] });
+    setShowBuilder(false);
+  };
+
+  return (
+    <div style={{ padding: '20px', backgroundColor: theme.background }}>
+      <h2 style={{ color: theme.textPrimary, fontSize: '20px', fontWeight: 'bold', margin: '0 0 8px 0' }}>
+        🗂️ Manage Templates
+      </h2>
+      <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 30px 0' }}>
+        Create, edit, and manage your content templates
+      </p>
+      
+      {/* Template Builder Toggle */}
+      <div style={{ marginBottom: '30px' }}>
+        <button
+          onClick={() => setShowBuilder(!showBuilder)}
+          style={{
+            padding: '12px 24px',
+            backgroundColor: theme.buttonPrimary,
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            boxShadow: '0 2px 6px rgba(59, 130, 246, 0.25)',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          {showBuilder ? '📋 View Templates' : '➕ Create New Template'}
+        </button>
+      </div>
+
+      {showBuilder ? (
+        <div style={{ 
+          padding: '30px', 
+          border: '2px solid #3b82f6', 
+          borderRadius: '12px', 
+          background: theme.gradientBlue,
+          marginBottom: '30px'
+        }}>
+          <h3 style={{ 
+            color: theme.textPrimary, 
+            marginBottom: '25px', 
+            fontSize: '18px', 
+            fontWeight: 'bold' 
+          }}>
+            🗂️ Template Builder
+          </h3>
+          
+          <div style={{ display: 'grid', gap: '25px' }}>
+            {/* Basic Info */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: 'bold', 
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Template Name
+                </label>
+                <input
+                  type="text"
+                  value={newTemplate.name}
+                  onChange={(e) => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: `1px solid ${theme.inputBorder}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: theme.inputBackground,
+                    color: theme.textPrimary,
+                    outline: 'none'
+                  }}
+                  placeholder="e.g., Instagram Story Template"
+                />
+              </div>
+              
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: 'bold', 
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Category
+                </label>
+                <select
+                  value={newTemplate.category}
+                  onChange={(e) => setNewTemplate(prev => ({ ...prev, category: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: `1px solid ${theme.inputBorder}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: theme.inputBackground,
+                    color: theme.textPrimary,
+                    outline: 'none'
+                  }}
+                >
+                  <option value="Social">Social Media</option>
+                  <option value="Content">Blog Content</option>
+                  <option value="Email">Email Marketing</option>
+                  <option value="Video">Video Content</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '8px', 
+                fontWeight: 'bold', 
+                color: theme.textPrimary,
+                fontSize: '14px'
+              }}>
+                Description
+              </label>
+              <textarea
+                value={newTemplate.description}
+                onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: `1px solid ${theme.inputBorder}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  backgroundColor: theme.inputBackground,
+                  color: theme.textPrimary,
+                  minHeight: '100px',
+                  resize: 'vertical',
+                  fontFamily: 'inherit',
+                  outline: 'none'
+                }}
+                placeholder="Describe what this template is used for..."
+              />
+            </div>
+
+            {/* Template Fields */}
+            <div>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '12px', 
+                fontWeight: 'bold', 
+                color: theme.textPrimary,
+                fontSize: '14px'
+              }}>
+                Template Fields
+              </label>
+              {newTemplate.fields.map((field, index) => (
+                <div key={index} style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                  <input
+                    type="text"
+                    value={field}
+                    onChange={(e) => updateField(index, e.target.value)}
+                    style={{
+                      flex: '1',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder={`Field ${index + 1} (e.g., headline, image, cta)`}
+                  />
+                  {newTemplate.fields.length > 1 && (
+                    <button
+                      onClick={() => removeField(index)}
+                      style={{
+                        padding: '12px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      ✖
+                    </button>
+                  )}
+                </div>
+              ))}
+              
+              <button
+                onClick={addField}
+                style={{
+                  padding: '12px 20px',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  marginTop: '8px'
+                }}
+              >
+                ➕ Add Field
+              </button>
+            </div>
+
+            {/* Save Button */}
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <button
+                onClick={() => setShowBuilder(false)}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: theme.buttonSecondary,
+                  color: theme.buttonSecondaryText,
+                  border: `1px solid ${theme.borderColor}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveTemplate}
+                disabled={!newTemplate.name.trim()}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: newTemplate.name.trim() ? '#10b981' : '#9ca3af',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: newTemplate.name.trim() ? 'pointer' : 'not-allowed',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                💾 Save Template
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Template Library */}
+          <div style={{ 
+            padding: '25px', 
+            border: `1px solid ${theme.borderColor}`, 
+            borderRadius: '12px', 
+            backgroundColor: theme.cardBackground,
+            marginBottom: '30px',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+          }}>
+            <h3 style={{ 
+              marginBottom: '25px', 
+              color: theme.textPrimary, 
+              fontSize: '18px', 
+              fontWeight: 'bold' 
+            }}>
+              📚 Template Library
+            </h3>
+            
+            <div style={{ display: 'grid', gap: '16px' }}>
+              {templates.map(template => (
+                <div 
+                  key={template.id}
+                  style={{ 
+                    padding: '20px', 
+                    border: `1px solid ${theme.borderColor}`, 
+                    borderRadius: '8px', 
+                    backgroundColor: theme.background,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onClick={() => setSelectedTemplate(selectedTemplate === template.id ? null : template.id)}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: '1' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                        <h4 style={{ margin: '0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
+                          {template.name}
+                        </h4>
+                        <span style={{ 
+                          padding: '4px 12px', 
+                          backgroundColor: '#dbeafe', 
+                          color: '#1e40af', 
+                          borderRadius: '16px', 
+                          fontSize: '12px',
+                          fontWeight: 'bold'
+                        }}>
+                          {template.category}
+                        </span>
+                      </div>
+                      <p style={{ 
+                        margin: '0 0 12px 0', 
+                        color: theme.textSecondary, 
+                        fontSize: '14px',
+                        lineHeight: '1.5'
+                      }}>
+                        {template.description}
+                      </p>
+                      <div style={{ fontSize: '12px', color: theme.textSecondary }}>
+                        Last modified: {template.lastModified} • {template.fields.length} fields
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button style={{ 
+                        padding: '8px 16px', 
+                        backgroundColor: theme.buttonPrimary, 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '6px', 
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}>
+                        ✏️ Edit
+                      </button>
+                      <button style={{ 
+                        padding: '8px 16px', 
+                        backgroundColor: '#10b981', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '6px', 
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}>
+                        📋 Use
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {selectedTemplate === template.id && (
+                    <div style={{ 
+                      marginTop: '20px', 
+                      padding: '16px', 
+                      backgroundColor: theme.headerBackground, 
+                      borderRadius: '8px',
+                      border: `1px solid ${theme.borderColor}`
+                    }}>
+                      <h5 style={{ 
+                        margin: '0 0 12px 0', 
+                        color: theme.textPrimary, 
+                        fontSize: '14px', 
+                        fontWeight: 'bold' 
+                      }}>
+                        Template Fields:
+                      </h5>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {template.fields.map((field, index) => (
+                          <span 
+                            key={index}
+                            style={{ 
+                              padding: '6px 12px', 
+                              backgroundColor: theme.buttonSecondary, 
+                              color: theme.buttonSecondaryText, 
+                              borderRadius: '12px', 
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                              border: `1px solid ${theme.borderColor}`
+                            }}
+                          >
+                            {field}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* External Tools Section */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+            {/* LEFT SIDE: External Builder Tools */}
+            <div style={{ 
+              padding: '25px', 
+              border: '2px solid #3b82f6', 
+              borderRadius: '12px', 
+              background: theme.gradientBlue
+            }}>
+              <h3 style={{ color: theme.textPrimary, marginBottom: '12px', fontSize: '18px', fontWeight: 'bold' }}>
+                🗂️ External Builder Tools
+              </h3>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', marginBottom: '20px' }}>
+                External integration for automated generation
+              </p>
+              
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {[
+                  {
+                    name: 'Content Template Engine',
+                    desc: 'Comprehensive template creation and management',
+                    url: 'https://anica-blip.github.io/3c-content-template-engine/'
+                  },
+                  {
+                    name: 'Featured Content Templates',
+                    desc: 'Social Media, Blog, News page, Article',
+                    url: 'https://anica-blip.github.io/3c-desktop-editor/'
+                  },
+                  {
+                    name: 'Content Management',
+                    desc: 'Content creation with AI & Templates',
+                    url: 'https://anica-blip.github.io/3c-content-scheduler/'
+                  },
+                  {
+                    name: 'SM Content Generator',
+                    desc: 'Generate social media post content',
+                    url: 'https://anica-blip.github.io/3c-smpost-generator/'
+                  }
+                ].map((tool, index) => (
+                  <a 
+                    key={index}
+                    href={tool.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '16px', 
+                      backgroundColor: 'rgba(255,255,255,0.1)', 
+                      border: `1px solid ${theme.borderColor}`, 
+                      borderRadius: '8px', 
+                      textDecoration: 'none',
+                      color: theme.textPrimary,
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>
+                        {tool.name}
+                      </div>
+                      <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                        {tool.desc}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold' }}>🔗 Open</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* RIGHT SIDE: 3C Brand Products */}
+            <div style={{ 
+              padding: '25px', 
+              border: '2px solid #10b981', 
+              borderRadius: '12px', 
+              background: theme.gradientGreen
+            }}>
+              <h3 style={{ color: theme.textPrimary, marginBottom: '12px', fontSize: '18px', fontWeight: 'bold' }}>
+                🎮 3C Brand Products
+              </h3>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', marginBottom: '20px' }}>
+                External app editors for interactive app loaders
+              </p>
+              
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {[
+                  {
+                    name: 'Quiz Generator',
+                    desc: '3C Interactive Quizzes',
+                    url: 'https://anica-blip.github.io/3c-quiz-admin/'
+                  },
+                  {
+                    name: 'Quiz Landing Page & App Loader',
+                    desc: 'Quiz application landing interface',
+                    url: 'https://anica-blip.github.io/3c-quiz-admin/landing.html?quiz=quiz.01'
+                  },
+                  {
+                    name: 'Game Generator',
+                    desc: 'Games, puzzles, challenges',
+                    url: 'https://anica-blip.github.io/3c-game-loader/'
+                  }
+                ].map((tool, index) => (
+                  <a 
+                    key={index}
+                    href={tool.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '16px', 
+                      backgroundColor: 'rgba(255,255,255,0.1)', 
+                      border: `1px solid ${theme.borderColor}`, 
+                      borderRadius: '8px', 
+                      textDecoration: 'none',
+                      color: theme.textPrimary,
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>
+                        {tool.name}
+                      </div>
+                      <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                        {tool.desc}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold' }}>🔗 Open</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// LIBRARIES TAB (KEEP YOUR EXISTING CODE)
+// =============================================================================
+
+function AdminLibrariesTab({ theme }) {
+  const [notionConnected, setNotionConnected] = useState(false);
+  const [wasabiConnected, setWasabiConnected] = useState(false);
+  const [canvaConnected, setCanvaConnected] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  // Add notification system
+  const showNotification = (message, type = 'info') => {
+    const id = Date.now();
+    const notification = { id, message, type };
+    setNotifications(prev => [...prev, notification]);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 3000);
+  };
+
+  // Connection handlers
+  const handleNotionToggle = () => {
+    if (notionConnected) {
+      setNotionConnected(false);
+      showNotification('Notion disconnected successfully', 'info');
+    } else {
+      // Simulate connection process
+      showNotification('Connecting to Notion...', 'info');
+      setTimeout(() => {
+        setNotionConnected(true);
+        showNotification('Notion connected successfully!', 'success');
+      }, 1500);
+    }
+  };
+
+  const handleWasabiToggle = () => {
+    if (wasabiConnected) {
+      setWasabiConnected(false);
+      showNotification('Wasabi storage disconnected', 'info');
+    } else {
+      showNotification('Connecting to Wasabi Cloud...', 'info');
+      setTimeout(() => {
+        setWasabiConnected(true);
+        showNotification('Wasabi Cloud Storage connected!', 'success');
+      }, 1500);
+    }
+  };
+
+  const handleCanvaToggle = () => {
+    if (canvaConnected) {
+      setCanvaConnected(false);
+      showNotification('Canva workspace disconnected', 'info');
+    } else {
+      showNotification('Connecting to Canva...', 'info');
+      setTimeout(() => {
+        setCanvaConnected(true);
+        showNotification('Canva workspace connected!', 'success');
+      }, 1500);
+    }
+  };
+
+  // Wasabi action handlers
+  const handleWasabiBrowse = () => {
+    showNotification('Opening Wasabi file browser...', 'info');
+    if (typeof window !== 'undefined') {
+      window.open('https://console.wasabisys.com', '_blank');
+    }
+  };
+
+  const handleWasabiUpload = () => {
+    showNotification('Upload functionality ready for implementation!', 'info');
+  };
+
+  const IntegrationCard = ({ 
+    title, 
+    subtitle, 
+    emoji, 
+    connected, 
+    onToggle, 
+    children, 
+    gradientColor 
+  }) => (
+    <div style={{ 
+      padding: '30px', 
+      border: `2px solid ${connected ? '#10b981' : '#f59e0b'}`, 
+      borderRadius: '12px', 
+      background: gradientColor,
+      marginBottom: '30px'
+    }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '25px' 
+      }}>
+        <div>
+          <h3 style={{ 
+            margin: '0', 
+            color: theme.textPrimary, 
+            fontSize: '20px', 
+            fontWeight: 'bold' 
+          }}>
+            {emoji} {title}
+          </h3>
+          <p style={{ 
+            margin: '8px 0 0 0', 
+            color: theme.textSecondary, 
+            fontSize: '14px' 
+          }}>
+            {subtitle}
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ 
+            padding: '6px 12px', 
+            backgroundColor: connected ? '#10b981' : '#f59e0b', 
+            color: 'white', 
+            borderRadius: '16px', 
+            fontSize: '12px',
+            fontWeight: 'bold'
+          }}>
+            {connected ? '✅ Connected' : '⏳ Ready to Connect'}
+          </span>
+          <button
+            onClick={onToggle}
+            style={{
+              padding: '12px 20px',
+              backgroundColor: connected ? '#ef4444' : '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {connected ? 'Disconnect' : '🔗 Connect'}
+          </button>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+
+  return (
+    <div style={{ padding: '20px', backgroundColor: theme.background }}>
+      {/* Notification System */}
+      {notifications.length > 0 && (
+        <div style={{ 
+          position: 'fixed', 
+          top: '20px', 
+          right: '20px', 
+          zIndex: 1000, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '10px',
+          maxWidth: '400px'
+        }}>
+          {notifications.map(notification => (
+            <div key={notification.id} style={{
+              padding: '12px 20px',
+              backgroundColor: notification.type === 'success' ? '#10b981' : 
+                             notification.type === 'error' ? '#ef4444' : '#3b82f6',
+              color: 'white',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              position: 'relative',
+              wordWrap: 'break-word'
+            }}>
+              {notification.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <h2 style={{ color: theme.textPrimary, fontSize: '20px', fontWeight: 'bold', margin: '0 0 8px 0' }}>
+        📚 Libraries
+      </h2>
+      <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 30px 0' }}>
+        External service integrations and storage management
+      </p>
+      
+      <div style={{ display: 'grid', gap: '0' }}>
+        
+        {/* NOTION INTEGRATION */}
+        <IntegrationCard
+          title="Notion Integration"
+          subtitle="Content management and documentation"
+          emoji="📝"
+          connected={notionConnected}
+          onToggle={handleNotionToggle}
+          gradientColor={theme.gradientBlue}
+        >
+          {notionConnected ? (
+            <div>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+                📄 Connected to Internal Hub
+              </h4>
+              <div style={{ fontSize: '14px', color: theme.textSecondary, marginBottom: '20px' }}>
+                Content Calendar • Brand Guidelines • Templates
+              </div>
+              <div style={{
+                padding: '20px', 
+                backgroundColor: 'rgba(255,255,255,0.1)', 
+                borderRadius: '8px',
+                border: `1px solid ${theme.borderColor}`
+              }}>
+                <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
+                  🔗 Main Hub Link:
+                </p>
+                <a
+                  href="https://www.notion.so/INTERNAL-HUB-2256ace1e8398087a3c9d25c1cf253e5"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ 
+                    fontSize: '12px', 
+                    color: '#3b82f6', 
+                    textDecoration: 'underline',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  notion.so/INTERNAL-HUB-2256ace1e8398087a3c9d25c1cf253e5
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
+              <p style={{ color: theme.textPrimary, fontSize: '16px', marginBottom: '8px', fontWeight: 'bold' }}>
+                Connect your Notion workspace
+              </p>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0' }}>
+                Access your content calendars, brand guidelines, and documentation
+              </p>
+            </div>
+          )}
+        </IntegrationCard>
+
+        {/* WASABI INTEGRATION */}
+        <IntegrationCard
+          title="Wasabi Cloud Storage"
+          subtitle="Internal assets & public member content storage"
+          emoji="📦"
+          connected={wasabiConnected}
+          onToggle={handleWasabiToggle}
+          gradientColor={theme.gradientRed}
+        >
+          {wasabiConnected ? (
+            <div>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+                📦 Storage Connected
+              </h4>
+              <div style={{ fontSize: '14px', color: theme.textSecondary, marginBottom: '20px' }}>
+                Internal Assets • Member Content • Media Library
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div style={{
+                  padding: '20px', 
+                  backgroundColor: 'rgba(255,255,255,0.1)', 
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.borderColor}`
+                }}>
+                  <p style={{ margin: '0 0 12px 0', fontSize: '12px', fontWeight: 'bold', color: theme.textPrimary }}>
+                    Storage Usage:
+                  </p>
+                  <div style={{ fontSize: '16px', color: theme.textPrimary, fontWeight: 'bold', marginBottom: '8px' }}>
+                    2.4 GB / 50 GB
+                  </div>
+                  <div style={{ 
+                    width: '100%', 
+                    height: '8px', 
+                    backgroundColor: theme.borderColor, 
+                    borderRadius: '4px', 
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ 
+                      width: '4.8%', 
+                      height: '100%', 
+                      backgroundColor: '#10b981' 
+                    }}></div>
+                  </div>
+                </div>
+                <div style={{
+                  padding: '20px', 
+                  backgroundColor: 'rgba(255,255,255,0.1)', 
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.borderColor}`
+                }}>
+                  <p style={{ margin: '0 0 12px 0', fontSize: '12px', fontWeight: 'bold', color: theme.textPrimary }}>
+                    Quick Actions:
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={handleWasabiBrowse}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '12px',
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      🔍 Browse
+                    </button>
+                    <button 
+                      onClick={handleWasabiUpload}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '12px',
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      ⬆️ Upload
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📦</div>
+              <p style={{ color: theme.textPrimary, fontSize: '16px', marginBottom: '8px', fontWeight: 'bold' }}>
+                Connect Wasabi Cloud Storage
+              </p>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0' }}>
+                Secure cloud storage for your assets and member content
+              </p>
+            </div>
+          )}
+        </IntegrationCard>
+
+        {/* CANVA INTEGRATION */}
+        <IntegrationCard
+          title="Canva Integration"
+          subtitle="Design templates and brand assets"
+          emoji="🎨"
+          connected={canvaConnected}
+          onToggle={handleCanvaToggle}
+          gradientColor={theme.gradientPurple}
+        >
+          {canvaConnected ? (
+            <div>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+                🎨 Design Library Connected
+              </h4>
+              <div style={{ fontSize: '14px', color: theme.textSecondary, marginBottom: '20px' }}>
+                Brand Templates • Design Assets • Collaborative Workspace
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                {[
+                  { emoji: '📄', title: 'Templates', value: '47 designs' },
+                  { emoji: '🏢', title: 'Brand Kit', value: 'Active' },
+                  { emoji: '👥', title: 'Team', value: '5 members' }
+                ].map((item, index) => (
+                  <div key={index} style={{
+                    padding: '20px', 
+                    backgroundColor: 'rgba(255,255,255,0.1)', 
+                    borderRadius: '8px',
+                    textAlign: 'center',
+                    border: `1px solid ${theme.borderColor}`
+                  }}>
+                    <div style={{ fontSize: '24px', marginBottom: '8px' }}>{item.emoji}</div>
+                    <div style={{ fontSize: '12px', fontWeight: 'bold', color: theme.textPrimary, marginBottom: '4px' }}>
+                      {item.title}
+                    </div>
+                    <div style={{ fontSize: '11px', color: theme.textSecondary }}>{item.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎨</div>
+              <p style={{ color: theme.textPrimary, fontSize: '16px', marginBottom: '8px', fontWeight: 'bold' }}>
+                Connect your Canva workspace
+              </p>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0' }}>
+                Access design templates, brand kits, and collaborative tools
+              </p>
+            </div>
+          )}
+        </IntegrationCard>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
 // BRAND TAB WITH COMPLETE FILE UPLOAD + DATABASE INTEGRATION
 // =============================================================================
 
@@ -481,13 +1606,14 @@ function AdminBrandTab({ theme, isDarkMode }) {
   const [brandColors, setBrandColors] = useState(() => {
     return safeLocalStorage.getItem('brandColors', [
       { id: 1, name: 'Primary Blue', hex: '#3b82f6', usage: 'Main brand color' },
-      { id: 2, name: 'Secondary Green', hex: '#10b981', usage: 'Success states' }
+      { id: 2, name: 'Secondary Green', hex: '#10b981', usage: 'Success states' },
+      { id: 3, name: 'Accent Purple', hex: '#8b5cf6', usage: 'Creative elements' }
     ]);
   });
 
   const [logos, setLogos] = useState(() => {
     return safeLocalStorage.getItem('brandLogos', [
-      { id: 1, name: 'Primary Logo', type: 'SVG', size: '1.2 MB', usage: 'Main brand identity' }
+      { id: 1, name: 'Primary Logo', type: 'SVG', size: '1.2 MB', usage: 'Main brand identity', category: 'Primary Logo' }
     ]);
   });
 
@@ -525,6 +1651,10 @@ function AdminBrandTab({ theme, isDarkMode }) {
     usage: '',
     weight: ''
   });
+
+  // BONUS: Custom font upload states
+  const [customFontFile, setCustomFontFile] = useState(null);
+  const [fontSourceType, setFontSourceType] = useState('google'); // 'google', 'custom', 'system'
 
   // Notification system
   const showNotification = (message, type = 'info') => {
@@ -595,12 +1725,51 @@ function AdminBrandTab({ theme, isDarkMode }) {
       setBrandColors(updatedColors);
       
     } catch (error) {
-      showNotification(`Save failed: ${error.message}`, 'error');
+      // Fallback to localStorage if Supabase fails
+      let updatedColors;
+      if (editingColor) {
+        updatedColors = brandColors.map(color => 
+          color.id === editingColor.id 
+            ? { ...color, name: newColor.name, hex: newColor.hex, usage: newColor.usage }
+            : color
+        );
+      } else {
+        const colorToAdd = {
+          id: brandColors.length > 0 ? Math.max(...brandColors.map(c => c.id)) + 1 : 1,
+          name: newColor.name,
+          hex: newColor.hex,
+          usage: newColor.usage
+        };
+        updatedColors = [...brandColors, colorToAdd];
+      }
+      
+      safeLocalStorage.setItem('brandColors', updatedColors);
+      setBrandColors(updatedColors);
+      
+      showNotification(`${editingColor ? 'Updated' : 'Added'} ${newColor.name} (saved locally - Supabase sync failed)`, 'error');
     }
     
     setNewColor({ name: '', hex: '#523474', usage: '' });
     setShowColorForm(false);
     setEditingColor(null);
+  };
+
+  const handleCancelColor = () => {
+    setNewColor({ name: '', hex: '#523474', usage: '' });
+    setShowColorForm(false);
+    setEditingColor(null);
+  };
+
+  const handleCopyColor = (hex) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(hex).then(() => {
+        showNotification(`Copied ${hex} to clipboard`, 'success');
+      }).catch(() => {
+        showNotification('Failed to copy color code', 'error');
+      });
+    } else {
+      showNotification('Clipboard not available', 'error');
+    }
   };
 
   // Logo management functions
@@ -664,11 +1833,24 @@ function AdminBrandTab({ theme, isDarkMode }) {
       setEditLogoData({ name: '', type: '', usage: '', category: 'Primary Logo' });
       setLogoFile(null);
     } catch (error) {
-      showNotification(`Logo save failed: ${error.message}`, 'error');
+      // Fallback to local save
+      const updatedLogos = logos.map(logo => 
+        logo.id === editingLogo.id ? { ...logo, ...editLogoData } : logo
+      );
+      setLogos(updatedLogos);
+      safeLocalStorage.setItem('brandLogos', updatedLogos);
+      
+      showNotification(`Logo saved locally - Supabase sync failed: ${error.message}`, 'error');
     }
   };
 
-  // Font management functions
+  const handleCancelLogo = () => {
+    setEditingLogo(null);
+    setEditLogoData({ name: '', type: '', usage: '', category: 'Primary Logo' });
+    setLogoFile(null);
+  };
+
+  // Font management functions  
   const handleSaveFont = async () => {
     if (!editFontData.name.trim()) {
       showNotification('Please enter a font name', 'error');
@@ -678,7 +1860,14 @@ function AdminBrandTab({ theme, isDarkMode }) {
     showNotification('Saving font to Supabase...', 'info');
     
     try {
-      await supabaseAPI.saveFont(editFontData);
+      // Choose save method based on font source type
+      if (fontSourceType === 'custom' && customFontFile) {
+        // Use enhanced save with custom font upload
+        await supabaseAPI.saveFontWithUpload(editFontData, customFontFile);
+      } else {
+        // Use regular save (Google Fonts or system fonts)
+        await supabaseAPI.saveFont(editFontData);
+      }
       
       const updatedFonts = fonts.map(f => 
         f.id === editingFont.id ? { ...f, ...editFontData } : f
@@ -686,10 +1875,22 @@ function AdminBrandTab({ theme, isDarkMode }) {
       setFonts(updatedFonts);
       safeLocalStorage.setItem('brandFonts', updatedFonts);
       
-      showNotification(`${editFontData.name} saved to Supabase and loaded for preview!`, 'success');
+      const fontType = customFontFile ? 'custom font' : 'font';
+      showNotification(`${editFontData.name} ${fontType} saved and loaded for preview!`, 'success');
+      
+      // Reset form
       setEditingFont(null);
       setEditFontData({ name: '', category: '', usage: '', weight: '' });
+      setCustomFontFile(null);
+      setFontSourceType('google');
     } catch (error) {
+      // Fallback to local save
+      const updatedFonts = fonts.map(f => 
+        f.id === editingFont.id ? { ...f, ...editFontData } : f
+      );
+      setFonts(updatedFonts);
+      safeLocalStorage.setItem('brandFonts', updatedFonts);
+      
       showNotification(`Font save failed: ${error.message}`, 'error');
     }
   };
@@ -901,11 +2102,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                 <button
-                  onClick={() => {
-                    setNewColor({ name: '', hex: '#523474', usage: '' });
-                    setShowColorForm(false);
-                    setEditingColor(null);
-                  }}
+                  onClick={handleCancelColor}
                   style={{
                     padding: '12px 24px',
                     backgroundColor: theme.buttonSecondary,
@@ -971,10 +2168,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                 </p>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button 
-                    onClick={() => {
-                      navigator.clipboard?.writeText(color.hex);
-                      showNotification(`${color.hex} copied!`, 'success');
-                    }}
+                    onClick={() => handleCopyColor(color.hex)}
                     style={{
                       padding: '8px 16px',
                       backgroundColor: theme.buttonSecondary,
@@ -1030,7 +2224,8 @@ function AdminBrandTab({ theme, isDarkMode }) {
                   name: 'New Logo',
                   type: 'PNG',
                   size: '',
-                  usage: 'Enter usage description'
+                  usage: 'Enter usage description',
+                  category: 'Primary Logo'
                 };
                 
                 setLogos([...logos, newLogo]);
@@ -1170,11 +2365,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                 <button
-                  onClick={() => {
-                    setEditingLogo(null);
-                    setEditLogoData({ name: '', type: '', usage: '', category: 'Primary Logo' });
-                    setLogoFile(null);
-                  }}
+                  onClick={handleCancelLogo}
                   style={{
                     padding: '12px 24px',
                     backgroundColor: theme.buttonSecondary,
@@ -1262,7 +2453,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
         </div>
       )}
 
-      {/* TYPOGRAPHY SECTION WITH GOOGLE FONTS */}
+      {/* TYPOGRAPHY SECTION WITH GOOGLE FONTS + CUSTOM UPLOAD */}
       {activeSection === 'fonts' && (
         <div style={{ 
           padding: '30px', 
@@ -1273,13 +2464,13 @@ function AdminBrandTab({ theme, isDarkMode }) {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
             <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              🔤 Typography → Supabase Database + Google Fonts
+              🔤 Typography → Supabase Database + 1000+ Google Fonts
             </h3>
             <button 
               onClick={() => {
                 const newFont = {
                   id: fonts.length > 0 ? Math.max(...fonts.map(f => f.id)) + 1 : 1,
-                  name: 'Poppins',
+                  name: 'Nunito',
                   category: 'Primary',
                   usage: 'New font usage',
                   weight: '400-600'
@@ -1294,7 +2485,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                   weight: newFont.weight
                 });
                 
-                showNotification('New font added - edit the details below', 'success');
+                showNotification('New font added - choose your font below', 'success');
               }}
               style={{
                 padding: '12px 20px',
@@ -1311,7 +2502,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
             </button>
           </div>
 
-          {/* Font Editing Form */}
+          {/* Font Editing Form with Custom Upload Support */}
           {editingFont && (
             <div style={{
               padding: '30px',
@@ -1324,49 +2515,182 @@ function AdminBrandTab({ theme, isDarkMode }) {
                 ✏️ Edit Font: {editingFont.name}
               </h4>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                <select
-                  value={editFontData.name}
-                  onChange={(e) => setEditFontData(prev => ({ ...prev, name: e.target.value }))}
-                  style={{
-                    padding: '12px',
-                    border: `1px solid ${theme.inputBorder}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    backgroundColor: theme.inputBackground,
-                    color: theme.textPrimary,
-                    outline: 'none'
-                  }}
-                >
-                  <option value="Inter">Inter</option>
-                  <option value="Roboto">Roboto</option>
-                  <option value="Playfair Display">Playfair Display</option>
-                  <option value="Open Sans">Open Sans</option>
-                  <option value="Poppins">Poppins</option>
-                  <option value="Lato">Lato</option>
-                  <option value="Montserrat">Montserrat</option>
-                  <option value="Source Sans Pro">Source Sans Pro</option>
-                </select>
-                
-                <select
-                  value={editFontData.category}
-                  onChange={(e) => setEditFontData(prev => ({ ...prev, category: e.target.value }))}
-                  style={{
-                    padding: '12px',
-                    border: `1px solid ${theme.inputBorder}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    backgroundColor: theme.inputBackground,
-                    color: theme.textPrimary,
-                    outline: 'none'
-                  }}
-                >
-                  <option value="Primary">Primary</option>
-                  <option value="Secondary">Secondary</option>
-                  <option value="Accent">Accent</option>
-                </select>
+              {/* FONT SOURCE SELECTION */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Font Source
+                </label>
+                <div style={{ display: 'flex', gap: '20px', marginBottom: '15px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="fontSource"
+                      value="google"
+                      checked={fontSourceType === 'google'}
+                      onChange={(e) => setFontSourceType(e.target.value)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span style={{ color: theme.textPrimary, fontSize: '14px' }}>🆓 Google Fonts (1000+)</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="fontSource"
+                      value="custom"
+                      checked={fontSourceType === 'custom'}
+                      onChange={(e) => setFontSourceType(e.target.value)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span style={{ color: theme.textPrimary, fontSize: '14px' }}>📁 Upload Custom Font</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="fontSource"
+                      value="system"
+                      checked={fontSourceType === 'system'}
+                      onChange={(e) => setFontSourceType(e.target.value)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span style={{ color: theme.textPrimary, fontSize: '14px' }}>💻 System Font</span>
+                  </label>
+                </div>
               </div>
 
+              {/* CUSTOM FONT UPLOAD (BONUS FEATURE) */}
+              {fontSourceType === 'custom' && (
+                <div style={{ marginBottom: '20px', padding: '20px', backgroundColor: theme.headerBackground, borderRadius: '8px' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Upload Font File
+                  </label>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
+                    <button
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.woff,.woff2,.ttf,.otf';
+                        input.style.display = 'none';
+                        input.onchange = (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setCustomFontFile(file);
+                            // Auto-fill font name from filename
+                            const fontName = file.name.replace(/\.(woff2?|[ot]tf)$/i, '').replace(/[_-]/g, ' ');
+                            setEditFontData(prev => ({ ...prev, name: fontName }));
+                          }
+                        };
+                        document.body.appendChild(input);
+                        input.click();
+                        document.body.removeChild(input);
+                      }}
+                      style={{
+                        padding: '12px 20px',
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      📁 Choose Font File
+                    </button>
+                    {customFontFile && (
+                      <span style={{ color: theme.textSecondary, fontSize: '14px' }}>
+                        Selected: {customFontFile.name} ({(customFontFile.size / 1024).toFixed(1)} KB)
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '12px', color: theme.textSecondary, fontStyle: 'italic' }}>
+                    💡 Supported: WOFF, WOFF2, TTF, OTF files (max 5MB)
+                    <br />
+                    Use your own licensed fonts, purchased fonts, or custom brand fonts
+                  </div>
+                </div>
+              )}
+
+              {/* FONT NAME INPUT - Open Text for ANY Font */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Font Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editFontData.name}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, name: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder={
+                      fontSourceType === 'google' ? 'e.g., Nunito, Raleway, Dancing Script, Oswald' :
+                      fontSourceType === 'system' ? 'e.g., Helvetica, Arial, Times New Roman' :
+                      'Font name (auto-filled from file)'
+                    }
+                  />
+                  <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '4px', fontStyle: 'italic' }}>
+                    {fontSourceType === 'google' && '🆓 Try ANY Google Font name - 1000+ available!'}
+                    {fontSourceType === 'system' && '💻 System fonts available on all computers'}
+                    {fontSourceType === 'custom' && '📁 Your custom font name'}
+                  </div>
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Category
+                  </label>
+                  <input
+                    type="text"
+                    value={editFontData.category}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, category: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., Primary, Secondary, Heading, Display"
+                  />
+                </div>
+              </div>
+
+              {/* USAGE AND WEIGHT */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
                 <input
                   type="text"
@@ -1381,7 +2705,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     color: theme.textPrimary,
                     outline: 'none'
                   }}
-                  placeholder="e.g., 400-700"
+                  placeholder="Font weights (e.g., 400-700)"
                 />
                 
                 <input
@@ -1397,15 +2721,18 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     color: theme.textPrimary,
                     outline: 'none'
                   }}
-                  placeholder="e.g., Headlines, UI text"
+                  placeholder="Usage description"
                 />
               </div>
 
+              {/* SAVE BUTTONS */}
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                 <button
                   onClick={() => {
                     setEditingFont(null);
                     setEditFontData({ name: '', category: '', usage: '', weight: '' });
+                    setCustomFontFile(null);
+                    setFontSourceType('google');
                   }}
                   style={{
                     padding: '12px 24px',
@@ -1433,7 +2760,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     fontWeight: 'bold'
                   }}
                 >
-                  💾 Save to Supabase
+                  💾 Save {fontSourceType === 'custom' ? 'Custom Font' : 'Font'} to Supabase
                 </button>
               </div>
             </div>
@@ -1461,29 +2788,77 @@ function AdminBrandTab({ theme, isDarkMode }) {
                       {font.usage}
                     </p>
                   </div>
-                  <button 
-                    onClick={() => {
-                      setEditingFont(font);
-                      setEditFontData({
-                        name: font.name,
-                        category: font.category,
-                        usage: font.usage,
-                        weight: font.weight
-                      });
-                    }}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: theme.buttonPrimary,
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    ✏️ Edit
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={() => {
+                        const cssCode = `font-family: '${font.name}', sans-serif;\nfont-weight: ${font.weight.split('-')[0]};\nfont-size: 16px;`;
+                        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                          navigator.clipboard.writeText(cssCode).then(() => {
+                            showNotification(`${font.name} CSS copied to clipboard!`, 'success');
+                          }).catch(() => {
+                            showNotification('Failed to copy CSS', 'error');
+                          });
+                        } else {
+                          showNotification('Clipboard not available', 'error');
+                        }
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonSecondary,
+                        color: theme.buttonSecondaryText,
+                        border: `1px solid ${theme.borderColor}`,
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      📋 Copy CSS
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setEditingFont(font);
+                        setEditFontData({
+                          name: font.name,
+                          category: font.category,
+                          usage: font.usage,
+                          weight: font.weight
+                        });
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonPrimary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const updatedFonts = fonts.filter(f => f.id !== font.id);
+                        setFonts(updatedFonts);
+                        safeLocalStorage.setItem('brandFonts', updatedFonts);
+                        showNotification(`${font.name} deleted successfully`, 'success');
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
                 </div>
                 
                 {/* Font Preview with Google Fonts */}
@@ -1492,14 +2867,14 @@ function AdminBrandTab({ theme, isDarkMode }) {
                   backgroundColor: theme.headerBackground,
                   borderRadius: '8px',
                   border: `1px solid ${theme.borderColor}`,
-                  fontFamily: `'${font.name}', sans-serif`
+                  fontFamily: `'${font.name}', ui-sans-serif, system-ui, sans-serif`
                 }}>
                   <div style={{ 
                     fontSize: '32px', 
                     marginBottom: '12px', 
                     fontWeight: 'bold', 
                     color: theme.textPrimary,
-                    fontFamily: `'${font.name}', sans-serif`
+                    fontFamily: `'${font.name}', ui-sans-serif, system-ui, sans-serif`
                   }}>
                     The quick brown fox jumps
                   </div>
@@ -1507,7 +2882,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     fontSize: '18px', 
                     marginBottom: '10px', 
                     color: theme.textPrimary,
-                    fontFamily: `'${font.name}', sans-serif`
+                    fontFamily: `'${font.name}', ui-sans-serif, system-ui, sans-serif`
                   }}>
                     Regular weight sample text for {font.name}
                   </div>
@@ -1515,7 +2890,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     fontSize: '14px', 
                     color: theme.textSecondary, 
                     fontWeight: '500',
-                    fontFamily: `'${font.name}', sans-serif`
+                    fontFamily: `'${font.name}', ui-sans-serif, system-ui, sans-serif`
                   }}>
                     ABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890
                   </div>
@@ -1529,7 +2904,7 @@ function AdminBrandTab({ theme, isDarkMode }) {
                     fontStyle: 'italic',
                     fontFamily: 'ui-sans-serif, system-ui, sans-serif'
                   }}>
-                    ✅ Google Fonts loaded: '{font.name}' preview active
+                    ✅ Font preview active - Google Fonts loaded automatically
                   </div>
                 </div>
               </div>
@@ -1537,25 +2912,6 @@ function AdminBrandTab({ theme, isDarkMode }) {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// Keep existing Templates and Libraries tabs (placeholder)
-function AdminTemplatesTab({ theme }) {
-  return (
-    <div style={{ padding: '30px', color: theme.textPrimary }}>
-      <h3>Templates Tab - Keep your existing code here</h3>
-      <p style={{ color: theme.textSecondary }}>This section unchanged from your original code.</p>
-    </div>
-  );
-}
-
-function AdminLibrariesTab({ theme }) {
-  return (
-    <div style={{ padding: '30px', color: theme.textPrimary }}>
-      <h3>Libraries Tab - Keep your existing code here</h3>
-      <p style={{ color: theme.textSecondary }}>This section unchanged from your original code.</p>
     </div>
   );
 }
