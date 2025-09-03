@@ -2420,10 +2420,8 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                       height: '64px',
                       backgroundColor: color.hex_code || color.hex,
                       borderRadius: '12px',
-                      border: `3px solid ${isDarkMode ? '#ffffff' : '#000000'}`,
-                      boxShadow: isDarkMode 
-                        ? '0 4px 12px rgba(255, 255, 255, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.3)' 
-                        : '0 4px 12px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.1)'
+                      border: '2px solid #ffffff',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
                     }}></div>
                     <div>
                       <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
