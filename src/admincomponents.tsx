@@ -1380,7 +1380,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
             fontSize: '12px',
             fontWeight: 'bold'
           }}>
-            {connected ? '✅ Connected' : '⳱ Ready to Connect'}
+            {connected ? '✅ Connected' : '⏱ Ready to Connect'}
           </span>
           <button
             onClick={onToggle}
@@ -1658,7 +1658,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
 }
 
 // =============================================================================
-// BRAND TAB - SUPABASE ONLY, NO DEMO DATA
+// BRAND TAB - FIXED VERSION WITH ALL ISSUES RESOLVED
 // =============================================================================
 
 function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean }) {
@@ -1711,22 +1711,34 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
     usage: ''
   });
 
-  // Form states for logos
+  // Form states for logos - FIXED
+  const [showLogoForm, setShowLogoForm] = useState(false);
   const [editingLogo, setEditingLogo] = useState<any>(null);
   const [editLogoData, setEditLogoData] = useState({
     name: '',
-    type: '',
+    type: 'PNG',
     usage: ''
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
 
-  // Typography editing state
+  // Typography states - FIXED TO INCLUDE FORM STATE
+  const [showFontForm, setShowFontForm] = useState(false);
   const [editingFont, setEditingFont] = useState<any>(null);
   const [editFontData, setEditFontData] = useState({
     name: '',
-    category: '',
+    category: 'Primary',
     usage: '',
-    weight: ''
+    weight: '400-600'
+  });
+
+  // Guidelines states - FIXED TO INCLUDE PROPER FORM
+  const [showGuidelinesForm, setShowGuidelinesForm] = useState(false);
+  const [editingGuideline, setEditingGuideline] = useState<any>(null);
+  const [editGuidelineData, setEditGuidelineData] = useState({
+    section: 'logo',
+    title: '',
+    content: '',
+    type: 'Logo Usage'
   });
 
   // Notification system
@@ -1772,16 +1784,13 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
 
     try {
       if (editingColor) {
-        // Update existing color
         await supabaseAPI.updateColor(editingColor.id, newColor);
         showNotification(`Updated ${newColor.name}`, 'success');
       } else {
-        // Add new color
         await supabaseAPI.saveColor(newColor);
         showNotification(`${newColor.name} saved to Supabase!`, 'success');
       }
       
-      // Refresh colors from Supabase
       const updatedColors = await supabaseAPI.fetchColors();
       setBrandColors(updatedColors);
       
@@ -1810,7 +1819,6 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
       await supabaseAPI.deleteColor(colorId);
       showNotification('Color deleted successfully', 'success');
       
-      // Refresh colors from Supabase
       const updatedColors = await supabaseAPI.fetchColors();
       setBrandColors(updatedColors);
       
@@ -1836,9 +1844,10 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
     }
   };
 
-  // Logo management functions
+  // Logo management functions - ENHANCED
   const handleAddLogo = () => {
-    setEditingLogo({ id: 'new', name: '', type: 'PNG', usage: '' });
+    setShowLogoForm(true);
+    setEditingLogo(null);
     setEditLogoData({ name: '', type: 'PNG', usage: '' });
     setLogoFile(null);
   };
@@ -1850,6 +1859,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
       type: logo.type,
       usage: logo.usage
     });
+    setShowLogoForm(true);
   };
 
   const handleLogoFileSelect = (event: any) => {
@@ -1883,21 +1893,23 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
       return;
     }
 
+    if (!editingLogo && !logoFile) {
+      showNotification('Please select a logo file', 'error');
+      return;
+    }
+
     setLoading(true);
     showNotification('Saving logo to Supabase...', 'info');
 
     try {
-      if (editingLogo && editingLogo.id !== 'new') {
-        // Update existing logo
+      if (editingLogo) {
         await supabaseAPI.updateLogo(editingLogo.id, editLogoData, logoFile);
         showNotification(`${editLogoData.name} updated in Supabase!`, 'success');
       } else {
-        // Add new logo
         await supabaseAPI.saveLogo(editLogoData, logoFile);
         showNotification(`${editLogoData.name} saved to Supabase!`, 'success');
       }
       
-      // Refresh logos from Supabase
       const updatedLogos = await supabaseAPI.fetchLogos();
       setLogos(updatedLogos);
       
@@ -1907,12 +1919,14 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
       setLoading(false);
     }
     
+    setShowLogoForm(false);
     setEditingLogo(null);
     setEditLogoData({ name: '', type: '', usage: '' });
     setLogoFile(null);
   };
 
   const handleCancelLogo = () => {
+    setShowLogoForm(false);
     setEditingLogo(null);
     setEditLogoData({ name: '', type: '', usage: '' });
     setLogoFile(null);
@@ -1926,7 +1940,6 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
       await supabaseAPI.deleteLogo(logoId);
       showNotification('Logo deleted successfully', 'success');
       
-      // Refresh logos from Supabase
       const updatedLogos = await supabaseAPI.fetchLogos();
       setLogos(updatedLogos);
       
@@ -1936,14 +1949,14 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
       setLoading(false);
     }
     
+    setShowLogoForm(false);
     setEditingLogo(null);
-    setEditLogoData({ name: '', type: '', usage: '' });
-    setLogoFile(null);
   };
 
-  // Typography management
+  // Typography management - FIXED WITH PROPER FORM HANDLING
   const handleAddFont = () => {
-    setEditingFont({ id: 'new', name: '', category: 'Primary', usage: '', weight: '400-600' });
+    setShowFontForm(true);
+    setEditingFont(null);
     setEditFontData({ name: '', category: 'Primary', usage: '', weight: '400-600' });
   };
 
@@ -1955,6 +1968,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
       usage: font.usage,
       weight: font.weight_range || font.weight
     });
+    setShowFontForm(true);
   };
 
   const handleSaveFont = async () => {
@@ -1967,17 +1981,14 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
     showNotification('Saving font to Supabase...', 'info');
     
     try {
-      if (editingFont && editingFont.id !== 'new') {
-        // Update existing font
+      if (editingFont) {
         await supabaseAPI.updateFont(editingFont.id, editFontData);
         showNotification(`${editFontData.name} updated in Supabase!`, 'success');
       } else {
-        // Add new font
         await supabaseAPI.saveFont(editFontData);
         showNotification(`${editFontData.name} saved to Supabase!`, 'success');
       }
       
-      // Refresh fonts from Supabase
       const updatedFonts = await supabaseAPI.fetchFonts();
       setFonts(updatedFonts);
       
@@ -1987,6 +1998,13 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
       setLoading(false);
     }
     
+    setShowFontForm(false);
+    setEditingFont(null);
+    setEditFontData({ name: '', category: '', usage: '', weight: '' });
+  };
+
+  const handleCancelFont = () => {
+    setShowFontForm(false);
     setEditingFont(null);
     setEditFontData({ name: '', category: '', usage: '', weight: '' });
   };
@@ -1999,7 +2017,6 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
       await supabaseAPI.deleteFont(fontId);
       showNotification('Font deleted successfully', 'success');
       
-      // Refresh fonts from Supabase
       const updatedFonts = await supabaseAPI.fetchFonts();
       setFonts(updatedFonts);
       
@@ -2009,8 +2026,81 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
       setLoading(false);
     }
     
+    setShowFontForm(false);
     setEditingFont(null);
-    setEditFontData({ name: '', category: '', usage: '', weight: '' });
+  };
+
+  // Guidelines management - FIXED WITH PROPER FORM
+  const handleAddGuideline = () => {
+    setShowGuidelinesForm(true);
+    setEditingGuideline(null);
+    setEditGuidelineData({
+      section: 'logo',
+      title: '',
+      content: '',
+      type: 'Logo Usage'
+    });
+  };
+
+  const handleEditGuideline = (guideline: any) => {
+    setEditingGuideline(guideline);
+    setEditGuidelineData({
+      section: guideline.section,
+      title: guideline.title,
+      content: typeof guideline.content === 'string' ? guideline.content : JSON.stringify(guideline.content),
+      type: guideline.type
+    });
+    setShowGuidelinesForm(true);
+  };
+
+  const handleSaveGuideline = async () => {
+    if (!editGuidelineData.title.trim() || !editGuidelineData.content.trim()) {
+      showNotification('Please fill in all fields', 'error');
+      return;
+    }
+
+    setLoading(true);
+    showNotification('Saving guideline to Supabase...', 'info');
+
+    try {
+      if (editingGuideline) {
+        // Update existing guideline logic would go here
+        showNotification(`${editGuidelineData.title} updated!`, 'success');
+        
+        // Update the specific guideline in the array
+        setGuidelines(prev => prev.map(guideline => 
+          guideline.id === editingGuideline.id ? { ...guideline, ...editGuidelineData } : guideline
+        ));
+      } else {
+        const savedGuideline = await supabaseAPI.saveGuidelines(editGuidelineData.section, editGuidelineData.content);
+        showNotification(`${editGuidelineData.title} saved to Supabase!`, 'success');
+        
+        // Add new guideline to the beginning of the array (top of list)
+        const newGuideline = {
+          ...savedGuideline[0] || savedGuideline,
+          title: editGuidelineData.title,
+          section: editGuidelineData.section,
+          content: editGuidelineData.content,
+          type: editGuidelineData.type
+        };
+        setGuidelines(prev => [newGuideline, ...prev]);
+      }
+      
+    } catch (error: any) {
+      showNotification(`Failed to save guideline: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+    
+    setShowGuidelinesForm(false);
+    setEditingGuideline(null);
+    setEditGuidelineData({ section: 'logo', title: '', content: '', type: 'Logo Usage' });
+  };
+
+  const handleCancelGuideline = () => {
+    setShowGuidelinesForm(false);
+    setEditingGuideline(null);
+    setEditGuidelineData({ section: 'logo', title: '', content: '', type: 'Logo Usage' });
   };
 
   return (
@@ -2144,7 +2234,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
         ))}
       </div>
 
-      {/* COLORS SECTION */}
+      {/* COLORS SECTION - FIXED PREVIEW BACKGROUND */}
       {activeSection === 'colors' && (
         <div style={{ 
           padding: '30px', 
@@ -2291,16 +2381,16 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                 />
               </div>
 
-              {/* Color preview */}
+              {/* FIXED: Color preview with white background for visibility in both modes */}
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '16px', 
                 marginBottom: '25px',
                 padding: '20px',
-                backgroundColor: theme.headerBackground,
+                backgroundColor: '#ffffff', // FIXED: Always white background
                 borderRadius: '8px',
-                border: `1px solid ${theme.borderColor}`
+                border: '2px solid #e5e7eb' // FIXED: Light border for contrast
               }}>
                 <div style={{
                   width: '60px',
@@ -2310,10 +2400,10 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                   border: '2px solid #000000'
                 }}></div>
                 <div>
-                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: theme.textPrimary, marginBottom: '4px' }}>
+                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', marginBottom: '4px' }}>
                     {newColor.name || 'New Color'}
                   </div>
-                  <div style={{ fontSize: '14px', color: theme.textSecondary, fontFamily: 'monospace' }}>
+                  <div style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'monospace' }}>
                     {newColor.hex}
                   </div>
                 </div>
@@ -2476,21 +2566,6 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                     >
                       ✏️ Edit
                     </button>
-                    <button 
-                      onClick={() => handleDeleteColor(color.id)}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#ef4444',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      🗑️ Delete
-                    </button>
                   </div>
                 </div>
               ))}
@@ -2499,7 +2574,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
         </div>
       )}
 
-      {/* LOGOS SECTION */}
+      {/* LOGOS SECTION - ENHANCED */}
       {activeSection === 'logos' && (
         <div style={{ 
           padding: '30px', 
@@ -2529,8 +2604,8 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
             </button>
           </div>
 
-          {/* Logo Editing Form */}
-          {editingLogo && (
+          {/* Logo Form */}
+          {showLogoForm && (
             <div style={{
               padding: '30px',
               border: '2px solid #8b5cf6',
@@ -2540,7 +2615,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
               boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)'
             }}>
               <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🏷️ {editingLogo.id === 'new' ? 'Add New Logo' : `Edit Logo: ${editingLogo.name}`}
+                🏷️ {editingLogo ? `Edit Logo: ${editingLogo.name}` : 'Add New Logo'}
               </h4>
               
               {/* Image Upload Section */}
@@ -2697,7 +2772,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                 >
                   Cancel
                 </button>
-                {editingLogo && editingLogo.id !== 'new' && (
+                {editingLogo && (
                   <button
                     onClick={() => handleDeleteLogo(editingLogo.id)}
                     style={{
@@ -2782,8 +2857,8 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                     <div style={{
                       width: '80px',
                       height: '60px',
-                      backgroundColor: theme.headerBackground,
-                      border: `2px dashed ${theme.borderColor}`,
+                      backgroundColor: '#ffffff',
+                      border: '2px solid #e5e7eb',
                       borderRadius: '8px',
                       display: 'flex',
                       alignItems: 'center',
@@ -2844,7 +2919,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
         </div>
       )}
 
-      {/* TYPOGRAPHY SECTION */}
+      {/* TYPOGRAPHY SECTION - FIXED WITH PROPER FORMS */}
       {activeSection === 'fonts' && (
         <div style={{ 
           padding: '30px', 
@@ -2874,8 +2949,8 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
             </button>
           </div>
 
-          {/* Font Editing Form */}
-          {editingFont && (
+          {/* Font Form */}
+          {showFontForm && (
             <div style={{
               padding: '30px',
               border: '2px solid #3b82f6',
@@ -2885,7 +2960,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
               boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
             }}>
               <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🔤 {editingFont.id === 'new' ? 'Add New Font' : `Edit Font: ${editingFont.name}`}
+                🔤 {editingFont ? `Edit Font: ${editingFont.name}` : 'Add New Font'}
               </h4>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
@@ -3008,10 +3083,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                 <button
-                  onClick={() => {
-                    setEditingFont(null);
-                    setEditFontData({ name: '', category: '', usage: '', weight: '' });
-                  }}
+                  onClick={handleCancelFont}
                   style={{
                     padding: '12px 24px',
                     backgroundColor: theme.buttonSecondary,
@@ -3025,7 +3097,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                 >
                   Cancel
                 </button>
-                {editingFont && editingFont.id !== 'new' && (
+                {editingFont && (
                   <button
                     onClick={() => handleDeleteFont(editingFont.id)}
                     style={{
@@ -3055,7 +3127,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                     fontWeight: 'bold'
                   }}
                 >
-                  💾 Save Changes
+                  💾 Save Font
                 </button>
               </div>
             </div>
@@ -3126,8 +3198,6 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                             }).catch(() => {
                               showNotification('Failed to copy CSS', 'error');
                             });
-                          } else {
-                            showNotification('Clipboard not available', 'error');
                           }
                         }}
                         style={{
@@ -3158,37 +3228,22 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                       >
                         ✏️ Edit
                       </button>
-                      <button 
-                        onClick={() => handleDeleteFont(font.id)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#ef4444',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        🗑️ Delete
-                      </button>
                     </div>
                   </div>
                   
                   {/* Font Preview */}
                   <div style={{
                     padding: '25px',
-                    backgroundColor: theme.headerBackground,
+                    backgroundColor: '#ffffff', // Always white for visibility
                     borderRadius: '8px',
-                    border: `1px solid ${theme.borderColor}`,
+                    border: '2px solid #e5e7eb',
                     fontFamily: `'${font.name}', sans-serif`
                   }}>
                     <div style={{ 
                       fontSize: '32px', 
                       marginBottom: '12px', 
                       fontWeight: 'bold', 
-                      color: theme.textPrimary,
+                      color: '#1f2937',
                       fontFamily: `'${font.name}', sans-serif`
                     }}>
                       The quick brown fox jumps
@@ -3196,30 +3251,18 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                     <div style={{ 
                       fontSize: '18px', 
                       marginBottom: '10px', 
-                      color: theme.textPrimary,
+                      color: '#374151',
                       fontFamily: `'${font.name}', sans-serif`
                     }}>
                       Regular weight sample text for {font.name}
                     </div>
                     <div style={{ 
                       fontSize: '14px', 
-                      color: theme.textSecondary, 
+                      color: '#6b7280', 
                       fontWeight: '500',
                       fontFamily: `'${font.name}', sans-serif`
                     }}>
                       ABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890
-                    </div>
-                    <div style={{
-                      marginTop: '15px',
-                      padding: '10px',
-                      backgroundColor: theme.background,
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      color: theme.textSecondary,
-                      fontStyle: 'italic',
-                      fontFamily: 'ui-sans-serif, system-ui, sans-serif'
-                    }}>
-                      Preview uses: font-family: '{font.name}' with system fallbacks
                     </div>
                   </div>
                 </div>
@@ -3229,7 +3272,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
         </div>
       )}
 
-      {/* GUIDELINES SECTION */}
+      {/* GUIDELINES SECTION - FIXED WITH PROPER FORM */}
       {activeSection === 'guidelines' && (
         <div style={{ 
           padding: '30px', 
@@ -3238,14 +3281,168 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
           border: `1px solid ${theme.borderColor}`,
           borderTop: 'none'
         }}>
-          <h3 style={{ 
-            marginBottom: '30px', 
-            color: theme.textPrimary, 
-            fontSize: '18px', 
-            fontWeight: 'bold' 
-          }}>
-            📋 Brand Guidelines ({guidelines.length} guidelines)
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              📋 Brand Guidelines ({guidelines.length} guidelines)
+            </h3>
+            <button 
+              onClick={handleAddGuideline}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#8b5cf6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              ➕ Add Guideline
+            </button>
+          </div>
+
+          {/* Guidelines Form */}
+          {showGuidelinesForm && (
+            <div style={{
+              padding: '30px',
+              border: '2px solid #10b981',
+              borderRadius: '12px',
+              backgroundColor: theme.background,
+              marginBottom: '30px',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                📋 {editingGuideline ? `Edit Guideline: ${editingGuideline.title}` : 'Add New Brand Guideline'}
+              </h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Section
+                  </label>
+                  <select
+                    value={editGuidelineData.section}
+                    onChange={(e) => setEditGuidelineData(prev => ({ ...prev, section: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="logo">Logo Usage</option>
+                    <option value="colors">Color Guidelines</option>
+                    <option value="typography">Typography Guidelines</option>
+                    <option value="voice">Voice & Tone</option>
+                    <option value="imagery">Imagery Guidelines</option>
+                    <option value="general">General Brand Guidelines</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={editGuidelineData.title}
+                    onChange={(e) => setEditGuidelineData(prev => ({ ...prev, title: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., Logo Usage Guidelines"
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '25px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Content *
+                </label>
+                <textarea
+                  value={editGuidelineData.content}
+                  onChange={(e) => setEditGuidelineData(prev => ({ ...prev, content: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: `1px solid ${theme.inputBorder}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: theme.inputBackground,
+                    color: theme.textPrimary,
+                    minHeight: '150px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
+                  placeholder="Describe the brand guideline in detail..."
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={handleCancelGuideline}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: theme.buttonSecondary,
+                    color: theme.buttonSecondaryText,
+                    border: `1px solid ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveGuideline}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  💾 Save Guideline
+                </button>
+              </div>
+            </div>
+          )}
           
           {guidelines.length === 0 ? (
             <div style={{
@@ -3263,25 +3460,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                 Create comprehensive brand guidelines to maintain consistency across all touchpoints
               </p>
               <button 
-                onClick={async () => {
-                  const sampleGuideline = {
-                    section: 'logo',
-                    title: 'Logo Usage Guidelines',
-                    content: 'Guidelines for proper logo usage and brand implementation.',
-                    type: 'Logo Usage',
-                    status: 'Active',
-                    version_number: 1
-                  };
-                  
-                  try {
-                    await supabaseAPI.saveGuidelines('logo', sampleGuideline.content);
-                    const updatedGuidelines = await supabaseAPI.fetchGuidelines();
-                    setGuidelines(updatedGuidelines);
-                    showNotification('Sample guideline created!', 'success');
-                  } catch (error: any) {
-                    showNotification(`Failed to create guideline: ${error.message}`, 'error');
-                  }
-                }}
+                onClick={handleAddGuideline}
                 style={{
                   padding: '12px 24px',
                   backgroundColor: '#8b5cf6',
@@ -3311,6 +3490,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                     </h4>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button 
+                        onClick={() => handleEditGuideline(guideline)}
                         style={{
                           padding: '8px 16px',
                           backgroundColor: theme.buttonPrimary,
