@@ -320,12 +320,12 @@ const supabaseAPI = {
     }
   },
 
-  // Fetch fonts using Edge Function
+  // Fetch fonts using Edge Function with correct name
   async fetchFonts() {
     console.log('🔤 Fetching fonts via Edge Function...');
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/fetch_brand_font`, {
+      const response = await fetch(`${supabaseConfig.url}/functions/v1/fetch_brand_fonts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -532,7 +532,7 @@ const supabaseAPI = {
     console.log('📋 Updating guidelines via Edge Function:', { guidelineId, guidelineData });
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_guidelines`, {
+      const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_guidelines-ts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -562,7 +562,7 @@ const supabaseAPI = {
     console.log('📋 Deleting guidelines via Edge Function:', guidelineId);
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_guidelines`, {
+      const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_guidelines-ts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
