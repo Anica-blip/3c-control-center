@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 // =============================================================================
-// FIXED SUPABASE INTEGRATION - VITE ENVIRONMENT VARIABLES
+// COMPLETE SUPABASE EDGE FUNCTIONS INTEGRATION
 // =============================================================================
 
 // Vite Supabase Client Configuration
@@ -10,7 +10,7 @@ const supabaseConfig = {
   anonKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || ''
 };
 
-// Fixed Supabase API with correct endpoints and Vite env vars
+// Complete Supabase API with Edge Functions
 const supabaseAPI = {
   // Upload file to Supabase Storage bucket
   async uploadFileToBucket(file: File, fileName: string, bucketName = 'brand-assets') {
@@ -73,7 +73,7 @@ const supabaseAPI = {
     }
   },
 
-  // Save color to Supabase - Fixed endpoint
+  // Save color to Supabase
   async saveColor(colorData: any) {
     console.log('🎨 Saving color to Supabase:', colorData);
     
@@ -113,30 +113,20 @@ const supabaseAPI = {
     }
   },
 
-  // Update color in Supabase
+  // Update color using Edge Function
   async updateColor(colorId: number, colorData: any) {
-    console.log('🎨 Updating color in Supabase:', { colorId, colorData });
+    console.log('🎨 Updating color via Edge Function:', { colorId, colorData });
     
     try {
-      const hex = colorData.hex.replace('#', '');
-      const r = parseInt(hex.substr(0, 2), 16);
-      const g = parseInt(hex.substr(2, 2), 16);
-      const b = parseInt(hex.substr(4, 2), 16);
-      const rgbValues = `rgb(${r}, ${g}, ${b})`;
-      
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_colors?id=eq.${colorId}`, {
-        method: 'PATCH',
+      const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_colors`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': supabaseConfig.anonKey,
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-          'Prefer': 'return=representation'
         },
         body: JSON.stringify({
-          name: colorData.name,
-          hex_code: colorData.hex,
-          usage: colorData.usage,
-          rgb_values: rgbValues
+          colorId: colorId,
+          colorData: colorData
         })
       });
       
@@ -145,32 +135,36 @@ const supabaseAPI = {
       }
       
       const result = await response.json();
-      console.log('✅ Color updated in Supabase:', result);
-      return result;
+      console.log('✅ Color updated via Edge Function:', result);
+      return result.data;
     } catch (error) {
       console.error('💥 Color update error:', error);
       throw error;
     }
   },
 
-  // Delete color from Supabase
+  // Delete color using Edge Function
   async deleteColor(colorId: number) {
-    console.log('🎨 Deleting color from Supabase:', colorId);
+    console.log('🎨 Deleting color via Edge Function:', colorId);
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_colors?id=eq.${colorId}`, {
-        method: 'DELETE',
+      const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_colors`, {
+        method: 'POST',
         headers: {
-          'apikey': supabaseConfig.anonKey,
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        }
+        },
+        body: JSON.stringify({
+          colorId: colorId
+        })
       });
       
       if (!response.ok) {
         throw new Error(`Color delete failed: ${response.status}`);
       }
       
-      console.log('✅ Color deleted from Supabase');
+      const result = await response.json();
+      console.log('✅ Color deleted via Edge Function:', result);
       return true;
     } catch (error) {
       console.error('💥 Color delete error:', error);
@@ -204,7 +198,7 @@ const supabaseAPI = {
     }
   },
 
-  // Save logo to Supabase - Fixed endpoint
+  // Save logo to Supabase
   async saveLogo(logoData: any, file: File | null = null) {
     console.log('🏷️ Saving logo to Supabase:', logoData);
     
@@ -253,43 +247,35 @@ const supabaseAPI = {
     }
   },
 
-  // Update logo in Supabase
+  // Update logo using Edge Function
   async updateLogo(logoId: number, logoData: any, file: File | null = null) {
-    console.log('🏷️ Updating logo in Supabase:', { logoId, logoData });
+    console.log('🏷️ Updating logo via Edge Function:', { logoId, logoData });
     
     try {
-      let fileUrl = null;
-      let filePath = null;
+      let fileInfo = null;
       
       if (file) {
         const timestamp = Date.now();
         const fileName = `logos/${timestamp}_${file.name}`;
         const uploadResult = await this.uploadFileToBucket(file, fileName);
-        fileUrl = uploadResult.publicUrl;
-        filePath = uploadResult.fullPath;
+        fileInfo = {
+          publicUrl: uploadResult.publicUrl,
+          fullPath: uploadResult.fullPath,
+          size: `${(file.size / 1024).toFixed(1)} KB`
+        };
       }
       
-      const updateData: any = {
-        name: logoData.name,
-        type: logoData.type,
-        usage: logoData.usage,
-      };
-      
-      if (fileUrl) {
-        updateData.file_url = fileUrl;
-        updateData.file_path = filePath;
-        updateData.file_size = file ? `${(file.size / 1024).toFixed(1)} KB` : logoData.size;
-      }
-      
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_logos?id=eq.${logoId}`, {
-        method: 'PATCH',
+      const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_logos`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': supabaseConfig.anonKey,
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-          'Prefer': 'return=representation'
         },
-        body: JSON.stringify(updateData)
+        body: JSON.stringify({
+          logoId: logoId,
+          logoData: logoData,
+          fileInfo: fileInfo
+        })
       });
       
       if (!response.ok) {
@@ -297,32 +283,36 @@ const supabaseAPI = {
       }
       
       const result = await response.json();
-      console.log('✅ Logo updated in Supabase:', result);
-      return result;
+      console.log('✅ Logo updated via Edge Function:', result);
+      return result.data;
     } catch (error) {
       console.error('💥 Logo update error:', error);
       throw error;
     }
   },
 
-  // Delete logo from Supabase
+  // Delete logo using Edge Function
   async deleteLogo(logoId: number) {
-    console.log('🏷️ Deleting logo from Supabase:', logoId);
+    console.log('🏷️ Deleting logo via Edge Function:', logoId);
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_logos?id=eq.${logoId}`, {
-        method: 'DELETE',
+      const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_logos`, {
+        method: 'POST',
         headers: {
-          'apikey': supabaseConfig.anonKey,
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        }
+        },
+        body: JSON.stringify({
+          logoId: logoId
+        })
       });
       
       if (!response.ok) {
         throw new Error(`Logo delete failed: ${response.status}`);
       }
       
-      console.log('✅ Logo deleted from Supabase');
+      const result = await response.json();
+      console.log('✅ Logo deleted via Edge Function:', result);
       return true;
     } catch (error) {
       console.error('💥 Logo delete error:', error);
@@ -330,15 +320,15 @@ const supabaseAPI = {
     }
   },
 
-  // UPDATED: Fetch fonts from brand_font table
+  // Fetch fonts using Edge Function
   async fetchFonts() {
-    console.log('🔤 Fetching fonts from Supabase (brand_font table)...');
+    console.log('🔤 Fetching fonts via Edge Function...');
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
-        method: 'GET',
+      const response = await fetch(`${supabaseConfig.url}/functions/v1/fetch_brand_font`, {
+        method: 'POST',
         headers: {
-          'apikey': supabaseConfig.anonKey,
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
         }
       });
@@ -347,25 +337,25 @@ const supabaseAPI = {
         throw new Error(`Failed to fetch fonts: ${response.status}`);
       }
       
-      const fonts = await response.json();
-      console.log('✅ Fonts fetched from Supabase (brand_font):', fonts);
-      return fonts;
+      const result = await response.json();
+      console.log('✅ Fonts fetched via Edge Function:', result);
+      return result.data || [];
     } catch (error) {
       console.error('💥 Font fetch error:', error);
       return [];
     }
   },
 
-  // UPDATED: Save font to brand_font table
+  // Save font to Supabase
   async saveFont(fontData: any) {
-    console.log('🔤 Saving font to Supabase (brand_font table):', fontData);
+    console.log('🔤 Saving font to Supabase:', fontData);
     
     try {
       const googleFontsUrl = this.generateGoogleFontsUrl(fontData.name);
       const cssImport = googleFontsUrl ? `@import url("${googleFontsUrl}");` : null;
       const fontFamilyCSS = `font-family: "${fontData.name}", ui-sans-serif, system-ui, sans-serif;`;
       
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/typography_system`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -391,7 +381,7 @@ const supabaseAPI = {
       }
       
       const result = await response.json();
-      console.log('✅ Font saved to Supabase (brand_font):', result);
+      console.log('✅ Font saved to Supabase:', result);
       
       if (googleFontsUrl) {
         this.loadGoogleFont(googleFontsUrl, fontData.name);
@@ -404,16 +394,16 @@ const supabaseAPI = {
     }
   },
 
-  // UPDATED: Update font in brand_font table
+  // Update font in Supabase
   async updateFont(fontId: number, fontData: any) {
-    console.log('🔤 Updating font in Supabase (brand_font table):', { fontId, fontData });
+    console.log('🔤 Updating font in Supabase:', { fontId, fontData });
     
     try {
       const googleFontsUrl = this.generateGoogleFontsUrl(fontData.name);
       const cssImport = googleFontsUrl ? `@import url("${googleFontsUrl}");` : null;
       const fontFamilyCSS = `font-family: "${fontData.name}", ui-sans-serif, system-ui, sans-serif;`;
       
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font?id=eq.${fontId}`, {
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/typography_system?id=eq.${fontId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -437,7 +427,7 @@ const supabaseAPI = {
       }
       
       const result = await response.json();
-      console.log('✅ Font updated in Supabase (brand_font):', result);
+      console.log('✅ Font updated in Supabase:', result);
       
       if (googleFontsUrl) {
         this.loadGoogleFont(googleFontsUrl, fontData.name);
@@ -450,12 +440,12 @@ const supabaseAPI = {
     }
   },
 
-  // UPDATED: Delete font from brand_font table
+  // Delete font from Supabase
   async deleteFont(fontId: number) {
-    console.log('🔤 Deleting font from Supabase (brand_font table):', fontId);
+    console.log('🔤 Deleting font from Supabase:', fontId);
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font?id=eq.${fontId}`, {
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/typography_system?id=eq.${fontId}`, {
         method: 'DELETE',
         headers: {
           'apikey': supabaseConfig.anonKey,
@@ -467,7 +457,7 @@ const supabaseAPI = {
         throw new Error(`Font delete failed: ${response.status}`);
       }
       
-      console.log('✅ Font deleted from Supabase (brand_font)');
+      console.log('✅ Font deleted from Supabase');
       return true;
     } catch (error) {
       console.error('💥 Font delete error:', error);
@@ -501,7 +491,7 @@ const supabaseAPI = {
     }
   },
 
-  // Save guidelines to Supabase - Fixed endpoint
+  // Save guidelines to Supabase
   async saveGuidelines(section: string, content: any) {
     console.log('📋 Saving guidelines to Supabase:', { section, content });
     
@@ -537,6 +527,65 @@ const supabaseAPI = {
     }
   },
 
+  // Update guidelines using Edge Function
+  async updateGuidelines(guidelineId: number, guidelineData: any) {
+    console.log('📋 Updating guidelines via Edge Function:', { guidelineId, guidelineData });
+    
+    try {
+      const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_guidelines`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+        },
+        body: JSON.stringify({
+          guidelineId: guidelineId,
+          guidelineData: guidelineData
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Guidelines update failed: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Guidelines updated via Edge Function:', result);
+      return result.data;
+    } catch (error) {
+      console.error('💥 Guidelines update error:', error);
+      throw error;
+    }
+  },
+
+  // Delete guidelines using Edge Function
+  async deleteGuidelines(guidelineId: number) {
+    console.log('📋 Deleting guidelines via Edge Function:', guidelineId);
+    
+    try {
+      const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_guidelines`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+        },
+        body: JSON.stringify({
+          guidelineId: guidelineId
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Guidelines delete failed: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Guidelines deleted via Edge Function:', result);
+      return true;
+    } catch (error) {
+      console.error('💥 Guidelines delete error:', error);
+      throw error;
+    }
+  },
+
   // Generate Google Fonts URL
   generateGoogleFontsUrl(fontName: string) {
     const cleanFontName = fontName.trim().replace(/\s+/g, '+');
@@ -568,7 +617,7 @@ const supabaseAPI = {
 };
 
 // =============================================================================
-// ADMIN COMPONENTS - NO LOCALSTORAGE, SUPABASE ONLY
+// ADMIN COMPONENTS - COMPLETE IMPLEMENTATION
 // =============================================================================
 
 function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
@@ -668,7 +717,7 @@ function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
 }
 
 // =============================================================================
-// TEMPLATES TAB - UNCHANGED
+// TEMPLATES TAB
 // =============================================================================
 
 function AdminTemplatesTab({ theme }: { theme: any }) {
@@ -807,1155 +856,6 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                     fontSize: '14px',
                     backgroundColor: theme.inputBackground,
                     color: theme.textPrimary,
-                    minHeight: '80px',
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                    outline: 'none'
-                  }}
-                  placeholder="Describe where and how this color should be used..."
-                />
-              </div>
-
-              {/* FIXED: Color preview with white background for visibility in both modes */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '16px', 
-                marginBottom: '25px',
-                padding: '20px',
-                backgroundColor: '#ffffff', // FIXED: Always white background
-                borderRadius: '8px',
-                border: '2px solid #e5e7eb' // FIXED: Light border for contrast
-              }}>
-                <div style={{
-                  width: '60px',
-                  height: '60px',
-                  backgroundColor: newColor.hex,
-                  borderRadius: '8px',
-                  border: '2px solid #000000'
-                }}></div>
-                <div>
-                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', marginBottom: '4px' }}>
-                    {newColor.name || 'New Color'}
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'monospace' }}>
-                    {newColor.hex}
-                  </div>
-                </div>
-              </div>
-
-              {/* Form Actions */}
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={handleCancelColor}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: theme.buttonSecondary,
-                    color: theme.buttonSecondaryText,
-                    border: `1px solid ${theme.borderColor}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  Cancel
-                </button>
-                {editingColor && (
-                  <button
-                    onClick={() => handleDeleteColor(editingColor.id)}
-                    style={{
-                      padding: '12px 24px',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    🗑️ Delete
-                  </button>
-                )}
-                <button
-                  onClick={handleSaveColor}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  💾 Save Color
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {/* Color Grid */}
-          {brandColors.length === 0 ? (
-            <div style={{
-              padding: '60px',
-              textAlign: 'center',
-              border: `2px dashed ${theme.borderColor}`,
-              borderRadius: '12px',
-              backgroundColor: theme.background
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎨</div>
-              <h4 style={{ color: theme.textPrimary, fontSize: '18px', marginBottom: '8px', fontWeight: 'bold' }}>
-                No Brand Colors Yet
-              </h4>
-              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 20px 0' }}>
-                Add your first brand color to get started with your brand kit
-              </p>
-              <button 
-                onClick={handleAddColor}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: '#8b5cf6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}
-              >
-                ➕ Add Your First Color
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-              {brandColors.map(color => (
-                <div key={color.id} style={{
-                  padding: '25px',
-                  border: `1px solid ${theme.borderColor}`,
-                  borderRadius: '12px',
-                  backgroundColor: theme.background,
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-                    <div style={{
-                      width: '64px',
-                      height: '64px',
-                      backgroundColor: color.hex_code || color.hex,
-                      borderRadius: '12px',
-                      border: '2px solid #ffffff',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
-                    }}></div>
-                    <div>
-                      <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
-                        {color.name}
-                      </h4>
-                      <div style={{ 
-                        fontSize: '14px', 
-                        color: theme.textSecondary, 
-                        fontFamily: 'monospace', 
-                        fontWeight: 'bold' 
-                      }}>
-                        {color.hex_code || color.hex}
-                      </div>
-                    </div>
-                  </div>
-                  <p style={{ 
-                    margin: '0 0 20px 0', 
-                    fontSize: '14px', 
-                    color: theme.textSecondary,
-                    lineHeight: '1.5'
-                  }}>
-                    {color.usage}
-                  </p>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button 
-                      onClick={() => handleCopyColor(color.hex_code || color.hex)}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: theme.buttonSecondary,
-                        color: theme.buttonSecondaryText,
-                        border: `1px solid ${theme.borderColor}`,
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      📋 Copy
-                    </button>
-                    <button 
-                      onClick={() => handleEditColor(color)}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: theme.buttonPrimary,
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      ✏️ Edit
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* LOGOS SECTION - ENHANCED */}
-      {activeSection === 'logos' && (
-        <div style={{ 
-          padding: '30px', 
-          backgroundColor: theme.cardBackground, 
-          borderRadius: '0 0 12px 12px',
-          border: `1px solid ${theme.borderColor}`,
-          borderTop: 'none'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              🏷️ Logo Assets ({logos.length} logos)
-            </h3>
-            <button 
-              onClick={handleAddLogo}
-              style={{
-                padding: '12px 20px',
-                backgroundColor: '#8b5cf6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}
-            >
-              ➕ Add New Logo
-            </button>
-          </div>
-
-          {/* Logo Form */}
-          {showLogoForm && (
-            <div style={{
-              padding: '30px',
-              border: '2px solid #8b5cf6',
-              borderRadius: '12px',
-              backgroundColor: theme.background,
-              marginBottom: '30px',
-              boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)'
-            }}>
-              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🏷️ {editingLogo ? `Edit Logo: ${editingLogo.name}` : 'Add New Logo'}
-              </h4>
-              
-              {/* Image Upload Section */}
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontWeight: 'bold',
-                  color: theme.textPrimary,
-                  fontSize: '14px'
-                }}>
-                  Logo Image *
-                </label>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <button
-                    onClick={() => {
-                      if (typeof document !== 'undefined') {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = 'image/*,.svg';
-                        input.style.display = 'none';
-                        input.onchange = handleLogoFileSelect;
-                        document.body.appendChild(input);
-                        input.click();
-                        document.body.removeChild(input);
-                      }
-                    }}
-                    style={{
-                      padding: '12px 20px',
-                      backgroundColor: '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    📁 Choose Image File
-                  </button>
-                  {logoFile && (
-                    <span style={{ color: theme.textSecondary, fontSize: '14px' }}>
-                      Selected: {logoFile.name}
-                    </span>
-                  )}
-                </div>
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Logo Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={editLogoData.name}
-                    onChange={(e) => setEditLogoData(prev => ({ ...prev, name: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                    placeholder="e.g., Primary Logo"
-                  />
-                </div>
-                
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    File Type
-                  </label>
-                  <select
-                    value={editLogoData.type}
-                    onChange={(e) => setEditLogoData(prev => ({ ...prev, type: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="SVG">SVG</option>
-                    <option value="PNG">PNG</option>
-                    <option value="JPG">JPG</option>
-                    <option value="WebP">WebP</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '25px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontWeight: 'bold',
-                  color: theme.textPrimary,
-                  fontSize: '14px'
-                }}>
-                  Usage Description *
-                </label>
-                <textarea
-                  value={editLogoData.usage}
-                  onChange={(e) => setEditLogoData(prev => ({ ...prev, usage: e.target.value }))}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: `1px solid ${theme.inputBorder}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    backgroundColor: theme.inputBackground,
-                    color: theme.textPrimary,
-                    minHeight: '80px',
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                    outline: 'none'
-                  }}
-                  placeholder="Describe where and how this logo should be used..."
-                />
-              </div>
-
-              {/* Form Actions */}
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={handleCancelLogo}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: theme.buttonSecondary,
-                    color: theme.buttonSecondaryText,
-                    border: `1px solid ${theme.borderColor}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  Cancel
-                </button>
-                {editingLogo && (
-                  <button
-                    onClick={() => handleDeleteLogo(editingLogo.id)}
-                    style={{
-                      padding: '12px 24px',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    🗑️ Delete
-                  </button>
-                )}
-                <button
-                  onClick={handleSaveLogo}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  💾 Save Logo
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {/* Logo Grid */}
-          {logos.length === 0 ? (
-            <div style={{
-              padding: '60px',
-              textAlign: 'center',
-              border: `2px dashed ${theme.borderColor}`,
-              borderRadius: '12px',
-              backgroundColor: theme.background
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏷️</div>
-              <h4 style={{ color: theme.textPrimary, fontSize: '18px', marginBottom: '8px', fontWeight: 'bold' }}>
-                No Logo Assets Yet
-              </h4>
-              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 20px 0' }}>
-                Upload your first logo to start building your brand asset library
-              </p>
-              <button 
-                onClick={handleAddLogo}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: '#8b5cf6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}
-              >
-                ➕ Add Your First Logo
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gap: '16px' }}>
-              {logos.map(logo => (
-                <div key={logo.id} style={{
-                  padding: '25px',
-                  border: `1px solid ${theme.borderColor}`,
-                  borderRadius: '12px',
-                  backgroundColor: theme.background,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <div style={{
-                      width: '80px',
-                      height: '60px',
-                      backgroundColor: '#ffffff',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '24px',
-                      backgroundImage: logo.file_url ? `url(${logo.file_url})` : 'none',
-                      backgroundSize: 'contain',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'center'
-                    }}>
-                      {!logo.file_url && '🏷️'}
-                    </div>
-                    <div>
-                      <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
-                        {logo.name}
-                      </h4>
-                      <div style={{ fontSize: '12px', color: theme.textSecondary }}>
-                        {logo.type} • {logo.file_size || 'Unknown size'} • {logo.usage}
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button 
-                      onClick={() => handleEditLogo(logo)}
-                      style={{
-                        padding: '10px 16px',
-                        backgroundColor: '#f59e0b',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteLogo(logo.id)}
-                      style={{
-                        padding: '10px 16px',
-                        backgroundColor: '#ef4444',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      🗑️ Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TYPOGRAPHY SECTION - FIXED WITH PROPER FORMS */}
-      {activeSection === 'fonts' && (
-        <div style={{ 
-          padding: '30px', 
-          backgroundColor: theme.cardBackground, 
-          borderRadius: '0 0 12px 12px',
-          border: `1px solid ${theme.borderColor}`,
-          borderTop: 'none'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              🔤 Typography System ({fonts.length} fonts)
-            </h3>
-            <button 
-              onClick={handleAddFont}
-              style={{
-                padding: '12px 20px',
-                backgroundColor: '#8b5cf6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}
-            >
-              ➕ Add Font
-            </button>
-          </div>
-
-          {/* Font Form */}
-          {showFontForm && (
-            <div style={{
-              padding: '30px',
-              border: '2px solid #3b82f6',
-              borderRadius: '12px',
-              backgroundColor: theme.background,
-              marginBottom: '30px',
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
-            }}>
-              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🔤 {editingFont ? `Edit Font: ${editingFont.name}` : 'Add New Font'}
-              </h4>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Font Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={editFontData.name}
-                    onChange={(e) => setEditFontData(prev => ({ ...prev, name: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                    placeholder="e.g., Inter, Roboto, Playfair Display"
-                  />
-                </div>
-                
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Category
-                  </label>
-                  <select
-                    value={editFontData.category}
-                    onChange={(e) => setEditFontData(prev => ({ ...prev, category: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="Primary">Primary</option>
-                    <option value="Secondary">Secondary</option>
-                    <option value="Accent">Accent</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Font Weight Range
-                  </label>
-                  <input
-                    type="text"
-                    value={editFontData.weight}
-                    onChange={(e) => setEditFontData(prev => ({ ...prev, weight: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                    placeholder="e.g., 400-700"
-                  />
-                </div>
-                
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Usage Description *
-                  </label>
-                  <input
-                    type="text"
-                    value={editFontData.usage}
-                    onChange={(e) => setEditFontData(prev => ({ ...prev, usage: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                    placeholder="e.g., Headlines, UI text"
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={handleCancelFont}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: theme.buttonSecondary,
-                    color: theme.buttonSecondaryText,
-                    border: `1px solid ${theme.borderColor}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  Cancel
-                </button>
-                {editingFont && (
-                  <button
-                    onClick={() => handleDeleteFont(editingFont.id)}
-                    style={{
-                      padding: '12px 24px',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    🗑️ Delete
-                  </button>
-                )}
-                <button
-                  onClick={handleSaveFont}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  💾 Save Font
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {/* Font Grid */}
-          {fonts.length === 0 ? (
-            <div style={{
-              padding: '60px',
-              textAlign: 'center',
-              border: `2px dashed ${theme.borderColor}`,
-              borderRadius: '12px',
-              backgroundColor: theme.background
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔤</div>
-              <h4 style={{ color: theme.textPrimary, fontSize: '18px', marginBottom: '8px', fontWeight: 'bold' }}>
-                No Fonts in Typography System
-              </h4>
-              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 20px 0' }}>
-                Add your first font to establish your brand's typography hierarchy
-              </p>
-              <button 
-                onClick={handleAddFont}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: '#8b5cf6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}
-              >
-                ➕ Add Your First Font
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gap: '25px' }}>
-              {fonts.map(font => (
-                <div key={font.id} style={{
-                  padding: '30px',
-                  border: `1px solid ${theme.borderColor}`,
-                  borderRadius: '12px',
-                  backgroundColor: theme.background,
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px' }}>
-                    <div>
-                      <h4 style={{ margin: '0 0 10px 0', color: theme.textPrimary, fontSize: '20px', fontWeight: 'bold' }}>
-                        {font.name}
-                      </h4>
-                      <div style={{ display: 'flex', gap: '20px', fontSize: '14px', color: theme.textSecondary, marginBottom: '8px' }}>
-                        <span><strong>Category:</strong> {font.category}</span>
-                        <span><strong>Weight:</strong> {font.weight_range || font.weight}</span>
-                      </div>
-                      <p style={{ margin: '0', fontSize: '14px', color: theme.textSecondary, lineHeight: '1.5' }}>
-                        {font.usage}
-                      </p>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button 
-                        onClick={() => {
-                          const cssCode = `font-family: '${font.name}', sans-serif;\nfont-weight: ${(font.weight_range || font.weight || '400').split('-')[0]};\nfont-size: 16px;`;
-                          if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                            navigator.clipboard.writeText(cssCode).then(() => {
-                              showNotification(`${font.name} CSS copied to clipboard!`, 'success');
-                            }).catch(() => {
-                              showNotification('Failed to copy CSS', 'error');
-                            });
-                          }
-                        }}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: theme.buttonSecondary,
-                          color: theme.buttonSecondaryText,
-                          border: `1px solid ${theme.borderColor}`,
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        📋 Copy CSS
-                      </button>
-                      <button 
-                        onClick={() => handleEditFont(font)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: theme.buttonPrimary,
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ✏️ Edit
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* Font Preview */}
-                  <div style={{
-                    padding: '25px',
-                    backgroundColor: '#ffffff', // Always white for visibility
-                    borderRadius: '8px',
-                    border: '2px solid #e5e7eb',
-                    fontFamily: `'${font.name}', sans-serif`
-                  }}>
-                    <div style={{ 
-                      fontSize: '32px', 
-                      marginBottom: '12px', 
-                      fontWeight: 'bold', 
-                      color: '#1f2937',
-                      fontFamily: `'${font.name}', sans-serif`
-                    }}>
-                      The quick brown fox jumps
-                    </div>
-                    <div style={{ 
-                      fontSize: '18px', 
-                      marginBottom: '10px', 
-                      color: '#374151',
-                      fontFamily: `'${font.name}', sans-serif`
-                    }}>
-                      Regular weight sample text for {font.name}
-                    </div>
-                    <div style={{ 
-                      fontSize: '14px', 
-                      color: '#6b7280', 
-                      fontWeight: '500',
-                      fontFamily: `'${font.name}', sans-serif`
-                    }}>
-                      ABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* GUIDELINES SECTION - FIXED WITH PROPER FORM */}
-      {activeSection === 'guidelines' && (
-        <div style={{ 
-          padding: '30px', 
-          backgroundColor: theme.cardBackground, 
-          borderRadius: '0 0 12px 12px',
-          border: `1px solid ${theme.borderColor}`,
-          borderTop: 'none'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              📋 Brand Guidelines ({guidelines.length} guidelines)
-            </h3>
-            <button 
-              onClick={handleAddGuideline}
-              style={{
-                padding: '12px 20px',
-                backgroundColor: '#8b5cf6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}
-            >
-              ➕ Add Guideline
-            </button>
-          </div>
-
-          {/* Guidelines Form */}
-          {showGuidelinesForm && (
-            <div style={{
-              padding: '30px',
-              border: '2px solid #10b981',
-              borderRadius: '12px',
-              backgroundColor: theme.background,
-              marginBottom: '30px',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
-            }}>
-              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                📋 {editingGuideline ? `Edit Guideline: ${editingGuideline.title}` : 'Add New Brand Guideline'}
-              </h4>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Section
-                  </label>
-                  <select
-                    value={editGuidelineData.section}
-                    onChange={(e) => setEditGuidelineData(prev => ({ ...prev, section: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="logo">Logo Usage</option>
-                    <option value="colors">Color Guidelines</option>
-                    <option value="typography">Typography Guidelines</option>
-                    <option value="voice">Voice & Tone</option>
-                    <option value="imagery">Imagery Guidelines</option>
-                    <option value="general">General Brand Guidelines</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Title *
-                  </label>
-                  <input
-                    type="text"
-                    value={editGuidelineData.title}
-                    onChange={(e) => setEditGuidelineData(prev => ({ ...prev, title: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                    placeholder="e.g., Logo Usage Guidelines"
-                  />
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '25px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontWeight: 'bold',
-                  color: theme.textPrimary,
-                  fontSize: '14px'
-                }}>
-                  Content *
-                </label>
-                <textarea
-                  value={editGuidelineData.content}
-                  onChange={(e) => setEditGuidelineData(prev => ({ ...prev, content: e.target.value }))}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: `1px solid ${theme.inputBorder}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    backgroundColor: theme.inputBackground,
-                    color: theme.textPrimary,
-                    minHeight: '150px',
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                    outline: 'none'
-                  }}
-                  placeholder="Describe the brand guideline in detail..."
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={handleCancelGuideline}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: theme.buttonSecondary,
-                    color: theme.buttonSecondaryText,
-                    border: `1px solid ${theme.borderColor}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveGuideline}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  💾 Save Guideline
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {guidelines.length === 0 ? (
-            <div style={{
-              padding: '60px',
-              textAlign: 'center',
-              border: `2px dashed ${theme.borderColor}`,
-              borderRadius: '12px',
-              backgroundColor: theme.background
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
-              <h4 style={{ color: theme.textPrimary, fontSize: '18px', marginBottom: '8px', fontWeight: 'bold' }}>
-                No Brand Guidelines Yet
-              </h4>
-              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 20px 0' }}>
-                Create comprehensive brand guidelines to maintain consistency across all touchpoints
-              </p>
-              <button 
-                onClick={handleAddGuideline}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: '#8b5cf6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}
-              >
-                ➕ Create Your First Guideline
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gap: '30px' }}>
-              {guidelines.map(guideline => (
-                <div key={guideline.id} style={{
-                  padding: '30px',
-                  border: `2px solid ${theme.borderColor}`,
-                  borderRadius: '12px',
-                  backgroundColor: theme.background
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h4 style={{ color: theme.textPrimary, margin: '0', fontSize: '16px', fontWeight: 'bold' }}>
-                      📋 {guideline.title}
-                    </h4>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button 
-                        onClick={() => handleEditGuideline(guideline)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: theme.buttonPrimary,
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ✏️ Edit
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8' }}>
-                    {typeof guideline.content === 'string' ? guideline.content : JSON.stringify(guideline.content)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default AdminComponents;.textPrimary,
                     outline: 'none'
                   }}
                   placeholder="e.g., Instagram Story Template"
@@ -2404,7 +1304,7 @@ export default AdminComponents;.textPrimary,
 }
 
 // =============================================================================
-// LIBRARIES TAB - UNCHANGED
+// LIBRARIES TAB
 // =============================================================================
 
 function AdminLibrariesTab({ theme }: { theme: any }) {
@@ -2807,14 +1707,14 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
 }
 
 // =============================================================================
-// BRAND TAB - FIXED VERSION WITH ALL ISSUES RESOLVED
+// BRAND TAB - COMPLETE WITH ALL EDGE FUNCTION INTEGRATIONS
 // =============================================================================
 
 function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean }) {
   const [activeSection, setActiveSection] = useState('colors');
   const [notifications, setNotifications] = useState<any[]>([]);
   
-  // States for all brand kit elements - NO DEMO DATA
+  // States for all brand kit elements
   const [brandColors, setBrandColors] = useState<any[]>([]);
   const [logos, setLogos] = useState<any[]>([]);
   const [fonts, setFonts] = useState<any[]>([]);
@@ -2860,7 +1760,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
     usage: ''
   });
 
-  // Form states for logos - FIXED
+  // Form states for logos
   const [showLogoForm, setShowLogoForm] = useState(false);
   const [editingLogo, setEditingLogo] = useState<any>(null);
   const [editLogoData, setEditLogoData] = useState({
@@ -2870,7 +1770,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
 
-  // Typography states - FIXED TO INCLUDE FORM STATE
+  // Typography states
   const [showFontForm, setShowFontForm] = useState(false);
   const [editingFont, setEditingFont] = useState<any>(null);
   const [editFontData, setEditFontData] = useState({
@@ -2880,7 +1780,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
     weight: '400-600'
   });
 
-  // Guidelines states - FIXED TO INCLUDE PROPER FORM
+  // Guidelines states
   const [showGuidelinesForm, setShowGuidelinesForm] = useState(false);
   const [editingGuideline, setEditingGuideline] = useState<any>(null);
   const [editGuidelineData, setEditGuidelineData] = useState({
@@ -2905,7 +1805,10 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  // Color management functions
+  // =============================================================================
+  // COLOR MANAGEMENT FUNCTIONS
+  // =============================================================================
+
   const handleAddColor = () => {
     setShowColorForm(true);
     setEditingColor(null);
@@ -2993,7 +1896,10 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
     }
   };
 
-  // Logo management functions - ENHANCED
+  // =============================================================================
+  // LOGO MANAGEMENT FUNCTIONS
+  // =============================================================================
+
   const handleAddLogo = () => {
     setShowLogoForm(true);
     setEditingLogo(null);
@@ -3102,7 +2008,10 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
     setEditingLogo(null);
   };
 
-  // Typography management - FIXED WITH PROPER FORM HANDLING
+  // =============================================================================
+  // TYPOGRAPHY MANAGEMENT FUNCTIONS
+  // =============================================================================
+
   const handleAddFont = () => {
     setShowFontForm(true);
     setEditingFont(null);
@@ -3179,7 +2088,10 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
     setEditingFont(null);
   };
 
-  // Guidelines management - FIXED WITH PROPER FORM
+  // =============================================================================
+  // GUIDELINES MANAGEMENT FUNCTIONS - COMPLETE WITH EDGE FUNCTIONS
+  // =============================================================================
+
   const handleAddGuideline = () => {
     setShowGuidelinesForm(true);
     setEditingGuideline(null);
@@ -3213,27 +2125,18 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
 
     try {
       if (editingGuideline) {
-        // Update existing guideline logic would go here
+        // Use Edge Function for update
+        await supabaseAPI.updateGuidelines(editingGuideline.id, editGuidelineData);
         showNotification(`${editGuidelineData.title} updated!`, 'success');
-        
-        // Update the specific guideline in the array
-        setGuidelines(prev => prev.map(guideline => 
-          guideline.id === editingGuideline.id ? { ...guideline, ...editGuidelineData } : guideline
-        ));
       } else {
-        const savedGuideline = await supabaseAPI.saveGuidelines(editGuidelineData.section, editGuidelineData.content);
+        // Use REST API for create
+        await supabaseAPI.saveGuidelines(editGuidelineData.section, editGuidelineData.content);
         showNotification(`${editGuidelineData.title} saved to Supabase!`, 'success');
-        
-        // Add new guideline to the beginning of the array (top of list)
-        const newGuideline = {
-          ...savedGuideline[0] || savedGuideline,
-          title: editGuidelineData.title,
-          section: editGuidelineData.section,
-          content: editGuidelineData.content,
-          type: editGuidelineData.type
-        };
-        setGuidelines(prev => [newGuideline, ...prev]);
       }
+      
+      // Refresh guidelines data
+      const updatedGuidelines = await supabaseAPI.fetchGuidelines();
+      setGuidelines(updatedGuidelines);
       
     } catch (error: any) {
       showNotification(`Failed to save guideline: ${error.message}`, 'error');
@@ -3250,6 +2153,29 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
     setShowGuidelinesForm(false);
     setEditingGuideline(null);
     setEditGuidelineData({ section: 'logo', title: '', content: '', type: 'Logo Usage' });
+  };
+
+  const handleDeleteGuideline = async (guidelineId: number) => {
+    setLoading(true);
+    showNotification('Deleting guideline from Supabase...', 'info');
+
+    try {
+      // Use Edge Function for delete
+      await supabaseAPI.deleteGuidelines(guidelineId);
+      showNotification('Guideline deleted successfully', 'success');
+      
+      // Refresh guidelines data
+      const updatedGuidelines = await supabaseAPI.fetchGuidelines();
+      setGuidelines(updatedGuidelines);
+      
+    } catch (error: any) {
+      showNotification(`Failed to delete guideline: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+    
+    setShowGuidelinesForm(false);
+    setEditingGuideline(null);
   };
 
   return (
@@ -3271,7 +2197,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
           fontSize: '18px',
           fontWeight: 'bold'
         }}>
-          📄 Processing...
+          🔄 Processing...
         </div>
       )}
 
@@ -3341,11 +2267,11 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
             fontWeight: 'bold'
           }}
         >
-          📄 Refresh from Supabase
+          🔄 Refresh from Supabase
         </button>
       </div>
       <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 30px 0' }}>
-        Brand guidelines, assets, and style management (Connected to Supabase)
+        Brand guidelines, assets, and style management (Connected to Supabase Edge Functions)
       </p>
       
       {/* Brand Kit Sub-Navigation */}
@@ -3383,7 +2309,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
         ))}
       </div>
 
-      {/* COLORS SECTION - FIXED PREVIEW BACKGROUND */}
+      {/* COLORS SECTION */}
       {activeSection === 'colors' && (
         <div style={{ 
           padding: '30px', 
@@ -3520,8 +2446,1181 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                     borderRadius: '8px',
                     fontSize: '14px',
                     backgroundColor: theme.inputBackground,
-                    color: theme
-)}
+                    color: theme.textPrimary,
+                    minHeight: '80px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
+                  placeholder="Describe where and how this color should be used..."
+                />
+              </div>
+
+              {/* Color preview with white background for visibility */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '16px', 
+                marginBottom: '25px',
+                padding: '20px',
+                backgroundColor: '#ffffff',
+                borderRadius: '8px',
+                border: '2px solid #e5e7eb'
+              }}>
+                <div style={{
+                  width: '60px',
+                  height: '60px',
+                  backgroundColor: newColor.hex,
+                  borderRadius: '8px',
+                  border: '2px solid #000000'
+                }}></div>
+                <div>
+                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', marginBottom: '4px' }}>
+                    {newColor.name || 'New Color'}
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'monospace' }}>
+                    {newColor.hex}
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Actions */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={handleCancelColor}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: theme.buttonSecondary,
+                    color: theme.buttonSecondaryText,
+                    border: `1px solid ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Cancel
+                </button>
+                {editingColor && (
+                  <button
+                    onClick={() => handleDeleteColor(editingColor.id)}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    🗑️ Delete
+                  </button>
+                )}
+                <button
+                  onClick={handleSaveColor}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  💾 Save Color
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Color Grid */}
+          {brandColors.length === 0 ? (
+            <div style={{
+              padding: '60px',
+              textAlign: 'center',
+              border: `2px dashed ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎨</div>
+              <h4 style={{ color: theme.textPrimary, fontSize: '18px', marginBottom: '8px', fontWeight: 'bold' }}>
+                No Brand Colors Yet
+              </h4>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 20px 0' }}>
+                Add your first brand color to get started with your brand kit
+              </p>
+              <button 
+                onClick={handleAddColor}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#8b5cf6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                ➕ Add Your First Color
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+              {brandColors.map(color => (
+                <div key={color.id} style={{
+                  padding: '25px',
+                  border: `1px solid ${theme.borderColor}`,
+                  borderRadius: '12px',
+                  backgroundColor: theme.background,
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                    <div style={{
+                      width: '64px',
+                      height: '64px',
+                      backgroundColor: color.hex_code || color.hex,
+                      borderRadius: '12px',
+                      border: '2px solid #ffffff',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
+                    }}></div>
+                    <div>
+                      <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
+                        {color.name}
+                      </h4>
+                      <div style={{ 
+                        fontSize: '14px', 
+                        color: theme.textSecondary, 
+                        fontFamily: 'monospace', 
+                        fontWeight: 'bold' 
+                      }}>
+                        {color.hex_code || color.hex}
+                      </div>
+                    </div>
+                  </div>
+                  <p style={{ 
+                    margin: '0 0 20px 0', 
+                    fontSize: '14px', 
+                    color: theme.textSecondary,
+                    lineHeight: '1.5'
+                  }}>
+                    {color.usage}
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={() => handleCopyColor(color.hex_code || color.hex)}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonSecondary,
+                        color: theme.buttonSecondaryText,
+                        border: `1px solid ${theme.borderColor}`,
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      📋 Copy
+                    </button>
+                    <button 
+                      onClick={() => handleEditColor(color)}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonPrimary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* LOGOS SECTION */}
+      {activeSection === 'logos' && (
+        <div style={{ 
+          padding: '30px', 
+          backgroundColor: theme.cardBackground, 
+          borderRadius: '0 0 12px 12px',
+          border: `1px solid ${theme.borderColor}`,
+          borderTop: 'none'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              🏷️ Logo Assets ({logos.length} logos)
+            </h3>
+            <button 
+              onClick={handleAddLogo}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#8b5cf6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              ➕ Add New Logo
+            </button>
+          </div>
+
+          {/* Logo Form */}
+          {showLogoForm && (
+            <div style={{
+              padding: '30px',
+              border: '2px solid #8b5cf6',
+              borderRadius: '12px',
+              backgroundColor: theme.background,
+              marginBottom: '30px',
+              boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)'
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                🏷️ {editingLogo ? `Edit Logo: ${editingLogo.name}` : 'Add New Logo'}
+              </h4>
+              
+              {/* Image Upload Section */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Logo Image *
+                </label>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <button
+                    onClick={() => {
+                      if (typeof document !== 'undefined') {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*,.svg';
+                        input.style.display = 'none';
+                        input.onchange = handleLogoFileSelect;
+                        document.body.appendChild(input);
+                        input.click();
+                        document.body.removeChild(input);
+                      }
+                    }}
+                    style={{
+                      padding: '12px 20px',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    🔍 Choose Image File
+                  </button>
+                  {logoFile && (
+                    <span style={{ color: theme.textSecondary, fontSize: '14px' }}>
+                      Selected: {logoFile.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Logo Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={editLogoData.name}
+                    onChange={(e) => setEditLogoData(prev => ({ ...prev, name: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., Primary Logo"
+                  />
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    File Type
+                  </label>
+                  <select
+                    value={editLogoData.type}
+                    onChange={(e) => setEditLogoData(prev => ({ ...prev, type: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="SVG">SVG</option>
+                    <option value="PNG">PNG</option>
+                    <option value="JPG">JPG</option>
+                    <option value="WebP">WebP</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '25px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Usage Description *
+                </label>
+                <textarea
+                  value={editLogoData.usage}
+                  onChange={(e) => setEditLogoData(prev => ({ ...prev, usage: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: `1px solid ${theme.inputBorder}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: theme.inputBackground,
+                    color: theme.textPrimary,
+                    minHeight: '80px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
+                  placeholder="Describe where and how this logo should be used..."
+                />
+              </div>
+
+              {/* Form Actions */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={handleCancelLogo}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: theme.buttonSecondary,
+                    color: theme.buttonSecondaryText,
+                    border: `1px solid ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Cancel
+                </button>
+                {editingLogo && (
+                  <button
+                    onClick={() => handleDeleteLogo(editingLogo.id)}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    🗑️ Delete
+                  </button>
+                )}
+                <button
+                  onClick={handleSaveLogo}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  💾 Save Logo
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Logo Grid */}
+          {logos.length === 0 ? (
+            <div style={{
+              padding: '60px',
+              textAlign: 'center',
+              border: `2px dashed ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏷️</div>
+              <h4 style={{ color: theme.textPrimary, fontSize: '18px', marginBottom: '8px', fontWeight: 'bold' }}>
+                No Logo Assets Yet
+              </h4>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 20px 0' }}>
+                Upload your first logo to start building your brand asset library
+              </p>
+              <button 
+                onClick={handleAddLogo}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#8b5cf6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                ➕ Add Your First Logo
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '16px' }}>
+              {logos.map(logo => (
+                <div key={logo.id} style={{
+                  padding: '25px',
+                  border: `1px solid ${theme.borderColor}`,
+                  borderRadius: '12px',
+                  backgroundColor: theme.background,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <div style={{
+                      width: '80px',
+                      height: '60px',
+                      backgroundColor: '#ffffff',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '24px',
+                      backgroundImage: logo.file_url ? `url(${logo.file_url})` : 'none',
+                      backgroundSize: 'contain',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'center'
+                    }}>
+                      {!logo.file_url && '🏷️'}
+                    </div>
+                    <div>
+                      <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
+                        {logo.name}
+                      </h4>
+                      <div style={{ fontSize: '12px', color: theme.textSecondary }}>
+                        {logo.type} • {logo.file_size || 'Unknown size'} • {logo.usage}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={() => handleEditLogo(logo)}
+                      style={{
+                        padding: '10px 16px',
+                        backgroundColor: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteLogo(logo.id)}
+                      style={{
+                        padding: '10px 16px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TYPOGRAPHY SECTION */}
+      {activeSection === 'fonts' && (
+        <div style={{ 
+          padding: '30px', 
+          backgroundColor: theme.cardBackground, 
+          borderRadius: '0 0 12px 12px',
+          border: `1px solid ${theme.borderColor}`,
+          borderTop: 'none'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              🔤 Typography System ({fonts.length} fonts)
+            </h3>
+            <button 
+              onClick={handleAddFont}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#8b5cf6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              ➕ Add Font
+            </button>
+          </div>
+
+          {/* Font Form */}
+          {showFontForm && (
+            <div style={{
+              padding: '30px',
+              border: '2px solid #3b82f6',
+              borderRadius: '12px',
+              backgroundColor: theme.background,
+              marginBottom: '30px',
+              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                🔤 {editingFont ? `Edit Font: ${editingFont.name}` : 'Add New Font'}
+              </h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Font Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={editFontData.name}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, name: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., Inter, Roboto, Playfair Display"
+                  />
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Category
+                  </label>
+                  <select
+                    value={editFontData.category}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, category: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="Primary">Primary</option>
+                    <option value="Secondary">Secondary</option>
+                    <option value="Accent">Accent</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Font Weight Range
+                  </label>
+                  <input
+                    type="text"
+                    value={editFontData.weight}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, weight: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., 400-700"
+                  />
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Usage Description *
+                  </label>
+                  <input
+                    type="text"
+                    value={editFontData.usage}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, usage: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., Headlines, UI text"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={handleCancelFont}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: theme.buttonSecondary,
+                    color: theme.buttonSecondaryText,
+                    border: `1px solid ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Cancel
+                </button>
+                {editingFont && (
+                  <button
+                    onClick={() => handleDeleteFont(editingFont.id)}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    🗑️ Delete
+                  </button>
+                )}
+                <button
+                  onClick={handleSaveFont}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  💾 Save Font
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Font Grid */}
+          {fonts.length === 0 ? (
+            <div style={{
+              padding: '60px',
+              textAlign: 'center',
+              border: `2px dashed ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔤</div>
+              <h4 style={{ color: theme.textPrimary, fontSize: '18px', marginBottom: '8px', fontWeight: 'bold' }}>
+                No Fonts in Typography System
+              </h4>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 20px 0' }}>
+                Add your first font to establish your brand's typography hierarchy
+              </p>
+              <button 
+                onClick={handleAddFont}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#8b5cf6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                ➕ Add Your First Font
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '25px' }}>
+              {fonts.map(font => (
+                <div key={font.id} style={{
+                  padding: '30px',
+                  border: `1px solid ${theme.borderColor}`,
+                  borderRadius: '12px',
+                  backgroundColor: theme.background,
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px' }}>
+                    <div>
+                      <h4 style={{ margin: '0 0 10px 0', color: theme.textPrimary, fontSize: '20px', fontWeight: 'bold' }}>
+                        {font.name}
+                      </h4>
+                      <div style={{ display: 'flex', gap: '20px', fontSize: '14px', color: theme.textSecondary, marginBottom: '8px' }}>
+                        <span><strong>Category:</strong> {font.category}</span>
+                        <span><strong>Weight:</strong> {font.weight_range || font.weight}</span>
+                      </div>
+                      <p style={{ margin: '0', fontSize: '14px', color: theme.textSecondary, lineHeight: '1.5' }}>
+                        {font.usage}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        onClick={() => {
+                          const cssCode = `font-family: '${font.name}', sans-serif;\nfont-weight: ${(font.weight_range || font.weight || '400').split('-')[0]};\nfont-size: 16px;`;
+                          if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                            navigator.clipboard.writeText(cssCode).then(() => {
+                              showNotification(`${font.name} CSS copied to clipboard!`, 'success');
+                            }).catch(() => {
+                              showNotification('Failed to copy CSS', 'error');
+                            });
+                          }
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: theme.buttonSecondary,
+                          color: theme.buttonSecondaryText,
+                          border: `1px solid ${theme.borderColor}`,
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        📋 Copy CSS
+                      </button>
+                      <button 
+                        onClick={() => handleEditFont(font)}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: theme.buttonPrimary,
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ✏️ Edit
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Font Preview */}
+                  <div style={{
+                    padding: '25px',
+                    backgroundColor: '#ffffff',
+                    borderRadius: '8px',
+                    border: '2px solid #e5e7eb',
+                    fontFamily: `'${font.name}', sans-serif`
+                  }}>
+                    <div style={{ 
+                      fontSize: '32px', 
+                      marginBottom: '12px', 
+                      fontWeight: 'bold', 
+                      color: '#1f2937',
+                      fontFamily: `'${font.name}', sans-serif`
+                    }}>
+                      The quick brown fox jumps
+                    </div>
+                    <div style={{ 
+                      fontSize: '18px', 
+                      marginBottom: '10px', 
+                      color: '#374151',
+                      fontFamily: `'${font.name}', sans-serif`
+                    }}>
+                      Regular weight sample text for {font.name}
+                    </div>
+                    <div style={{ 
+                      fontSize: '14px', 
+                      color: '#6b7280', 
+                      fontWeight: '500',
+                      fontFamily: `'${font.name}', sans-serif`
+                    }}>
+                      ABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* GUIDELINES SECTION */}
+      {activeSection === 'guidelines' && (
+        <div style={{ 
+          padding: '30px', 
+          backgroundColor: theme.cardBackground, 
+          borderRadius: '0 0 12px 12px',
+          border: `1px solid ${theme.borderColor}`,
+          borderTop: 'none'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              📋 Brand Guidelines ({guidelines.length} guidelines)
+            </h3>
+            <button 
+              onClick={handleAddGuideline}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#8b5cf6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              ➕ Add Guideline
+            </button>
+          </div>
+
+          {/* Guidelines Form */}
+          {showGuidelinesForm && (
+            <div style={{
+              padding: '30px',
+              border: '2px solid #10b981',
+              borderRadius: '12px',
+              backgroundColor: theme.background,
+              marginBottom: '30px',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                📋 {editingGuideline ? `Edit Guideline: ${editingGuideline.title}` : 'Add New Brand Guideline'}
+              </h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Section
+                  </label>
+                  <select
+                    value={editGuidelineData.section}
+                    onChange={(e) => setEditGuidelineData(prev => ({ ...prev, section: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="logo">Logo Usage</option>
+                    <option value="colors">Color Guidelines</option>
+                    <option value="typography">Typography Guidelines</option>
+                    <option value="voice">Voice & Tone</option>
+                    <option value="imagery">Imagery Guidelines</option>
+                    <option value="general">General Brand Guidelines</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={editGuidelineData.title}
+                    onChange={(e) => setEditGuidelineData(prev => ({ ...prev, title: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., Logo Usage Guidelines"
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '25px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Content *
+                </label>
+                <textarea
+                  value={editGuidelineData.content}
+                  onChange={(e) => setEditGuidelineData(prev => ({ ...prev, content: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: `1px solid ${theme.inputBorder}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: theme.inputBackground,
+                    color: theme.textPrimary,
+                    minHeight: '150px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
+                  placeholder="Describe the brand guideline in detail..."
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={handleCancelGuideline}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: theme.buttonSecondary,
+                    color: theme.buttonSecondaryText,
+                    border: `1px solid ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Cancel
+                </button>
+                {editingGuideline && (
+                  <button
+                    onClick={() => handleDeleteGuideline(editingGuideline.id)}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    🗑️ Delete
+                  </button>
+                )}
+                <button
+                  onClick={handleSaveGuideline}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  💾 Save Guideline
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {guidelines.length === 0 ? (
+            <div style={{
+              padding: '60px',
+              textAlign: 'center',
+              border: `2px dashed ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+              <h4 style={{ color: theme.textPrimary, fontSize: '18px', marginBottom: '8px', fontWeight: 'bold' }}>
+                No Brand Guidelines Yet
+              </h4>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 20px 0' }}>
+                Create comprehensive brand guidelines to maintain consistency across all touchpoints
+              </p>
+              <button 
+                onClick={handleAddGuideline}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#8b5cf6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                ➕ Create Your First Guideline
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '30px' }}>
+              {guidelines.map(guideline => (
+                <div key={guideline.id} style={{
+                  padding: '30px',
+                  border: `2px solid ${theme.borderColor}`,
+                  borderRadius: '12px',
+                  backgroundColor: theme.background
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h4 style={{ color: theme.textPrimary, margin: '0', fontSize: '16px', fontWeight: 'bold' }}>
+                      📋 {guideline.title}
+                    </h4>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        onClick={() => handleEditGuideline(guideline)}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: theme.buttonPrimary,
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteGuideline(guideline.id)}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8' }}>
+                    {typeof guideline.content === 'string' ? guideline.content : JSON.stringify(guideline.content)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
