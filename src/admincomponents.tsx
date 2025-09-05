@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 // =============================================================================
-// COMPLETE SUPABASE EDGE FUNCTIONS INTEGRATION - FIXED VERSION
+// COMPLETE SUPABASE EDGE FUNCTIONS INTEGRATION
 // =============================================================================
 
 // Vite Supabase Client Configuration
@@ -10,10 +10,10 @@ const supabaseConfig = {
   anonKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || ''
 };
 
-// Complete Supabase API with Edge Functions - CORRECTED
+// Complete Supabase API with Edge Functions
 const supabaseAPI = {
-  // Upload file to Supabase Storage bucket
-  async uploadFileToBucket(file: File, fileName: string, bucketName = 'brand-assets') {
+  // Upload file to Supabase Storage bucket - FIXED BUCKET NAME
+  async uploadFileToBucket(file: File, fileName: string, bucketName = 'brand_assets') {
     console.log('📁 Uploading file to bucket:', { fileName, bucketName, size: file.size });
     
     try {
@@ -113,7 +113,7 @@ const supabaseAPI = {
     }
   },
 
-  // Update color using Edge Function - FIXED
+  // Update color using Edge Function - FIXED NAME
   async updateColor(colorId: number, colorData: any) {
     console.log('🎨 Updating color via Edge Function:', { colorId, colorData });
     
@@ -131,8 +131,7 @@ const supabaseAPI = {
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Color update failed: ${response.status} - ${errorText}`);
+        throw new Error(`Color update failed: ${response.status}`);
       }
       
       const result = await response.json();
@@ -144,7 +143,7 @@ const supabaseAPI = {
     }
   },
 
-  // Delete color using Edge Function - FIXED
+  // Delete color using Edge Function - FIXED NAME
   async deleteColor(colorId: number) {
     console.log('🎨 Deleting color via Edge Function:', colorId);
     
@@ -161,8 +160,7 @@ const supabaseAPI = {
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Color delete failed: ${response.status} - ${errorText}`);
+        throw new Error(`Color delete failed: ${response.status}`);
       }
       
       const result = await response.json();
@@ -200,7 +198,7 @@ const supabaseAPI = {
     }
   },
 
-  // Save logo to Supabase
+  // Save logo to Supabase - FIXED BUCKET NAME
   async saveLogo(logoData: any, file: File | null = null) {
     console.log('🏷️ Saving logo to Supabase:', logoData);
     
@@ -232,13 +230,12 @@ const supabaseAPI = {
           file_path: filePath,
           file_size: file ? `${(file.size / 1024).toFixed(1)} KB` : logoData.size,
           category: logoData.category || 'Primary Logo',
-          bucket_name: 'brand-assets'
+          bucket_name: 'brand_assets'
         })
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Logo save failed: ${response.status} - ${errorText}`);
+        throw new Error(`Logo save failed: ${response.status}`);
       }
       
       const result = await response.json();
@@ -250,7 +247,7 @@ const supabaseAPI = {
     }
   },
 
-  // Update logo using Edge Function - FIXED
+  // Update logo using Edge Function - FIXED NAME
   async updateLogo(logoId: number, logoData: any, file: File | null = null) {
     console.log('🏷️ Updating logo via Edge Function:', { logoId, logoData });
     
@@ -282,8 +279,7 @@ const supabaseAPI = {
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Logo update failed: ${response.status} - ${errorText}`);
+        throw new Error(`Logo update failed: ${response.status}`);
       }
       
       const result = await response.json();
@@ -295,7 +291,7 @@ const supabaseAPI = {
     }
   },
 
-  // Delete logo using Edge Function - FIXED
+  // Delete logo using Edge Function - FIXED NAME
   async deleteLogo(logoId: number) {
     console.log('🏷️ Deleting logo via Edge Function:', logoId);
     
@@ -312,8 +308,7 @@ const supabaseAPI = {
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Logo delete failed: ${response.status} - ${errorText}`);
+        throw new Error(`Logo delete failed: ${response.status}`);
       }
       
       const result = await response.json();
@@ -325,12 +320,12 @@ const supabaseAPI = {
     }
   },
 
-  // Fetch fonts using Edge Function - FIXED
+  // Fetch fonts using Edge Function - FIXED NAME (singular)
   async fetchFonts() {
     console.log('🔤 Fetching fonts via Edge Function...');
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/fetch_brand_fonts-ts`, {
+      const response = await fetch(`${supabaseConfig.url}/functions/v1/fetch_brand_font-ts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -339,8 +334,7 @@ const supabaseAPI = {
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to fetch fonts: ${response.status} - ${errorText}`);
+        throw new Error(`Failed to fetch fonts: ${response.status}`);
       }
       
       const result = await response.json();
@@ -352,7 +346,7 @@ const supabaseAPI = {
     }
   },
 
-  // Save font to Supabase
+  // Save font to Supabase - FIXED TABLE NAME
   async saveFont(fontData: any) {
     console.log('🔤 Saving font to Supabase:', fontData);
     
@@ -361,7 +355,7 @@ const supabaseAPI = {
       const cssImport = googleFontsUrl ? `@import url("${googleFontsUrl}");` : null;
       const fontFamilyCSS = `font-family: "${fontData.name}", ui-sans-serif, system-ui, sans-serif;`;
       
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/typography_system`, {
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -383,8 +377,7 @@ const supabaseAPI = {
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Font save failed: ${response.status} - ${errorText}`);
+        throw new Error(`Font save failed: ${response.status}`);
       }
       
       const result = await response.json();
@@ -401,60 +394,70 @@ const supabaseAPI = {
     }
   },
 
-  // Update font using Edge Function - FIXED
+  // Update font in Supabase - FIXED TABLE NAME
   async updateFont(fontId: number, fontData: any) {
-    console.log('🔤 Updating font via Edge Function:', { fontId, fontData });
+    console.log('🔤 Updating font in Supabase:', { fontId, fontData });
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_fonts-ts`, {
-        method: 'POST',
+      const googleFontsUrl = this.generateGoogleFontsUrl(fontData.name);
+      const cssImport = googleFontsUrl ? `@import url("${googleFontsUrl}");` : null;
+      const fontFamilyCSS = `font-family: "${fontData.name}", ui-sans-serif, system-ui, sans-serif;`;
+      
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font?id=eq.${fontId}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'apikey': supabaseConfig.anonKey,
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+          'Prefer': 'return=representation'
         },
         body: JSON.stringify({
-          fontId: fontId,
-          fontData: fontData
+          name: fontData.name,
+          category: fontData.category,
+          usage: fontData.usage,
+          weight_range: fontData.weight || '400-600',
+          google_fonts_url: googleFontsUrl,
+          css_import: cssImport,
+          font_family_css: fontFamilyCSS,
         })
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Font update failed: ${response.status} - ${errorText}`);
+        throw new Error(`Font update failed: ${response.status}`);
       }
       
       const result = await response.json();
-      console.log('✅ Font updated via Edge Function:', result);
-      return result.data;
+      console.log('✅ Font updated in Supabase:', result);
+      
+      if (googleFontsUrl) {
+        this.loadGoogleFont(googleFontsUrl, fontData.name);
+      }
+      
+      return result;
     } catch (error) {
       console.error('💥 Font update error:', error);
       throw error;
     }
   },
 
-  // Delete font using Edge Function - FIXED
+  // Delete font from Supabase - FIXED TABLE NAME
   async deleteFont(fontId: number) {
-    console.log('🔤 Deleting font via Edge Function:', fontId);
+    console.log('🔤 Deleting font from Supabase:', fontId);
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_fonts-ts`, {
-        method: 'POST',
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font?id=eq.${fontId}`, {
+        method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
+          'apikey': supabaseConfig.anonKey,
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({
-          fontId: fontId
-        })
+        }
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Font delete failed: ${response.status} - ${errorText}`);
+        throw new Error(`Font delete failed: ${response.status}`);
       }
       
-      const result = await response.json();
-      console.log('✅ Font deleted via Edge Function:', result);
+      console.log('✅ Font deleted from Supabase');
       return true;
     } catch (error) {
       console.error('💥 Font delete error:', error);
@@ -462,15 +465,15 @@ const supabaseAPI = {
     }
   },
 
-  // Fetch guidelines from Supabase - CORRECT
+  // Fetch guidelines from Supabase
   async fetchGuidelines() {
     console.log('📋 Fetching guidelines from Supabase...');
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/fetch_brand_guidelines-ts`, {
-        method: 'POST',
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_guidelines`, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
+          'apikey': supabaseConfig.anonKey,
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
         }
       });
@@ -479,47 +482,52 @@ const supabaseAPI = {
         throw new Error(`Failed to fetch guidelines: ${response.status}`);
       }
       
-      const result = await response.json();
-      console.log('✅ Guidelines fetched from Supabase:', result);
-      return result.data || [];
+      const guidelines = await response.json();
+      console.log('✅ Guidelines fetched from Supabase:', guidelines);
+      return guidelines;
     } catch (error) {
       console.error('💥 Guidelines fetch error:', error);
       return [];
     }
   },
 
-  // Save guidelines to Supabase - CORRECT
+  // Save guidelines to Supabase
   async saveGuidelines(section: string, content: any) {
     console.log('📋 Saving guidelines to Supabase:', { section, content });
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/save_brand_guidelines-ts`, {
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_guidelines`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'apikey': supabaseConfig.anonKey,
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+          'Prefer': 'return=representation'
         },
         body: JSON.stringify({
           section: section,
-          content: content
+          title: `${section.charAt(0).toUpperCase() + section.slice(1)} Guidelines`,
+          content: typeof content === 'string' ? content : JSON.stringify(content),
+          type: `${section.charAt(0).toUpperCase() + section.slice(1)} Usage`,
+          status: 'Active',
+          version_number: 1
         })
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Guidelines save failed: ${response.status} - ${errorText}`);
+        throw new Error(`Guidelines save failed: ${response.status}`);
       }
       
       const result = await response.json();
       console.log('✅ Guidelines saved to Supabase:', result);
-      return result.data;
+      return result;
     } catch (error) {
       console.error('💥 Guidelines save error:', error);
       throw error;
     }
   },
 
-  // Update guidelines using Edge Function - CORRECT
+  // Update guidelines using Edge Function
   async updateGuidelines(guidelineId: number, guidelineData: any) {
     console.log('📋 Updating guidelines via Edge Function:', { guidelineId, guidelineData });
     
@@ -537,8 +545,7 @@ const supabaseAPI = {
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Guidelines update failed: ${response.status} - ${errorText}`);
+        throw new Error(`Guidelines update failed: ${response.status}`);
       }
       
       const result = await response.json();
@@ -550,7 +557,7 @@ const supabaseAPI = {
     }
   },
 
-  // Delete guidelines using Edge Function - CORRECT
+  // Delete guidelines using Edge Function
   async deleteGuidelines(guidelineId: number) {
     console.log('📋 Deleting guidelines via Edge Function:', guidelineId);
     
@@ -567,8 +574,7 @@ const supabaseAPI = {
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Guidelines delete failed: ${response.status} - ${errorText}`);
+        throw new Error(`Guidelines delete failed: ${response.status}`);
       }
       
       const result = await response.json();
@@ -1701,7 +1707,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
 }
 
 // =============================================================================
-// BRAND TAB - COMPLETE WITH ALL EDGE FUNCTION INTEGRATIONS - FIXED
+// BRAND TAB - COMPLETE WITH ALL EDGE FUNCTION INTEGRATIONS
 // =============================================================================
 
 function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean }) {
@@ -2420,7 +2426,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                 </div>
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
+              <div style={{ marginBottom: '25px' }}>
                 <label style={{
                   display: 'block',
                   marginBottom: '8px',
@@ -2450,30 +2456,29 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                 />
               </div>
 
-              {/* Color preview - FIXED for dark mode transparency */}
+              {/* Color preview with white background for visibility */}
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '16px', 
                 marginBottom: '25px',
                 padding: '20px',
-                backgroundColor: 'transparent',
+                backgroundColor: '#ffffff',
                 borderRadius: '8px',
-                border: `2px solid ${theme.borderColor}`
+                border: '2px solid #e5e7eb'
               }}>
                 <div style={{
                   width: '60px',
                   height: '60px',
                   backgroundColor: newColor.hex,
                   borderRadius: '8px',
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
+                  border: '2px solid #000000'
                 }}></div>
                 <div>
-                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: theme.textPrimary, marginBottom: '4px' }}>
+                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', marginBottom: '4px' }}>
                     {newColor.name || 'New Color'}
                   </div>
-                  <div style={{ fontSize: '14px', color: theme.textSecondary, fontFamily: 'monospace' }}>
+                  <div style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'monospace' }}>
                     {newColor.hex}
                   </div>
                 </div>
@@ -2580,7 +2585,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                       height: '64px',
                       backgroundColor: color.hex_code || color.hex,
                       borderRadius: '12px',
-                      border: '2px solid rgba(255,255,255,0.3)',
+                      border: '2px solid #ffffff',
                       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
                     }}></div>
                     <div>
@@ -2927,8 +2932,8 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                     <div style={{
                       width: '80px',
                       height: '60px',
-                      backgroundColor: 'transparent',
-                      border: `2px solid ${theme.borderColor}`,
+                      backgroundColor: '#ffffff',
+                      border: '2px solid #e5e7eb',
                       borderRadius: '8px',
                       display: 'flex',
                       alignItems: 'center',
@@ -3304,16 +3309,16 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                   {/* Font Preview */}
                   <div style={{
                     padding: '25px',
-                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#ffffff',
+                    backgroundColor: '#ffffff',
                     borderRadius: '8px',
-                    border: `2px solid ${theme.borderColor}`,
+                    border: '2px solid #e5e7eb',
                     fontFamily: `'${font.name}', sans-serif`
                   }}>
                     <div style={{ 
                       fontSize: '32px', 
                       marginBottom: '12px', 
                       fontWeight: 'bold', 
-                      color: theme.textPrimary,
+                      color: '#1f2937',
                       fontFamily: `'${font.name}', sans-serif`
                     }}>
                       The quick brown fox jumps
@@ -3321,14 +3326,14 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
                     <div style={{ 
                       fontSize: '18px', 
                       marginBottom: '10px', 
-                      color: theme.textSecondary,
+                      color: '#374151',
                       fontFamily: `'${font.name}', sans-serif`
                     }}>
                       Regular weight sample text for {font.name}
                     </div>
                     <div style={{ 
                       fontSize: '14px', 
-                      color: theme.textSecondary, 
+                      color: '#6b7280', 
                       fontWeight: '500',
                       fontFamily: `'${font.name}', sans-serif`
                     }}>
