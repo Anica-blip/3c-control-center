@@ -1,0 +1,588 @@
+# Complete Supabase Integration Guide - Reference Document
+
+## 1. Proven Success Pattern (Character Profiles Model)
+
+**What Works - Character Profiles Approach:**
+- Systematic migration files from start
+- UUID primary keys with `gen_random_uuid()`
+- Proper timestamps (`created_at`, `updated_at`, `created_by`)
+- RLS policies defined in migrations
+- Storage bucket integration
+- Consistent table naming
+
+**What Causes Problems - Manual Approach:**
+- Creating tables manually in dashboard
+- Adding RLS policies as afterthoughts
+- Inconsistent naming conventions
+- Missing UUID structure
+
+## 2. Table Structure Standards
+
+### Core Column Pattern (Apply to ALL tables)
+```sql
+CREATE TABLE public.table_name (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    -- table-specific columns here --
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_by UUID REFERENCES auth.users(id),
+    is_active BOOLEAN DEFAULT true
+);
+```
+
+### Naming Conventions
+- **Tables**: `brand_colors`, `brand_logos`, `brand_font`, `brand_guidelines`
+- **Functions**: Match table names with operation prefix
+- **Exception**: Use singular for font (`brand_font` not `brand_fonts`)
+- **Edge Functions**: GitHub `.ts` becomes Supabase `-ts`
+
+## 3. Migration Strategy - Always Use This Approach
+
+### For New Components (contentcomponent.tsx, schedulecomponent.tsx)
+```sql
+-- Example: Content Management Tables
+CREATE TABLE public.content_items (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT,
+    content_type TEXT NOT NULL, -- 'text', 'image', 'video', 'mixed'
+    status TEXT DEFAULT 'draft', -- 'draft', 'scheduled', 'published'
+    scheduled_date TIMESTAMP WITH TIME ZONE,
+    published_date TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_by UUID REFERENCES auth.users(id),
+    is_active BOOLEAN DEFAULT true
+);
+
+-- Content attachments for mixed media
+CREATE TABLE public.content_attachments (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    content_item_id UUID REFERENCES public.content_items(id) ON DELETE CASCADE,
+    file_url TEXT,
+    file_path TEXT,
+    file_type TEXT, -- 'image', 'video', 'document'
+    file_size TEXT,
+    attachment_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_by UUID REFERENCES auth.users(id),
+    is_active BOOLEAN DEFAULT true
+);
+```
+
+### For Existing Tables (scheduled_post modification)
+```sql
+-- Additive migration for scheduled_post table
+ALTER TABLE public.scheduled_post 
+ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+
+ALTER TABLE public.scheduled_post 
+ADD COLUMN IF NOT EXISTS content_type TEXT DEFAULT 'text';
+
+ALTER TABLE public.scheduled_post 
+ADD COLUMN IF NOT EXISTS attachments_count INTEGER DEFAULT 0;
+
+ALTER TABLE public.scheduled_post 
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now());
+
+ALTER TABLE public.scheduled_post 
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now());
+
+ALTER TABLE public.scheduled_post 
+ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+
+-- Create attachments table for scheduled posts
+CREATE TABLE public.scheduled_post_attachments (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    scheduled_post_id UUID REFERENCES public.scheduled_post(id) ON DELETE CASCADE,
+    file_url TEXT,
+    file_path TEXT,
+    file_type TEXT,
+    file_size TEXT,
+    attachment_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_by UUID REFERENCES auth.users(id),
+    is_active BOOLEAN DEFAULT true
+);
+```
+
+## 4. Edge Function Standards
+
+### File Naming Pattern
+```
+GitHub: supabase/functions/fetch_content_items.ts
+Deployed: /functions/v1/fetch_content_items-ts
+
+GitHub: supabase/functions/update_content_items.ts  
+Deployed: /functions/v1/update_content_items-ts
+```
+
+### Standard Edge Function Template
+```typescript
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    )
+
+    const { itemId, itemData } = await req.json()
+
+    const { data, error } = await supabaseClient
+      .from('table_name')
+      .update({
+        ...itemData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', itemId)
+      .select()
+
+    if (error) throw error
+
+    return new Response(
+      JSON.stringify({ success: true, data }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400 
+      }
+    )
+  }
+})
+```
+
+## 5. RLS Policy Standards
+
+### Always Use in Migrations
+```sql
+-- Enable RLS
+ALTER TABLE public.table_name ENABLE ROW LEVEL SECURITY;
+
+-- Create permissive policy for development
+CREATE POLICY "Allow all operations" ON public.table_name FOR ALL USING (true);
+
+-- Storage policies for each bucket
+CREATE POLICY "Allow public uploads to bucket-name" ON storage.objects
+FOR INSERT WITH CHECK (bucket_id = 'bucket-name');
+
+CREATE POLICY "Allow public access to bucket-name" ON storage.objects
+FOR SELECT USING (bucket_id = 'bucket-name');
+
+CREATE POLICY "Allow public updates to bucket-name" ON storage.objects
+FOR UPDATE USING (bucket_id = 'bucket-name');
+
+CREATE POLICY "Allow public deletes from bucket-name" ON storage.objects
+FOR DELETE USING (bucket_id = 'bucket-name');
+```
+
+## 6. React Component API Pattern
+
+### Standard API Object Structure
+```typescript
+const supabaseAPI = {
+  // Fetch - Always use REST API (better performance)
+  async fetchItems() {
+    const response = await fetch(`${supabaseConfig.url}/rest/v1/table_name`, {
+      headers: {
+        'apikey': supabaseConfig.anonKey,
+        'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+      }
+    });
+    return response.json();
+  },
+
+  // Create - Use REST API 
+  async saveItem(itemData: any) {
+    const response = await fetch(`${supabaseConfig.url}/rest/v1/table_name`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseConfig.anonKey,
+        'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(itemData)
+    });
+    return response.json();
+  },
+
+  // Update - Use Edge Function
+  async updateItem(itemId: string, itemData: any) {
+    const response = await fetch(`${supabaseConfig.url}/functions/v1/update_table_name-ts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+      },
+      body: JSON.stringify({ itemId, itemData })
+    });
+    return response.json();
+  },
+
+  // Delete - Use Edge Function
+  async deleteItem(itemId: string) {
+    const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_table_name-ts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+      },
+      body: JSON.stringify({ itemId })
+    });
+    return response.json();
+  }
+};
+```
+
+## 7. Content & Schedule Component Considerations
+
+### Content Component (contentcomponent.tsx)
+**Tables Needed:**
+- `content_items` (main content table)
+- `content_attachments` (for mixed media)
+- `content_categories` (organization)
+- `content_tags` (tagging system)
+
+### Schedule Component (schedulecomponent.tsx)  
+**Tables Needed:**
+- Enhance existing `scheduled_post` table
+- Add `scheduled_post_attachments` table
+- Consider `posting_schedules` (recurring schedules)
+- `posting_channels` (different platforms)
+
+### Mixed Media Strategy
+```sql
+-- Content can have multiple attachments
+content_item -> content_attachments (one-to-many)
+
+-- Scheduled post enhanced for media
+scheduled_post -> scheduled_post_attachments (one-to-many)
+
+-- File metadata tracking
+CREATE TABLE public.file_metadata (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    original_name TEXT,
+    file_path TEXT,
+    file_url TEXT,
+    file_type TEXT,
+    file_size BIGINT,
+    dimensions TEXT, -- "1920x1080" for images/videos
+    duration INTEGER, -- seconds for videos/audio
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_by UUID REFERENCES auth.users(id),
+    is_active BOOLEAN DEFAULT true
+);
+```
+
+## 8. Development Workflow Checklist
+
+### For Each New Component:
+- [ ] Plan table structure with UUID pattern
+- [ ] Create migration file (don't use dashboard)
+- [ ] Set up storage bucket if needed
+- [ ] Create Edge Functions with correct naming
+- [ ] Deploy functions, verify `-ts` suffix
+- [ ] Create React component with standard API pattern
+- [ ] Test all CRUD operations
+- [ ] Verify RLS policies work
+
+### Debugging Process:
+1. Check function exists in Supabase dashboard
+2. Verify exact function name with `-ts` suffix
+3. Test function directly in Supabase
+4. Check browser network tab for actual requests
+5. Verify RLS policies allow operations
+6. Check Edge Function logs
+
+## 9. Storage Integration Pattern
+
+### Bucket Setup (in migration)
+```sql
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('content-assets', 'content-assets', true)
+ON CONFLICT (id) DO NOTHING;
+```
+
+### File Upload Helper
+```typescript
+async uploadFile(file: File, folder: string, bucketName = 'content-assets') {
+  const timestamp = Date.now();
+  const fileName = `${folder}/${timestamp}_${file.name}`;
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await fetch(`${supabaseConfig.url}/storage/v1/object/${bucketName}/${fileName}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+    },
+    body: formData
+  });
+  
+  return {
+    path: fileName,
+    publicUrl: `${supabaseConfig.url}/storage/v1/object/public/${bucketName}/${fileName}`
+  };
+}
+```
+
+## 10. Success Metrics
+
+**When Implementation is Correct:**
+- All CRUD operations work immediately after migration
+- No 401 authentication errors
+- No 404 function not found errors
+- Consistent behavior across all operations
+- File uploads work seamlessly
+- Data persists with proper UUID structure
+
+**This pattern successfully used in:**
+- ✅ Character Profiles (original success)
+- ✅ Brand Kit Component (after migration fix)
+- 🎯 Content Component (upcoming)
+- 🎯 Schedule Component (upcoming)
+
+The key is following this systematic approach rather than ad-hoc manual setup. Every component that follows this pattern works immediately without debugging sessions.# Supabase Edge Functions Integration Guide
+
+## 1. Naming Convention Rules
+
+### GitHub File Structure
+```
+supabase/
+  functions/
+    fetch_brand_colors.ts
+    update_brand_colors.ts
+    delete_brand_colors.ts
+```
+
+### Deployed Function URLs
+```
+/functions/v1/fetch_brand_colors-ts
+/functions/v1/update_brand_colors-ts
+/functions/v1/delete_brand_colors-ts
+```
+
+**Key Point:** Supabase automatically converts `.ts` to `-ts` in deployed URLs.
+
+## 2. Table-Function Naming Alignment
+
+### Database Tables
+- `brand_colors` (plural)
+- `brand_logos` (plural)
+- `typography_system` (exception: use `font` for functions)
+- `brand_guidelines` (plural)
+
+### Function Names
+- `fetch_brand_colors.ts` → `fetch_brand_colors-ts`
+- `update_brand_colors.ts` → `update_brand_colors-ts`
+- `delete_brand_colors.ts` → `delete_brand_colors-ts`
+- `fetch_brand_fonts.ts` → `fetch_brand_fonts-ts` (singular exception)
+
+## 3. Standard Edge Function Template
+
+```typescript
+// supabase/functions/[operation]_[table]/index.ts
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    )
+
+    const { /* parameters */ } = await req.json()
+
+    // Database operation here
+    const { data, error } = await supabaseClient
+      .from('table_name')
+      .operation()
+
+    if (error) throw error
+
+    return new Response(
+      JSON.stringify({ success: true, data }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400 
+      }
+    )
+  }
+})
+```
+
+## 4. Required RLS Policy Setup
+
+Run this SQL for each new table:
+
+```sql
+-- Enable RLS
+ALTER TABLE your_table_name ENABLE ROW LEVEL SECURITY;
+
+-- Create permissive policy for Edge Functions
+CREATE POLICY "Allow all operations for service role" 
+ON your_table_name 
+FOR ALL 
+USING (true);
+```
+
+## 5. React Component API Call Pattern
+
+```typescript
+// Fetch operation (simple GET via REST API)
+async fetchItems() {
+  const response = await fetch(`${supabaseConfig.url}/rest/v1/table_name`, {
+    headers: {
+      'apikey': supabaseConfig.anonKey,
+      'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+    }
+  });
+  return response.json();
+}
+
+// Create operation (POST via REST API)
+async saveItem(itemData: any) {
+  const response = await fetch(`${supabaseConfig.url}/rest/v1/table_name`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': supabaseConfig.anonKey,
+      'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(itemData)
+  });
+  return response.json();
+}
+
+// Update operation (Edge Function)
+async updateItem(itemId: number, itemData: any) {
+  const response = await fetch(`${supabaseConfig.url}/functions/v1/update_table_name-ts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+    },
+    body: JSON.stringify({ itemId, itemData })
+  });
+  return response.json();
+}
+
+// Delete operation (Edge Function)
+async deleteItem(itemId: number) {
+  const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_table_name-ts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+    },
+    body: JSON.stringify({ itemId })
+  });
+  return response.json();
+}
+```
+
+## 6. Environment Variables
+
+### Component (.env file)
+```
+VITE_SUPABASE_URL=your_project_url
+VITE_SUPABASE_PUBLISHABLE_KEY=your_anon_key
+```
+
+### Edge Functions (automatically available)
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+
+## 7. Common Error Solutions
+
+### 404 Function Not Found
+- Check exact function name in Supabase dashboard
+- Ensure using `-ts` suffix in API calls
+- Verify function is deployed
+
+### 401 Authentication Error
+- Check RLS policies on target tables
+- Verify API key is correct
+- Ensure environment variables are set
+
+### 500 Internal Server Error
+- Check Edge Function logs in Supabase dashboard
+- Verify JSON payload structure
+- Check database table schema matches code
+
+## 8. Debugging Process
+
+1. **Check Function Exists:** Supabase Dashboard > Edge Functions
+2. **Verify Function Name:** Must match URL pattern with `-ts`
+3. **Test Function Directly:** Use Supabase function testing interface
+4. **Check Logs:** Edge Functions > [Function] > Logs tab
+5. **Verify RLS Policies:** SQL Editor > Check table permissions
+6. **Test API Call:** Browser console network tab
+
+## 9. Development Workflow
+
+1. Create table in Supabase
+2. Set up RLS policies
+3. Create Edge Function files (.ts)
+4. Deploy functions via GitHub or CLI
+5. Verify deployment in dashboard
+6. Update component with correct function names
+7. Test operations in order: fetch → create → update → delete
+
+## 10. Best Practices
+
+- Use REST API for simple fetch/create operations (better performance)
+- Use Edge Functions for complex update/delete operations (better control)
+- Always include proper error handling
+- Test functions individually before integration
+- Keep function names consistent with table names
+- Document any naming exceptions (like font vs fonts)
+- Always check RLS policies when setting up new tables
+
+## 11. Future Component Checklist
+
+- [ ] Table created with correct name
+- [ ] RLS policies configured
+- [ ] Edge Functions match table name pattern
+- [ ] Functions deployed and visible in dashboard
+- [ ] Component calls use correct `-ts` suffix
+- [ ] Error handling implemented
+- [ ] Testing completed for all CRUD operations
