@@ -387,7 +387,9 @@ const supabaseAPI = {
       });
       
       if (!response.ok) {
-        throw new Error(`font save failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Full error response:', errorText);
+        throw new Error(`font save failed: ${response.status} - ${errorText}`);
       }
       
       const result = await response.json();
