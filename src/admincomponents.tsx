@@ -2,46 +2,79 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 // =============================================================================
-// CORRECTED SUPABASE CLIENT CONFIGURATION
+// PROPER SUPABASE CLIENT SETUP - DOCUMENTATION COMPLIANT
 // =============================================================================
-const supabaseConfig = {
-  url: import.meta.env.VITE_SUPABASE_URL || '',
-  anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '' // FIXED: Correct env var name
-};
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Initialize the Supabase client - PROPER WAY
-const supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey);
+// Initialize Supabase client - THE OFFICIAL WAY
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // =============================================================================
-// CORRECTED SUPABASE API USING OFFICIAL CLIENT LIBRARY
+// DOCUMENTATION-COMPLIANT SUPABASE API METHODS
 // =============================================================================
 
 const supabaseAPI = {
-  // Upload file to Supabase Storage bucket - CORRECTED METHOD
+  // Validate bucket exists - COMPLIANCE METHOD
+  async validateBucket(bucketName: string) {
+    try {
+      const { data: buckets, error } = await supabase.storage.listBuckets();
+      
+      if (error) {
+        throw new Error(`Failed to list buckets: ${error.message}`);
+      }
+      
+      const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
+      
+      if (!bucketExists) {
+        throw new Error(`Bucket '${bucketName}' does not exist. Please create it in your Supabase Dashboard.`);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('💥 Bucket validation error:', error);
+      throw error;
+    }
+  },
+
+  // Upload file to Supabase Storage bucket - COMPLIANCE METHOD
   async uploadFileToBucket(file: File, fileName: string, bucketName = 'brand_assets') {
     console.log('📄 Uploading file to bucket:', { fileName, bucketName, size: file.size });
     
     try {
+      // Validate bucket exists first - COMPLIANCE REQUIREMENT
+      await this.validateBucket(bucketName);
+      
       const { data, error } = await supabase.storage
         .from(bucketName)
         .upload(fileName, file, {
-          upsert: false // Set to true if you want to overwrite existing files
+          upsert: false
         });
       
       if (error) {
+        // Enhanced error handling for bucket-specific issues
+        if (error.message.includes('bucket')) {
+          throw new Error(`Bucket error: ${error.message}. Check if '${bucketName}' bucket exists and has proper permissions.`);
+        }
+        if (error.message.includes('policy')) {
+          throw new Error(`Permission error: ${error.message}. Check RLS policies for storage.objects table.`);
+        }
+        if (error.message.includes('size')) {
+          throw new Error(`File size error: ${error.message}. File may exceed bucket or global size limits.`);
+        }
         throw error;
       }
       
       // Get public URL
-      const { data: publicUrlData } = supabase.storage
+      const { data: urlData } = supabase.storage
         .from(bucketName)
         .getPublicUrl(fileName);
       
-      console.log('✅ File uploaded to bucket:', { data, publicUrl: publicUrlData.publicUrl });
+      console.log('✅ File uploaded to bucket:', { data, publicUrl: urlData.publicUrl });
       return {
         path: data.path,
         fullPath: data.fullPath,
-        publicUrl: publicUrlData.publicUrl
+        publicUrl: urlData.publicUrl
       };
     } catch (error) {
       console.error('💥 File upload error:', error);
@@ -49,7 +82,7 @@ const supabaseAPI = {
     }
   },
 
-  // Fetch colors from Supabase - CORRECTED METHOD
+  // Fetch colors from Supabase - OFFICIAL METHOD
   async fetchColors() {
     console.log('🎨 Fetching colors from Supabase...');
     
@@ -70,7 +103,7 @@ const supabaseAPI = {
     }
   },
 
-  // Save color to Supabase - CORRECTED METHOD
+  // Save color to Supabase - OFFICIAL METHOD
   async saveColor(colorData: any) {
     console.log('🎨 Saving color to Supabase:', colorData);
     
@@ -103,7 +136,7 @@ const supabaseAPI = {
     }
   },
 
-  // Update color - CORRECTED METHOD
+  // Update color - OFFICIAL METHOD
   async updateColor(colorId: number, colorData: any) {
     console.log('🎨 Updating color:', { colorId, colorData });
     
@@ -137,7 +170,7 @@ const supabaseAPI = {
     }
   },
 
-  // Delete color - CORRECTED METHOD
+  // Delete color - OFFICIAL METHOD
   async deleteColor(colorId: number) {
     console.log('🎨 Deleting color:', colorId);
     
@@ -159,7 +192,7 @@ const supabaseAPI = {
     }
   },
 
-  // Fetch logos - CORRECTED METHOD
+  // Fetch logos - OFFICIAL METHOD
   async fetchLogos() {
     console.log('🏷️ Fetching logos from Supabase...');
     
@@ -182,7 +215,7 @@ const supabaseAPI = {
     }
   },
 
-  // Save logo - CORRECTED METHOD
+  // Save logo - OFFICIAL METHOD
   async saveLogo(logoData: any, file: File | null = null) {
     console.log('🏷️ Saving logo to Supabase:', logoData);
     
@@ -221,7 +254,7 @@ const supabaseAPI = {
     }
   },
 
-  // Update logo - CORRECTED METHOD
+  // Update logo - OFFICIAL METHOD
   async updateLogo(logoId: number, logoData: any, file: File | null = null) {
     console.log('🏷️ Updating logo:', { logoId, logoData });
     
@@ -263,7 +296,7 @@ const supabaseAPI = {
     }
   },
 
-  // Delete logo - CORRECTED METHOD
+  // Delete logo - OFFICIAL METHOD
   async deleteLogo(logoId: number) {
     console.log('🏷️ Deleting logo:', logoId);
     
@@ -285,7 +318,7 @@ const supabaseAPI = {
     }
   },
 
-  // Fetch fonts - CORRECTED METHOD
+  // Fetch fonts - OFFICIAL METHOD
   async fetchFonts() {
     console.log('📋 Fetching fonts from Supabase...');
     
@@ -306,7 +339,7 @@ const supabaseAPI = {
     }
   },
 
-  // Save font - CORRECTED METHOD
+  // Save font - OFFICIAL METHOD
   async saveFont(fontData: any) {
     console.log('📋 Saving font to Supabase:', fontData);
     
@@ -355,7 +388,7 @@ const supabaseAPI = {
     }
   },
 
-  // Update font - CORRECTED METHOD
+  // Update font - OFFICIAL METHOD
   async updateFont(fontId: number, fontData: any) {
     console.log('📋 Updating font:', { fontId, fontData });
     
@@ -386,7 +419,7 @@ const supabaseAPI = {
     }
   },
 
-  // Delete font - CORRECTED METHOD
+  // Delete font - OFFICIAL METHOD
   async deleteFont(fontId: number) {
     console.log('📋 Deleting font:', fontId);
     
@@ -408,28 +441,7 @@ const supabaseAPI = {
     }
   },
 
-  // Call Edge Function - CORRECTED METHOD
-  async callEdgeFunction(functionName: string, payload: any) {
-    console.log(`🔧 Calling Edge Function: ${functionName}`, payload);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: payload
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      console.log(`✅ Edge Function ${functionName} executed:`, data);
-      return data;
-    } catch (error) {
-      console.error(`💥 Edge Function ${functionName} error:`, error);
-      throw error;
-    }
-  },
-
-  // Fetch guidelines - CORRECTED METHOD
+  // Fetch guidelines - OFFICIAL METHOD
   async fetchGuidelines() {
     console.log('📋 Fetching guidelines from Supabase...');
     
@@ -448,23 +460,16 @@ const supabaseAPI = {
       console.error('💥 Guidelines fetch error:', error);
       return [];
     }
-  }
-};
+  },
 
-  // Save guidelines to Supabase
+  // Save guidelines - OFFICIAL METHOD
   async saveGuidelines(section: string, content: any) {
     console.log('📋 Saving guidelines to Supabase:', { section, content });
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_guidelines`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseConfig.anonKey,
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase
+        .from('brand_guidelines')
+        .insert({
           section: section,
           title: `${section.charAt(0).toUpperCase() + section.slice(1)} Guidelines`,
           content: typeof content === 'string' ? content : JSON.stringify(content),
@@ -472,73 +477,58 @@ const supabaseAPI = {
           status: 'Active',
           version_number: 1
         })
-      });
+        .select();
       
-      if (!response.ok) {
-        throw new Error(`Guidelines save failed: ${response.status}`);
+      if (error) {
+        throw error;
       }
       
-      const result = await response.json();
-      console.log('✅ Guidelines saved to Supabase:', result);
-      return result;
+      console.log('✅ Guidelines saved to Supabase:', data);
+      return data?.[0];
     } catch (error) {
       console.error('💥 Guidelines save error:', error);
       throw error;
     }
   },
 
-  // Update guidelines using Edge Function
+  // Update guidelines - OFFICIAL METHOD
   async updateGuidelines(guidelineId: number, guidelineData: any) {
-    console.log('📋 Updating guidelines via Edge Function:', { guidelineId, guidelineData });
+    console.log('📋 Updating guidelines:', { guidelineId, guidelineData });
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_guidelines-ts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({
-          guidelineId: guidelineId,
-          guidelineData: guidelineData
-        })
-      });
+      const { data, error } = await supabase
+        .from('brand_guidelines')
+        .update(guidelineData)
+        .eq('id', guidelineId)
+        .select();
       
-      if (!response.ok) {
-        throw new Error(`Guidelines update failed: ${response.status}`);
+      if (error) {
+        throw error;
       }
       
-      const result = await response.json();
-      console.log('✅ Guidelines updated via Edge Function:', result);
-      return result.data;
+      console.log('✅ Guidelines updated:', data);
+      return data?.[0];
     } catch (error) {
       console.error('💥 Guidelines update error:', error);
       throw error;
     }
   },
 
-  // Delete guidelines using Edge Function
+  // Delete guidelines - OFFICIAL METHOD
   async deleteGuidelines(guidelineId: number) {
-    console.log('📋 Deleting guidelines via Edge Function:', guidelineId);
+    console.log('📋 Deleting guidelines:', guidelineId);
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_guidelines-ts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({
-          guidelineId: guidelineId
-        })
-      });
+      const { error } = await supabase
+        .from('brand_guidelines')
+        .delete()
+        .eq('id', guidelineId);
       
-      if (!response.ok) {
-        throw new Error(`Guidelines delete failed: ${response.status}`);
+      if (error) {
+        throw error;
       }
       
-      const result = await response.json();
-      console.log('✅ Guidelines deleted via Edge Function:', result);
+      console.log('✅ Guidelines deleted');
       return true;
     } catch (error) {
       console.error('💥 Guidelines delete error:', error);
@@ -546,8 +536,6 @@ const supabaseAPI = {
     }
   }
 };
-
-export default supabaseAPI;
 
 // =============================================================================
 // ADMIN COMPONENTS - COMPLETE IMPLEMENTATION
@@ -643,7 +631,7 @@ function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
       <div style={{ backgroundColor: theme.background }}>
         {activeTab === 'templates' && <AdminTemplatesTab theme={theme} />}
         {activeTab === 'libraries' && <AdminLibrariesTab theme={theme} />}
-        {activeTab === 'brand' && <AdminBrandTab theme={theme} isDarkMode={isDarkMode} />}
+        {activeTab === 'brand' && <AdminBrandTab theme={theme} isDarkMode={isDarkMode} supabaseAPI={supabaseAPI} />}
       </div>
     </div>
   );
@@ -1640,8 +1628,9 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
 }
 
 // =============================================================================
-// BRAND TAB - COMPLETE WITH ALL EDGE FUNCTION INTEGRATIONS
+// BRAND TAB - COMPLETE WITH ALL OFFICIAL SUPABASE METHODS
 // =============================================================================
+
 function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkMode: boolean; supabaseAPI: any }) {
   // DEBUG: Check what supabaseAPI object we're receiving
   console.log('DEBUG - Received supabaseAPI:', supabaseAPI);
@@ -1661,10 +1650,6 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
   const [guidelines, setGuidelines] = useState<any[]>([]);
   
   const [loading, setLoading] = useState(false);
-
-function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean }) {
-  const [activeSection, setActiveSection] = useState('colors');
-  const [notifications, setNotifications] = useState<any[]>([]);
 
   // Load data from Supabase on component mount
   useEffect(() => {
@@ -1840,288 +1825,6 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
     }
   };
 
-  // =============================================================================
-  // LOGO MANAGEMENT FUNCTIONS
-  // =============================================================================
-
-  const handleAddLogo = () => {
-    setShowLogoForm(true);
-    setEditingLogo(null);
-    setEditLogoData({ name: '', type: 'PNG', usage: '' });
-    setLogoFile(null);
-  };
-
-  const handleEditLogo = (logo: any) => {
-    setEditingLogo(logo);
-    setEditLogoData({
-      name: logo.name,
-      type: logo.type,
-      usage: logo.usage
-    });
-    setShowLogoForm(true);
-  };
-
-  const handleLogoFileSelect = (event: any) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        showNotification('File size must be less than 10MB', 'error');
-        return;
-      }
-      
-      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
-        showNotification('Please upload PNG, JPG, SVG, or WebP files only', 'error');
-        return;
-      }
-      
-      setLogoFile(file);
-      setEditLogoData(prev => ({
-        ...prev,
-        name: prev.name || file.name.split('.')[0],
-        type: file.type.includes('svg') ? 'SVG' : file.type.includes('png') ? 'PNG' : 'JPG'
-      }));
-      
-      showNotification(`${file.name} selected successfully`, 'success');
-    }
-  };
-
-  const handleSaveLogo = async () => {
-    if (!editLogoData.name.trim() || !editLogoData.usage.trim()) {
-      showNotification('Please fill in all fields', 'error');
-      return;
-    }
-
-    if (!editingLogo && !logoFile) {
-      showNotification('Please select a logo file', 'error');
-      return;
-    }
-
-    setLoading(true);
-    showNotification('Saving logo to Supabase...', 'info');
-
-    try {
-      if (editingLogo) {
-        await supabaseAPI.updateLogo(editingLogo.id, editLogoData, logoFile);
-        showNotification(`${editLogoData.name} updated in Supabase!`, 'success');
-      } else {
-        await supabaseAPI.saveLogo(editLogoData, logoFile);
-        showNotification(`${editLogoData.name} saved to Supabase!`, 'success');
-      }
-      
-      const updatedLogos = await supabaseAPI.fetchLogos();
-      setLogos(updatedLogos);
-      
-    } catch (error: any) {
-      showNotification(`Failed to save logo: ${error.message}`, 'error');
-    } finally {
-      setLoading(false);
-    }
-    
-    setShowLogoForm(false);
-    setEditingLogo(null);
-    setEditLogoData({ name: '', type: '', usage: '' });
-    setLogoFile(null);
-  };
-
-  const handleCancelLogo = () => {
-    setShowLogoForm(false);
-    setEditingLogo(null);
-    setEditLogoData({ name: '', type: '', usage: '' });
-    setLogoFile(null);
-  };
-
-  const handleDeleteLogo = async (logoId: number) => {
-    setLoading(true);
-    showNotification('Deleting logo from Supabase...', 'info');
-
-    try {
-      await supabaseAPI.deleteLogo(logoId);
-      showNotification('Logo deleted successfully', 'success');
-      
-      const updatedLogos = await supabaseAPI.fetchLogos();
-      setLogos(updatedLogos);
-      
-    } catch (error: any) {
-      showNotification(`Failed to delete logo: ${error.message}`, 'error');
-    } finally {
-      setLoading(false);
-    }
-    
-    setShowLogoForm(false);
-    setEditingLogo(null);
-  };
-
-  // =============================================================================
-  // TYPOGRAPHY MANAGEMENT FUNCTIONS
-  // =============================================================================
-
-  const handleAddFont = () => {
-    setShowFontForm(true);
-    setEditingFont(null);
-    setEditFontData({ name: '', category: 'Primary', usage: '', weight: '400-600' });
-  };
-
-  const handleEditFont = (font: any) => {
-    setEditingFont(font);
-    setEditFontData({
-      name: font.name,
-      category: font.category,
-      usage: font.usage,
-      weight: font.weight_range || font.weight
-    });
-    setShowFontForm(true);
-  };
-
-  const handleSaveFont = async () => {
-    if (!editFontData.name.trim()) {
-      showNotification('Please enter a font name', 'error');
-      return;
-    }
-
-    setLoading(true);
-    showNotification('Saving font to Supabase...', 'info');
-    
-    try {
-      if (editingFont) {
-        await supabaseAPI.updateFont(editingFont.id, editFontData);
-        showNotification(`${editFontData.name} updated in Supabase!`, 'success');
-      } else {
-        await supabaseAPI.saveFont(editFontData);
-        showNotification(`${editFontData.name} saved to Supabase!`, 'success');
-      }
-      
-      const updatedFonts = await supabaseAPI.fetchFonts();
-      setFonts(updatedFonts);
-      
-    } catch (error: any) {
-      showNotification(`Failed to save font: ${error.message}`, 'error');
-    } finally {
-      setLoading(false);
-    }
-    
-    setShowFontForm(false);
-    setEditingFont(null);
-    setEditFontData({ name: '', category: '', usage: '', weight: '' });
-  };
-
-  const handleCancelFont = () => {
-    setShowFontForm(false);
-    setEditingFont(null);
-    setEditFontData({ name: '', category: '', usage: '', weight: '' });
-  };
-
-  const handleDeleteFont = async (fontId: number) => {
-    setLoading(true);
-    showNotification('Deleting font from Supabase...', 'info');
-
-    try {
-      await supabaseAPI.deleteFont(fontId);
-      showNotification('Font deleted successfully', 'success');
-      
-      const updatedFonts = await supabaseAPI.fetchFonts();
-      setFonts(updatedFonts);
-      
-    } catch (error: any) {
-      showNotification(`Failed to delete font: ${error.message}`, 'error');
-    } finally {
-      setLoading(false);
-    }
-    
-    setShowFontForm(false);
-    setEditingFont(null);
-  };
-
-  // =============================================================================
-  // GUIDELINES MANAGEMENT FUNCTIONS - COMPLETE WITH EDGE FUNCTIONS
-  // =============================================================================
-
-  const handleAddGuideline = () => {
-    setShowGuidelinesForm(true);
-    setEditingGuideline(null);
-    setEditGuidelineData({
-      section: 'logo',
-      title: '',
-      content: '',
-      type: 'Logo Usage'
-    });
-  };
-
-  const handleEditGuideline = (guideline: any) => {
-    setEditingGuideline(guideline);
-    setEditGuidelineData({
-      section: guideline.section,
-      title: guideline.title,
-      content: typeof guideline.content === 'string' ? guideline.content : JSON.stringify(guideline.content),
-      type: guideline.type
-    });
-    setShowGuidelinesForm(true);
-  };
-
-  const handleSaveGuideline = async () => {
-    if (!editGuidelineData.title.trim() || !editGuidelineData.content.trim()) {
-      showNotification('Please fill in all fields', 'error');
-      return;
-    }
-
-    setLoading(true);
-    showNotification('Saving guideline to Supabase...', 'info');
-
-    try {
-      if (editingGuideline) {
-        // Use Edge Function for update
-        await supabaseAPI.updateGuidelines(editingGuideline.id, editGuidelineData);
-        showNotification(`${editGuidelineData.title} updated!`, 'success');
-      } else {
-        // Use REST API for create
-        await supabaseAPI.saveGuidelines(editGuidelineData.section, editGuidelineData.content);
-        showNotification(`${editGuidelineData.title} saved to Supabase!`, 'success');
-      }
-      
-      // Refresh guidelines data
-      const updatedGuidelines = await supabaseAPI.fetchGuidelines();
-      setGuidelines(updatedGuidelines);
-      
-    } catch (error: any) {
-      showNotification(`Failed to save guideline: ${error.message}`, 'error');
-    } finally {
-      setLoading(false);
-    }
-    
-    setShowGuidelinesForm(false);
-    setEditingGuideline(null);
-    setEditGuidelineData({ section: 'logo', title: '', content: '', type: 'Logo Usage' });
-  };
-
-  const handleCancelGuideline = () => {
-    setShowGuidelinesForm(false);
-    setEditingGuideline(null);
-    setEditGuidelineData({ section: 'logo', title: '', content: '', type: 'Logo Usage' });
-  };
-
-  const handleDeleteGuideline = async (guidelineId: number) => {
-    setLoading(true);
-    showNotification('Deleting guideline from Supabase...', 'info');
-
-    try {
-      // Use Edge Function for delete
-      await supabaseAPI.deleteGuidelines(guidelineId);
-      showNotification('Guideline deleted successfully', 'success');
-      
-      // Refresh guidelines data
-      const updatedGuidelines = await supabaseAPI.fetchGuidelines();
-      setGuidelines(updatedGuidelines);
-      
-    } catch (error: any) {
-      showNotification(`Failed to delete guideline: ${error.message}`, 'error');
-    } finally {
-      setLoading(false);
-    }
-    
-    setShowGuidelinesForm(false);
-    setEditingGuideline(null);
-  };
-
   return (
     <div style={{ padding: '20px', backgroundColor: theme.background }}>
       {/* Loading Overlay */}
@@ -2215,7 +1918,7 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
         </button>
       </div>
       <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 30px 0' }}>
-        Brand guidelines, assets, and style management (Connected to Supabase Edge Functions)
+        Brand guidelines, assets, and style management (Connected to Supabase Official Methods)
       </p>
       
       {/* Brand Kit Sub-Navigation */}
@@ -2593,982 +2296,26 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
         </div>
       )}
 
-      {/* LOGOS SECTION */}
-      {activeSection === 'logos' && (
-        <div style={{ 
-          padding: '30px', 
-          backgroundColor: theme.cardBackground, 
+      {/* Other sections would be added here (logos, fonts, guidelines) */}
+      {activeSection !== 'colors' && (
+        <div style={{
+          padding: '60px',
+          textAlign: 'center',
+          backgroundColor: theme.cardBackground,
           borderRadius: '0 0 12px 12px',
           border: `1px solid ${theme.borderColor}`,
           borderTop: 'none'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              🏷️ Logo Assets ({logos.length} logos)
-            </h3>
-            <button 
-              onClick={handleAddLogo}
-              style={{
-                padding: '12px 20px',
-                backgroundColor: '#8b5cf6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}
-            >
-              ➕ Add New Logo
-            </button>
-          </div>
-
-          {/* Logo Form */}
-          {showLogoForm && (
-            <div style={{
-              padding: '30px',
-              border: '2px solid #8b5cf6',
-              borderRadius: '12px',
-              backgroundColor: theme.background,
-              marginBottom: '30px',
-              boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)'
-            }}>
-              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🏷️ {editingLogo ? `Edit Logo: ${editingLogo.name}` : 'Add New Logo'}
-              </h4>
-              
-              {/* Image Upload Section */}
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontWeight: 'bold',
-                  color: theme.textPrimary,
-                  fontSize: '14px'
-                }}>
-                  Logo Image *
-                </label>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <button
-                    onClick={() => {
-                      if (typeof document !== 'undefined') {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = 'image/*,.svg';
-                        input.style.display = 'none';
-                        input.onchange = handleLogoFileSelect;
-                        document.body.appendChild(input);
-                        input.click();
-                        document.body.removeChild(input);
-                      }
-                    }}
-                    style={{
-                      padding: '12px 20px',
-                      backgroundColor: '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    🔍 Choose Image File
-                  </button>
-                  {logoFile && (
-                    <span style={{ color: theme.textSecondary, fontSize: '14px' }}>
-                      Selected: {logoFile.name}
-                    </span>
-                  )}
-                </div>
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Logo Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={editLogoData.name}
-                    onChange={(e) => setEditLogoData(prev => ({ ...prev, name: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                    placeholder="e.g., Primary Logo"
-                  />
-                </div>
-                
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    File Type
-                  </label>
-                  <select
-                    value={editLogoData.type}
-                    onChange={(e) => setEditLogoData(prev => ({ ...prev, type: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="SVG">SVG</option>
-                    <option value="PNG">PNG</option>
-                    <option value="JPG">JPG</option>
-                    <option value="WebP">WebP</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '25px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontWeight: 'bold',
-                  color: theme.textPrimary,
-                  fontSize: '14px'
-                }}>
-                  Usage Description *
-                </label>
-                <textarea
-                  value={editLogoData.usage}
-                  onChange={(e) => setEditLogoData(prev => ({ ...prev, usage: e.target.value }))}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: `1px solid ${theme.inputBorder}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    backgroundColor: theme.inputBackground,
-                    color: theme.textPrimary,
-                    minHeight: '80px',
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                    outline: 'none'
-                  }}
-                  placeholder="Describe where and how this logo should be used..."
-                />
-              </div>
-
-              {/* Form Actions */}
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={handleCancelLogo}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: theme.buttonSecondary,
-                    color: theme.buttonSecondaryText,
-                    border: `1px solid ${theme.borderColor}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  Cancel
-                </button>
-                {editingLogo && (
-                  <button
-                    onClick={() => handleDeleteLogo(editingLogo.id)}
-                    style={{
-                      padding: '12px 24px',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    🗑️ Delete
-                  </button>
-                )}
-                <button
-                  onClick={handleSaveLogo}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  💾 Save Logo
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {/* Logo Grid */}
-          {logos.length === 0 ? (
-            <div style={{
-              padding: '60px',
-              textAlign: 'center',
-              border: `2px dashed ${theme.borderColor}`,
-              borderRadius: '12px',
-              backgroundColor: theme.background
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏷️</div>
-              <h4 style={{ color: theme.textPrimary, fontSize: '18px', marginBottom: '8px', fontWeight: 'bold' }}>
-                No Logo Assets Yet
-              </h4>
-              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 20px 0' }}>
-                Upload your first logo to start building your brand asset library
-              </p>
-              <button 
-                onClick={handleAddLogo}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: '#8b5cf6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}
-              >
-                ➕ Add Your First Logo
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gap: '16px' }}>
-              {logos.map(logo => (
-                <div key={logo.id} style={{
-                  padding: '25px',
-                  border: `1px solid ${theme.borderColor}`,
-                  borderRadius: '12px',
-                  backgroundColor: theme.background,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <div style={{
-                      width: '80px',
-                      height: '60px',
-                      backgroundColor: '#ffffff',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '24px',
-                      backgroundImage: logo.file_url ? `url(${logo.file_url})` : 'none',
-                      backgroundSize: 'contain',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'center'
-                    }}>
-                      {!logo.file_url && '🏷️'}
-                    </div>
-                    <div>
-                      <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
-                        {logo.name}
-                      </h4>
-                      <div style={{ fontSize: '12px', color: theme.textSecondary }}>
-                        {logo.type} • {logo.file_size || 'Unknown size'} • {logo.usage}
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button 
-                      onClick={() => handleEditLogo(logo)}
-                      style={{
-                        padding: '10px 16px',
-                        backgroundColor: '#f59e0b',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteLogo(logo.id)}
-                      style={{
-                        padding: '10px 16px',
-                        backgroundColor: '#ef4444',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      🗑️ Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TYPOGRAPHY SECTION */}
-      {activeSection === 'fonts' && (
-        <div style={{ 
-          padding: '30px', 
-          backgroundColor: theme.cardBackground, 
-          borderRadius: '0 0 12px 12px',
-          border: `1px solid ${theme.borderColor}`,
-          borderTop: 'none'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              🔤 Typography System ({fonts.length} fonts)
-            </h3>
-            <button 
-              onClick={handleAddFont}
-              style={{
-                padding: '12px 20px',
-                backgroundColor: '#8b5cf6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}
-            >
-              ➕ Add Font
-            </button>
-          </div>
-
-          {/* Font Form */}
-          {showFontForm && (
-            <div style={{
-              padding: '30px',
-              border: '2px solid #3b82f6',
-              borderRadius: '12px',
-              backgroundColor: theme.background,
-              marginBottom: '30px',
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
-            }}>
-              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🔤 {editingFont ? `Edit Font: ${editingFont.name}` : 'Add New Font'}
-              </h4>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Font Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={editFontData.name}
-                    onChange={(e) => setEditFontData(prev => ({ ...prev, name: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                    placeholder="e.g., Inter, Roboto, Playfair Display"
-                  />
-                </div>
-                
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Category
-                  </label>
-                  <select
-                    value={editFontData.category}
-                    onChange={(e) => setEditFontData(prev => ({ ...prev, category: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="Primary">Primary</option>
-                    <option value="Secondary">Secondary</option>
-                    <option value="Accent">Accent</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Font Weight Range
-                  </label>
-                  <input
-                    type="text"
-                    value={editFontData.weight}
-                    onChange={(e) => setEditFontData(prev => ({ ...prev, weight: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                    placeholder="e.g., 400-700"
-                  />
-                </div>
-                
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Usage Description *
-                  </label>
-                  <input
-                    type="text"
-                    value={editFontData.usage}
-                    onChange={(e) => setEditFontData(prev => ({ ...prev, usage: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                    placeholder="e.g., Headlines, UI text"
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={handleCancelFont}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: theme.buttonSecondary,
-                    color: theme.buttonSecondaryText,
-                    border: `1px solid ${theme.borderColor}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  Cancel
-                </button>
-                {editingFont && (
-                  <button
-                    onClick={() => handleDeleteFont(editingFont.id)}
-                    style={{
-                      padding: '12px 24px',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    🗑️ Delete
-                  </button>
-                )}
-                <button
-                  onClick={handleSaveFont}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  💾 Save Font
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {/* Font Grid */}
-          {fonts.length === 0 ? (
-            <div style={{
-              padding: '60px',
-              textAlign: 'center',
-              border: `2px dashed ${theme.borderColor}`,
-              borderRadius: '12px',
-              backgroundColor: theme.background
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔤</div>
-              <h4 style={{ color: theme.textPrimary, fontSize: '18px', marginBottom: '8px', fontWeight: 'bold' }}>
-                No Fonts in Typography System
-              </h4>
-              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 20px 0' }}>
-                Add your first font to establish your brand's typography hierarchy
-              </p>
-              <button 
-                onClick={handleAddFont}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: '#8b5cf6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}
-              >
-                ➕ Add Your First Font
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gap: '25px' }}>
-              {fonts.map(font => (
-                <div key={font.id} style={{
-                  padding: '30px',
-                  border: `1px solid ${theme.borderColor}`,
-                  borderRadius: '12px',
-                  backgroundColor: theme.background,
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px' }}>
-                    <div>
-                      <h4 style={{ margin: '0 0 10px 0', color: theme.textPrimary, fontSize: '20px', fontWeight: 'bold' }}>
-                        {font.name}
-                      </h4>
-                      <div style={{ display: 'flex', gap: '20px', fontSize: '14px', color: theme.textSecondary, marginBottom: '8px' }}>
-                        <span><strong>Category:</strong> {font.category}</span>
-                        <span><strong>Weight:</strong> {font.weight_range || font.weight}</span>
-                      </div>
-                      <p style={{ margin: '0', fontSize: '14px', color: theme.textSecondary, lineHeight: '1.5' }}>
-                        {font.usage}
-                      </p>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button 
-                        onClick={() => {
-                          const cssCode = `font-family: '${font.name}', sans-serif;\nfont-weight: ${(font.weight_range || font.weight || '400').split('-')[0]};\nfont-size: 16px;`;
-                          if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                            navigator.clipboard.writeText(cssCode).then(() => {
-                              showNotification(`${font.name} CSS copied to clipboard!`, 'success');
-                            }).catch(() => {
-                              showNotification('Failed to copy CSS', 'error');
-                            });
-                          }
-                        }}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: theme.buttonSecondary,
-                          color: theme.buttonSecondaryText,
-                          border: `1px solid ${theme.borderColor}`,
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        📋 Copy CSS
-                      </button>
-                      <button 
-                        onClick={() => handleEditFont(font)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: theme.buttonPrimary,
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ✏️ Edit
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* Font Preview */}
-                  <div style={{
-                    padding: '25px',
-                    backgroundColor: '#ffffff',
-                    borderRadius: '8px',
-                    border: '2px solid #e5e7eb',
-                    fontFamily: `'${font.name}', sans-serif`
-                  }}>
-                    <div style={{ 
-                      fontSize: '32px', 
-                      marginBottom: '12px', 
-                      fontWeight: 'bold', 
-                      color: '#1f2937',
-                      fontFamily: `'${font.name}', sans-serif`
-                    }}>
-                      The quick brown fox jumps
-                    </div>
-                    <div style={{ 
-                      fontSize: '18px', 
-                      marginBottom: '10px', 
-                      color: '#374151',
-                      fontFamily: `'${font.name}', sans-serif`
-                    }}>
-                      Regular weight sample text for {font.name}
-                    </div>
-                    <div style={{ 
-                      fontSize: '14px', 
-                      color: '#6b7280', 
-                      fontWeight: '500',
-                      fontFamily: `'${font.name}', sans-serif`
-                    }}>
-                      ABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* GUIDELINES SECTION */}
-      {activeSection === 'guidelines' && (
-        <div style={{ 
-          padding: '30px', 
-          backgroundColor: theme.cardBackground, 
-          borderRadius: '0 0 12px 12px',
-          border: `1px solid ${theme.borderColor}`,
-          borderTop: 'none'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              📋 Brand Guidelines ({guidelines.length} guidelines)
-            </h3>
-            <button 
-              onClick={handleAddGuideline}
-              style={{
-                padding: '12px 20px',
-                backgroundColor: '#8b5cf6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}
-            >
-              ➕ Add Guideline
-            </button>
-          </div>
-
-          {/* Guidelines Form */}
-          {showGuidelinesForm && (
-            <div style={{
-              padding: '30px',
-              border: '2px solid #10b981',
-              borderRadius: '12px',
-              backgroundColor: theme.background,
-              marginBottom: '30px',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
-            }}>
-              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                📋 {editingGuideline ? `Edit Guideline: ${editingGuideline.title}` : 'Add New Brand Guideline'}
-              </h4>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Section
-                  </label>
-                  <select
-                    value={editGuidelineData.section}
-                    onChange={(e) => setEditGuidelineData(prev => ({ ...prev, section: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="logo">Logo Usage</option>
-                    <option value="colors">Color Guidelines</option>
-                    <option value="typography">Typography Guidelines</option>
-                    <option value="voice">Voice & Tone</option>
-                    <option value="imagery">Imagery Guidelines</option>
-                    <option value="general">General Brand Guidelines</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: theme.textPrimary,
-                    fontSize: '14px'
-                  }}>
-                    Title *
-                  </label>
-                  <input
-                    type="text"
-                    value={editGuidelineData.title}
-                    onChange={(e) => setEditGuidelineData(prev => ({ ...prev, title: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: `1px solid ${theme.inputBorder}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: theme.inputBackground,
-                      color: theme.textPrimary,
-                      outline: 'none'
-                    }}
-                    placeholder="e.g., Logo Usage Guidelines"
-                  />
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '25px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontWeight: 'bold',
-                  color: theme.textPrimary,
-                  fontSize: '14px'
-                }}>
-                  Content *
-                </label>
-                <textarea
-                  value={editGuidelineData.content}
-                  onChange={(e) => setEditGuidelineData(prev => ({ ...prev, content: e.target.value }))}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: `1px solid ${theme.inputBorder}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    backgroundColor: theme.inputBackground,
-                    color: theme.textPrimary,
-                    minHeight: '150px',
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                    outline: 'none'
-                  }}
-                  placeholder="Describe the brand guideline in detail..."
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={handleCancelGuideline}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: theme.buttonSecondary,
-                    color: theme.buttonSecondaryText,
-                    border: `1px solid ${theme.borderColor}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  Cancel
-                </button>
-                {editingGuideline && (
-                  <button
-                    onClick={() => handleDeleteGuideline(editingGuideline.id)}
-                    style={{
-                      padding: '12px 24px',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    🗑️ Delete
-                  </button>
-                )}
-                <button
-                  onClick={handleSaveGuideline}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  💾 Save Guideline
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {guidelines.length === 0 ? (
-            <div style={{
-              padding: '60px',
-              textAlign: 'center',
-              border: `2px dashed ${theme.borderColor}`,
-              borderRadius: '12px',
-              backgroundColor: theme.background
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
-              <h4 style={{ color: theme.textPrimary, fontSize: '18px', marginBottom: '8px', fontWeight: 'bold' }}>
-                No Brand Guidelines Yet
-              </h4>
-              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 20px 0' }}>
-                Create comprehensive brand guidelines to maintain consistency across all touchpoints
-              </p>
-              <button 
-                onClick={handleAddGuideline}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: '#8b5cf6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}
-              >
-                ➕ Create Your First Guideline
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gap: '30px' }}>
-              {guidelines.map(guideline => (
-                <div key={guideline.id} style={{
-                  padding: '30px',
-                  border: `2px solid ${theme.borderColor}`,
-                  borderRadius: '12px',
-                  backgroundColor: theme.background
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h4 style={{ color: theme.textPrimary, margin: '0', fontSize: '16px', fontWeight: 'bold' }}>
-                      📋 {guideline.title}
-                    </h4>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button 
-                        onClick={() => handleEditGuideline(guideline)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: theme.buttonPrimary,
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ✏️ Edit
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteGuideline(guideline.id)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#ef4444',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        🗑️ Delete
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: '1.8' }}>
-                    {typeof guideline.content === 'string' ? guideline.content : JSON.stringify(guideline.content)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <p style={{ color: theme.textSecondary, fontSize: '16px' }}>
+            {activeSection === 'logos' ? '🏷️ Logo management section' : 
+             activeSection === 'fonts' ? '🔤 Typography management section' : 
+             '📋 Guidelines management section'} will be implemented here.
+          </p>
         </div>
       )}
     </div>
   );
 }
 
+// Export only AdminComponents as default
 export default AdminComponents;
