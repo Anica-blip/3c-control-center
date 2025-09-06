@@ -334,8 +334,8 @@ const supabaseAPI = {
     }
   },
 
-  // Fetch fonts from Supabase
-  async fetchfont() {
+// Fetch fonts from Supabase
+  async fetchFont() {
     console.log('📋 Fetching font from Supabase...');
     
     try {
@@ -356,12 +356,12 @@ const supabaseAPI = {
       return font;
     } catch (error) {
       console.error('💥 font fetch error:', error);
-      return [];
+      return {};
     }
   },
 
   // Save font to Supabase
-  async savefont(section: string, content: any) {
+  async saveFont(section: string, content: any) {
     console.log('📋 Saving font to Supabase:', { section, content });
     
     try {
@@ -397,7 +397,7 @@ const supabaseAPI = {
   },
 
   // Update font using Edge Function
-  async updatefont(fontId: number, fontData: any) {
+  async updateFont(fontId: number, fontData: any) {
     console.log('📋 Updating font via Edge Function:', { fontId, fontData });
     
     try {
@@ -427,7 +427,7 @@ const supabaseAPI = {
   },
 
   // Delete font using Edge Function
-  async deletefont(fontId: number) {
+  async deleteFont(fontId: number) {
     console.log('📋 Deleting font via Edge Function:', fontId);
     
     try {
