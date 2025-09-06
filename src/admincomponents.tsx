@@ -335,200 +335,200 @@ const supabaseAPI = {
   },
 
 // Fetch fonts from Supabase
-  async fetchFont() {
-    console.log('📋 Fetching font from Supabase...');
-    
-    try {
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
-        method: 'GET',
-        headers: {
-          'apikey': supabaseConfig.anonKey,
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch font: ${response.status}`);
+async fetchFonts() {
+  console.log('📋 Fetching fonts from Supabase...');
+  
+  try {
+    const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
+      method: 'GET',
+      headers: {
+        'apikey': supabaseConfig.anonKey,
+        'Authorization': `Bearer ${supabaseConfig.anonKey}`,
       }
-      
-      const font = await response.json();
-      console.log('✅ font fetched from Supabase:', font);
-      return font;
-    } catch (error) {
-      console.error('💥 font fetch error:', error);
-      return [];
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch fonts: ${response.status}`);
     }
-  },
+    
+    const fonts = await response.json();
+    console.log('✅ Fonts fetched from Supabase:', fonts);
+    return fonts;
+  } catch (error) {
+    console.error('💥 Font fetch error:', error);
+    return [];
+  }
+},
 
-  // Save font to Supabase - handles all calling patterns
-  async saveFont(fontData: any) {
-    console.log('📋 Saving font to Supabase:', fontData);
+// Save font to Supabase - handles all calling patterns
+async saveFont(fontData: any) {
+  console.log('📋 Saving font to Supabase:', fontData);
+  
+  if (!fontData || !fontData.name) {
+    throw new Error('Font data with name is required');
+  }
+  
+  try {
+    const googleFontsUrl = fontData.name.trim().replace(/\s+/g, '+');
+    const fontUrl = `https://fonts.googleapis.com/css2?family=${googleFontsUrl}:wght@300;400;500;600;700&display=swap`;
     
-    if (!fontData || !fontData.name) {
-      throw new Error('Font data with name is required');
+    const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseConfig.anonKey,
+        'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        name: fontData.name,
+        type: fontData.category || 'Google Font',
+        file_path: fontUrl,
+        created_by: null,
+        is_active: true
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Full error response:', errorText);
+      throw new Error(`font save failed: ${response.status} - ${errorText}`);
     }
     
-    try {
-      const googleFontsUrl = fontData.name.trim().replace(/\s+/g, '+');
-      const fontUrl = `https://fonts.googleapis.com/css2?family=${googleFontsUrl}:wght@300;400;500;600;700&display=swap`;
-      
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseConfig.anonKey,
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({
+    const result = await response.json();
+    console.log('✅ font saved to Supabase:', result);
+    
+    // Load the Google Font for preview
+    if (typeof document !== 'undefined') {
+      const existingLink = document.querySelector(`link[href="${fontUrl}"]`);
+      if (!existingLink) {
+        const link = document.createElement('link');
+        link.href = fontUrl;
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.onload = () => console.log(`✅ Google Font loaded: ${fontData.name}`);
+        document.head.appendChild(link);
+      }
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('💥 font save error:', error);
+    throw error;
+  }
+},
+
+async savefont(fontData: any) {
+  return this.saveFont(fontData);
+},
+
+// Update font using Edge Function - handles all calling patterns
+async updateFont(fontId: number, fontData: any) {
+  console.log('📋 Updating font via Edge Function:', { fontId, fontData });
+  
+  try {
+    const googleFontsUrl = fontData.name.trim().replace(/\s+/g, '+');
+    const fontUrl = `https://fonts.googleapis.com/css2?family=${googleFontsUrl}:wght@300;400;500;600;700&display=swap`;
+    
+    const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_font-ts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+      },
+      body: JSON.stringify({
+        fontId: fontId,
+        fontData: {
           name: fontData.name,
           type: fontData.category || 'Google Font',
           file_path: fontUrl,
-          created_by: null,
           is_active: true
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Full error response:', errorText);
-        throw new Error(`font save failed: ${response.status} - ${errorText}`);
-      }
-      
-      const result = await response.json();
-      console.log('✅ font saved to Supabase:', result);
-      
-      // Load the Google Font for preview
-      if (typeof document !== 'undefined') {
-        const existingLink = document.querySelector(`link[href="${fontUrl}"]`);
-        if (!existingLink) {
-          const link = document.createElement('link');
-          link.href = fontUrl;
-          link.rel = 'stylesheet';
-          link.type = 'text/css';
-          link.onload = () => console.log(`✅ Google Font loaded: ${fontData.name}`);
-          document.head.appendChild(link);
         }
-      },
-      
-      return result;
-    } catch (error) {
-      console.error('💥 font save error:', error);
-      throw error;
-    }
-  },
-
-  async savefont(fontData: any) {
-    return this.saveFont(fontData);
-  },
-
-  // Update font using Edge Function - handles all calling patterns
-  async updateFont(fontId: number, fontData: any) {
-    console.log('📋 Updating font via Edge Function:', { fontId, fontData });
+      })
+    });
     
-    try {
-      const googleFontsUrl = fontData.name.trim().replace(/\s+/g, '+');
-      const fontUrl = `https://fonts.googleapis.com/css2?family=${googleFontsUrl}:wght@300;400;500;600;700&display=swap`;
-      
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_font-ts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({
-          fontId: fontId,
-          fontData: {
-            name: fontData.name,
-            type: fontData.category || 'Google Font',
-            file_path: fontUrl,
-            is_active: true
-          }
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Full error response:', errorText);
-        throw new Error(`font update failed: ${response.status} - ${errorText}`);
-      }
-      
-      const result = await response.json();
-      console.log('✅ font updated via Edge Function:', result);
-      return result.data;
-    } catch (error) {
-      console.error('💥 font update error:', error);
-      throw error;
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Full error response:', errorText);
+      throw new Error(`font update failed: ${response.status} - ${errorText}`);
     }
-  },
-
-  async updatefont(fontId: number, fontData: any) {
-    return this.updateFont(fontId, fontData);
-  },
-
-  // Delete font using Edge Function - handles all calling patterns
-  async deleteFont(fontId: number) {
-    console.log('📋 Deleting font via Edge Function:', fontId);
     
-    try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_font-ts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({
-          fontId: fontId
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Full error response:', errorText);
-        throw new Error(`font delete failed: ${response.status} - ${errorText}`);
-      }
-      
-      const result = await response.json();
-      console.log('✅ font deleted via Edge Function:', result);
-      return true;
-    } catch (error) {
-      console.error('💥 font delete error:', error);
-      throw error;
-    }
-  },
-
-  async deletefont(fontId: number) {
-    return this.deleteFont(fontId);
-  },
-
-  // Generate Google Fonts URL
-  generateGoogleFontsUrl(fontName: string) {
-    const cleanFontName = fontName.trim().replace(/\s+/g, '+');
-    return `https://fonts.googleapis.com/css2?family=${cleanFontName}:wght@300;400;500;600;700&display=swap`;
-  },
-
-  // Load Google Font for preview
-  loadGoogleFont(url: string, fontName: string) {
-    if (typeof document !== 'undefined') {
-      const existingLink = document.querySelector(`link[href="${url}"]`);
-      if (existingLink) return;
-      
-      const link = document.createElement('link');
-      link.href = url;
-      link.rel = 'stylesheet';
-      link.type = 'text/css';
-      
-      link.onload = () => {
-        console.log(`✅ Google Font loaded successfully: ${fontName}`);
-      };
-      
-      link.onerror = () => {
-        console.log(`⚠️ Could not load Google Font: ${fontName}`);
-      };
-      
-      document.head.appendChild(link);
-    }
+    const result = await response.json();
+    console.log('✅ font updated via Edge Function:', result);
+    return result.data;
+  } catch (error) {
+    console.error('💥 font update error:', error);
+    throw error;
   }
+},
+
+async updatefont(fontId: number, fontData: any) {
+  return this.updateFont(fontId, fontData);
+},
+
+// Delete font using Edge Function - handles all calling patterns
+async deleteFont(fontId: number) {
+  console.log('📋 Deleting font via Edge Function:', fontId);
+  
+  try {
+    const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_font-ts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+      },
+      body: JSON.stringify({
+        fontId: fontId
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Full error response:', errorText);
+      throw new Error(`font delete failed: ${response.status} - ${errorText}`);
+    }
+    
+    const result = await response.json();
+    console.log('✅ font deleted via Edge Function:', result);
+    return true;
+  } catch (error) {
+    console.error('💥 font delete error:', error);
+    throw error;
+  }
+},
+
+async deletefont(fontId: number) {
+  return this.deleteFont(fontId);
+},
+
+// Generate Google Fonts URL
+generateGoogleFontsUrl(fontName: string) {
+  const cleanFontName = fontName.trim().replace(/\s+/g, '+');
+  return `https://fonts.googleapis.com/css2?family=${cleanFontName}:wght@300;400;500;600;700&display=swap`;
+},
+
+// Load Google Font for preview
+loadGoogleFont(url: string, fontName: string) {
+  if (typeof document !== 'undefined') {
+    const existingLink = document.querySelector(`link[href="${url}"]`);
+    if (existingLink) return;
+    
+    const link = document.createElement('link');
+    link.href = url;
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    
+    link.onload = () => {
+      console.log(`✅ Google Font loaded successfully: ${fontName}`);
+    };
+    
+    link.onerror = () => {
+      console.log(`⚠️ Could not load Google Font: ${fontName}`);
+    };
+    
+    document.head.appendChild(link);
+  }
+},
 
   // Save guidelines to Supabase
   async saveGuidelines(section: string, content: any) {
