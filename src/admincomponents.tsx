@@ -356,22 +356,59 @@ const supabaseAPI = {
       return font;
     } catch (error) {
       console.error('💥 font fetch error:', error);
-      return {};
+      return [];
     }
   },
 
-  // Save font to Supabase
-  async saveFont(section: string, content: any) {
-    console.log('📋 Saving font to Supabase:', { section, content });
+  // Save font to Supabase - MINIMAL FIX: Handle both object and separate parameters
+  async saveFont(sectionOrFontData: any, content?: any) {
+    console.log('📋 Saving font to Supabase:', { sectionOrFontData, content });
     
-    // Validate section parameter
+    // Handle when called with font object from component
+    if (typeof sectionOrFontData === 'object' && sectionOrFontData.name) {
+      const fontData = sectionOrFontData;
+      const section = fontData.category || 'primary';
+      const contentData = JSON.stringify(fontData);
+      
+      try {
+        const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseConfig.anonKey,
+            'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({
+            section: section,
+            title: `${section.charAt(0).toUpperCase() + section.slice(1)} font`,
+            content: contentData,
+            type: `${section.charAt(0).toUpperCase() + section.slice(1)} Usage`,
+            status: 'Active',
+            version_number: 1
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`font save failed: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('✅ font saved to Supabase:', result);
+        return result;
+      } catch (error) {
+        console.error('💥 font save error:', error);
+        throw error;
+      }
+    }
+    
+    // Handle when called with separate parameters (original way)
+    const section = sectionOrFontData;
     if (!section || typeof section !== 'string') {
       throw new Error('Section parameter must be a non-empty string');
     }
     
     try {
-      const sectionTitle = section.charAt(0).toUpperCase() + section.slice(1);
-      
       const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
         method: 'POST',
         headers: {
@@ -382,9 +419,9 @@ const supabaseAPI = {
         },
         body: JSON.stringify({
           section: section,
-          title: `${sectionTitle} font`,
+          title: `${section.charAt(0).toUpperCase() + section.slice(1)} font`,
           content: typeof content === 'string' ? content : JSON.stringify(content),
-          type: `${sectionTitle} Usage`,
+          type: `${section.charAt(0).toUpperCase() + section.slice(1)} Usage`,
           status: 'Active',
           version_number: 1
         })
@@ -437,11 +474,6 @@ const supabaseAPI = {
   async deleteFont(fontId: number) {
     console.log('📋 Deleting font via Edge Function:', fontId);
     
-    // Validate font ID
-    if (!fontId || typeof fontId !== 'number') {
-      throw new Error('Font ID must be a valid number');
-    }
-    
     try {
       const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_font-ts`, {
         method: 'POST',
@@ -455,14 +487,14 @@ const supabaseAPI = {
       });
       
       if (!response.ok) {
-        throw new Error(`Font delete failed: ${response.status}`);
+        throw new Error(`font delete failed: ${response.status}`);
       }
       
       const result = await response.json();
-      console.log('✅ Font deleted via Edge Function:', result);
+      console.log('✅ font deleted via Edge Function:', result);
       return true;
     } catch (error) {
-      console.error('💥 Font delete error:', error);
+      console.error('💥 font delete error:', error);
       throw error;
     }
   },
