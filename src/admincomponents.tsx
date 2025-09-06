@@ -2296,21 +2296,1100 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
         </div>
       )}
 
-      {/* Other sections would be added here (logos, fonts, guidelines) */}
-      {activeSection !== 'colors' && (
-        <div style={{
-          padding: '60px',
-          textAlign: 'center',
-          backgroundColor: theme.cardBackground,
+      {/* LOGOS SECTION - COMPLETE IMPLEMENTATION */}
+      {activeSection === 'logos' && (
+        <div style={{ 
+          padding: '30px', 
+          backgroundColor: theme.cardBackground, 
           borderRadius: '0 0 12px 12px',
           border: `1px solid ${theme.borderColor}`,
           borderTop: 'none'
         }}>
-          <p style={{ color: theme.textSecondary, fontSize: '16px' }}>
-            {activeSection === 'logos' ? '🏷️ Logo management section' : 
-             activeSection === 'fonts' ? '🔤 Typography management section' : 
-             '📋 Guidelines management section'} will be implemented here.
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              🏷️ Brand Logos ({logos.length} logos)
+            </h3>
+            <button 
+              onClick={() => setShowLogoForm(true)}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#f59e0b',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              ➕ Add Logo
+            </button>
+          </div>
+
+          {/* Add/Edit Logo Form */}
+          {showLogoForm && (
+            <div style={{
+              padding: '30px',
+              border: '2px solid #f59e0b',
+              borderRadius: '12px',
+              backgroundColor: theme.background,
+              marginBottom: '30px',
+              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.25)'
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                🏷️ {editingLogo ? 'Edit Brand Logo' : 'Add New Brand Logo'}
+              </h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Logo Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={editLogoData.name}
+                    onChange={(e) => setEditLogoData(prev => ({ ...prev, name: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., Primary Logo"
+                  />
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Logo Type
+                  </label>
+                  <select
+                    value={editLogoData.type}
+                    onChange={(e) => setEditLogoData(prev => ({ ...prev, type: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="PNG">PNG</option>
+                    <option value="SVG">SVG</option>
+                    <option value="JPG">JPG</option>
+                    <option value="PDF">PDF</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Usage Description *
+                </label>
+                <textarea
+                  value={editLogoData.usage}
+                  onChange={(e) => setEditLogoData(prev => ({ ...prev, usage: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: `1px solid ${theme.inputBorder}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: theme.inputBackground,
+                    color: theme.textPrimary,
+                    minHeight: '80px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
+                  placeholder="Describe where and how this logo should be used..."
+                />
+              </div>
+
+              <div style={{ marginBottom: '25px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Logo File
+                </label>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: `1px solid ${theme.inputBorder}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: theme.inputBackground,
+                    color: theme.textPrimary,
+                    outline: 'none'
+                  }}
+                />
+                {logoFile && (
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: theme.textSecondary }}>
+                    Selected: {logoFile.name} ({Math.round(logoFile.size / 1024)}KB)
+                  </div>
+                )}
+              </div>
+
+              {/* Form Actions */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setShowLogoForm(false);
+                    setEditingLogo(null);
+                    setEditLogoData({ name: '', type: 'PNG', usage: '' });
+                    setLogoFile(null);
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: theme.buttonSecondary,
+                    color: theme.buttonSecondaryText,
+                    border: `1px solid ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!editLogoData.name.trim() || !editLogoData.usage.trim()) {
+                      showNotification('Please fill in all required fields', 'error');
+                      return;
+                    }
+
+                    setLoading(true);
+                    try {
+                      if (editingLogo) {
+                        await supabaseAPI.updateLogo(editingLogo.id, editLogoData, logoFile);
+                        showNotification(`Logo ${editLogoData.name} updated successfully`, 'success');
+                      } else {
+                        if (!logoFile) {
+                          showNotification('Please select a logo file', 'error');
+                          return;
+                        }
+                        await supabaseAPI.saveLogo(editLogoData, logoFile);
+                        showNotification(`Logo ${editLogoData.name} saved successfully`, 'success');
+                      }
+                      
+                      const updatedLogos = await supabaseAPI.fetchLogos();
+                      setLogos(updatedLogos);
+                      setShowLogoForm(false);
+                      setEditingLogo(null);
+                      setEditLogoData({ name: '', type: 'PNG', usage: '' });
+                      setLogoFile(null);
+                    } catch (error: any) {
+                      showNotification(`Failed to save logo: ${error.message}`, 'error');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  💾 Save Logo
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Logo Grid */}
+          {logos.length === 0 ? (
+            <div style={{
+              padding: '60px',
+              textAlign: 'center',
+              border: `2px dashed ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏷️</div>
+              <h4 style={{ color: theme.textPrimary, fontSize: '18px', marginBottom: '8px', fontWeight: 'bold' }}>
+                No Brand Logos Yet
+              </h4>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 20px 0' }}>
+                Add your first brand logo to get started with your logo library
+              </p>
+              <button 
+                onClick={() => setShowLogoForm(true)}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#f59e0b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                ➕ Add Your First Logo
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+              {logos.map(logo => (
+                <div key={logo.id} style={{
+                  padding: '25px',
+                  border: `1px solid ${theme.borderColor}`,
+                  borderRadius: '12px',
+                  backgroundColor: theme.background,
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                    {logo.logo_url ? (
+                      <img 
+                        src={logo.logo_url} 
+                        alt={logo.name}
+                        style={{
+                          width: '64px',
+                          height: '64px',
+                          objectFit: 'contain',
+                          borderRadius: '8px',
+                          border: `2px solid ${theme.borderColor}`,
+                          backgroundColor: '#ffffff'
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: '64px',
+                        height: '64px',
+                        backgroundColor: theme.buttonSecondary,
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '24px'
+                      }}>
+                        🏷️
+                      </div>
+                    )}
+                    <div>
+                      <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
+                        {logo.name}
+                      </h4>
+                      <div style={{ 
+                        fontSize: '12px', 
+                        color: theme.textSecondary,
+                        marginBottom: '4px'
+                      }}>
+                        {logo.type} • {logo.file_size ? `${logo.file_size}KB` : 'No file'}
+                      </div>
+                    </div>
+                  </div>
+                  <p style={{ 
+                    margin: '0 0 20px 0', 
+                    fontSize: '14px', 
+                    color: theme.textSecondary,
+                    lineHeight: '1.5'
+                  }}>
+                    {logo.usage}
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={() => {
+                        setEditingLogo(logo);
+                        setEditLogoData({
+                          name: logo.name,
+                          type: logo.type || 'PNG',
+                          usage: logo.usage
+                        });
+                        setShowLogoForm(true);
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonPrimary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button 
+                      onClick={async () => {
+                        if (confirm(`Delete logo "${logo.name}"?`)) {
+                          setLoading(true);
+                          try {
+                            await supabaseAPI.deleteLogo(logo.id);
+                            showNotification(`Logo ${logo.name} deleted`, 'success');
+                            const updatedLogos = await supabaseAPI.fetchLogos();
+                            setLogos(updatedLogos);
+                          } catch (error: any) {
+                            showNotification(`Failed to delete logo: ${error.message}`, 'error');
+                          } finally {
+                            setLoading(false);
+                          }
+                        }
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TYPOGRAPHY SECTION - COMPLETE IMPLEMENTATION */}
+      {activeSection === 'fonts' && (
+        <div style={{ 
+          padding: '30px', 
+          backgroundColor: theme.cardBackground, 
+          borderRadius: '0 0 12px 12px',
+          border: `1px solid ${theme.borderColor}`,
+          borderTop: 'none'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              🔤 Typography ({fonts.length} fonts)
+            </h3>
+            <button 
+              onClick={() => setShowFontForm(true)}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              ➕ Add Font
+            </button>
+          </div>
+
+          {/* Add/Edit Font Form */}
+          {showFontForm && (
+            <div style={{
+              padding: '30px',
+              border: '2px solid #10b981',
+              borderRadius: '12px',
+              backgroundColor: theme.background,
+              marginBottom: '30px',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                🔤 {editingFont ? 'Edit Typography' : 'Add New Typography'}
+              </h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Font Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={editFontData.name}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, name: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., Inter, Roboto, Open Sans"
+                  />
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Category
+                  </label>
+                  <select
+                    value={editFontData.category}
+                    onChange={(e) => setEditFontData(prev => ({ ...prev, category: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="Primary">Primary</option>
+                    <option value="Secondary">Secondary</option>
+                    <option value="Heading">Heading</option>
+                    <option value="Body">Body Text</option>
+                    <option value="Accent">Accent</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '25px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Usage Description *
+                </label>
+                <textarea
+                  value={editFontData.usage}
+                  onChange={(e) => setEditFontData(prev => ({ ...prev, usage: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: `1px solid ${theme.inputBorder}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: theme.inputBackground,
+                    color: theme.textPrimary,
+                    minHeight: '80px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
+                  placeholder="Describe where and how this font should be used..."
+                />
+              </div>
+
+              {/* Font Preview */}
+              {editFontData.name && (
+                <div style={{ 
+                  padding: '20px',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '8px',
+                  border: '2px solid #e5e7eb',
+                  marginBottom: '25px'
+                }}>
+                  <div style={{ 
+                    fontFamily: editFontData.name + ', sans-serif',
+                    fontSize: '24px',
+                    fontWeight: 'bold',
+                    color: '#1f2937',
+                    marginBottom: '8px'
+                  }}>
+                    {editFontData.name}
+                  </div>
+                  <div style={{ 
+                    fontFamily: editFontData.name + ', sans-serif',
+                    fontSize: '16px',
+                    color: '#6b7280'
+                  }}>
+                    The quick brown fox jumps over the lazy dog
+                  </div>
+                </div>
+              )}
+
+              {/* Form Actions */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setShowFontForm(false);
+                    setEditingFont(null);
+                    setEditFontData({ name: '', category: 'Primary', usage: '', weight: '400-600' });
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: theme.buttonSecondary,
+                    color: theme.buttonSecondaryText,
+                    border: `1px solid ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!editFontData.name.trim() || !editFontData.usage.trim()) {
+                      showNotification('Please fill in all required fields', 'error');
+                      return;
+                    }
+
+                    setLoading(true);
+                    try {
+                      if (editingFont) {
+                        await supabaseAPI.updateFont(editingFont.id, editFontData);
+                        showNotification(`Font ${editFontData.name} updated successfully`, 'success');
+                      } else {
+                        await supabaseAPI.saveFont(editFontData);
+                        showNotification(`Font ${editFontData.name} saved successfully`, 'success');
+                      }
+                      
+                      const updatedFonts = await supabaseAPI.fetchFonts();
+                      setFonts(updatedFonts);
+                      setShowFontForm(false);
+                      setEditingFont(null);
+                      setEditFontData({ name: '', category: 'Primary', usage: '', weight: '400-600' });
+                    } catch (error: any) {
+                      showNotification(`Failed to save font: ${error.message}`, 'error');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  💾 Save Font
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Font Grid */}
+          {fonts.length === 0 ? (
+            <div style={{
+              padding: '60px',
+              textAlign: 'center',
+              border: `2px dashed ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔤</div>
+              <h4 style={{ color: theme.textPrimary, fontSize: '18px', marginBottom: '8px', fontWeight: 'bold' }}>
+                No Typography Yet
+              </h4>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 20px 0' }}>
+                Add your first brand font to get started with your typography system
+              </p>
+              <button 
+                onClick={() => setShowFontForm(true)}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                ➕ Add Your First Font
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+              {fonts.map(font => (
+                <div key={font.id} style={{
+                  padding: '25px',
+                  border: `1px solid ${theme.borderColor}`,
+                  borderRadius: '12px',
+                  backgroundColor: theme.background,
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                }}>
+                  <div style={{ marginBottom: '20px' }}>
+                    <h4 style={{ 
+                      margin: '0 0 12px 0', 
+                      color: theme.textPrimary, 
+                      fontSize: '18px', 
+                      fontWeight: 'bold',
+                      fontFamily: font.name + ', sans-serif'
+                    }}>
+                      {font.name}
+                    </h4>
+                    <div style={{ 
+                      fontSize: '14px', 
+                      color: theme.textSecondary,
+                      marginBottom: '12px',
+                      fontFamily: font.name + ', sans-serif'
+                    }}>
+                      The quick brown fox jumps over the lazy dog
+                    </div>
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: theme.textSecondary,
+                      marginBottom: '8px' 
+                    }}>
+                      Category: {font.type}
+                    </div>
+                  </div>
+                  <p style={{ 
+                    margin: '0 0 20px 0', 
+                    fontSize: '14px', 
+                    color: theme.textSecondary,
+                    lineHeight: '1.5'
+                  }}>
+                    {font.file_path ? 'Google Fonts integrated' : 'Custom font'}
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={() => {
+                        setEditingFont(font);
+                        setEditFontData({
+                          name: font.name,
+                          category: font.type || 'Primary',
+                          usage: font.file_path || '',
+                          weight: '400-600'
+                        });
+                        setShowFontForm(true);
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: theme.buttonPrimary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button 
+                      onClick={async () => {
+                        if (confirm(`Delete font "${font.name}"?`)) {
+                          setLoading(true);
+                          try {
+                            await supabaseAPI.deleteFont(font.id);
+                            showNotification(`Font ${font.name} deleted`, 'success');
+                            const updatedFonts = await supabaseAPI.fetchFonts();
+                            setFonts(updatedFonts);
+                          } catch (error: any) {
+                            showNotification(`Failed to delete font: ${error.message}`, 'error');
+                          } finally {
+                            setLoading(false);
+                          }
+                        }
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* GUIDELINES SECTION - COMPLETE IMPLEMENTATION */}
+      {activeSection === 'guidelines' && (
+        <div style={{ 
+          padding: '30px', 
+          backgroundColor: theme.cardBackground, 
+          borderRadius: '0 0 12px 12px',
+          border: `1px solid ${theme.borderColor}`,
+          borderTop: 'none'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+            <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+              📋 Brand Guidelines ({guidelines.length} sections)
+            </h3>
+            <button 
+              onClick={() => setShowGuidelinesForm(true)}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#8b5cf6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              ➕ Add Guideline
+            </button>
+          </div>
+
+          {/* Add/Edit Guidelines Form */}
+          {showGuidelinesForm && (
+            <div style={{
+              padding: '30px',
+              border: '2px solid #8b5cf6',
+              borderRadius: '12px',
+              backgroundColor: theme.background,
+              marginBottom: '30px',
+              boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)'
+            }}>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                📋 {editingGuideline ? 'Edit Guideline' : 'Add New Guideline'}
+              </h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Section *
+                  </label>
+                  <select
+                    value={editGuidelineData.section}
+                    onChange={(e) => setEditGuidelineData(prev => ({ ...prev, section: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="logo">Logo Usage</option>
+                    <option value="color">Color Usage</option>
+                    <option value="typography">Typography Rules</option>
+                    <option value="voice">Voice & Tone</option>
+                    <option value="imagery">Imagery Guidelines</option>
+                    <option value="general">General Guidelines</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    color: theme.textPrimary,
+                    fontSize: '14px'
+                  }}>
+                    Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={editGuidelineData.title}
+                    onChange={(e) => setEditGuidelineData(prev => ({ ...prev, title: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `1px solid ${theme.inputBorder}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: theme.inputBackground,
+                      color: theme.textPrimary,
+                      outline: 'none'
+                    }}
+                    placeholder="e.g., Logo Clear Space Requirements"
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '25px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  color: theme.textPrimary,
+                  fontSize: '14px'
+                }}>
+                  Content *
+                </label>
+                <textarea
+                  value={editGuidelineData.content}
+                  onChange={(e) => setEditGuidelineData(prev => ({ ...prev, content: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: `1px solid ${theme.inputBorder}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: theme.inputBackground,
+                    color: theme.textPrimary,
+                    minHeight: '150px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
+                  placeholder="Enter detailed guidelines and rules for this section..."
+                />
+              </div>
+
+              {/* Form Actions */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setShowGuidelinesForm(false);
+                    setEditingGuideline(null);
+                    setEditGuidelineData({ section: 'logo', title: '', content: '', type: 'Logo Usage' });
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: theme.buttonSecondary,
+                    color: theme.buttonSecondaryText,
+                    border: `1px solid ${theme.borderColor}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!editGuidelineData.title.trim() || !editGuidelineData.content.trim()) {
+                      showNotification('Please fill in all required fields', 'error');
+                      return;
+                    }
+
+                    setLoading(true);
+                    try {
+                      if (editingGuideline) {
+                        await supabaseAPI.updateGuidelines(editingGuideline.id, editGuidelineData);
+                        showNotification(`Guideline "${editGuidelineData.title}" updated successfully`, 'success');
+                      } else {
+                        await supabaseAPI.saveGuidelines(editGuidelineData.section, editGuidelineData.content);
+                        showNotification(`Guideline "${editGuidelineData.title}" saved successfully`, 'success');
+                      }
+                      
+                      const updatedGuidelines = await supabaseAPI.fetchGuidelines();
+                      setGuidelines(updatedGuidelines);
+                      setShowGuidelinesForm(false);
+                      setEditingGuideline(null);
+                      setEditGuidelineData({ section: 'logo', title: '', content: '', type: 'Logo Usage' });
+                    } catch (error: any) {
+                      showNotification(`Failed to save guideline: ${error.message}`, 'error');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  💾 Save Guideline
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Guidelines Grid */}
+          {guidelines.length === 0 ? (
+            <div style={{
+              padding: '60px',
+              textAlign: 'center',
+              border: `2px dashed ${theme.borderColor}`,
+              borderRadius: '12px',
+              backgroundColor: theme.background
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+              <h4 style={{ color: theme.textPrimary, fontSize: '18px', marginBottom: '8px', fontWeight: 'bold' }}>
+                No Brand Guidelines Yet
+              </h4>
+              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 20px 0' }}>
+                Add your first brand guideline to establish your brand standards
+              </p>
+              <button 
+                onClick={() => setShowGuidelinesForm(true)}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#8b5cf6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                ➕ Add Your First Guideline
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '20px' }}>
+              {guidelines.map(guideline => (
+                <div key={guideline.id} style={{
+                  padding: '25px',
+                  border: `1px solid ${theme.borderColor}`,
+                  borderRadius: '12px',
+                  backgroundColor: theme.background,
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    <div>
+                      <h4 style={{ 
+                        margin: '0 0 8px 0', 
+                        color: theme.textPrimary, 
+                        fontSize: '18px', 
+                        fontWeight: 'bold'
+                      }}>
+                        {guideline.title}
+                      </h4>
+                      <span style={{ 
+                        padding: '4px 12px', 
+                        backgroundColor: '#8b5cf6', 
+                        color: 'white', 
+                        borderRadius: '16px', 
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        textTransform: 'capitalize'
+                      }}>
+                        {guideline.section}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        onClick={() => {
+                          setEditingGuideline(guideline);
+                          setEditGuidelineData({
+                            section: guideline.section,
+                            title: guideline.title,
+                            content: guideline.content,
+                            type: guideline.type || 'General'
+                          });
+                          setShowGuidelinesForm(true);
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: theme.buttonPrimary,
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          if (confirm(`Delete guideline "${guideline.title}"?`)) {
+                            setLoading(true);
+                            try {
+                              await supabaseAPI.deleteGuidelines(guideline.id);
+                              showNotification(`Guideline "${guideline.title}" deleted`, 'success');
+                              const updatedGuidelines = await supabaseAPI.fetchGuidelines();
+                              setGuidelines(updatedGuidelines);
+                            } catch (error: any) {
+                              showNotification(`Failed to delete guideline: ${error.message}`, 'error');
+                            } finally {
+                              setLoading(false);
+                            }
+                          }
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </div>
+                  <div style={{ 
+                    fontSize: '14px', 
+                    color: theme.textSecondary,
+                    lineHeight: '1.6',
+                    whiteSpace: 'pre-wrap'
+                  }}>
+                    {guideline.content}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
