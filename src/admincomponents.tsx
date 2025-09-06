@@ -224,7 +224,7 @@ const supabaseAPI = {
       
       if (file) {
         const fileName = `logos/${logoData.name.replace(/[^a-zA-Z0-9]/g, '_')}_logo_${Date.now()}.${file.name.split('.').pop()}`;
-        const uploadResult = await this.uploadFileToBucket(file, fileName, 'brand_assets');
+        const uploadResult = await this.uploadFileToBucket(file, fileName, 'brand-assets');
         logoUrl = uploadResult.publicUrl;
       }
       
@@ -263,7 +263,7 @@ const supabaseAPI = {
       
       if (file) {
         const fileName = `logos/${logoData.name.replace(/[^a-zA-Z0-9]/g, '_')}_logo_${Date.now()}.${file.name.split('.').pop()}`;
-        const uploadResult = await this.uploadFileToBucket(file, fileName, 'brand_assets');
+        const uploadResult = await this.uploadFileToBucket(file, fileName, 'brand-assets');
         logoUrl = uploadResult.publicUrl;
       }
       
@@ -1632,14 +1632,6 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
 // =============================================================================
 
 function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkMode: boolean; supabaseAPI: any }) {
-  // DEBUG: Check what supabaseAPI object we're receiving
-  console.log('DEBUG - Received supabaseAPI:', supabaseAPI);
-  console.log('DEBUG - supabaseAPI type:', typeof supabaseAPI);
-  console.log('DEBUG - Has saveFont method:', typeof supabaseAPI?.saveFont);
-  console.log('DEBUG - Has fetchFonts method:', typeof supabaseAPI?.fetchFonts);
-  console.log('DEBUG - Has from method:', typeof supabaseAPI?.from);
-  console.log('DEBUG - supabaseAPI keys:', supabaseAPI ? Object.keys(supabaseAPI) : 'undefined');
-
   const [activeSection, setActiveSection] = useState('colors');
   const [notifications, setNotifications] = useState<any[]>([]);
   
@@ -1761,7 +1753,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
     }
 
     setLoading(true);
-    showNotification('Saving color to Supabase...', 'info');
+    showNotification('Saving colour to Supabase...', 'info');
 
     try {
       if (editingColor) {
@@ -1776,7 +1768,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
       setBrandColors(updatedColors);
       
     } catch (error: any) {
-      showNotification(`Failed to save color: ${error.message}`, 'error');
+      showNotification(`Failed to save colour: ${error.message}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -1794,17 +1786,17 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
 
   const handleDeleteColor = async (colorId: number) => {
     setLoading(true);
-    showNotification('Deleting color from Supabase...', 'info');
+    showNotification('Deleting colour from Supabase...', 'info');
 
     try {
       await supabaseAPI.deleteColor(colorId);
-      showNotification('Color deleted successfully', 'success');
+      showNotification('Colour deleted successfully', 'success');
       
       const updatedColors = await supabaseAPI.fetchColors();
       setBrandColors(updatedColors);
       
     } catch (error: any) {
-      showNotification(`Failed to delete color: ${error.message}`, 'error');
+      showNotification(`Failed to delete colour: ${error.message}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -1818,7 +1810,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
       navigator.clipboard.writeText(hex).then(() => {
         showNotification(`Copied ${hex} to clipboard`, 'success');
       }).catch(() => {
-        showNotification('Failed to copy color code', 'error');
+        showNotification('Failed to copy colour code', 'error');
       });
     } else {
       showNotification('Clipboard not available', 'error');
@@ -1931,7 +1923,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
         borderRadius: '8px 8px 0 0'
       }}>
         {[
-          { id: 'colors', label: '🎨 Colors' },
+          { id: 'colors', label: '🎨 Colours' },
           { id: 'logos', label: '🏷️ Logos' },
           { id: 'fonts', label: '🔤 Typography' },
           { id: 'guidelines', label: '📋 Guidelines' }
@@ -1956,7 +1948,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
         ))}
       </div>
 
-      {/* COLORS SECTION */}
+      {/* COLOURS SECTION */}
       {activeSection === 'colors' && (
         <div style={{ 
           padding: '30px', 
@@ -1967,7 +1959,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
             <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              🎨 Brand Colors ({brandColors.length} colors)
+              🎨 Brand Colours ({brandColors.length} colours)
             </h3>
             <button 
               onClick={handleAddColor}
@@ -1982,11 +1974,11 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                 fontWeight: 'bold'
               }}
             >
-              ➕ Add Color
+              ➕ Add Colour
             </button>
           </div>
 
-          {/* Add/Edit Color Form */}
+          {/* Add/Edit Colour Form */}
           {showColorForm && (
             <div style={{
               padding: '30px',
@@ -1997,7 +1989,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
               boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)'
             }}>
               <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🎨 {editingColor ? 'Edit Brand Color' : 'Add New Brand Color'}
+                🎨 {editingColor ? 'Edit Brand Colour' : 'Add New Brand Colour'}
               </h4>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
@@ -2009,7 +2001,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                     color: theme.textPrimary,
                     fontSize: '14px'
                   }}>
-                    Color Name *
+                    Colour Name *
                   </label>
                   <input
                     type="text"
@@ -2099,33 +2091,33 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                     fontFamily: 'inherit',
                     outline: 'none'
                   }}
-                  placeholder="Describe where and how this color should be used..."
+                  placeholder="Describe where and how this colour should be used..."
                 />
               </div>
 
-              {/* Color preview with white background for visibility */}
+              {/* Colour preview with transparent background for dark mode compatibility */}
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '16px', 
                 marginBottom: '25px',
                 padding: '20px',
-                backgroundColor: '#ffffff',
+                backgroundColor: 'transparent',
                 borderRadius: '8px',
-                border: '2px solid #e5e7eb'
+                border: `2px solid ${theme.borderColor}`
               }}>
                 <div style={{
                   width: '60px',
                   height: '60px',
                   backgroundColor: newColor.hex,
                   borderRadius: '8px',
-                  border: '2px solid #000000'
+                  border: `2px solid ${theme.borderColor}`
                 }}></div>
                 <div>
-                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', marginBottom: '4px' }}>
-                    {newColor.name || 'New Color'}
+                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: theme.textPrimary, marginBottom: '4px' }}>
+                    {newColor.name || 'New Colour'}
                   </div>
-                  <div style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'monospace' }}>
+                  <div style={{ fontSize: '14px', color: theme.textSecondary, fontFamily: 'monospace' }}>
                     {newColor.hex}
                   </div>
                 </div>
@@ -2178,13 +2170,13 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                     fontWeight: 'bold'
                   }}
                 >
-                  💾 Save Color
+                  💾 Save Colour
                 </button>
               </div>
             </div>
           )}
           
-          {/* Color Grid */}
+          {/* Colour Grid */}
           {brandColors.length === 0 ? (
             <div style={{
               padding: '60px',
@@ -2195,10 +2187,10 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
             }}>
               <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎨</div>
               <h4 style={{ color: theme.textPrimary, fontSize: '18px', marginBottom: '8px', fontWeight: 'bold' }}>
-                No Brand Colors Yet
+                No Brand Colours Yet
               </h4>
               <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 20px 0' }}>
-                Add your first brand color to get started with your brand kit
+                Add your first brand colour to get started with your brand kit
               </p>
               <button 
                 onClick={handleAddColor}
@@ -2213,7 +2205,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                   fontWeight: 'bold'
                 }}
               >
-                ➕ Add Your First Color
+                ➕ Add Your First Colour
               </button>
             </div>
           ) : (
@@ -3125,7 +3117,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                     }}
                   >
                     <option value="logo">Logo Usage</option>
-                    <option value="color">Color Usage</option>
+                    <option value="color">Colour Usage</option>
                     <option value="typography">Typography Rules</option>
                     <option value="voice">Voice & Tone</option>
                     <option value="imagery">Imagery Guidelines</option>
