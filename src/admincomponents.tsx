@@ -177,187 +177,162 @@ const supabaseAPI = {
     }
   },
 
-  // 🔧 FIXED: Fetch logos using Edge Function - fetch_brand_logos-ts
-  async fetchLogos() {
-    console.log('🎨 Fetching logos via Edge Function...');
-    
+  // MIRROR CHARACTER PROFILES: Direct fetch logos (like loadCharacters)
+  async fetchLogos(supabase) {
+    if (!supabase) {
+      console.warn('Supabase not configured. Using empty logo list.');
+      return [];
+    }
+
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/fetch_brand_logos-ts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({})
-      });
+      const { data, error } = await supabase
+        .from('brand_logos')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch logos: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      console.log('✅ Logos fetched via Edge Function:', result);
-      return result.data || result || [];
+      if (error) throw error;
+      return data || [];
     } catch (error) {
-      console.error('💥 Logo fetch error:', error);
+      console.error('Error loading logos:', error);
       return [];
     }
   },
 
-  // 🔧 FIXED: Save logo using Edge Function - save_brand_logos-ts
-  async saveLogo(logoData: any, file: File | null = null) {
-    console.log('🎨 Saving logo via Edge Function:', logoData);
+  // MIRROR CHARACTER PROFILES: Direct save logo (like addCharacter)
+  async saveLogo(supabase, logoData: any, file: File | null = null) {
+    if (!logoData.name.trim()) return;
+    
+    if (!supabase) {
+      throw new Error('Supabase not configured');
+    }
     
     try {
-      let fileInfo = null;
+      let logoUrl = null;
       
+      // Upload image if one was selected (same pattern as character profiles)
       if (file) {
-        const timestamp = Date.now();
-        const fileName = `logos/${timestamp}_${file.name}`;
-        const uploadResult = await this.uploadFileToBucket(file, fileName);
-        fileInfo = {
-          publicUrl: uploadResult.publicUrl,
-          fullPath: uploadResult.fullPath,
-          size: Math.round(file.size / 1024),
-          fileName: fileName,
-          mimeType: file.type
-        };
+        const fileName = `logos/${logoData.name.replace(/[^a-zA-Z0-9]/g, '_')}_logo_${Date.now()}.${file.name.split('.').pop()}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('brand_assets')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: true
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('brand_assets')
+          .getPublicUrl(fileName);
+
+        logoUrl = publicUrl;
       }
       
-      const requestBody = {
-        logoData: {
-          name: logoData.name,
-          type: logoData.type || (file ? file.type.split('/')[1].toUpperCase() : 'PNG'),
-          usage: logoData.usage,
-          category: logoData.category || 'Primary Logo',
-          bucket_name: 'brand_assets'
-        },
-        fileInfo: fileInfo
+      const logoRecord = {
+        name: logoData.name.trim(),
+        type: logoData.type || (file ? file.type.split('/')[1].toUpperCase() : 'PNG'),
+        usage: logoData.usage?.trim() || null,
+        category: logoData.category || 'Primary Logo',
+        logo_url: logoUrl,
+        file_size: file ? Math.round(file.size / 1024) : null,
+        mime_type: file ? file.type : null,
+        is_active: true,
+        user_id: null
       };
       
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/save_brand_logos-ts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify(requestBody)
-      });
+      const { data, error } = await supabase
+        .from('brand_logos')
+        .insert([logoRecord])
+        .select()
+        .single();
       
-      if (!response.ok) {
-        throw new Error(`Logo save failed: ${response.status}`);
-      }
+      if (error) throw error;
       
-      const result = await response.json();
-      console.log('✅ Logo saved via Edge Function:', result);
-      return result.data || result;
+      return data;
     } catch (error) {
-      console.error('💥 Logo save error:', error);
+      console.error('Error saving logo:', error);
       throw error;
     }
   },
 
-  // 🔧 FIXED: Upload logo using Edge Function - upload_brand_logos-ts
-  async uploadLogo(file: File, logoData: any) {
-    console.log('🎨 Uploading logo via Edge Function:', logoData);
-    
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('logoData', JSON.stringify(logoData));
-      
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/upload_brand_logos-ts`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Logo upload failed: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      console.log('✅ Logo uploaded via Edge Function:', result);
-      return result.data || result;
-    } catch (error) {
-      console.error('💥 Logo upload error:', error);
-      throw error;
-    }
+  // MIRROR CHARACTER PROFILES: Upload logo (simplified to call saveLogo)
+  async uploadLogo(supabase, file: File, logoData: any) {
+    return await this.saveLogo(supabase, logoData, file);
   },
 
-  // Update logo using Edge Function - update_brand_logos-ts (ALREADY CORRECT)
-  async updateLogo(logoId: number, logoData: any, file: File | null = null) {
-    console.log('🎨 Updating logo via Edge Function:', { logoId, logoData });
+  // MIRROR CHARACTER PROFILES: Direct update logo (like saveCharacterEdit)
+  async updateLogo(supabase, logoId: number, logoData: any, file: File | null = null) {
+    if (!logoData.name.trim()) return;
+    
+    if (!supabase) {
+      throw new Error('Supabase not configured');
+    }
     
     try {
-      let fileInfo = null;
+      let logoUrl = null;
       
       if (file) {
-        const timestamp = Date.now();
-        const fileName = `logos/${timestamp}_${file.name}`;
-        const uploadResult = await this.uploadFileToBucket(file, fileName);
-        fileInfo = {
-          publicUrl: uploadResult.publicUrl,
-          fullPath: uploadResult.fullPath,
-          size: Math.round(file.size / 1024),
-          fileName: fileName,
-          mimeType: file.type
-        };
+        const fileName = `logos/${logoData.name.replace(/[^a-zA-Z0-9]/g, '_')}_logo_${Date.now()}.${file.name.split('.').pop()}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('brand_assets')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: true
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('brand_assets')
+          .getPublicUrl(fileName);
+
+        logoUrl = publicUrl;
       }
       
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_logos-ts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({
-          logoId: logoId,
-          logoData: logoData,
-          fileInfo: fileInfo
-        })
-      });
+      const updateData = {
+        name: logoData.name.trim(),
+        type: logoData.type || 'PNG',
+        usage: logoData.usage?.trim() || null,
+        category: logoData.category || 'Primary Logo',
+        ...(logoUrl && { logo_url: logoUrl })
+      };
       
-      if (!response.ok) {
-        throw new Error(`Logo update failed: ${response.status}`);
-      }
+      const { data, error } = await supabase
+        .from('brand_logos')
+        .update(updateData)
+        .eq('id', logoId)
+        .select()
+        .single();
       
-      const result = await response.json();
-      console.log('✅ Logo updated via Edge Function:', result);
-      return result.data;
+      if (error) throw error;
+      
+      return data;
     } catch (error) {
-      console.error('💥 Logo update error:', error);
+      console.error('Error updating logo:', error);
       throw error;
     }
   },
 
-  // Delete logo using Edge Function - delete_brand_logos-ts (ALREADY CORRECT)
-  async deleteLogo(logoId: number) {
-    console.log('🎨 Deleting logo via Edge Function:', logoId);
+  // MIRROR CHARACTER PROFILES: Direct delete logo (like deleteCharacter)
+  async deleteLogo(supabase, logoId: number) {
+    if (!supabase) {
+      throw new Error('Supabase not configured');
+    }
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_logos-ts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({
-          logoId: logoId
-        })
-      });
+      const { error } = await supabase
+        .from('brand_logos')
+        .update({ is_active: false })
+        .eq('id', logoId);
       
-      if (!response.ok) {
-        throw new Error(`Logo delete failed: ${response.status}`);
-      }
+      if (error) throw error;
       
-      const result = await response.json();
-      console.log('✅ Logo deleted via Edge Function:', result);
       return true;
     } catch (error) {
-      console.error('💥 Logo delete error:', error);
+      console.error('Error deleting logo:', error);
       throw error;
     }
   },
@@ -517,7 +492,7 @@ const supabaseAPI = {
     }
   },
 
-  // ✅ RESTORED: Fetch guidelines using Edge Function - fetch_brand_guidelines-ts
+  // ✅ CORRECTED: Fetch guidelines using Edge Function - fetch_brand_guidelines-ts
   async fetchGuidelines() {
     console.log('📋 Fetching guidelines via Edge Function...');
     
@@ -544,7 +519,7 @@ const supabaseAPI = {
     }
   },
 
-  // ✅ RESTORED: Save guidelines using Edge Function - save_brand_guidelines-ts
+  // ✅ CORRECTED: Save guidelines using Edge Function - save_brand_guidelines-ts
   async saveGuidelines(section: string, content: any) {
     console.log('📋 Saving guidelines via Edge Function:', { section, content });
     
