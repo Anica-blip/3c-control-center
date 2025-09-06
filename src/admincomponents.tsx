@@ -33,13 +33,13 @@ const supabaseAPI = {
       }
       
       const result = await response.json();
-      const publicUrl = `${supabaseConfig.url}/storage/v1/object/public/${bucketName}/${fileName}`;
+      const privateUrl = `${supabaseConfig.url}/storage/v1/object/private/${bucketName}/${fileName}`;
       
-      console.log('✅ File uploaded to bucket:', { result, publicUrl });
+      console.log('✅ File uploaded to bucket:', { result, privateUrl });
       return {
         path: fileName,
         fullPath: `${bucketName}/${fileName}`,
-        publicUrl: publicUrl
+        privateUrl: privateUrl
       };
     } catch (error) {
       console.error('💥 File upload error:', error);
@@ -61,11 +61,11 @@ const supabaseAPI = {
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to fetch colors: ${response.status}`);
+        throw new Error(`Failed to fetch color: ${response.status}`);
       }
       
       const colors = await response.json();
-      console.log('✅ Colors fetched from Supabase:', colors);
+      console.log('✅ Color fetched from Supabase:', colors);
       return colors;
     } catch (error) {
       console.error('💥 Color fetch error:', error);
@@ -149,7 +149,7 @@ const supabaseAPI = {
     
     try {
       const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_colors-ts`, {
-        method: 'POST',
+        method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
@@ -186,11 +186,11 @@ const supabaseAPI = {
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to fetch logos: ${response.status}`);
+        throw new Error(`Failed to fetch logo: ${response.status}`);
       }
       
       const logos = await response.json();
-      console.log('✅ Logos fetched from Supabase:', logos);
+      console.log('✅ Logo fetched from Supabase:', logos);
       return logos;
     } catch (error) {
       console.error('💥 Logo fetch error:', error);
@@ -215,7 +215,7 @@ const supabaseAPI = {
       }
       
       const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_logos`, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'apikey': supabaseConfig.anonKey,
@@ -297,7 +297,7 @@ const supabaseAPI = {
     
     try {
       const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_logos-ts`, {
-        method: 'POST',
+        method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
@@ -325,7 +325,7 @@ const supabaseAPI = {
     console.log('🔤 Fetching fonts via Edge Function...');
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/fetch_brand_font-ts`, {
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font-ts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -334,11 +334,11 @@ const supabaseAPI = {
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to fetch fonts: ${response.status}`);
+        throw new Error(`Failed to fetch font: ${response.status}`);
       }
       
       const result = await response.json();
-      console.log('✅ Fonts fetched via Edge Function:', result);
+      console.log('✅ Font fetched via Edge Function:', result);
       return result.data || [];
     } catch (error) {
       console.error('💥 Font fetch error:', error);
@@ -356,7 +356,7 @@ const supabaseAPI = {
       const fontFamilyCSS = `font-family: "${fontData.name}", ui-sans-serif, system-ui, sans-serif;`;
       
       const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'apikey': supabaseConfig.anonKey,
@@ -403,8 +403,8 @@ const supabaseAPI = {
       const cssImport = googleFontsUrl ? `@import url("${googleFontsUrl}");` : null;
       const fontFamilyCSS = `font-family: "${fontData.name}", ui-sans-serif, system-ui, sans-serif;`;
       
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font?id=eq.${fontId}`, {
-        method: 'PATCH',
+      const response = await fetch(`${supabaseConfig.url}/function/v1/update_brand_font-ts`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': supabaseConfig.anonKey,
@@ -445,7 +445,7 @@ const supabaseAPI = {
     console.log('🔤 Deleting font from Supabase:', fontId);
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font?id=eq.${fontId}`, {
+      const response = await fetch(`${supabaseConfig.url}/function/v1/delete_brand_font`, {
         method: 'DELETE',
         headers: {
           'apikey': supabaseConfig.anonKey,
@@ -563,7 +563,7 @@ const supabaseAPI = {
     
     try {
       const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_guidelines-ts`, {
-        method: 'POST',
+        method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
