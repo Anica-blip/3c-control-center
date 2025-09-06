@@ -351,16 +351,16 @@ async fetchFonts() {
       throw new Error(`Failed to fetch fonts: ${response.status}`);
     }
     
-    const font = await response.json();
-    console.log('✅ font fetched from Supabase:', font);
-    return font;
+    const fonts = await response.json();
+    console.log('✅ Fonts fetched from Supabase:', fonts);
+    return fonts;
   } catch (error) {
-    console.error('💥 font fetch error:', error);
+    console.error('💥 Font fetch error:', error);
     return [];
   }
 },
 
-// Save font to Supabase - handles all calling patterns
+// Save font to Supabase
 async saveFont(fontData: any) {
   console.log('📋 Saving font to Supabase:', fontData);
   
@@ -392,11 +392,11 @@ async saveFont(fontData: any) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Full error response:', errorText);
-      throw new Error(`font save failed: ${response.status} - ${errorText}`);
+      throw new Error(`Font save failed: ${response.status} - ${errorText}`);
     }
     
     const result = await response.json();
-    console.log('✅ font saved to Supabase:', result);
+    console.log('✅ Font saved to Supabase:', result);
     
     // Load the Google Font for preview
     if (typeof document !== 'undefined') {
@@ -413,7 +413,7 @@ async saveFont(fontData: any) {
     
     return result;
   } catch (error) {
-    console.error('💥 font save error:', error);
+    console.error('💥 Font save error:', error);
     throw error;
   }
 },
@@ -422,7 +422,7 @@ async savefont(fontData: any) {
   return this.saveFont(fontData);
 },
 
-// Update font using Edge Function - handles all calling patterns
+// Update font using Edge Function
 async updateFont(fontId: number, fontData: any) {
   console.log('📋 Updating font via Edge Function:', { fontId, fontData });
   
@@ -450,14 +450,14 @@ async updateFont(fontId: number, fontData: any) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Full error response:', errorText);
-      throw new Error(`font update failed: ${response.status} - ${errorText}`);
+      throw new Error(`Font update failed: ${response.status} - ${errorText}`);
     }
     
     const result = await response.json();
-    console.log('✅ font updated via Edge Function:', result);
+    console.log('✅ Font updated via Edge Function:', result);
     return result.data;
   } catch (error) {
-    console.error('💥 font update error:', error);
+    console.error('💥 Font update error:', error);
     throw error;
   }
 },
@@ -466,7 +466,7 @@ async updatefont(fontId: number, fontData: any) {
   return this.updateFont(fontId, fontData);
 },
 
-// Delete font using Edge Function - handles all calling patterns
+// Delete font using Edge Function
 async deleteFont(fontId: number) {
   console.log('📋 Deleting font via Edge Function:', fontId);
   
@@ -485,15 +485,48 @@ async deleteFont(fontId: number) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Full error response:', errorText);
-      throw new Error(`font delete failed: ${response.status} - ${errorText}`);
+      throw new Error(`Font delete failed: ${response.status} - ${errorText}`);
     }
     
     const result = await response.json();
-    console.log('✅ font deleted via Edge Function:', result);
+    console.log('✅ Font deleted via Edge Function:', result);
     return true;
   } catch (error) {
-    console.error('💥 font delete error:', error);
+    console.error('💥 Font delete error:', error);
     throw error;
+  }
+},
+
+async deletefont(fontId: number) {
+  return this.deleteFont(fontId);
+},
+
+// Generate Google Fonts URL
+generateGoogleFontsUrl(fontName: string) {
+  const cleanFontName = fontName.trim().replace(/\s+/g, '+');
+  return `https://fonts.googleapis.com/css2?family=${cleanFontName}:wght@300;400;500;600;700&display=swap`;
+},
+
+// Load Google Font for preview
+loadGoogleFont(url: string, fontName: string) {
+  if (typeof document !== 'undefined') {
+    const existingLink = document.querySelector(`link[href="${url}"]`);
+    if (existingLink) return;
+    
+    const link = document.createElement('link');
+    link.href = url;
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    
+    link.onload = () => {
+      console.log(`✅ Google Font loaded successfully: ${fontName}`);
+    };
+    
+    link.onerror = () => {
+      console.log(`⚠️ Could not load Google Font: ${fontName}`);
+    };
+    
+    document.head.appendChild(link);
   }
 },
 
