@@ -174,361 +174,345 @@ const supabaseAPI = {
     }
   },
 
-  // MIRROR CHARACTER PROFILES: Direct fetch logos (like loadCharacters)
-  async fetchLogos(supabase) {
-    if (!supabase) {
-      console.warn('Supabase not configured. Using empty logo list.');
-      return [];
-    }
-
+  // FIXED: Fetch logos using REST API (no supabase client needed)
+  async fetchLogos() {
+    console.log('🏷️ Fetching logos from Supabase...');
+    
     try {
-      const { data, error } = await supabase
-        .from('brand_logos')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_logos?is_active=eq.true&order=created_at.desc`, {
+        method: 'GET',
+        headers: {
+          'apikey': supabaseConfig.anonKey,
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+        }
+      });
       
-      if (error) throw error;
-      return data || [];
+      if (!response.ok) {
+        throw new Error(`Failed to fetch logos: ${response.status}`);
+      }
+      
+      const logos = await response.json();
+      console.log('✅ Logos fetched from Supabase:', logos);
+      return logos;
     } catch (error) {
-      console.error('Error loading logos:', error);
+      console.error('💥 Logo fetch error:', error);
       return [];
     }
   },
 
-  // MIRROR CHARACTER PROFILES: Direct save logo (like addCharacter)
-  async saveLogo(supabase, logoData: any, file: File | null = null) {
-    if (!logoData.name.trim()) return;
-    
-    if (!supabase) {
-      throw new Error('Supabase not configured');
-    }
+  // FIXED: Save logo using REST API
+  async saveLogo(logoData: any, file: File | null = null) {
+    console.log('🏷️ Saving logo to Supabase:', logoData);
     
     try {
       let logoUrl = null;
       
-      // Upload image if one was selected (same pattern as character profiles)
       if (file) {
         const fileName = `logos/${logoData.name.replace(/[^a-zA-Z0-9]/g, '_')}_logo_${Date.now()}.${file.name.split('.').pop()}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('brand_assets')
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: true
-          });
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('brand_assets')
-          .getPublicUrl(fileName);
-
-        logoUrl = publicUrl;
+        const uploadResult = await this.uploadFileToBucket(file, fileName, 'brand_assets');
+        logoUrl = uploadResult.publicUrl;
       }
       
-      const logoRecord = {
-        name: logoData.name.trim(),
-        type: logoData.type || (file ? file.type.split('/')[1].toUpperCase() : 'PNG'),
-        usage: logoData.usage?.trim() || null,
-        category: logoData.category || 'Primary Logo',
-        logo_url: logoUrl,
-        file_size: file ? Math.round(file.size / 1024) : null,
-        mime_type: file ? file.type : null,
-        is_active: true,
-        user_id: null
-      };
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_logos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseConfig.anonKey,
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          name: logoData.name,
+          type: logoData.type || 'PNG',
+          usage: logoData.usage,
+          category: logoData.category || 'Primary Logo',
+          logo_url: logoUrl,
+          file_size: file ? Math.round(file.size / 1024) : null,
+          mime_type: file ? file.type : null,
+          is_active: true
+        })
+      });
       
-      const { data, error } = await supabase
-        .from('brand_logos')
-        .insert([logoRecord])
-        .select()
-        .single();
+      if (!response.ok) {
+        throw new Error(`Logo save failed: ${response.status}`);
+      }
       
-      if (error) throw error;
-      
-      return data;
+      const result = await response.json();
+      console.log('✅ Logo saved to Supabase:', result);
+      return result;
     } catch (error) {
-      console.error('Error saving logo:', error);
+      console.error('💥 Logo save error:', error);
       throw error;
     }
   },
 
-  // MIRROR CHARACTER PROFILES: Upload logo (simplified to call saveLogo)
-  async uploadLogo(supabase, file: File, logoData: any) {
-    return await this.saveLogo(supabase, logoData, file);
-  },
-
-  // MIRROR CHARACTER PROFILES: Direct update logo (like saveCharacterEdit)
-  async updateLogo(supabase, logoId: number, logoData: any, file: File | null = null) {
-    if (!logoData.name.trim()) return;
-    
-    if (!supabase) {
-      throw new Error('Supabase not configured');
-    }
+  // Update logo using REST API
+  async updateLogo(logoId: number, logoData: any, file: File | null = null) {
+    console.log('🏷️ Updating logo:', { logoId, logoData });
     
     try {
       let logoUrl = null;
       
       if (file) {
         const fileName = `logos/${logoData.name.replace(/[^a-zA-Z0-9]/g, '_')}_logo_${Date.now()}.${file.name.split('.').pop()}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('brand_assets')
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: true
-          });
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('brand_assets')
-          .getPublicUrl(fileName);
-
-        logoUrl = publicUrl;
+        const uploadResult = await this.uploadFileToBucket(file, fileName, 'brand_assets');
+        logoUrl = uploadResult.publicUrl;
       }
       
       const updateData = {
-        name: logoData.name.trim(),
+        name: logoData.name,
         type: logoData.type || 'PNG',
-        usage: logoData.usage?.trim() || null,
+        usage: logoData.usage,
         category: logoData.category || 'Primary Logo',
         ...(logoUrl && { logo_url: logoUrl })
       };
       
-      const { data, error } = await supabase
-        .from('brand_logos')
-        .update(updateData)
-        .eq('id', logoId)
-        .select()
-        .single();
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_logos?id=eq.${logoId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseConfig.anonKey,
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(updateData)
+      });
       
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`Logo update failed: ${response.status}`);
+      }
       
-      return data;
+      const result = await response.json();
+      console.log('✅ Logo updated:', result);
+      return result[0];
     } catch (error) {
-      console.error('Error updating logo:', error);
+      console.error('💥 Logo update error:', error);
       throw error;
     }
   },
 
-  // MIRROR CHARACTER PROFILES: Direct delete logo (like deleteCharacter)
-  async deleteLogo(supabase, logoId: number) {
-    if (!supabase) {
-      throw new Error('Supabase not configured');
+  // Delete logo using REST API
+  async deleteLogo(logoId: number) {
+    console.log('🏷️ Deleting logo:', logoId);
+    
+    try {
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_logos?id=eq.${logoId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseConfig.anonKey,
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+        },
+        body: JSON.stringify({ is_active: false })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Logo delete failed: ${response.status}`);
+      }
+      
+      console.log('✅ Logo deleted');
+      return true;
+    } catch (error) {
+      console.error('💥 Logo delete error:', error);
+      throw error;
+    }
+  },
+
+  // Fetch fonts from Supabase
+  async fetchFonts() {
+    console.log('📋 Fetching fonts from Supabase...');
+    
+    try {
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
+        method: 'GET',
+        headers: {
+          'apikey': supabaseConfig.anonKey,
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch fonts: ${response.status}`);
+      }
+      
+      const fonts = await response.json();
+      console.log('✅ Fonts fetched from Supabase:', fonts);
+      return fonts;
+    } catch (error) {
+      console.error('💥 Font fetch error:', error);
+      return [];
+    }
+  },
+
+  // Save font to Supabase
+  async saveFont(fontData: any) {
+    console.log('📋 Saving font to Supabase:', fontData);
+    
+    if (!fontData || !fontData.name) {
+      throw new Error('Font data with name is required');
     }
     
     try {
-      const { error } = await supabase
-        .from('brand_logos')
-        .update({ is_active: false })
-        .eq('id', logoId);
+      const googleFontsUrl = fontData.name.trim().replace(/\s+/g, '+');
+      const fontUrl = `https://fonts.googleapis.com/css2?family=${googleFontsUrl}:wght@300;400;500;600;700&display=swap`;
       
-      if (error) throw error;
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseConfig.anonKey,
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          name: fontData.name,
+          type: fontData.category || 'Google Font',
+          file_path: fontUrl,
+          created_by: null,
+          is_active: true
+        })
+      });
       
-      return true;
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Full error response:', errorText);
+        throw new Error(`Font save failed: ${response.status} - ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Font saved to Supabase:', result);
+      
+      // Load the Google Font for preview
+      if (typeof document !== 'undefined') {
+        const existingLink = document.querySelector(`link[href="${fontUrl}"]`);
+        if (!existingLink) {
+          const link = document.createElement('link');
+          link.href = fontUrl;
+          link.rel = 'stylesheet';
+          link.type = 'text/css';
+          link.onload = () => console.log(`✅ Google Font loaded: ${fontData.name}`);
+          document.head.appendChild(link);
+        }
+      }
+      
+      return result;
     } catch (error) {
-      console.error('Error deleting logo:', error);
+      console.error('💥 Font save error:', error);
       throw error;
     }
   },
 
-// Fetch fonts from Supabase
-async fetchFonts() {
-  console.log('📋 Fetching fonts from Supabase...');
-  
-  try {
-    const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
-      method: 'GET',
-      headers: {
-        'apikey': supabaseConfig.anonKey,
-        'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch fonts: ${response.status}`);
-    }
-    
-    const fonts = await response.json();
-    console.log('✅ Fonts fetched from Supabase:', fonts);
-    return fonts;
-  } catch (error) {
-    console.error('💥 Font fetch error:', error);
-    return [];
-  }
-},
+  async savefont(fontData: any) {
+    return this.saveFont(fontData);
+  },
 
-// Save font to Supabase
-async saveFont(fontData: any) {
-  console.log('📋 Saving font to Supabase:', fontData);
-  
-  if (!fontData || !fontData.name) {
-    throw new Error('Font data with name is required');
-  }
-  
-  try {
-    const googleFontsUrl = fontData.name.trim().replace(/\s+/g, '+');
-    const fontUrl = `https://fonts.googleapis.com/css2?family=${googleFontsUrl}:wght@300;400;500;600;700&display=swap`;
+  // Update font using Edge Function
+  async updateFont(fontId: number, fontData: any) {
+    console.log('📋 Updating font via Edge Function:', { fontId, fontData });
     
-    const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseConfig.anonKey,
-        'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify({
-        name: fontData.name,
-        type: fontData.category || 'Google Font',
-        file_path: fontUrl,
-        created_by: null,
-        is_active: true
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Full error response:', errorText);
-      throw new Error(`Font save failed: ${response.status} - ${errorText}`);
+    try {
+      const googleFontsUrl = fontData.name.trim().replace(/\s+/g, '+');
+      const fontUrl = `https://fonts.googleapis.com/css2?family=${googleFontsUrl}:wght@300;400;500;600;700&display=swap`;
+      
+      const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_font-ts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+        },
+        body: JSON.stringify({
+          fontId: fontId,
+          fontData: {
+            name: fontData.name,
+            type: fontData.category || 'Google Font',
+            file_path: fontUrl,
+            is_active: true
+          }
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Full error response:', errorText);
+        throw new Error(`Font update failed: ${response.status} - ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Font updated via Edge Function:', result);
+      return result.data;
+    } catch (error) {
+      console.error('💥 Font update error:', error);
+      throw error;
     }
+  },
+
+  async updatefont(fontId: number, fontData: any) {
+    return this.updateFont(fontId, fontData);
+  },
+
+  // Delete font using Edge Function
+  async deleteFont(fontId: number) {
+    console.log('📋 Deleting font via Edge Function:', fontId);
     
-    const result = await response.json();
-    console.log('✅ Font saved to Supabase:', result);
-    
-    // Load the Google Font for preview
+    try {
+      const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_font-ts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+        },
+        body: JSON.stringify({
+          fontId: fontId
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Full error response:', errorText);
+        throw new Error(`Font delete failed: ${response.status} - ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Font deleted via Edge Function:', result);
+      return true;
+    } catch (error) {
+      console.error('💥 Font delete error:', error);
+      throw error;
+    }
+  },
+
+  async deletefont(fontId: number) {
+    return this.deleteFont(fontId);
+  },
+
+  // Generate Google Fonts URL
+  generateGoogleFontsUrl(fontName: string) {
+    const cleanFontName = fontName.trim().replace(/\s+/g, '+');
+    return `https://fonts.googleapis.com/css2?family=${cleanFontName}:wght@300;400;500;600;700&display=swap`;
+  },
+
+  // Load Google Font for preview
+  loadGoogleFont(url: string, fontName: string) {
     if (typeof document !== 'undefined') {
-      const existingLink = document.querySelector(`link[href="${fontUrl}"]`);
-      if (!existingLink) {
-        const link = document.createElement('link');
-        link.href = fontUrl;
-        link.rel = 'stylesheet';
-        link.type = 'text/css';
-        link.onload = () => console.log(`✅ Google Font loaded: ${fontData.name}`);
-        document.head.appendChild(link);
-      }
+      const existingLink = document.querySelector(`link[href="${url}"]`);
+      if (existingLink) return;
+      
+      const link = document.createElement('link');
+      link.href = url;
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      
+      link.onload = () => {
+        console.log(`✅ Google Font loaded successfully: ${fontName}`);
+      };
+      
+      link.onerror = () => {
+        console.log(`⚠️ Could not load Google Font: ${fontName}`);
+      };
+      
+      document.head.appendChild(link);
     }
-    
-    return result;
-  } catch (error) {
-    console.error('💥 Font save error:', error);
-    throw error;
-  }
-},
-
-async savefont(fontData: any) {
-  return this.saveFont(fontData);
-},
-
-// Update font using Edge Function
-async updateFont(fontId: number, fontData: any) {
-  console.log('📋 Updating font via Edge Function:', { fontId, fontData });
-  
-  try {
-    const googleFontsUrl = fontData.name.trim().replace(/\s+/g, '+');
-    const fontUrl = `https://fonts.googleapis.com/css2?family=${googleFontsUrl}:wght@300;400;500;600;700&display=swap`;
-    
-    const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_font-ts`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-      },
-      body: JSON.stringify({
-        fontId: fontId,
-        fontData: {
-          name: fontData.name,
-          type: fontData.category || 'Google Font',
-          file_path: fontUrl,
-          is_active: true
-        }
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Full error response:', errorText);
-      throw new Error(`Font update failed: ${response.status} - ${errorText}`);
-    }
-    
-    const result = await response.json();
-    console.log('✅ Font updated via Edge Function:', result);
-    return result.data;
-  } catch (error) {
-    console.error('💥 Font update error:', error);
-    throw error;
-  }
-},
-
-async updatefont(fontId: number, fontData: any) {
-  return this.updateFont(fontId, fontData);
-},
-
-// Delete font using Edge Function
-async deleteFont(fontId: number) {
-  console.log('📋 Deleting font via Edge Function:', fontId);
-  
-  try {
-    const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_font-ts`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-      },
-      body: JSON.stringify({
-        fontId: fontId
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Full error response:', errorText);
-      throw new Error(`Font delete failed: ${response.status} - ${errorText}`);
-    }
-    
-    const result = await response.json();
-    console.log('✅ Font deleted via Edge Function:', result);
-    return true;
-  } catch (error) {
-    console.error('💥 Font delete error:', error);
-    throw error;
-  }
-},
-
-async deletefont(fontId: number) {
-  return this.deleteFont(fontId);
-},
-
-// Generate Google Fonts URL
-generateGoogleFontsUrl(fontName: string) {
-  const cleanFontName = fontName.trim().replace(/\s+/g, '+');
-  return `https://fonts.googleapis.com/css2?family=${cleanFontName}:wght@300;400;500;600;700&display=swap`;
-},
-
-// Load Google Font for preview
-loadGoogleFont(url: string, fontName: string) {
-  if (typeof document !== 'undefined') {
-    const existingLink = document.querySelector(`link[href="${url}"]`);
-    if (existingLink) return;
-    
-    const link = document.createElement('link');
-    link.href = url;
-    link.rel = 'stylesheet';
-    link.type = 'text/css';
-    
-    link.onload = () => {
-      console.log(`✅ Google Font loaded successfully: ${fontName}`);
-    };
-    
-    link.onerror = () => {
-      console.log(`⚠️ Could not load Google Font: ${fontName}`);
-    };
-    
-    document.head.appendChild(link);
-  }
-},
+  },
 
   // Save guidelines to Supabase
   async saveGuidelines(section: string, content: any) {
