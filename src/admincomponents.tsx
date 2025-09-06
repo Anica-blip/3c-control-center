@@ -351,11 +351,11 @@ async fetchFonts() {
       throw new Error(`Failed to fetch fonts: ${response.status}`);
     }
     
-    const fonts = await response.json();
-    console.log('✅ Fonts fetched from Supabase:', fonts);
-    return fonts;
+    const font = await response.json();
+    console.log('✅ font fetched from Supabase:', font);
+    return font;
   } catch (error) {
-    console.error('💥 Font fetch error:', error);
+    console.error('💥 font fetch error:', error);
     return [];
   }
 },
@@ -494,39 +494,6 @@ async deleteFont(fontId: number) {
   } catch (error) {
     console.error('💥 font delete error:', error);
     throw error;
-  }
-},
-
-async deletefont(fontId: number) {
-  return this.deleteFont(fontId);
-},
-
-// Generate Google Fonts URL
-generateGoogleFontsUrl(fontName: string) {
-  const cleanFontName = fontName.trim().replace(/\s+/g, '+');
-  return `https://fonts.googleapis.com/css2?family=${cleanFontName}:wght@300;400;500;600;700&display=swap`;
-},
-
-// Load Google Font for preview
-loadGoogleFont(url: string, fontName: string) {
-  if (typeof document !== 'undefined') {
-    const existingLink = document.querySelector(`link[href="${url}"]`);
-    if (existingLink) return;
-    
-    const link = document.createElement('link');
-    link.href = url;
-    link.rel = 'stylesheet';
-    link.type = 'text/css';
-    
-    link.onload = () => {
-      console.log(`✅ Google Font loaded successfully: ${fontName}`);
-    };
-    
-    link.onerror = () => {
-      console.log(`⚠️ Could not load Google Font: ${fontName}`);
-    };
-    
-    document.head.appendChild(link);
   }
 },
 
