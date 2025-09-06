@@ -38,7 +38,7 @@ const supabaseAPI = {
   },
 
   // Upload file to Supabase Storage bucket - COMPLIANCE METHOD
-  async uploadFileToBucket(file: File, fileName: string, bucketName = 'brand_assets') {
+  async uploadFileToBucket(file: File, fileName: string, bucketName = 'brand-assets') {
     console.log('📄 Uploading file to bucket:', { fileName, bucketName, size: file.size });
     
     try {
