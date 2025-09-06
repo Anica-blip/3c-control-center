@@ -356,7 +356,7 @@ const supabaseAPI = {
       const fontFamilyCSS = `font-family: "${fontData.name}", ui-sans-serif, system-ui, sans-serif;`;
       
       const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': supabaseConfig.anonKey,
