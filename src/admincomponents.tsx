@@ -11,10 +11,55 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // =============================================================================
-// DOCUMENTATION-COMPLIANT SUPABASE API METHODS
+// AUTHENTICATION-AWARE SUPABASE API METHODS
 // =============================================================================
 
 const supabaseAPI = {
+  // Sign in user for development/testing
+  async signInUser(email: string, password: string) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    if (error) {
+      throw new Error(`Authentication failed: ${error.message}`);
+    }
+    
+    return data.user;
+  },
+
+  // Sign up user for development/testing
+  async signUpUser(email: string, password: string) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password
+    });
+    
+    if (error) {
+      throw new Error(`Sign up failed: ${error.message}`);
+    }
+    
+    return data.user;
+  },
+
+  // Sign out user
+  async signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      throw new Error(`Sign out failed: ${error.message}`);
+    }
+  },
+
+  // Get current user
+  async getCurrentUser() {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) {
+      throw new Error(`Get user failed: ${error.message}`);
+    }
+    return user;
+  },
+
   // Validate bucket exists - COMPLIANCE METHOD
   async validateBucket(bucketName: string) {
     try {
@@ -42,6 +87,12 @@ const supabaseAPI = {
     console.log('📄 Uploading file to bucket:', { fileName, bucketName, size: file.size });
     
     try {
+      // Check if user is authenticated first
+      const user = await this.getCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated. Please log in first.');
+      }
+      
       // Validate bucket exists first - COMPLIANCE REQUIREMENT
       await this.validateBucket(bucketName);
       
@@ -108,6 +159,11 @@ const supabaseAPI = {
     console.log('🎨 Saving color to Supabase:', colorData);
     
     try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated. Please log in first.');
+      }
+
       const hex = colorData.hex.replace('#', '');
       const r = parseInt(hex.substr(0, 2), 16);
       const g = parseInt(hex.substr(2, 2), 16);
@@ -120,7 +176,8 @@ const supabaseAPI = {
           name: colorData.name,
           hex_code: colorData.hex,
           usage: colorData.usage,
-          rgb_values: rgbValues
+          rgb_values: rgbValues,
+          created_by: user.id
         })
         .select();
       
@@ -141,10 +198,15 @@ const supabaseAPI = {
     console.log('🎨 Updating color:', { colorId, colorData });
     
     try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated. Please log in first.');
+      }
+
       const hex = colorData.hex.replace('#', '');
       const r = parseInt(hex.substr(0, 2), 16);
       const g = parseInt(hex.substr(2, 2), 16);
-      const b = parseInt(hex.substr(4, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 2, 16);
       const rgbValues = `rgb(${r}, ${g}, ${b})`;
       
       const { data, error } = await supabase
@@ -175,6 +237,11 @@ const supabaseAPI = {
     console.log('🎨 Deleting color:', colorId);
     
     try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated. Please log in first.');
+      }
+
       const { error } = await supabase
         .from('brand_colors')
         .delete()
@@ -220,6 +287,11 @@ const supabaseAPI = {
     console.log('🏷️ Saving logo to Supabase:', logoData);
     
     try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated. Please log in first.');
+      }
+
       let logoUrl = null;
       
       if (file) {
@@ -238,7 +310,8 @@ const supabaseAPI = {
           logo_url: logoUrl,
           file_size: file ? Math.round(file.size / 1024) : null,
           mime_type: file ? file.type : null,
-          is_active: true
+          is_active: true,
+          created_by: user.id
         })
         .select();
       
@@ -259,6 +332,11 @@ const supabaseAPI = {
     console.log('🏷️ Updating logo:', { logoId, logoData });
     
     try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated. Please log in first.');
+      }
+
       let logoUrl = null;
       
       if (file) {
@@ -301,6 +379,11 @@ const supabaseAPI = {
     console.log('🏷️ Deleting logo:', logoId);
     
     try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated. Please log in first.');
+      }
+
       const { error } = await supabase
         .from('brand_logos')
         .update({ is_active: false })
@@ -348,6 +431,11 @@ const supabaseAPI = {
     }
     
     try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated. Please log in first.');
+      }
+
       const googleFontsUrl = fontData.name.trim().replace(/\s+/g, '+');
       const fontUrl = `https://fonts.googleapis.com/css2?family=${googleFontsUrl}:wght@300;400;500;600;700&display=swap`;
       
@@ -357,7 +445,7 @@ const supabaseAPI = {
           name: fontData.name,
           type: fontData.category || 'Google Font',
           file_path: fontUrl,
-          created_by: null,
+          created_by: user.id,
           is_active: true
         })
         .select();
@@ -393,6 +481,11 @@ const supabaseAPI = {
     console.log('📋 Updating font:', { fontId, fontData });
     
     try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated. Please log in first.');
+      }
+
       const googleFontsUrl = fontData.name.trim().replace(/\s+/g, '+');
       const fontUrl = `https://fonts.googleapis.com/css2?family=${googleFontsUrl}:wght@300;400;500;600;700&display=swap`;
       
@@ -424,6 +517,11 @@ const supabaseAPI = {
     console.log('📋 Deleting font:', fontId);
     
     try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated. Please log in first.');
+      }
+
       const { error } = await supabase
         .from('brand_font')
         .delete()
@@ -467,6 +565,11 @@ const supabaseAPI = {
     console.log('📋 Saving guidelines to Supabase:', { section, content });
     
     try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated. Please log in first.');
+      }
+
       const { data, error } = await supabase
         .from('brand_guidelines')
         .insert({
@@ -475,7 +578,8 @@ const supabaseAPI = {
           content: typeof content === 'string' ? content : JSON.stringify(content),
           type: `${section.charAt(0).toUpperCase() + section.slice(1)} Usage`,
           status: 'Active',
-          version_number: 1
+          version_number: 1,
+          created_by: user.id
         })
         .select();
       
@@ -496,6 +600,11 @@ const supabaseAPI = {
     console.log('📋 Updating guidelines:', { guidelineId, guidelineData });
     
     try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated. Please log in first.');
+      }
+
       const { data, error } = await supabase
         .from('brand_guidelines')
         .update(guidelineData)
@@ -519,6 +628,11 @@ const supabaseAPI = {
     console.log('📋 Deleting guidelines:', guidelineId);
     
     try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated. Please log in first.');
+      }
+
       const { error } = await supabase
         .from('brand_guidelines')
         .delete()
@@ -538,11 +652,15 @@ const supabaseAPI = {
 };
 
 // =============================================================================
-// ADMIN COMPONENTS - COMPLETE IMPLEMENTATION
+// ADMIN COMPONENTS WITH AUTHENTICATION
 // =============================================================================
 
 function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
   const [activeTab, setActiveTab] = useState('templates');
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [authForm, setAuthForm] = useState({ email: '', password: '' });
+  const [showAuthForm, setShowAuthForm] = useState(false);
 
   const theme = {
     background: isDarkMode ? '#1f2937' : '#ffffff',
@@ -570,13 +688,176 @@ function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
       : 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
   };
 
+  // Check authentication on mount
+  useEffect(() => {
+    checkUser();
+    
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const checkUser = async () => {
+    try {
+      const user = await supabaseAPI.getCurrentUser();
+      setUser(user);
+    } catch (error) {
+      setUser(null);
+    }
+  };
+
+  const handleAuth = async (isSignUp = false) => {
+    if (!authForm.email || !authForm.password) {
+      alert('Please fill in email and password');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (isSignUp) {
+        await supabaseAPI.signUpUser(authForm.email, authForm.password);
+        alert('Check your email for verification link');
+      } else {
+        const user = await supabaseAPI.signInUser(authForm.email, authForm.password);
+        setUser(user);
+        setShowAuthForm(false);
+      }
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await supabaseAPI.signOut();
+      setUser(null);
+      setActiveTab('templates');
+    } catch (error: any) {
+      alert(error.message);
+    }
+  };
+
+  // Show authentication form if not authenticated
+  if (!user && (activeTab === 'brand' || showAuthForm)) {
+    return (
+      <div style={{ backgroundColor: theme.background, minHeight: '100vh', padding: '40px' }}>
+        <div style={{ 
+          maxWidth: '400px', 
+          margin: '0 auto', 
+          padding: '40px', 
+          backgroundColor: theme.cardBackground,
+          borderRadius: '12px',
+          border: `1px solid ${theme.borderColor}`
+        }}>
+          <h2 style={{ color: theme.textPrimary, textAlign: 'center', marginBottom: '30px' }}>
+            Authentication Required
+          </h2>
+          <p style={{ color: theme.textSecondary, textAlign: 'center', marginBottom: '30px' }}>
+            Please log in to access the Brand Kit features
+          </p>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', color: theme.textPrimary }}>Email</label>
+            <input
+              type="email"
+              value={authForm.email}
+              onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: `1px solid ${theme.inputBorder}`,
+                borderRadius: '8px',
+                backgroundColor: theme.inputBackground,
+                color: theme.textPrimary
+              }}
+              placeholder="your@email.com"
+            />
+          </div>
+          
+          <div style={{ marginBottom: '30px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', color: theme.textPrimary }}>Password</label>
+            <input
+              type="password"
+              value={authForm.password}
+              onChange={(e) => setAuthForm(prev => ({ ...prev, password: e.target.value }))}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: `1px solid ${theme.inputBorder}`,
+                borderRadius: '8px',
+                backgroundColor: theme.inputBackground,
+                color: theme.textPrimary
+              }}
+              placeholder="••••••••"
+            />
+          </div>
+          
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+            <button
+              onClick={() => handleAuth(false)}
+              disabled={loading}
+              style={{
+                flex: 1,
+                padding: '12px',
+                backgroundColor: theme.buttonPrimary,
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {loading ? 'Signing In...' : 'Sign In'}
+            </button>
+            <button
+              onClick={() => handleAuth(true)}
+              disabled={loading}
+              style={{
+                flex: 1,
+                padding: '12px',
+                backgroundColor: theme.buttonSecondary,
+                color: theme.buttonSecondaryText,
+                border: `1px solid ${theme.borderColor}`,
+                borderRadius: '8px',
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {loading ? 'Signing Up...' : 'Sign Up'}
+            </button>
+          </div>
+          
+          <button
+            onClick={() => setShowAuthForm(false)}
+            style={{
+              width: '100%',
+              padding: '8px',
+              backgroundColor: 'transparent',
+              color: theme.textSecondary,
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ backgroundColor: theme.background, minHeight: '100vh' }}>
       {/* Top Tab Navigation */}
       <div style={{ 
         borderBottom: `1px solid ${theme.borderColor}`, 
         backgroundColor: theme.headerBackground, 
-        padding: '0 20px' 
+        padding: '0 20px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
       }}>
         <div style={{ display: 'flex', gap: '0' }}>
           <button
@@ -610,7 +891,13 @@ function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
             📚 Libraries
           </button>
           <button
-            onClick={() => setActiveTab('brand')}
+            onClick={() => {
+              if (!user) {
+                setShowAuthForm(true);
+              } else {
+                setActiveTab('brand');
+              }
+            }}
             style={{
               padding: '12px 24px',
               backgroundColor: activeTab === 'brand' ? theme.background : 'transparent',
@@ -622,16 +909,38 @@ function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
               fontSize: '14px'
             }}
           >
-            🏢 Brand Kit
+            🏢 Brand Kit {!user && '🔒'}
           </button>
         </div>
+        
+        {user && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '12px', color: theme.textSecondary }}>
+              {user.email}
+            </span>
+            <button
+              onClick={handleSignOut}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+            >
+              Sign Out
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Content Area */}
       <div style={{ backgroundColor: theme.background }}>
         {activeTab === 'templates' && <AdminTemplatesTab theme={theme} />}
         {activeTab === 'libraries' && <AdminLibrariesTab theme={theme} />}
-        {activeTab === 'brand' && <AdminBrandTab theme={theme} isDarkMode={isDarkMode} supabaseAPI={supabaseAPI} />}
+        {activeTab === 'brand' && user && <AdminBrandTab theme={theme} isDarkMode={isDarkMode} supabaseAPI={supabaseAPI} />}
       </div>
     </div>
   );
