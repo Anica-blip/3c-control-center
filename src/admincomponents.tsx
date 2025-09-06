@@ -1642,8 +1642,15 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
 // =============================================================================
 // BRAND TAB - COMPLETE WITH ALL EDGE FUNCTION INTEGRATIONS
 // =============================================================================
+function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkMode: boolean; supabaseAPI: any }) {
+  // DEBUG: Check what supabaseAPI object we're receiving
+  console.log('DEBUG - Received supabaseAPI:', supabaseAPI);
+  console.log('DEBUG - supabaseAPI type:', typeof supabaseAPI);
+  console.log('DEBUG - Has saveFont method:', typeof supabaseAPI?.saveFont);
+  console.log('DEBUG - Has fetchFonts method:', typeof supabaseAPI?.fetchFonts);
+  console.log('DEBUG - Has from method:', typeof supabaseAPI?.from);
+  console.log('DEBUG - supabaseAPI keys:', supabaseAPI ? Object.keys(supabaseAPI) : 'undefined');
 
-function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean }) {
   const [activeSection, setActiveSection] = useState('colors');
   const [notifications, setNotifications] = useState<any[]>([]);
   
@@ -1654,6 +1661,10 @@ function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean 
   const [guidelines, setGuidelines] = useState<any[]>([]);
   
   const [loading, setLoading] = useState(false);
+
+function AdminBrandTab({ theme, isDarkMode }: { theme: any; isDarkMode: boolean }) {
+  const [activeSection, setActiveSection] = useState('colors');
+  const [notifications, setNotifications] = useState<any[]>([]);
 
   // Load data from Supabase on component mount
   useEffect(() => {
