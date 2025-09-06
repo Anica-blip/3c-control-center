@@ -1,47 +1,47 @@
 import React, { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
 // =============================================================================
-// COMPLETE SUPABASE EDGE FUNCTIONS INTEGRATION
+// CORRECTED SUPABASE CLIENT CONFIGURATION
 // =============================================================================
-// Vite Supabase Client Configuration
 const supabaseConfig = {
   url: import.meta.env.VITE_SUPABASE_URL || '',
-  anonKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || ''
+  anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '' // FIXED: Correct env var name
 };
 
+// Initialize the Supabase client - PROPER WAY
+const supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey);
+
 // =============================================================================
-// SCHEMA-COMPLIANT SUPABASE API - ALL EDGE FUNCTIONS MATCHING SCHEMA
+// CORRECTED SUPABASE API USING OFFICIAL CLIENT LIBRARY
 // =============================================================================
 
 const supabaseAPI = {
-  // Upload file to Supabase Storage bucket - SCHEMA COMPLIANT
+  // Upload file to Supabase Storage bucket - CORRECTED METHOD
   async uploadFileToBucket(file: File, fileName: string, bucketName = 'brand_assets') {
     console.log('📄 Uploading file to bucket:', { fileName, bucketName, size: file.size });
     
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .upload(fileName, file, {
+          upsert: false // Set to true if you want to overwrite existing files
+        });
       
-      const response = await fetch(`${supabaseConfig.url}/storage/v1/object/${bucketName}/${fileName}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error(`File upload failed: ${response.status}`);
+      if (error) {
+        throw error;
       }
       
-      const result = await response.json();
-      const publicUrl = `${supabaseConfig.url}/storage/v1/object/public/${bucketName}/${fileName}`;
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(fileName);
       
-      console.log('✅ File uploaded to bucket:', { result, publicUrl });
+      console.log('✅ File uploaded to bucket:', { data, publicUrl: publicUrlData.publicUrl });
       return {
-        path: fileName,
-        fullPath: `${bucketName}/${fileName}`,
-        publicUrl: publicUrl
+        path: data.path,
+        fullPath: data.fullPath,
+        publicUrl: publicUrlData.publicUrl
       };
     } catch (error) {
       console.error('💥 File upload error:', error);
@@ -49,33 +49,28 @@ const supabaseAPI = {
     }
   },
 
-  // Fetch colors from Supabase
+  // Fetch colors from Supabase - CORRECTED METHOD
   async fetchColors() {
     console.log('🎨 Fetching colors from Supabase...');
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_colors`, {
-        method: 'GET',
-        headers: {
-          'apikey': supabaseConfig.anonKey,
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        }
-      });
+      const { data, error } = await supabase
+        .from('brand_colors')
+        .select('*');
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch colors: ${response.status}`);
+      if (error) {
+        throw error;
       }
       
-      const colors = await response.json();
-      console.log('✅ Colors fetched from Supabase:', colors);
-      return colors;
+      console.log('✅ Colors fetched from Supabase:', data);
+      return data || [];
     } catch (error) {
       console.error('💥 Color fetch error:', error);
       return [];
     }
   },
 
-  // Save color to Supabase
+  // Save color to Supabase - CORRECTED METHOD
   async saveColor(colorData: any) {
     console.log('🎨 Saving color to Supabase:', colorData);
     
@@ -86,87 +81,77 @@ const supabaseAPI = {
       const b = parseInt(hex.substr(4, 2), 16);
       const rgbValues = `rgb(${r}, ${g}, ${b})`;
       
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_colors`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseConfig.anonKey,
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase
+        .from('brand_colors')
+        .insert({
           name: colorData.name,
           hex_code: colorData.hex,
           usage: colorData.usage,
           rgb_values: rgbValues
         })
-      });
+        .select();
       
-      if (!response.ok) {
-        throw new Error(`Color save failed: ${response.status}`);
+      if (error) {
+        throw error;
       }
       
-      const result = await response.json();
-      console.log('✅ Color saved to Supabase:', result);
-      return result;
+      console.log('✅ Color saved to Supabase:', data);
+      return data?.[0];
     } catch (error) {
       console.error('💥 Color save error:', error);
       throw error;
     }
   },
 
-  // Update color using Edge Function
+  // Update color - CORRECTED METHOD
   async updateColor(colorId: number, colorData: any) {
-    console.log('🎨 Updating color via Edge Function:', { colorId, colorData });
+    console.log('🎨 Updating color:', { colorId, colorData });
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_colors-ts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({
-          colorId: colorId,
-          colorData: colorData
-        })
-      });
+      const hex = colorData.hex.replace('#', '');
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      const rgbValues = `rgb(${r}, ${g}, ${b})`;
       
-      if (!response.ok) {
-        throw new Error(`Color update failed: ${response.status}`);
+      const { data, error } = await supabase
+        .from('brand_colors')
+        .update({
+          name: colorData.name,
+          hex_code: colorData.hex,
+          usage: colorData.usage,
+          rgb_values: rgbValues
+        })
+        .eq('id', colorId)
+        .select();
+      
+      if (error) {
+        throw error;
       }
       
-      const result = await response.json();
-      console.log('✅ Color updated via Edge Function:', result);
-      return result.data;
+      console.log('✅ Color updated:', data);
+      return data?.[0];
     } catch (error) {
       console.error('💥 Color update error:', error);
       throw error;
     }
   },
 
-  // Delete color using Edge Function
+  // Delete color - CORRECTED METHOD
   async deleteColor(colorId: number) {
-    console.log('🎨 Deleting color via Edge Function:', colorId);
+    console.log('🎨 Deleting color:', colorId);
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_colors-ts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({
-          colorId: colorId
-        })
-      });
+      const { error } = await supabase
+        .from('brand_colors')
+        .delete()
+        .eq('id', colorId);
       
-      if (!response.ok) {
-        throw new Error(`Color delete failed: ${response.status}`);
+      if (error) {
+        throw error;
       }
       
-      const result = await response.json();
-      console.log('✅ Color deleted via Edge Function:', result);
+      console.log('✅ Color deleted');
       return true;
     } catch (error) {
       console.error('💥 Color delete error:', error);
@@ -174,33 +159,30 @@ const supabaseAPI = {
     }
   },
 
-  // Fetch logos using REST API
+  // Fetch logos - CORRECTED METHOD
   async fetchLogos() {
     console.log('🏷️ Fetching logos from Supabase...');
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_logos?is_active=eq.true&order=created_at.desc`, {
-        method: 'GET',
-        headers: {
-          'apikey': supabaseConfig.anonKey,
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        }
-      });
+      const { data, error } = await supabase
+        .from('brand_logos')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch logos: ${response.status}`);
+      if (error) {
+        throw error;
       }
       
-      const logos = await response.json();
-      console.log('✅ Logos fetched from Supabase:', logos);
-      return logos;
+      console.log('✅ Logos fetched from Supabase:', data);
+      return data || [];
     } catch (error) {
       console.error('💥 Logo fetch error:', error);
       return [];
     }
   },
 
-  // Save logo using REST API
+  // Save logo - CORRECTED METHOD
   async saveLogo(logoData: any, file: File | null = null) {
     console.log('🏷️ Saving logo to Supabase:', logoData);
     
@@ -213,15 +195,9 @@ const supabaseAPI = {
         logoUrl = uploadResult.publicUrl;
       }
       
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_logos`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseConfig.anonKey,
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase
+        .from('brand_logos')
+        .insert({
           name: logoData.name,
           type: logoData.type || 'PNG',
           usage: logoData.usage,
@@ -231,22 +207,21 @@ const supabaseAPI = {
           mime_type: file ? file.type : null,
           is_active: true
         })
-      });
+        .select();
       
-      if (!response.ok) {
-        throw new Error(`Logo save failed: ${response.status}`);
+      if (error) {
+        throw error;
       }
       
-      const result = await response.json();
-      console.log('✅ Logo saved to Supabase:', result);
-      return result;
+      console.log('✅ Logo saved to Supabase:', data);
+      return data?.[0];
     } catch (error) {
       console.error('💥 Logo save error:', error);
       throw error;
     }
   },
 
-  // Update logo using REST API
+  // Update logo - CORRECTED METHOD
   async updateLogo(logoId: number, logoData: any, file: File | null = null) {
     console.log('🏷️ Updating logo:', { logoId, logoData });
     
@@ -259,55 +234,47 @@ const supabaseAPI = {
         logoUrl = uploadResult.publicUrl;
       }
       
-      const updateData = {
+      const updateData: any = {
         name: logoData.name,
         type: logoData.type || 'PNG',
         usage: logoData.usage,
-        category: logoData.category || 'Primary Logo',
-        ...(logoUrl && { logo_url: logoUrl })
+        category: logoData.category || 'Primary Logo'
       };
       
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_logos?id=eq.${logoId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseConfig.anonKey,
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify(updateData)
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Logo update failed: ${response.status}`);
+      if (logoUrl) {
+        updateData.logo_url = logoUrl;
       }
       
-      const result = await response.json();
-      console.log('✅ Logo updated:', result);
-      return result[0];
+      const { data, error } = await supabase
+        .from('brand_logos')
+        .update(updateData)
+        .eq('id', logoId)
+        .select();
+      
+      if (error) {
+        throw error;
+      }
+      
+      console.log('✅ Logo updated:', data);
+      return data?.[0];
     } catch (error) {
       console.error('💥 Logo update error:', error);
       throw error;
     }
   },
 
-  // Delete logo using REST API
+  // Delete logo - CORRECTED METHOD
   async deleteLogo(logoId: number) {
     console.log('🏷️ Deleting logo:', logoId);
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_logos?id=eq.${logoId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseConfig.anonKey,
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({ is_active: false })
-      });
+      const { error } = await supabase
+        .from('brand_logos')
+        .update({ is_active: false })
+        .eq('id', logoId);
       
-      if (!response.ok) {
-        throw new Error(`Logo delete failed: ${response.status}`);
+      if (error) {
+        throw error;
       }
       
       console.log('✅ Logo deleted');
@@ -318,33 +285,28 @@ const supabaseAPI = {
     }
   },
 
-  // Fetch fonts from Supabase
+  // Fetch fonts - CORRECTED METHOD
   async fetchFonts() {
     console.log('📋 Fetching fonts from Supabase...');
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
-        method: 'GET',
-        headers: {
-          'apikey': supabaseConfig.anonKey,
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        }
-      });
+      const { data, error } = await supabase
+        .from('brand_font')
+        .select('*');
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch fonts: ${response.status}`);
+      if (error) {
+        throw error;
       }
       
-      const fonts = await response.json();
-      console.log('✅ Fonts fetched from Supabase:', fonts);
-      return fonts;
+      console.log('✅ Fonts fetched from Supabase:', data);
+      return data || [];
     } catch (error) {
       console.error('💥 Font fetch error:', error);
       return [];
     }
   },
 
-  // Save font to Supabase
+  // Save font - CORRECTED METHOD
   async saveFont(fontData: any) {
     console.log('📋 Saving font to Supabase:', fontData);
     
@@ -356,31 +318,22 @@ const supabaseAPI = {
       const googleFontsUrl = fontData.name.trim().replace(/\s+/g, '+');
       const fontUrl = `https://fonts.googleapis.com/css2?family=${googleFontsUrl}:wght@300;400;500;600;700&display=swap`;
       
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseConfig.anonKey,
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase
+        .from('brand_font')
+        .insert({
           name: fontData.name,
           type: fontData.category || 'Google Font',
           file_path: fontUrl,
           created_by: null,
           is_active: true
         })
-      });
+        .select();
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Full error response:', errorText);
-        throw new Error(`Font save failed: ${response.status} - ${errorText}`);
+      if (error) {
+        throw error;
       }
       
-      const result = await response.json();
-      console.log('✅ Font saved to Supabase:', result);
+      console.log('✅ Font saved to Supabase:', data);
       
       // Load the Google Font for preview
       if (typeof document !== 'undefined') {
@@ -395,77 +348,59 @@ const supabaseAPI = {
         }
       }
       
-      return result;
+      return data?.[0];
     } catch (error) {
       console.error('💥 Font save error:', error);
       throw error;
     }
   },
 
-  // Update font using Edge Function
+  // Update font - CORRECTED METHOD
   async updateFont(fontId: number, fontData: any) {
-    console.log('📋 Updating font via Edge Function:', { fontId, fontData });
+    console.log('📋 Updating font:', { fontId, fontData });
     
     try {
       const googleFontsUrl = fontData.name.trim().replace(/\s+/g, '+');
       const fontUrl = `https://fonts.googleapis.com/css2?family=${googleFontsUrl}:wght@300;400;500;600;700&display=swap`;
       
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_font-ts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({
-          fontId: fontId,
-          fontData: {
-            name: fontData.name,
-            type: fontData.category || 'Google Font',
-            file_path: fontUrl,
-            is_active: true
-          }
+      const { data, error } = await supabase
+        .from('brand_font')
+        .update({
+          name: fontData.name,
+          type: fontData.category || 'Google Font',
+          file_path: fontUrl,
+          is_active: true
         })
-      });
+        .eq('id', fontId)
+        .select();
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Full error response:', errorText);
-        throw new Error(`Font update failed: ${response.status} - ${errorText}`);
+      if (error) {
+        throw error;
       }
       
-      const result = await response.json();
-      console.log('✅ Font updated via Edge Function:', result);
-      return result.data;
+      console.log('✅ Font updated:', data);
+      return data?.[0];
     } catch (error) {
       console.error('💥 Font update error:', error);
       throw error;
     }
   },
 
-  // Delete font using Edge Function
+  // Delete font - CORRECTED METHOD
   async deleteFont(fontId: number) {
-    console.log('📋 Deleting font via Edge Function:', fontId);
+    console.log('📋 Deleting font:', fontId);
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_font-ts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({
-          fontId: fontId
-        })
-      });
+      const { error } = await supabase
+        .from('brand_font')
+        .delete()
+        .eq('id', fontId);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Full error response:', errorText);
-        throw new Error(`Font delete failed: ${response.status} - ${errorText}`);
+      if (error) {
+        throw error;
       }
       
-      const result = await response.json();
-      console.log('✅ Font deleted via Edge Function:', result);
+      console.log('✅ Font deleted');
       return true;
     } catch (error) {
       console.error('💥 Font delete error:', error);
@@ -473,60 +408,48 @@ const supabaseAPI = {
     }
   },
 
-  // Generate Google Fonts URL
-  generateGoogleFontsUrl(fontName: string) {
-    const cleanFontName = fontName.trim().replace(/\s+/g, '+');
-    return `https://fonts.googleapis.com/css2?family=${cleanFontName}:wght@300;400;500;600;700&display=swap`;
-  },
-
-  // Load Google Font for preview
-  loadGoogleFont(url: string, fontName: string) {
-    if (typeof document !== 'undefined') {
-      const existingLink = document.querySelector(`link[href="${url}"]`);
-      if (existingLink) return;
+  // Call Edge Function - CORRECTED METHOD
+  async callEdgeFunction(functionName: string, payload: any) {
+    console.log(`🔧 Calling Edge Function: ${functionName}`, payload);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: payload
+      });
       
-      const link = document.createElement('link');
-      link.href = url;
-      link.rel = 'stylesheet';
-      link.type = 'text/css';
+      if (error) {
+        throw error;
+      }
       
-      link.onload = () => {
-        console.log(`✅ Google Font loaded successfully: ${fontName}`);
-      };
-      
-      link.onerror = () => {
-        console.log(`⚠️ Could not load Google Font: ${fontName}`);
-      };
-      
-      document.head.appendChild(link);
+      console.log(`✅ Edge Function ${functionName} executed:`, data);
+      return data;
+    } catch (error) {
+      console.error(`💥 Edge Function ${functionName} error:`, error);
+      throw error;
     }
   },
 
-  // Fetch guidelines from Supabase
+  // Fetch guidelines - CORRECTED METHOD
   async fetchGuidelines() {
     console.log('📋 Fetching guidelines from Supabase...');
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_guidelines`, {
-        method: 'GET',
-        headers: {
-          'apikey': supabaseConfig.anonKey,
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        }
-      });
+      const { data, error } = await supabase
+        .from('brand_guidelines')
+        .select('*');
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch guidelines: ${response.status}`);
+      if (error) {
+        throw error;
       }
       
-      const guidelines = await response.json();
-      console.log('✅ Guidelines fetched from Supabase:', guidelines);
-      return guidelines;
+      console.log('✅ Guidelines fetched from Supabase:', data);
+      return data || [];
     } catch (error) {
       console.error('💥 Guidelines fetch error:', error);
       return [];
     }
-  },
+  }
+};
 
   // Save guidelines to Supabase
   async saveGuidelines(section: string, content: any) {
