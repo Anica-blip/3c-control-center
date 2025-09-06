@@ -334,23 +334,23 @@ const supabaseAPI = {
     }
   },
 
-  // Fetch fonts from Supabase
-async savefont(section: string, content: any) {
+// Fetch fonts from Supabase
+  async fetchFonts() {
     console.log('📋 Fetching font from Supabase...');
-
+    
     try {
-      const response = await fetch(${supabaseConfig.url}/rest/v1/brand_font, {
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
         method: 'GET',
         headers: {
           'apikey': supabaseConfig.anonKey,
-          'Authorization': Bearer ${supabaseConfig.anonKey},
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
         }
       });
-
+      
       if (!response.ok) {
-        throw new Error(Failed to fetch font: ${response.status});
+        throw new Error(`Failed to fetch font: ${response.status}`);
       }
-
+      
       const font = await response.json();
       console.log('✅ font fetched from Supabase:', font);
       return font;
@@ -359,62 +359,74 @@ async savefont(section: string, content: any) {
       return [];
     }
   },
-  // Save font to Supabase
-  async savefont(section: string, content: any) {
-    console.log('📋 Saving font to Supabase:', { section, content });
 
+  // Save font to Supabase - FIXED to match actual table schema
+  async savefont(fontData: any) {
+    console.log('📋 Saving font to Supabase:', fontData);
+    
+    if (!fontData || !fontData.name) {
+      throw new Error('Font data with name is required');
+    }
+    
     try {
-      const response = await fetch(${supabaseConfig.url}/rest/v1/brand_font, {
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': supabaseConfig.anonKey,
-          'Authorization': Bearer ${supabaseConfig.anonKey},
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
           'Prefer': 'return=representation'
         },
         body: JSON.stringify({
-          section: section,
-          title: ${section.charAt(0).toUpperCase() + section.slice(1)} font,
-          content: typeof content === 'string' ? content : JSON.stringify(content),
-          type: ${section.charAt(0).toUpperCase() + section.slice(1)} Usage,
-          status: 'Active',
-          version_number: 1
+          name: fontData.name,
+          type: fontData.category || 'Google Font',
+          file_path: fontData.name ? this.generateGoogleFontsUrl(fontData.name) : null,
+          created_by: null,
+          is_active: true
         })
       });
-
+      
       if (!response.ok) {
-        throw new Error(font save failed: ${response.status});
+        throw new Error(`font save failed: ${response.status}`);
       }
-
+      
       const result = await response.json();
       console.log('✅ font saved to Supabase:', result);
+      
+      // Load the Google Font for preview
+      if (fontData.name) {
+        const fontUrl = this.generateGoogleFontsUrl(fontData.name);
+        this.loadGoogleFont(fontUrl, fontData.name);
+      }
+      
       return result;
     } catch (error) {
       console.error('💥 font save error:', error);
       throw error;
     }
   },
+
   // Update font using Edge Function
   async updatefont(fontId: number, fontData: any) {
     console.log('📋 Updating font via Edge Function:', { fontId, fontData });
-
+    
     try {
-      const response = await fetch(${supabaseConfig.url}/functions/v1/update_brand_font-ts, {
+      const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_font-ts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': Bearer ${supabaseConfig.anonKey},
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
         },
         body: JSON.stringify({
           fontId: fontId,
           fontData: fontData
         })
       });
-
+      
       if (!response.ok) {
-        throw new Error(font update failed: ${response.status});
+        throw new Error(`font update failed: ${response.status}`);
       }
-
+      
       const result = await response.json();
       console.log('✅ font updated via Edge Function:', result);
       return result.data;
@@ -423,26 +435,27 @@ async savefont(section: string, content: any) {
       throw error;
     }
   },
+
   // Delete font using Edge Function
   async deletefont(fontId: number) {
     console.log('📋 Deleting font via Edge Function:', fontId);
-
+    
     try {
-      const response = await fetch(${supabaseConfig.url}/functions/v1/delete_brand_font-ts, {
+      const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_font-ts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': Bearer ${supabaseConfig.anonKey},
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
         },
         body: JSON.stringify({
           fontId: fontId
         })
       });
-
+      
       if (!response.ok) {
-        throw new Error(font delete failed: ${response.status});
+        throw new Error(`font delete failed: ${response.status}`);
       }
-
+      
       const result = await response.json();
       console.log('✅ font deleted via Edge Function:', result);
       return true;
