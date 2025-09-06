@@ -409,7 +409,7 @@ const supabaseAPI = {
           link.onload = () => console.log(`✅ Google Font loaded: ${fontData.name}`);
           document.head.appendChild(link);
         }
-      }
+      },
       
       return result;
     } catch (error) {
