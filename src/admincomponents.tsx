@@ -49,36 +49,35 @@ const supabaseAPI = {
     }
   },
 
-  // ✅ RESTORED: Fetch colors using Edge Function - fetch_brand_colors-ts
+// Fetch colors from Supabase
   async fetchColors() {
-    console.log('🎨 Fetching colors via Edge Function...');
+    console.log('🎨 Fetching colors from Supabase...');
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/fetch_brand_colors-ts`, {
-        method: 'POST',
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_colors`, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
+          'apikey': supabaseConfig.anonKey,
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({})
+        }
       });
       
       if (!response.ok) {
         throw new Error(`Failed to fetch colors: ${response.status}`);
       }
       
-      const result = await response.json();
-      console.log('✅ Colors fetched via Edge Function:', result);
-      return result.data || result || [];
+      const colors = await response.json();
+      console.log('✅ Colors fetched from Supabase:', colors);
+      return colors;
     } catch (error) {
       console.error('💥 Color fetch error:', error);
       return [];
     }
   },
 
-  // ✅ RESTORED: Save color using Edge Function - save_brand_colors-ts
+  // Save color to Supabase
   async saveColor(colorData: any) {
-    console.log('🎨 Saving color via Edge Function:', colorData);
+    console.log('🎨 Saving color to Supabase:', colorData);
     
     try {
       const hex = colorData.hex.replace('#', '');
@@ -87,22 +86,20 @@ const supabaseAPI = {
       const b = parseInt(hex.substr(4, 2), 16);
       const rgbValues = `rgb(${r}, ${g}, ${b})`;
       
-      const requestBody = {
-        colorData: {
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_colors`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseConfig.anonKey,
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
           name: colorData.name,
           hex_code: colorData.hex,
           usage: colorData.usage,
           rgb_values: rgbValues
-        }
-      };
-      
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/save_brand_colors-ts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify(requestBody)
+        })
       });
       
       if (!response.ok) {
@@ -110,15 +107,15 @@ const supabaseAPI = {
       }
       
       const result = await response.json();
-      console.log('✅ Color saved via Edge Function:', result);
-      return result.data || result;
+      console.log('✅ Color saved to Supabase:', result);
+      return result;
     } catch (error) {
       console.error('💥 Color save error:', error);
       throw error;
     }
   },
 
-  // Update color using Edge Function - update_brand_colors-ts (ALREADY CORRECT)
+  // Update color using Edge Function - FIXED NAME
   async updateColor(colorId: number, colorData: any) {
     console.log('🎨 Updating color via Edge Function:', { colorId, colorData });
     
@@ -148,7 +145,7 @@ const supabaseAPI = {
     }
   },
 
-  // Delete color using Edge Function - delete_brand_colors-ts (ALREADY CORRECT)
+  // Delete color using Edge Function - FIXED NAME
   async deleteColor(colorId: number) {
     console.log('🎨 Deleting color via Edge Function:', colorId);
     
@@ -337,135 +334,101 @@ const supabaseAPI = {
     }
   },
 
-  // 🔧 FIXED: Fetch fonts using Edge Function - fetch_brand_font-ts
-  async fetchFonts() {
-    console.log('🔤 Fetching fonts via Edge Function...');
+  // Fetch fonts from Supabase
+  async fetchfont() {
+    console.log('📋 Fetching font from Supabase...');
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/fetch_brand_font-ts`, {
-        method: 'POST',
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
+          'apikey': supabaseConfig.anonKey,
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({})
+        }
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to fetch fonts: ${response.status}`);
+        throw new Error(`Failed to fetch font: ${response.status}`);
       }
       
-      const result = await response.json();
-      console.log('✅ Fonts fetched via Edge Function:', result);
-      return result.data || [];
+      const font = await response.json();
+      console.log('✅ font fetched from Supabase:', font);
+      return font;
     } catch (error) {
-      console.error('💥 Font fetch error:', error);
+      console.error('💥 font fetch error:', error);
       return [];
     }
   },
 
-  // 🔧 FIXED: Save font using Edge Function - save_brand_font-ts
-  async saveFont(fontData: any) {
-    console.log('🔤 Saving font via Edge Function:', fontData);
+  // Save font to Supabase
+  async savefont(section: string, content: any) {
+    console.log('📋 Saving font to Supabase:', { section, content });
     
     try {
-      const googleFontsUrl = this.generateGoogleFontsUrl(fontData.name);
-      const cssImport = googleFontsUrl ? `@import url("${googleFontsUrl}");` : null;
-      const fontFamilyCSS = `font-family: "${fontData.name}", ui-sans-serif, system-ui, sans-serif;`;
-      
-      const requestBody = {
-        fontData: {
-          name: fontData.name,
-          category: fontData.category,
-          usage: fontData.usage,
-          weight_range: fontData.weight || '400-600',
-          google_fonts_url: googleFontsUrl,
-          css_import: cssImport,
-          font_family_css: fontFamilyCSS,
-          font_source: 'google',
-          status: 'Active'
-        }
-      };
-      
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/save_brand_font-ts`, {
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'apikey': supabaseConfig.anonKey,
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+          'Prefer': 'return=representation'
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          section: section,
+          title: `${section.charAt(0).toUpperCase() + section.slice(1)} font`,
+          content: typeof content === 'string' ? content : JSON.stringify(content),
+          type: `${section.charAt(0).toUpperCase() + section.slice(1)} Usage`,
+          status: 'Active',
+          version_number: 1
+        })
       });
       
       if (!response.ok) {
-        throw new Error(`Font save failed: ${response.status}`);
+        throw new Error(`font save failed: ${response.status}`);
       }
       
       const result = await response.json();
-      console.log('✅ Font saved via Edge Function:', result);
-      
-      if (googleFontsUrl) {
-        this.loadGoogleFont(googleFontsUrl, fontData.name);
-      }
-      
-      return result.data || result;
+      console.log('✅ font saved to Supabase:', result);
+      return result;
     } catch (error) {
-      console.error('💥 Font save error:', error);
+      console.error('💥 font save error:', error);
       throw error;
     }
   },
 
-  // 🔧 FIXED: Update font using Edge Function - update_brand_font-ts
-  async updateFont(fontId: number, fontData: any) {
-    console.log('🔤 Updating font via Edge Function:', { fontId, fontData });
+  // Update font using Edge Function
+  async updatefont(fontId: number, fontData: any) {
+    console.log('📋 Updating font via Edge Function:', { fontId, fontData });
     
     try {
-      const googleFontsUrl = this.generateGoogleFontsUrl(fontData.name);
-      const cssImport = googleFontsUrl ? `@import url("${googleFontsUrl}");` : null;
-      const fontFamilyCSS = `font-family: "${fontData.name}", ui-sans-serif, system-ui, sans-serif;`;
-      
-      const requestBody = {
-        fontId: fontId,
-        fontData: {
-          name: fontData.name,
-          category: fontData.category,
-          usage: fontData.usage,
-          weight_range: fontData.weight || '400-600',
-          google_fonts_url: googleFontsUrl,
-          css_import: cssImport,
-          font_family_css: fontFamilyCSS,
-        }
-      };
-      
       const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_font-ts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          fontId: fontId,
+          fontData: fontData
+        })
       });
       
       if (!response.ok) {
-        throw new Error(`Font update failed: ${response.status}`);
+        throw new Error(`font update failed: ${response.status}`);
       }
       
       const result = await response.json();
-      console.log('✅ Font updated via Edge Function:', result);
-      
-      if (googleFontsUrl) {
-        this.loadGoogleFont(googleFontsUrl, fontData.name);
-      }
-      
-      return result.data || result;
+      console.log('✅ font updated via Edge Function:', result);
+      return result.data;
     } catch (error) {
-      console.error('💥 Font update error:', error);
+      console.error('💥 font update error:', error);
       throw error;
     }
   },
 
-  // 🔧 FIXED: Delete font using Edge Function - delete_brand_font-ts
-  async deleteFont(fontId: number) {
-    console.log('🔤 Deleting font via Edge Function:', fontId);
+  // Delete font using Edge Function
+  async deletefont(fontId: number) {
+    console.log('📋 Deleting font via Edge Function:', fontId);
     
     try {
       const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_font-ts`, {
@@ -480,68 +443,65 @@ const supabaseAPI = {
       });
       
       if (!response.ok) {
-        throw new Error(`Font delete failed: ${response.status}`);
+        throw new Error(`font delete failed: ${response.status}`);
       }
       
       const result = await response.json();
-      console.log('✅ Font deleted via Edge Function:', result);
+      console.log('✅ font deleted via Edge Function:', result);
       return true;
     } catch (error) {
-      console.error('💥 Font delete error:', error);
+      console.error('💥 font delete error:', error);
       throw error;
     }
   },
 
-  // ✅ CORRECTED: Fetch guidelines using Edge Function - fetch_brand_guidelines-ts
+  // Fetch guidelines from Supabase
   async fetchGuidelines() {
-    console.log('📋 Fetching guidelines via Edge Function...');
+    console.log('📋 Fetching guidelines from Supabase...');
     
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/fetch_brand_guidelines-ts`, {
-        method: 'POST',
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_guidelines`, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
+          'apikey': supabaseConfig.anonKey,
           'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify({})
+        }
       });
       
       if (!response.ok) {
         throw new Error(`Failed to fetch guidelines: ${response.status}`);
       }
       
-      const result = await response.json();
-      console.log('✅ Guidelines fetched via Edge Function:', result);
-      return result.data || result || [];
+      const guidelines = await response.json();
+      console.log('✅ Guidelines fetched from Supabase:', guidelines);
+      return guidelines;
     } catch (error) {
       console.error('💥 Guidelines fetch error:', error);
       return [];
     }
   },
 
-  // ✅ CORRECTED: Save guidelines using Edge Function - save_brand_guidelines-ts
+  // Save guidelines to Supabase
   async saveGuidelines(section: string, content: any) {
-    console.log('📋 Saving guidelines via Edge Function:', { section, content });
+    console.log('📋 Saving guidelines to Supabase:', { section, content });
     
     try {
-      const requestBody = {
-        guidelineData: {
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_guidelines`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseConfig.anonKey,
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
           section: section,
           title: `${section.charAt(0).toUpperCase() + section.slice(1)} Guidelines`,
           content: typeof content === 'string' ? content : JSON.stringify(content),
           type: `${section.charAt(0).toUpperCase() + section.slice(1)} Usage`,
           status: 'Active',
           version_number: 1
-        }
-      };
-      
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/save_brand_guidelines-ts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-        },
-        body: JSON.stringify(requestBody)
+        })
       });
       
       if (!response.ok) {
@@ -549,15 +509,15 @@ const supabaseAPI = {
       }
       
       const result = await response.json();
-      console.log('✅ Guidelines saved via Edge Function:', result);
-      return result.data || result;
+      console.log('✅ Guidelines saved to Supabase:', result);
+      return result;
     } catch (error) {
       console.error('💥 Guidelines save error:', error);
       throw error;
     }
   },
 
-  // Update guidelines using Edge Function - update_brand_guidelines-ts (ALREADY CORRECT)
+  // Update guidelines using Edge Function
   async updateGuidelines(guidelineId: number, guidelineData: any) {
     console.log('📋 Updating guidelines via Edge Function:', { guidelineId, guidelineData });
     
@@ -587,7 +547,7 @@ const supabaseAPI = {
     }
   },
 
-  // Delete guidelines using Edge Function - delete_brand_guidelines-ts (ALREADY CORRECT)
+  // Delete guidelines using Edge Function
   async deleteGuidelines(guidelineId: number) {
     console.log('📋 Deleting guidelines via Edge Function:', guidelineId);
     
