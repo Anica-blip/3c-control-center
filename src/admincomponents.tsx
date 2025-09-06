@@ -16,7 +16,7 @@ const supabaseConfig = {
 const supabaseAPI = {
   // Upload file to Supabase Storage bucket - SCHEMA COMPLIANT
   async uploadFileToBucket(file: File, fileName: string, bucketName = 'brand_assets') {
-    console.log('🔄 Uploading file to bucket:', { fileName, bucketName, size: file.size });
+    console.log('📄 Uploading file to bucket:', { fileName, bucketName, size: file.size });
     
     try {
       const formData = new FormData();
@@ -49,7 +49,7 @@ const supabaseAPI = {
     }
   },
 
-// Fetch colors from Supabase
+  // Fetch colors from Supabase
   async fetchColors() {
     console.log('🎨 Fetching colors from Supabase...');
     
@@ -115,7 +115,7 @@ const supabaseAPI = {
     }
   },
 
-  // Update color using Edge Function - FIXED NAME
+  // Update color using Edge Function
   async updateColor(colorId: number, colorData: any) {
     console.log('🎨 Updating color via Edge Function:', { colorId, colorData });
     
@@ -145,7 +145,7 @@ const supabaseAPI = {
     }
   },
 
-  // Delete color using Edge Function - FIXED NAME
+  // Delete color using Edge Function
   async deleteColor(colorId: number) {
     console.log('🎨 Deleting color via Edge Function:', colorId);
     
@@ -174,7 +174,7 @@ const supabaseAPI = {
     }
   },
 
-  // FIXED: Fetch logos using REST API (no supabase client needed)
+  // Fetch logos using REST API
   async fetchLogos() {
     console.log('🏷️ Fetching logos from Supabase...');
     
@@ -200,7 +200,7 @@ const supabaseAPI = {
     }
   },
 
-  // FIXED: Save logo using REST API
+  // Save logo using REST API
   async saveLogo(logoData: any, file: File | null = null) {
     console.log('🏷️ Saving logo to Supabase:', logoData);
     
@@ -402,10 +402,6 @@ const supabaseAPI = {
     }
   },
 
-  async savefont(fontData: any) {
-    return this.saveFont(fontData);
-  },
-
   // Update font using Edge Function
   async updateFont(fontId: number, fontData: any) {
     console.log('📋 Updating font via Edge Function:', { fontId, fontData });
@@ -446,10 +442,6 @@ const supabaseAPI = {
     }
   },
 
-  async updatefont(fontId: number, fontData: any) {
-    return this.updateFont(fontId, fontData);
-  },
-
   // Delete font using Edge Function
   async deleteFont(fontId: number) {
     console.log('📋 Deleting font via Edge Function:', fontId);
@@ -481,10 +473,6 @@ const supabaseAPI = {
     }
   },
 
-  async deletefont(fontId: number) {
-    return this.deleteFont(fontId);
-  },
-
   // Generate Google Fonts URL
   generateGoogleFontsUrl(fontName: string) {
     const cleanFontName = fontName.trim().replace(/\s+/g, '+');
@@ -511,6 +499,32 @@ const supabaseAPI = {
       };
       
       document.head.appendChild(link);
+    }
+  },
+
+  // Fetch guidelines from Supabase
+  async fetchGuidelines() {
+    console.log('📋 Fetching guidelines from Supabase...');
+    
+    try {
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_guidelines`, {
+        method: 'GET',
+        headers: {
+          'apikey': supabaseConfig.anonKey,
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch guidelines: ${response.status}`);
+      }
+      
+      const guidelines = await response.json();
+      console.log('✅ Guidelines fetched from Supabase:', guidelines);
+      return guidelines;
+    } catch (error) {
+      console.error('💥 Guidelines fetch error:', error);
+      return [];
     }
   },
 
@@ -607,7 +621,10 @@ const supabaseAPI = {
       console.error('💥 Guidelines delete error:', error);
       throw error;
     }
-  },
+  }
+};
+
+export default supabaseAPI;
 
 // =============================================================================
 // ADMIN COMPONENTS - COMPLETE IMPLEMENTATION
