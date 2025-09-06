@@ -335,7 +335,7 @@ const supabaseAPI = {
   },
 
   // Fetch fonts from Supabase
-  async fetchfont() {
+async savefont(section: string, content: any) {
     console.log('📋 Fetching font from Supabase...');
 
     try {
