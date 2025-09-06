@@ -334,23 +334,23 @@ const supabaseAPI = {
     }
   },
 
-// Fetch fonts from Supabase
-  async fetchFont() {
+  // Fetch fonts from Supabase
+  async fetchfont() {
     console.log('📋 Fetching font from Supabase...');
-    
+
     try {
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
+      const response = await fetch(${supabaseConfig.url}/rest/v1/brand_font, {
         method: 'GET',
         headers: {
           'apikey': supabaseConfig.anonKey,
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+          'Authorization': Bearer ${supabaseConfig.anonKey},
         }
       });
-      
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch font: ${response.status}`);
+        throw new Error(Failed to fetch font: ${response.status});
       }
-      
+
       const font = await response.json();
       console.log('✅ font fetched from Supabase:', font);
       return font;
@@ -359,78 +359,33 @@ const supabaseAPI = {
       return [];
     }
   },
+  // Save font to Supabase
+  async savefont(section: string, content: any) {
+    console.log('📋 Saving font to Supabase:', { section, content });
 
-  // Save font to Supabase - MINIMAL FIX: Handle both object and separate parameters
-  async saveFont(sectionOrFontData: any, content?: any) {
-    console.log('📋 Saving font to Supabase:', { sectionOrFontData, content });
-    
-    // Handle when called with font object from component
-    if (typeof sectionOrFontData === 'object' && sectionOrFontData.name) {
-      const fontData = sectionOrFontData;
-      const section = fontData.category || 'primary';
-      const contentData = JSON.stringify(fontData);
-      
-      try {
-        const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabaseConfig.anonKey,
-            'Authorization': `Bearer ${supabaseConfig.anonKey}`,
-            'Prefer': 'return=representation'
-          },
-          body: JSON.stringify({
-            section: section,
-            title: `${section.charAt(0).toUpperCase() + section.slice(1)} font`,
-            content: contentData,
-            type: `${section.charAt(0).toUpperCase() + section.slice(1)} Usage`,
-            status: 'Active',
-            version_number: 1
-          })
-        });
-        
-        if (!response.ok) {
-          throw new Error(`font save failed: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        console.log('✅ font saved to Supabase:', result);
-        return result;
-      } catch (error) {
-        console.error('💥 font save error:', error);
-        throw error;
-      }
-    }
-    
-    // Handle when called with separate parameters (original way)
-    const section = sectionOrFontData;
-    if (!section || typeof section !== 'string') {
-      throw new Error('Section parameter must be a non-empty string');
-    }
-    
     try {
-      const response = await fetch(`${supabaseConfig.url}/rest/v1/brand_font`, {
+      const response = await fetch(${supabaseConfig.url}/rest/v1/brand_font, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': supabaseConfig.anonKey,
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+          'Authorization': Bearer ${supabaseConfig.anonKey},
           'Prefer': 'return=representation'
         },
         body: JSON.stringify({
           section: section,
-          title: `${section.charAt(0).toUpperCase() + section.slice(1)} font`,
+          title: ${section.charAt(0).toUpperCase() + section.slice(1)} font,
           content: typeof content === 'string' ? content : JSON.stringify(content),
-          type: `${section.charAt(0).toUpperCase() + section.slice(1)} Usage`,
+          type: ${section.charAt(0).toUpperCase() + section.slice(1)} Usage,
           status: 'Active',
           version_number: 1
         })
       });
-      
+
       if (!response.ok) {
-        throw new Error(`font save failed: ${response.status}`);
+        throw new Error(font save failed: ${response.status});
       }
-      
+
       const result = await response.json();
       console.log('✅ font saved to Supabase:', result);
       return result;
@@ -439,28 +394,27 @@ const supabaseAPI = {
       throw error;
     }
   },
-
   // Update font using Edge Function
-  async updateFont(fontId: number, fontData: any) {
+  async updatefont(fontId: number, fontData: any) {
     console.log('📋 Updating font via Edge Function:', { fontId, fontData });
-    
+
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/update_brand_font-ts`, {
+      const response = await fetch(${supabaseConfig.url}/functions/v1/update_brand_font-ts, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+          'Authorization': Bearer ${supabaseConfig.anonKey},
         },
         body: JSON.stringify({
           fontId: fontId,
           fontData: fontData
         })
       });
-      
+
       if (!response.ok) {
-        throw new Error(`font update failed: ${response.status}`);
+        throw new Error(font update failed: ${response.status});
       }
-      
+
       const result = await response.json();
       console.log('✅ font updated via Edge Function:', result);
       return result.data;
@@ -469,27 +423,26 @@ const supabaseAPI = {
       throw error;
     }
   },
-
   // Delete font using Edge Function
-  async deleteFont(fontId: number) {
+  async deletefont(fontId: number) {
     console.log('📋 Deleting font via Edge Function:', fontId);
-    
+
     try {
-      const response = await fetch(`${supabaseConfig.url}/functions/v1/delete_brand_font-ts`, {
+      const response = await fetch(${supabaseConfig.url}/functions/v1/delete_brand_font-ts, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+          'Authorization': Bearer ${supabaseConfig.anonKey},
         },
         body: JSON.stringify({
           fontId: fontId
         })
       });
-      
+
       if (!response.ok) {
-        throw new Error(`font delete failed: ${response.status}`);
+        throw new Error(font delete failed: ${response.status});
       }
-      
+
       const result = await response.json();
       console.log('✅ font deleted via Edge Function:', result);
       return true;
