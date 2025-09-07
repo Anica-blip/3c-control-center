@@ -331,16 +331,16 @@ const MarketingControlCenter = () => {
             border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
             borderRadius: '8px',
             fontSize: '14px',
-            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
-            color: isDarkMode ? '#f9fafb' : '#1f2937',
+            backgroundColor: '#334155',
+            color: '#ffffff',
             outline: 'none',
             fontFamily: 'inherit'
           }}
           required={required}
         >
-          <option value="" style={{ backgroundColor: isDarkMode ? '#374151' : '#ffffff', color: isDarkMode ? '#f9fafb' : '#1f2937' }}>Select persona</option>
+          <option value="" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Select persona</option>
           {PERSONA_OPTIONS.map(persona => (
-            <option key={persona} value={persona} style={{ backgroundColor: isDarkMode ? '#374151' : '#ffffff', color: isDarkMode ? '#f9fafb' : '#1f2937' }}>{persona}</option>
+            <option key={persona} value={persona} style={{ backgroundColor: '#334155', color: '#ffffff' }}>{persona}</option>
           ))}
         </select>
       </div>
@@ -355,16 +355,16 @@ const MarketingControlCenter = () => {
             border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
             borderRadius: '8px',
             fontSize: '14px',
-            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
-            color: isDarkMode ? '#f9fafb' : '#1f2937',
+            backgroundColor: '#334155',
+            color: '#ffffff',
             outline: 'none',
             fontFamily: 'inherit'
           }}
           required={required}
         >
-          <option value="" style={{ backgroundColor: isDarkMode ? '#374151' : '#ffffff', color: isDarkMode ? '#f9fafb' : '#1f2937' }}>Select audience</option>
+          <option value="" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Select audience</option>
           {AUDIENCE_OPTIONS.map(audience => (
-            <option key={audience.value} value={audience.value} style={{ backgroundColor: isDarkMode ? '#374151' : '#ffffff', color: isDarkMode ? '#f9fafb' : '#1f2937' }}>{audience.label}</option>
+            <option key={audience.value} value={audience.value} style={{ backgroundColor: '#334155', color: '#ffffff' }}>{audience.label}</option>
           ))}
         </select>
       </div>
@@ -702,17 +702,17 @@ const MarketingControlCenter = () => {
                     padding: '16px',
                     border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
                     borderRadius: '8px',
-                    backgroundColor: isDarkMode ? '#111827' : '#f9fafb'
+                    backgroundColor: '#334155' // Hardcoded dark background
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                       <div style={{ flex: 1 }}>
-                        <h4 style={{ margin: '0 0 8px 0', fontWeight: '600', color: isDarkMode ? '#f9fafb' : '#111827' }}>
+                        <h4 style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#ffffff' }}> {/* Hardcoded white text */}
                           {persona.name} - {persona.audienceSegment}
                         </h4>
-                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
+                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#d1d5db' }}> {/* Hardcoded light text */}
                           Role: {persona.userRole}
                         </p>
-                        <p style={{ margin: '0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
+                        <p style={{ margin: '0', fontSize: '14px', color: '#d1d5db' }}> {/* Hardcoded light text */}
                           {persona.description}
                         </p>
                       </div>
@@ -889,13 +889,30 @@ const MarketingControlCenter = () => {
               <select 
                 value={newStrategy.status}
                 onChange={(e) => setNewStrategy({...newStrategy, status: e.target.value})}
-                style={selectStyle}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  backgroundColor: '#334155',
+                  color: '#ffffff',
+                  outline: 'none',
+                  transition: 'border-color 0.2s ease',
+                  fontFamily: 'inherit',
+                  appearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                  backgroundPosition: 'right 12px center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '16px',
+                  paddingRight: '48px'
+                }}
               >
-                <option value="">Select status</option>
-                <option value="pending">Pending</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="deployed">Deployed</option>
-                <option value="archived">Archived</option>
+                <option value="" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Select status</option>
+                <option value="pending" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Pending</option>
+                <option value="scheduled" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Scheduled</option>
+                <option value="deployed" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Deployed</option>
+                <option value="archived" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Archived</option>
               </select>
             </div>
             <div>
@@ -903,12 +920,29 @@ const MarketingControlCenter = () => {
               <select 
                 value={newStrategy.aiSuggestionRating}
                 onChange={(e) => setNewStrategy({...newStrategy, aiSuggestionRating: e.target.value})}
-                style={selectStyle}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  backgroundColor: '#334155',
+                  color: '#ffffff',
+                  outline: 'none',
+                  transition: 'border-color 0.2s ease',
+                  fontFamily: 'inherit',
+                  appearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                  backgroundPosition: 'right 12px center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '16px',
+                  paddingRight: '48px'
+                }}
               >
-                <option value="">Rate AI suggestion</option>
-                <option value="useful">Useful</option>
-                <option value="neutral">Neutral</option>
-                <option value="not-useful">Not Useful</option>
+                <option value="" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Rate AI suggestion</option>
+                <option value="useful" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Useful</option>
+                <option value="neutral" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Neutral</option>
+                <option value="not-useful" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Not Useful</option>
               </select>
             </div>
           </div>
@@ -1036,11 +1070,28 @@ const MarketingControlCenter = () => {
               <select 
                 value={newChannel.status}
                 onChange={(e) => setNewChannel({...newChannel, status: e.target.value})}
-                style={selectStyle}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  backgroundColor: '#334155',
+                  color: '#ffffff',
+                  outline: 'none',
+                  transition: 'border-color 0.2s ease',
+                  fontFamily: 'inherit',
+                  appearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                  backgroundPosition: 'right 12px center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '16px',
+                  paddingRight: '48px'
+                }}
               >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Pending">Pending</option>
+                <option value="Active" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Active</option>
+                <option value="Inactive" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Inactive</option>
+                <option value="Pending" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Pending</option>
               </select>
             </div>
           </div>
@@ -1169,13 +1220,30 @@ const MarketingControlCenter = () => {
               <select 
                 value={newIntel.priorityLevel}
                 onChange={(e) => setNewIntel({...newIntel, priorityLevel: e.target.value})}
-                style={selectStyle}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  backgroundColor: '#334155',
+                  color: '#ffffff',
+                  outline: 'none',
+                  transition: 'border-color 0.2s ease',
+                  fontFamily: 'inherit',
+                  appearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                  backgroundPosition: 'right 12px center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '16px',
+                  paddingRight: '48px'
+                }}
               >
-                <option value="">Select priority</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
+                <option value="" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Select priority</option>
+                <option value="low" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Low</option>
+                <option value="medium" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Medium</option>
+                <option value="high" style={{ backgroundColor: '#334155', color: '#ffffff' }}>High</option>
+                <option value="urgent" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Urgent</option>
               </select>
             </div>
           </div>
@@ -1298,11 +1366,28 @@ const MarketingControlCenter = () => {
                 <select 
                   value={newResearchInsight.reviewStatus}
                   onChange={(e) => setNewResearchInsight({...newResearchInsight, reviewStatus: e.target.value})}
-                  style={selectStyle}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: '#334155',
+                    color: '#ffffff',
+                    outline: 'none',
+                    transition: 'border-color 0.2s ease',
+                    fontFamily: 'inherit',
+                    appearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                    backgroundPosition: 'right 12px center',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundSize: '16px',
+                    paddingRight: '48px'
+                  }}
                 >
-                  <option value="new">New</option>
-                  <option value="in-review">In Review</option>
-                  <option value="archived">Archived</option>
+                  <option value="new" style={{ backgroundColor: '#334155', color: '#ffffff' }}>New</option>
+                  <option value="in-review" style={{ backgroundColor: '#334155', color: '#ffffff' }}>In Review</option>
+                  <option value="archived" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Archived</option>
                 </select>
               </div>
             </div>
@@ -1416,15 +1501,32 @@ const MarketingControlCenter = () => {
                 <select 
                   value={newTool.category} 
                   onChange={(e) => setNewTool({...newTool, category: e.target.value})}
-                  style={selectStyle}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: '#334155',
+                    color: '#ffffff',
+                    outline: 'none',
+                    transition: 'border-color 0.2s ease',
+                    fontFamily: 'inherit',
+                    appearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                    backgroundPosition: 'right 12px center',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundSize: '16px',
+                    paddingRight: '48px'
+                  }}
                 >
-                  <option value="">Select category</option>
-                  <option value="SEO">SEO</option>
-                  <option value="Social Media">Social Media</option>
-                  <option value="Audience Research">Audience Research</option>
-                  <option value="Video Analytics">Video Analytics</option>
-                  <option value="Hashtag Analysis">Hashtag Analysis</option>
-                  <option value="Other">Other</option>
+                  <option value="" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Select category</option>
+                  <option value="SEO" style={{ backgroundColor: '#334155', color: '#ffffff' }}>SEO</option>
+                  <option value="Social Media" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Social Media</option>
+                  <option value="Audience Research" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Audience Research</option>
+                  <option value="Video Analytics" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Video Analytics</option>
+                  <option value="Hashtag Analysis" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Hashtag Analysis</option>
+                  <option value="Other" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Other</option>
                 </select>
               </div>
               
