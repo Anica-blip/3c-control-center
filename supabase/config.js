@@ -1,4 +1,4 @@
-// Step 3: Create this file as src/supabaseConfig.js
+// Step 3: Create this file as supabase/config.js in your repository
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
