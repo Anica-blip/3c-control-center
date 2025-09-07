@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
+// Import Inter font
+const fontStyle = {
+  fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+};
+
 // Define global persona and audience options
 const PERSONA_OPTIONS = ['Falcon', 'Panther', 'Wolf', 'Lion'];
 const AUDIENCE_OPTIONS = [
@@ -117,8 +122,47 @@ const MarketingControlCenter = () => {
     notes: ''
   });
 
-  // Styles (keeping existing styles but updating as needed)
+  // Tab definitions organized by workflow groups
+  const tabGroups = [
+    {
+      name: 'Content Creation',
+      color: '#3b82f6', // Blue
+      tabs: [
+        { id: 'personas', label: 'Personas' },
+        { id: 'content-tools', label: 'Keywords & Tags' },
+        { id: 'strategy', label: 'Strategy Vault' },
+        { id: 'channels', label: 'Channels' }
+      ]
+    },
+    {
+      name: 'Analytics & Research', 
+      color: '#10b981', // Green
+      tabs: [
+        { id: 'trends', label: 'Search Trends' },
+        { id: 'analytics', label: 'Insights Panel' },
+        { id: 'intel', label: 'Intel Drop' }
+      ]
+    },
+    {
+      name: 'Management',
+      color: '#8b5cf6', // Purple
+      tabs: [
+        { id: 'archives', label: 'Archives' }
+      ]
+    }
+  ];
+
+  const allTabs = tabGroups.flatMap(group => 
+    group.tabs.map(tab => ({
+      ...tab,
+      groupColor: group.color,
+      groupName: group.name
+    }))
+  );
+
+  // Styles (updated with Inter font and improved dark mode)
   const containerStyle = {
+    ...fontStyle,
     padding: '20px',
     minHeight: '100vh',
     backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
@@ -135,16 +179,20 @@ const MarketingControlCenter = () => {
       : '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
   };
 
-  const getTabStyle = (tabId) => ({
+  const getTabStyle = (tab) => ({
     padding: '12px 16px',
-    borderBottom: activeTab === tabId ? '2px solid #3b82f6' : '2px solid transparent',
-    fontWeight: '500',
-    fontSize: '12px',
-    color: activeTab === tabId ? '#2563eb' : (isDarkMode ? '#d1d5db' : '#6b7280'),
-    backgroundColor: 'transparent',
+    borderBottom: activeTab === tab.id ? `3px solid ${tab.groupColor}` : '3px solid transparent',
+    borderTop: activeTab === tab.id ? `2px solid ${tab.groupColor}` : '2px solid transparent',
+    fontWeight: activeTab === tab.id ? '600' : '500',
+    fontSize: '13px',
+    color: activeTab === tab.id ? tab.groupColor : (isDarkMode ? '#d1d5db' : '#6b7280'),
+    backgroundColor: activeTab === tab.id ? (isDarkMode ? '#374151' : '#f8fafc') : 'transparent',
     border: 'none',
     cursor: 'pointer',
-    transition: 'all 0.2s ease'
+    transition: 'all 0.2s ease',
+    borderRadius: '6px 6px 0 0',
+    margin: '0 2px',
+    position: 'relative'
   });
 
   const cardStyle = {
@@ -166,7 +214,7 @@ const MarketingControlCenter = () => {
   };
 
   const inputStyle = {
-    width: '100%',
+    width: '90%',
     padding: '12px 16px',
     border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
     borderRadius: '8px',
@@ -174,7 +222,27 @@ const MarketingControlCenter = () => {
     backgroundColor: isDarkMode ? '#374151' : '#ffffff',
     color: isDarkMode ? '#f9fafb' : '#1f2937',
     outline: 'none',
-    transition: 'border-color 0.2s ease'
+    transition: 'border-color 0.2s ease',
+    fontFamily: 'inherit'
+  };
+
+  const selectStyle = {
+    ...inputStyle,
+    width: '100%',
+    appearance: 'none',
+    backgroundImage: isDarkMode 
+      ? `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239CA3AF' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`
+      : `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+    backgroundPosition: 'right 12px center',
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: '16px',
+    paddingRight: '48px'
+  };
+
+  const textareaStyle = {
+    ...inputStyle,
+    resize: 'vertical',
+    fontFamily: 'inherit'
   };
 
   const labelStyle = {
@@ -182,7 +250,8 @@ const MarketingControlCenter = () => {
     marginBottom: '8px',
     fontWeight: '600',
     color: isDarkMode ? '#f9fafb' : '#374151',
-    fontSize: '14px'
+    fontSize: '14px',
+    fontFamily: 'inherit'
   };
 
   const buttonStyle = {
@@ -192,7 +261,8 @@ const MarketingControlCenter = () => {
     fontSize: '14px',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.2s ease'
+    transition: 'all 0.2s ease',
+    fontFamily: 'inherit'
   };
 
   const primaryButtonStyle = {
@@ -204,9 +274,22 @@ const MarketingControlCenter = () => {
 
   const secondaryButtonStyle = {
     ...buttonStyle,
-    backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
+    backgroundColor: isDarkMode ? '#4b5563' : '#f3f4f6',
     color: isDarkMode ? '#f9fafb' : '#374151',
-    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`
+    border: `1px solid ${isDarkMode ? '#6b7280' : '#d1d5db'}`
+  };
+
+  const smallButtonStyle = {
+    padding: '8px 12px',
+    borderRadius: '6px',
+    border: 'none',
+    fontSize: '12px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    backgroundColor: isDarkMode ? '#4b5563' : '#e5e7eb',
+    color: isDarkMode ? '#f9fafb' : '#374151',
+    fontFamily: 'inherit'
   };
 
   const formGridStyle = {
@@ -234,7 +317,7 @@ const MarketingControlCenter = () => {
     border: `2px dashed ${isDarkMode ? '#4b5563' : '#d1d5db'}`
   };
 
-  // Persona and Audience Dropdown Component
+  // Persona and Audience Dropdown Component (updated styles)
   const PersonaAudienceSelect = ({ personaValue, audienceValue, onPersonaChange, onAudienceChange, required = false }) => (
     <div style={formGridStyle}>
       <div>
@@ -242,7 +325,7 @@ const MarketingControlCenter = () => {
         <select 
           value={personaValue} 
           onChange={(e) => onPersonaChange(e.target.value)}
-          style={inputStyle}
+          style={selectStyle}
           required={required}
         >
           <option value="">Select persona</option>
@@ -256,7 +339,7 @@ const MarketingControlCenter = () => {
         <select 
           value={audienceValue} 
           onChange={(e) => onAudienceChange(e.target.value)}
-          style={inputStyle}
+          style={selectStyle}
           required={required}
         >
           <option value="">Select audience</option>
@@ -277,7 +360,6 @@ const MarketingControlCenter = () => {
         lastEditedAt: new Date().toISOString().split('T')[0]
       };
       setPersonas([...personas, persona]);
-      // TODO: Save to Supabase Personas DB
       resetPersonaForm();
     }
   };
@@ -289,7 +371,6 @@ const MarketingControlCenter = () => {
         ...newKeyword
       };
       setKeywords([...keywords, keyword]);
-      // TODO: Save to Supabase Keywords DB
       resetKeywordForm();
     }
   };
@@ -301,7 +382,6 @@ const MarketingControlCenter = () => {
         ...newChannel
       };
       setChannels([...channels, channel]);
-      // TODO: Save to Supabase Channels DB
       resetChannelForm();
     }
   };
@@ -315,7 +395,6 @@ const MarketingControlCenter = () => {
         createdAt: new Date().toISOString()
       };
       setStrategies([...strategies, strategy]);
-      // TODO: Save to Supabase Strategy Vault DB with version control
       resetStrategyForm();
     }
   };
@@ -328,7 +407,6 @@ const MarketingControlCenter = () => {
         submittedAt: new Date().toISOString()
       };
       setIntelEntries([...intelEntries, intel]);
-      // TODO: Save to Supabase Intel DB
       resetIntelForm();
     }
   };
@@ -340,7 +418,6 @@ const MarketingControlCenter = () => {
         ...newResearchInsight
       };
       setResearchInsights([...researchInsights, insight]);
-      // TODO: Save to Supabase Research Board DB
       resetResearchForm();
     }
   };
@@ -351,7 +428,6 @@ const MarketingControlCenter = () => {
         id: Date.now(),
         ...newTool
       }]);
-      // TODO: Save to Supabase Analytics Tools DB
       resetToolForm();
     }
   };
@@ -429,12 +505,10 @@ const MarketingControlCenter = () => {
 
   // Advanced functions (to be implemented)
   const generateHashtagsAndTags = () => {
-    // TODO: Implement AI-powered hashtag and tag generation
     console.log('Generating hashtags and tags...');
   };
 
   const insertHashtagsAndTags = () => {
-    // TODO: Implement hashtag/tag insertion into strategy
     console.log('Inserting hashtags and tags...');
   };
 
@@ -442,74 +516,73 @@ const MarketingControlCenter = () => {
     const file = event.target.files[0];
     if (file) {
       setNewIntel({...newIntel, audioFile: file});
-      // TODO: Upload to storage and save reference
     }
   };
 
   const importFromKeywordPlanner = () => {
-    // TODO: Implement import from Google Keyword Planner
     console.log('Importing from Keyword Planner...');
   };
 
   const importFromGSC = () => {
-    // TODO: Implement import from Google Search Console
     console.log('Importing from GSC...');
   };
 
   const importCSV = () => {
-    // TODO: Implement CSV import functionality
     console.log('Importing CSV...');
   };
-
-  const archiveItem = (itemId, itemType) => {
-    // TODO: Move item to archive database
-    console.log(`Archiving ${itemType} with ID: ${itemId}`);
-  };
-
-  const restoreItem = (itemId, itemType) => {
-    // TODO: Restore item from archive
-    console.log(`Restoring ${itemType} with ID: ${itemId}`);
-  };
-
-  // Tab definitions with updated structure
-  const tabs = [
-    { id: 'personas', label: 'Persona Manager' },
-    { id: 'keywords', label: 'Keyword Intel' },
-    { id: 'channels', label: 'Channel Mapper' },
-    { id: 'trends', label: 'Search Trends' },
-    { id: 'strategy', label: 'Strategy Vault' },
-    { id: 'intel', label: 'Intel Drop' },
-    { id: 'hashtags', label: 'Hashtags & Tags' },
-    { id: 'archives', label: 'Media Archives' },
-    { id: 'analytics', label: 'Analytics & Insights' }
-  ];
 
   return (
     <div style={containerStyle}>
       <div style={tabsContainerStyle}>
-        <nav style={{ display: 'flex', gap: '0', padding: '0 12px', overflowX: 'auto' }}>
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={getTabStyle(tab.id)}
-              onMouseOver={(e) => {
-                if (activeTab !== tab.id) {
-                  e.currentTarget.style.color = isDarkMode ? '#f3f4f6' : '#374151';
-                  e.currentTarget.style.borderBottom = `2px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`;
-                }
-              }}
-              onMouseOut={(e) => {
-                if (activeTab !== tab.id) {
-                  e.currentTarget.style.color = isDarkMode ? '#d1d5db' : '#6b7280';
-                  e.currentTarget.style.borderBottom = '2px solid transparent';
-                }
-              }}
-            >
-              {tab.label}
-            </button>
+        {/* Tab Groups */}
+        <div style={{ padding: '0 12px' }}>
+          {tabGroups.map((group, groupIndex) => (
+            <div key={group.name} style={{ 
+              display: 'inline-block',
+              marginRight: '32px',
+              borderLeft: groupIndex > 0 ? `2px solid ${isDarkMode ? '#374151' : '#e5e7eb'}` : 'none',
+              paddingLeft: groupIndex > 0 ? '32px' : '0'
+            }}>
+              <div style={{
+                fontSize: '11px',
+                fontWeight: '600',
+                color: group.color,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                marginBottom: '8px',
+                paddingLeft: '12px'
+              }}>
+                {group.name}
+              </div>
+              <nav style={{ display: 'flex', gap: '4px' }}>
+                {group.tabs.map((tab) => {
+                  const fullTab = allTabs.find(t => t.id === tab.id);
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      style={getTabStyle(fullTab)}
+                      onMouseOver={(e) => {
+                        if (activeTab !== tab.id) {
+                          e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f1f5f9';
+                          e.currentTarget.style.color = group.color;
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (activeTab !== tab.id) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.color = isDarkMode ? '#d1d5db' : '#6b7280';
+                        }
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
           ))}
-        </nav>
+        </div>
       </div>
 
       {/* Tab 1: Persona Manager */}
@@ -553,7 +626,7 @@ const MarketingControlCenter = () => {
                 onChange={(e) => setNewPersona({...newPersona, description: e.target.value})}
                 placeholder="Describe this persona"
                 rows={3}
-                style={{ ...inputStyle, resize: 'vertical' }}
+                style={textareaStyle}
               />
             </div>
             
@@ -564,7 +637,7 @@ const MarketingControlCenter = () => {
                 onChange={(e) => setNewPersona({...newPersona, keyMessages: e.target.value})}
                 placeholder="Key messages and positioning"
                 rows={3}
-                style={{ ...inputStyle, resize: 'vertical' }}
+                style={textareaStyle}
               />
             </div>
             
@@ -611,7 +684,7 @@ const MarketingControlCenter = () => {
                     borderRadius: '8px',
                     backgroundColor: isDarkMode ? '#111827' : '#f9fafb'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'start' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                       <div style={{ flex: 1 }}>
                         <h4 style={{ margin: '0 0 8px 0', fontWeight: '600', color: isDarkMode ? '#f9fafb' : '#111827' }}>
                           {persona.name} - {persona.audienceSegment}
@@ -624,13 +697,9 @@ const MarketingControlCenter = () => {
                         </p>
                       </div>
                       <button style={{
-                        padding: '8px 12px',
+                        ...smallButtonStyle,
                         backgroundColor: '#3b82f6',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        cursor: 'pointer'
+                        color: 'white'
                       }}>
                         Edit
                       </button>
@@ -643,71 +712,282 @@ const MarketingControlCenter = () => {
         </div>
       )}
 
-      {/* Tab 2: Keyword Intelligence */}
-      {activeTab === 'keywords' && (
-        <div style={cardStyle}>
-          <h2 style={sectionTitleStyle}>Keyword Intelligence</h2>
-          <div style={formGridStyle}>
-            <div>
-              <label style={labelStyle}>Keyword *</label>
-              <input 
-                type="text"
-                value={newKeyword.keyword}
-                onChange={(e) => setNewKeyword({...newKeyword, keyword: e.target.value})}
-                placeholder="Enter keyword"
-                style={inputStyle}
-              />
+      {/* Tab 2: Keywords & Content Tools (Combined) */}
+      {activeTab === 'content-tools' && (
+        <div style={{ display: 'grid', gap: '24px' }}>
+          {/* Keywords Section */}
+          <div style={cardStyle}>
+            <div style={{
+              borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+              paddingBottom: '16px',
+              marginBottom: '20px'
+            }}>
+              <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Keyword Intelligence</h2>
+              <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
+                Track and manage keywords for content strategy
+              </p>
             </div>
-            <div>
-              <label style={labelStyle}>Added By</label>
-              <input 
-                type="text"
-                value={newKeyword.addedBy}
-                onChange={(e) => setNewKeyword({...newKeyword, addedBy: e.target.value})}
-                placeholder="Your name"
-                style={inputStyle}
-              />
+            
+            <div style={formGridStyle}>
+              <div>
+                <label style={labelStyle}>Keyword *</label>
+                <input 
+                  type="text"
+                  value={newKeyword.keyword}
+                  onChange={(e) => setNewKeyword({...newKeyword, keyword: e.target.value})}
+                  placeholder="Enter keyword"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Added By</label>
+                <input 
+                  type="text"
+                  value={newKeyword.addedBy}
+                  onChange={(e) => setNewKeyword({...newKeyword, addedBy: e.target.value})}
+                  placeholder="Your name"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+            <div style={{ marginTop: '20px', textAlign: 'right' }}>
+              <button 
+                onClick={addKeyword}
+                style={{
+                  ...primaryButtonStyle,
+                  opacity: newKeyword.keyword ? 1 : 0.5,
+                  cursor: newKeyword.keyword ? 'pointer' : 'not-allowed'
+                }}
+              >
+                + Add Keyword
+              </button>
+            </div>
+            
+            {/* Display keywords */}
+            <div style={{ marginTop: '24px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
+                Keywords ({keywords.length})
+              </h3>
+              {keywords.length === 0 ? (
+                <div style={emptyStateStyle}>
+                  <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
+                    No keywords added yet
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  {keywords.map((keyword) => (
+                    <div key={keyword.id} style={{
+                      padding: '12px',
+                      border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                      borderRadius: '6px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <span style={{ fontWeight: '500' }}>{keyword.keyword}</span>
+                      <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                        {keyword.dateAdded} by {keyword.addedBy}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-          <div style={{ marginTop: '20px', textAlign: 'right' }}>
-            <button 
-              onClick={addKeyword}
-              style={{
-                ...primaryButtonStyle,
-                opacity: newKeyword.keyword ? 1 : 0.5,
-                cursor: newKeyword.keyword ? 'pointer' : 'not-allowed'
-              }}
-            >
-              + Add Keyword
-            </button>
+
+          {/* Hashtags & Tags Manager Section */}
+          <div style={cardStyle}>
+            <div style={{
+              borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+              paddingBottom: '16px',
+              marginBottom: '20px'
+            }}>
+              <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Hashtag & Tags Manager</h2>
+              <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
+                Import and manage hashtags from various sources
+              </p>
+            </div>
+            
+            <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
+              <button 
+                onClick={importFromKeywordPlanner}
+                style={secondaryButtonStyle}
+              >
+                Import from Keyword Planner
+              </button>
+              <button 
+                onClick={importFromGSC}
+                style={secondaryButtonStyle}
+              >
+                Import from Google Search Console
+              </button>
+              <button 
+                onClick={importCSV}
+                style={secondaryButtonStyle}
+              >
+                Manual CSV Upload
+              </button>
+            </div>
+
+            <div style={emptyStateStyle}>
+              <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
+                No hashtags imported yet. Use the import buttons above to get started.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Strategy Vault */}
+      {activeTab === 'strategy' && (
+        <div style={cardStyle}>
+          <div style={{
+            borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+            paddingBottom: '16px',
+            marginBottom: '20px'
+          }}>
+            <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Strategy Vault</h2>
+            <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
+              Version-controlled content strategy with AI feedback and persona targeting
+            </p>
           </div>
           
-          {/* Display keywords */}
+          <div style={formGridStyle}>
+            <div>
+              <label style={labelStyle}>Content Title *</label>
+              <input 
+                type="text"
+                value={newStrategy.contentTitle}
+                onChange={(e) => setNewStrategy({...newStrategy, contentTitle: e.target.value})}
+                placeholder="Enter content title" 
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Status</label>
+              <select 
+                value={newStrategy.status}
+                onChange={(e) => setNewStrategy({...newStrategy, status: e.target.value})}
+                style={selectStyle}
+              >
+                <option value="">Select status</option>
+                <option value="pending">Pending</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="deployed">Deployed</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>AI Suggestion Rating</label>
+              <select 
+                value={newStrategy.aiSuggestionRating}
+                onChange={(e) => setNewStrategy({...newStrategy, aiSuggestionRating: e.target.value})}
+                style={selectStyle}
+              >
+                <option value="">Rate AI suggestion</option>
+                <option value="useful">Useful</option>
+                <option value="neutral">Neutral</option>
+                <option value="not-useful">Not Useful</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '20px' }}>
+            <PersonaAudienceSelect
+              personaValue={newStrategy.persona}
+              audienceValue={newStrategy.audienceSegment}
+              onPersonaChange={(value) => setNewStrategy({...newStrategy, persona: value})}
+              onAudienceChange={(value) => setNewStrategy({...newStrategy, audienceSegment: value})}
+            />
+          </div>
+          
+          <div style={{ marginTop: '20px', display: 'grid', gap: '16px' }}>
+            <div>
+              <label style={labelStyle}>Hashtags</label>
+              <textarea 
+                value={newStrategy.hashtags}
+                onChange={(e) => setNewStrategy({...newStrategy, hashtags: e.target.value})}
+                placeholder="Enter hashtags" 
+                rows={2}
+                style={textareaStyle}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Tags</label>
+              <textarea 
+                value={newStrategy.tags}
+                onChange={(e) => setNewStrategy({...newStrategy, tags: e.target.value})}
+                placeholder="Enter tags" 
+                rows={2}
+                style={textareaStyle}
+              />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={generateHashtagsAndTags}
+                style={{ ...secondaryButtonStyle, flex: 1 }}
+              >
+                Generate Hashtags & Tags
+              </button>
+              <button 
+                onClick={insertHashtagsAndTags}
+                style={{ ...secondaryButtonStyle, flex: 1 }}
+              >
+                Insert Hashtags & Tags
+              </button>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '24px', textAlign: 'right' }}>
+            <button 
+              onClick={addStrategy}
+              style={{
+                ...primaryButtonStyle,
+                opacity: newStrategy.contentTitle ? 1 : 0.5,
+                cursor: newStrategy.contentTitle ? 'pointer' : 'not-allowed'
+              }}
+            >
+              + Save Strategy
+            </button>
+          </div>
+
+          {/* Display strategies */}
           <div style={{ marginTop: '24px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-              Keywords ({keywords.length})
+              Strategies ({strategies.length})
             </h3>
-            {keywords.length === 0 ? (
+            {strategies.length === 0 ? (
               <div style={emptyStateStyle}>
                 <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
-                  No keywords added yet
+                  No strategies saved yet
                 </p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gap: '8px' }}>
-                {keywords.map((keyword) => (
-                  <div key={keyword.id} style={{
-                    padding: '12px',
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {strategies.map((strategy) => (
+                  <div key={strategy.id} style={{
+                    padding: '16px',
                     border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-                    borderRadius: '6px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
+                    borderRadius: '8px'
                   }}>
-                    <span style={{ fontWeight: '500' }}>{keyword.keyword}</span>
-                    <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
-                      {keyword.dateAdded} by {keyword.addedBy}
-                    </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                      <div>
+                        <h4 style={{ margin: '0 0 8px 0', fontWeight: '600' }}>{strategy.contentTitle}</h4>
+                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
+                          {strategy.persona} - {strategy.audienceSegment} | Status: {strategy.status}
+                        </p>
+                        {strategy.hashtags && (
+                          <p style={{ margin: '0', fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                            {strategy.hashtags}
+                          </p>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                        v{strategy.version}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -716,8 +996,6 @@ const MarketingControlCenter = () => {
         </div>
       )}
 
-      {/* Tab 3: Channel Mapper */}
-      {activeTab === 'channels' && (
       {/* Tab 4: Channel Mapper */}
       {activeTab === 'channels' && (
         <div style={cardStyle}>
@@ -813,7 +1091,7 @@ const MarketingControlCenter = () => {
         </div>
       )}
 
-      {/* Tab 4: Search Trends & Intent */}
+      {/* Tab 5: Search Trends & Intent */}
       {activeTab === 'trends' && (
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>Search Trends & Intent Summary</h2>
@@ -851,163 +1129,6 @@ const MarketingControlCenter = () => {
         </div>
       )}
 
-      {/* Tab 5: Strategy Vault */}
-      {activeTab === 'strategy' && (
-        <div style={cardStyle}>
-          <div style={{
-            borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-            paddingBottom: '16px',
-            marginBottom: '20px'
-          }}>
-            <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Strategy Vault</h2>
-            <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-              Version-controlled content strategy with AI feedback and persona targeting
-            </p>
-          </div>
-          
-          <div style={formGridStyle}>
-            <div>
-              <label style={labelStyle}>Content Title *</label>
-              <input 
-                type="text"
-                value={newStrategy.contentTitle}
-                onChange={(e) => setNewStrategy({...newStrategy, contentTitle: e.target.value})}
-                placeholder="Enter content title" 
-                style={inputStyle}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Status</label>
-              <select 
-                value={newStrategy.status}
-                onChange={(e) => setNewStrategy({...newStrategy, status: e.target.value})}
-                style={inputStyle}
-              >
-                <option value="">Select status</option>
-                <option value="pending">Pending</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="deployed">Deployed</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>AI Suggestion Rating</label>
-              <select 
-                value={newStrategy.aiSuggestionRating}
-                onChange={(e) => setNewStrategy({...newStrategy, aiSuggestionRating: e.target.value})}
-                style={inputStyle}
-              >
-                <option value="">Rate AI suggestion</option>
-                <option value="useful">Useful</option>
-                <option value="neutral">Neutral</option>
-                <option value="not-useful">Not Useful</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={{ marginTop: '20px' }}>
-            <PersonaAudienceSelect
-              personaValue={newStrategy.persona}
-              audienceValue={newStrategy.audienceSegment}
-              onPersonaChange={(value) => setNewStrategy({...newStrategy, persona: value})}
-              onAudienceChange={(value) => setNewStrategy({...newStrategy, audienceSegment: value})}
-            />
-          </div>
-          
-          <div style={{ marginTop: '20px', display: 'grid', gap: '16px' }}>
-            <div>
-              <label style={labelStyle}>Hashtags</label>
-              <textarea 
-                value={newStrategy.hashtags}
-                onChange={(e) => setNewStrategy({...newStrategy, hashtags: e.target.value})}
-                placeholder="Enter hashtags" 
-                rows={2}
-                style={{ ...inputStyle, resize: 'vertical' }}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Tags</label>
-              <textarea 
-                value={newStrategy.tags}
-                onChange={(e) => setNewStrategy({...newStrategy, tags: e.target.value})}
-                placeholder="Enter tags" 
-                rows={2}
-                style={{ ...inputStyle, resize: 'vertical' }}
-              />
-            </div>
-            
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
-                onClick={generateHashtagsAndTags}
-                style={{ ...secondaryButtonStyle, flex: 1 }}
-              >
-                Generate Hashtags & Tags
-              </button>
-              <button 
-                onClick={insertHashtagsAndTags}
-                style={{ ...secondaryButtonStyle, flex: 1 }}
-              >
-                Insert Hashtags & Tags
-              </button>
-            </div>
-          </div>
-
-          <div style={{ marginTop: '24px', textAlign: 'right' }}>
-            <button 
-              onClick={addStrategy}
-              style={{
-                ...primaryButtonStyle,
-                opacity: newStrategy.contentTitle ? 1 : 0.5,
-                cursor: newStrategy.contentTitle ? 'pointer' : 'not-allowed'
-              }}
-            >
-              + Save Strategy
-            </button>
-          </div>
-
-          {/* Display strategies */}
-          <div style={{ marginTop: '24px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-              Strategies ({strategies.length})
-            </h3>
-            {strategies.length === 0 ? (
-              <div style={emptyStateStyle}>
-                <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
-                  No strategies saved yet
-                </p>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gap: '12px' }}>
-                {strategies.map((strategy) => (
-                  <div key={strategy.id} style={{
-                    padding: '16px',
-                    border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-                    borderRadius: '8px'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                      <div>
-                        <h4 style={{ margin: '0 0 8px 0', fontWeight: '600' }}>{strategy.contentTitle}</h4>
-                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
-                          {strategy.persona} - {strategy.audienceSegment} | Status: {strategy.status}
-                        </p>
-                        {strategy.hashtags && (
-                          <p style={{ margin: '0', fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
-                            {strategy.hashtags}
-                          </p>
-                        )}
-                      </div>
-                      <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
-                        v{strategy.version}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Tab 6: Intel Drop Zone */}
       {activeTab === 'intel' && (
         <div style={cardStyle}>
@@ -1028,7 +1149,7 @@ const MarketingControlCenter = () => {
               <select 
                 value={newIntel.priorityLevel}
                 onChange={(e) => setNewIntel({...newIntel, priorityLevel: e.target.value})}
-                style={inputStyle}
+                style={selectStyle}
               >
                 <option value="">Select priority</option>
                 <option value="low">Low</option>
@@ -1055,7 +1176,7 @@ const MarketingControlCenter = () => {
               onChange={(e) => setNewIntel({...newIntel, insightEntry: e.target.value})}
               placeholder="Enter intel or insights..." 
               rows={4}
-              style={{ ...inputStyle, resize: 'vertical' }}
+              style={textareaStyle}
             />
           </div>
           
@@ -1065,7 +1186,7 @@ const MarketingControlCenter = () => {
               type="file"
               accept="audio/*"
               onChange={handleAudioUpload}
-              style={{ ...inputStyle, padding: '8px' }}
+              style={{ ...inputStyle, padding: '8px', width: '100%' }}
             />
             {newIntel.audioFile && (
               <p style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280', marginTop: '8px' }}>
@@ -1136,80 +1257,7 @@ const MarketingControlCenter = () => {
         </div>
       )}
 
-      {/* Tab 7: Hashtags & Tags Manager */}
-      {activeTab === 'hashtags' && (
-        <div style={cardStyle}>
-          <div style={{
-            borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-            paddingBottom: '16px',
-            marginBottom: '20px'
-          }}>
-            <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Hashtag & Tags Manager</h2>
-            <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-              Import and manage hashtags from various sources
-            </p>
-          </div>
-          
-          <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
-            <button 
-              onClick={importFromKeywordPlanner}
-              style={secondaryButtonStyle}
-            >
-              Import from Keyword Planner
-            </button>
-            <button 
-              onClick={importFromGSC}
-              style={secondaryButtonStyle}
-            >
-              Import from Google Search Console
-            </button>
-            <button 
-              onClick={importCSV}
-              style={secondaryButtonStyle}
-            >
-              Manual CSV Upload
-            </button>
-          </div>
-
-          <div style={emptyStateStyle}>
-            <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
-              No hashtags imported yet. Use the import buttons above to get started.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Tab 8: Media Archives */}
-      {activeTab === 'archives' && (
-        <div style={cardStyle}>
-          <div style={{
-            borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-            paddingBottom: '16px',
-            marginBottom: '20px'
-          }}>
-            <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Caelum Archives</h2>
-            <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-              Archived content with search and restore functionality
-            </p>
-          </div>
-          
-          <div style={{ marginBottom: '20px' }}>
-            <input 
-              type="text"
-              placeholder="Search archived items..." 
-              style={inputStyle}
-            />
-          </div>
-
-          <div style={emptyStateStyle}>
-            <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center', fontSize: '16px', margin: '0' }}>
-              No archived items yet
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Tab 9: Analytics & Insights */}
+      {/* Tab 7: Analytics & Insights */}
       {activeTab === 'analytics' && (
         <div style={{ display: 'grid', gap: '24px' }}>
           <div style={cardStyle}>
@@ -1230,7 +1278,7 @@ const MarketingControlCenter = () => {
                 <select 
                   value={newResearchInsight.reviewStatus}
                   onChange={(e) => setNewResearchInsight({...newResearchInsight, reviewStatus: e.target.value})}
-                  style={inputStyle}
+                  style={selectStyle}
                 >
                   <option value="new">New</option>
                   <option value="in-review">In Review</option>
@@ -1255,7 +1303,7 @@ const MarketingControlCenter = () => {
                 onChange={(e) => setNewResearchInsight({...newResearchInsight, insight: e.target.value})}
                 placeholder="Enter research insight or finding..." 
                 rows={4}
-                style={{ ...inputStyle, resize: 'vertical' }}
+                style={textareaStyle}
               />
             </div>
             
@@ -1348,7 +1396,7 @@ const MarketingControlCenter = () => {
                 <select 
                   value={newTool.category} 
                   onChange={(e) => setNewTool({...newTool, category: e.target.value})}
-                  style={inputStyle}
+                  style={selectStyle}
                 >
                   <option value="">Select category</option>
                   <option value="SEO">SEO</option>
@@ -1371,7 +1419,7 @@ const MarketingControlCenter = () => {
                 <select 
                   value={newTool.status} 
                   onChange={(e) => setNewTool({...newTool, status: e.target.value})}
-                  style={inputStyle}
+                  style={selectStyle}
                 >
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
@@ -1384,7 +1432,7 @@ const MarketingControlCenter = () => {
                   value={newTool.notes}
                   onChange={(e) => setNewTool({...newTool, notes: e.target.value})}
                   rows={3}
-                  style={{ ...inputStyle, resize: 'vertical' }}
+                  style={textareaStyle}
                 />
               </div>
               
@@ -1470,6 +1518,36 @@ const MarketingControlCenter = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 8: Media Archives */}
+      {activeTab === 'archives' && (
+        <div style={cardStyle}>
+          <div style={{
+            borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+            paddingBottom: '16px',
+            marginBottom: '20px'
+          }}>
+            <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Caelum Archives</h2>
+            <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
+              Archived content with search and restore functionality
+            </p>
+          </div>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <input 
+              type="text"
+              placeholder="Search archived items..." 
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={emptyStateStyle}>
+            <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center', fontSize: '16px', margin: '0' }}>
+              No archived items yet
+            </p>
           </div>
         </div>
       )}
