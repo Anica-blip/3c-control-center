@@ -15,19 +15,40 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // =============================================================================
 
 const supabaseAPI = {
-  // Validate bucket exists - COMPLIANCE METHOD
+  // Validate bucket exists - DEBUG VERSION
   async validateBucket(bucketName: string) {
     try {
+      console.log('🔍 Looking for bucket:', bucketName);
+      
       const { data: buckets, error } = await supabase.storage.listBuckets();
       
       if (error) {
+        console.error('❌ listBuckets failed:', error);
         throw new Error(`Failed to list buckets: ${error.message}`);
       }
+      
+      console.log('📦 Available buckets:', buckets?.map(b => b.name) || []);
       
       const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
       
       if (!bucketExists) {
-        throw new Error(`Bucket '${bucketName}' does not exist. Please create it in your Supabase Dashboard.`);
+        console.error('❌ Bucket not found. Looking for:', bucketName);
+        console.error('❌ Available:', buckets?.map(b => b.name) || []);
+        throw new Error(`Bucket '${bucketName}' does not exist. Available buckets: ${buckets?.map(b => b.name).join(', ')}`);
+      }
+      
+      console.log('✅ Bucket found:', bucketName);
+      
+      // TEST: Try to list objects to verify access
+      const { data: objects, error: listError } = await supabase.storage
+        .from(bucketName)
+        .list('', { limit: 1 });
+        
+      if (listError) {
+        console.warn('⚠️ Bucket access test failed:', listError.message);
+        // Don't throw - bucket exists but might have permission issues
+      } else {
+        console.log('✅ Bucket access confirmed');
       }
       
       return true;
@@ -103,7 +124,7 @@ const supabaseAPI = {
     }
   },
 
-  // Save color to Supabase - OFFICIAL METHOD
+  // Save color to Supabase - SIMPLE VERSION  
   async saveColor(colorData: any) {
     console.log('🎨 Saving color to Supabase:', colorData);
     
