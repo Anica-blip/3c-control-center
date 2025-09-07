@@ -15,87 +15,37 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // =============================================================================
 
 const supabaseAPI = {
-  // Validate bucket exists - DEBUG VERSION
-  async validateBucket(bucketName: string) {
-    try {
-      console.log('Looking for bucket:', bucketName);
-      
-      const { data: buckets, error } = await supabase.storage.listBuckets();
-      
-      if (error) {
-        console.error('listBuckets failed:', error);
-        throw new Error(`Failed to list buckets: ${error.message}`);
-      }
-      
-      console.log('Available buckets:', buckets?.map(b => b.name) || []);
-      
-      const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
-      
-      if (!bucketExists) {
-        console.error('Bucket not found. Looking for:', bucketName);
-        console.error('Available:', buckets?.map(b => b.name) || []);
-        throw new Error(`Bucket '${bucketName}' does not exist. Available buckets: ${buckets?.map(b => b.name).join(', ')}`);
-      }
-      
-      console.log('Bucket found:', bucketName);
-      
-      // TEST: Try to list objects to verify access
-      const { data: objects, error: listError } = await supabase.storage
-        .from(bucketName)
-        .list('', { limit: 1 });
-        
-      if (listError) {
-        console.warn('Bucket access test failed:', listError.message);
-        // Don't throw - bucket exists but might have permission issues
-      } else {
-        console.log('Bucket access confirmed');
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Bucket validation error:', error);
-      throw error;
-    }
-  },
-
-  // Upload file to Supabase Storage bucket - COMPLIANCE METHOD
+  // Upload file to Supabase Storage bucket - SIMPLIFIED LIKE SETTINGS
   async uploadFileToBucket(file: File, fileName: string, bucketName = 'brand-assets') {
     console.log('Uploading file to bucket:', { fileName, bucketName, size: file.size });
     
+    if (!supabase) {
+      throw new Error('Supabase not configured. Please set up environment variables.');
+    }
+    
     try {
-      // Validate bucket exists first - COMPLIANCE REQUIREMENT
-      await this.validateBucket(bucketName);
-      
       const { data, error } = await supabase.storage
         .from(bucketName)
         .upload(fileName, file, {
-          upsert: false
+          cacheControl: '3600',
+          upsert: true
         });
       
       if (error) {
-        // Enhanced error handling for bucket-specific issues
-        if (error.message.includes('bucket')) {
-          throw new Error(`Bucket error: ${error.message}. Check if '${bucketName}' bucket exists and has proper permissions.`);
-        }
-        if (error.message.includes('policy')) {
-          throw new Error(`Permission error: ${error.message}. Check RLS policies for storage.objects table.`);
-        }
-        if (error.message.includes('size')) {
-          throw new Error(`File size error: ${error.message}. File may exceed bucket or global size limits.`);
-        }
+        console.error('Storage upload error:', error);
         throw error;
       }
       
       // Get public URL
-      const { data: urlData } = supabase.storage
+      const { data: { publicUrl } } = supabase.storage
         .from(bucketName)
         .getPublicUrl(fileName);
       
-      console.log('File uploaded to bucket:', { data, publicUrl: urlData.publicUrl });
+      console.log('File uploaded successfully:', publicUrl);
       return {
         path: data.path,
         fullPath: data.fullPath,
-        publicUrl: urlData.publicUrl
+        publicUrl: publicUrl
       };
     } catch (error) {
       console.error('File upload error:', error);
