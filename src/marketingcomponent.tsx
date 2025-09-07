@@ -1436,14 +1436,13 @@ const MarketingControlCenter = () => {
                   onChange={(e) => setNewTool({...newTool, url: e.target.value})}
                   style={inputStyle}
                 />
-                <select 
+                <DarkModeSelect
                   value={newTool.status} 
                   onChange={(e) => setNewTool({...newTool, status: e.target.value})}
-                  style={selectStyle}
                 >
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
-                </select>
+                </DarkModeSelect>
               </div>
               
               <div style={{ marginTop: '16px' }}>
