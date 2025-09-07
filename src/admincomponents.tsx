@@ -18,26 +18,26 @@ const supabaseAPI = {
   // Validate bucket exists - DEBUG VERSION
   async validateBucket(bucketName: string) {
     try {
-      console.log('🔍 Looking for bucket:', bucketName);
+      console.log('Looking for bucket:', bucketName);
       
       const { data: buckets, error } = await supabase.storage.listBuckets();
       
       if (error) {
-        console.error('❌ listBuckets failed:', error);
+        console.error('listBuckets failed:', error);
         throw new Error(`Failed to list buckets: ${error.message}`);
       }
       
-      console.log('📦 Available buckets:', buckets?.map(b => b.name) || []);
+      console.log('Available buckets:', buckets?.map(b => b.name) || []);
       
       const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
       
       if (!bucketExists) {
-        console.error('❌ Bucket not found. Looking for:', bucketName);
-        console.error('❌ Available:', buckets?.map(b => b.name) || []);
+        console.error('Bucket not found. Looking for:', bucketName);
+        console.error('Available:', buckets?.map(b => b.name) || []);
         throw new Error(`Bucket '${bucketName}' does not exist. Available buckets: ${buckets?.map(b => b.name).join(', ')}`);
       }
       
-      console.log('✅ Bucket found:', bucketName);
+      console.log('Bucket found:', bucketName);
       
       // TEST: Try to list objects to verify access
       const { data: objects, error: listError } = await supabase.storage
@@ -45,22 +45,22 @@ const supabaseAPI = {
         .list('', { limit: 1 });
         
       if (listError) {
-        console.warn('⚠️ Bucket access test failed:', listError.message);
+        console.warn('Bucket access test failed:', listError.message);
         // Don't throw - bucket exists but might have permission issues
       } else {
-        console.log('✅ Bucket access confirmed');
+        console.log('Bucket access confirmed');
       }
       
       return true;
     } catch (error) {
-      console.error('💥 Bucket validation error:', error);
+      console.error('Bucket validation error:', error);
       throw error;
     }
   },
 
   // Upload file to Supabase Storage bucket - COMPLIANCE METHOD
   async uploadFileToBucket(file: File, fileName: string, bucketName = 'brand-assets') {
-    console.log('📄 Uploading file to bucket:', { fileName, bucketName, size: file.size });
+    console.log('Uploading file to bucket:', { fileName, bucketName, size: file.size });
     
     try {
       // Validate bucket exists first - COMPLIANCE REQUIREMENT
@@ -91,21 +91,21 @@ const supabaseAPI = {
         .from(bucketName)
         .getPublicUrl(fileName);
       
-      console.log('✅ File uploaded to bucket:', { data, publicUrl: urlData.publicUrl });
+      console.log('File uploaded to bucket:', { data, publicUrl: urlData.publicUrl });
       return {
         path: data.path,
         fullPath: data.fullPath,
         publicUrl: urlData.publicUrl
       };
     } catch (error) {
-      console.error('💥 File upload error:', error);
+      console.error('File upload error:', error);
       throw error;
     }
   },
 
   // Fetch colors from Supabase - OFFICIAL METHOD
   async fetchColors() {
-    console.log('🎨 Fetching colors from Supabase...');
+    console.log('Fetching colors from Supabase...');
     
     try {
       const { data, error } = await supabase
@@ -116,17 +116,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Colors fetched from Supabase:', data);
+      console.log('Colors fetched from Supabase:', data);
       return data || [];
     } catch (error) {
-      console.error('💥 Color fetch error:', error);
+      console.error('Color fetch error:', error);
       return [];
     }
   },
 
   // Save color to Supabase - SIMPLE VERSION  
   async saveColor(colorData: any) {
-    console.log('🎨 Saving color to Supabase:', colorData);
+    console.log('Saving color to Supabase:', colorData);
     
     try {
       const hex = colorData.hex.replace('#', '');
@@ -149,17 +149,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Color saved to Supabase:', data);
+      console.log('Color saved to Supabase:', data);
       return data?.[0];
     } catch (error) {
-      console.error('💥 Color save error:', error);
+      console.error('Color save error:', error);
       throw error;
     }
   },
 
   // Update color - OFFICIAL METHOD
   async updateColor(colorId: number, colorData: any) {
-    console.log('🎨 Updating color:', { colorId, colorData });
+    console.log('Updating color:', { colorId, colorData });
     
     try {
       const hex = colorData.hex.replace('#', '');
@@ -183,17 +183,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Color updated:', data);
+      console.log('Color updated:', data);
       return data?.[0];
     } catch (error) {
-      console.error('💥 Color update error:', error);
+      console.error('Color update error:', error);
       throw error;
     }
   },
 
   // Delete color - OFFICIAL METHOD
   async deleteColor(colorId: number) {
-    console.log('🎨 Deleting color:', colorId);
+    console.log('Deleting color:', colorId);
     
     try {
       const { error } = await supabase
@@ -205,17 +205,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Color deleted');
+      console.log('Color deleted');
       return true;
     } catch (error) {
-      console.error('💥 Color delete error:', error);
+      console.error('Color delete error:', error);
       throw error;
     }
   },
 
   // Fetch logos - OFFICIAL METHOD
   async fetchLogos() {
-    console.log('🏷️ Fetching logos from Supabase...');
+    console.log('Fetching logos from Supabase...');
     
     try {
       const { data, error } = await supabase
@@ -228,27 +228,26 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Logos fetched from Supabase:', data);
+      console.log('Logos fetched from Supabase:', data);
       return data || [];
     } catch (error) {
-      console.error('💥 Logo fetch error:', error);
+      console.error('Logo fetch error:', error);
       return [];
     }
   },
 
-  // Save logo using media bucket + metadata pattern - COMPLIANCE METHOD
+  // Save logo using brand-assets bucket - OFFICIAL SUPABASE METHOD
   async saveLogo(logoData: any, file: File | null = null) {
-    console.log('🏷️ Saving logo to Supabase:', logoData);
+    console.log('Saving logo to Supabase:', logoData);
     
     try {
       let logoUrl = null;
-      let assetMetadataId = null;
       
       if (file) {
-        const fileName = `brand-assets/logos/${logoData.name.replace(/[^a-zA-Z0-9]/g, '_')}_logo_${Date.now()}.${file.name.split('.').pop()}`;
-        const uploadResult = await this.uploadFileToBucket(file, fileName, 'media');
+        // Correct file path within brand-assets bucket
+        const fileName = `logos/${logoData.name.replace(/[^a-zA-Z0-9]/g, '_')}_logo_${Date.now()}.${file.name.split('.').pop()}`;
+        const uploadResult = await this.uploadFileToBucket(file, fileName, 'brand-assets');
         logoUrl = uploadResult.publicUrl;
-        assetMetadataId = uploadResult.metadata?.id;
       }
       
       const { data, error } = await supabase
@@ -259,7 +258,6 @@ const supabaseAPI = {
           usage: logoData.usage,
           category: logoData.category || 'Primary Logo',
           logo_url: logoUrl,
-          asset_metadata_id: assetMetadataId, // Link to metadata table
           file_size: file ? Math.round(file.size / 1024) : null,
           mime_type: file ? file.type : null,
           is_active: true
@@ -270,17 +268,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Logo saved to Supabase:', data);
+      console.log('Logo saved to Supabase:', data);
       return data?.[0];
     } catch (error) {
-      console.error('💥 Logo save error:', error);
+      console.error('Logo save error:', error);
       throw error;
     }
   },
 
   // Update logo - OFFICIAL METHOD
   async updateLogo(logoId: number, logoData: any, file: File | null = null) {
-    console.log('🏷️ Updating logo:', { logoId, logoData });
+    console.log('Updating logo:', { logoId, logoData });
     
     try {
       let logoUrl = null;
@@ -312,17 +310,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Logo updated:', data);
+      console.log('Logo updated:', data);
       return data?.[0];
     } catch (error) {
-      console.error('💥 Logo update error:', error);
+      console.error('Logo update error:', error);
       throw error;
     }
   },
 
   // Delete logo - OFFICIAL METHOD
   async deleteLogo(logoId: number) {
-    console.log('🏷️ Deleting logo:', logoId);
+    console.log('Deleting logo:', logoId);
     
     try {
       const { error } = await supabase
@@ -334,17 +332,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Logo deleted');
+      console.log('Logo deleted');
       return true;
     } catch (error) {
-      console.error('💥 Logo delete error:', error);
+      console.error('Logo delete error:', error);
       throw error;
     }
   },
 
   // Fetch fonts - OFFICIAL METHOD
   async fetchFonts() {
-    console.log('📋 Fetching fonts from Supabase...');
+    console.log('Fetching fonts from Supabase...');
     
     try {
       const { data, error } = await supabase
@@ -355,17 +353,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Fonts fetched from Supabase:', data);
+      console.log('Fonts fetched from Supabase:', data);
       return data || [];
     } catch (error) {
-      console.error('💥 Font fetch error:', error);
+      console.error('Font fetch error:', error);
       return [];
     }
   },
 
   // Save font - OFFICIAL METHOD
   async saveFont(fontData: any) {
-    console.log('📋 Saving font to Supabase:', fontData);
+    console.log('Saving font to Supabase:', fontData);
     
     if (!fontData || !fontData.name) {
       throw new Error('Font data with name is required');
@@ -390,7 +388,7 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Font saved to Supabase:', data);
+      console.log('Font saved to Supabase:', data);
       
       // Load the Google Font for preview
       if (typeof document !== 'undefined') {
@@ -400,21 +398,21 @@ const supabaseAPI = {
           link.href = fontUrl;
           link.rel = 'stylesheet';
           link.type = 'text/css';
-          link.onload = () => console.log(`✅ Google Font loaded: ${fontData.name}`);
+          link.onload = () => console.log(`Google Font loaded: ${fontData.name}`);
           document.head.appendChild(link);
         }
       }
       
       return data?.[0];
     } catch (error) {
-      console.error('💥 Font save error:', error);
+      console.error('Font save error:', error);
       throw error;
     }
   },
 
   // Update font - OFFICIAL METHOD
   async updateFont(fontId: number, fontData: any) {
-    console.log('📋 Updating font:', { fontId, fontData });
+    console.log('Updating font:', { fontId, fontData });
     
     try {
       const googleFontsUrl = fontData.name.trim().replace(/\s+/g, '+');
@@ -435,17 +433,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Font updated:', data);
+      console.log('Font updated:', data);
       return data?.[0];
     } catch (error) {
-      console.error('💥 Font update error:', error);
+      console.error('Font update error:', error);
       throw error;
     }
   },
 
   // Delete font - OFFICIAL METHOD
   async deleteFont(fontId: number) {
-    console.log('📋 Deleting font:', fontId);
+    console.log('Deleting font:', fontId);
     
     try {
       const { error } = await supabase
@@ -457,17 +455,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Font deleted');
+      console.log('Font deleted');
       return true;
     } catch (error) {
-      console.error('💥 Font delete error:', error);
+      console.error('Font delete error:', error);
       throw error;
     }
   },
 
   // Fetch guidelines - OFFICIAL METHOD
   async fetchGuidelines() {
-    console.log('📋 Fetching guidelines from Supabase...');
+    console.log('Fetching guidelines from Supabase...');
     
     try {
       const { data, error } = await supabase
@@ -478,17 +476,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Guidelines fetched from Supabase:', data);
+      console.log('Guidelines fetched from Supabase:', data);
       return data || [];
     } catch (error) {
-      console.error('💥 Guidelines fetch error:', error);
+      console.error('Guidelines fetch error:', error);
       return [];
     }
   },
 
   // Save guidelines - OFFICIAL METHOD
   async saveGuidelines(section: string, content: any) {
-    console.log('📋 Saving guidelines to Supabase:', { section, content });
+    console.log('Saving guidelines to Supabase:', { section, content });
     
     try {
       const { data, error } = await supabase
@@ -507,17 +505,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Guidelines saved to Supabase:', data);
+      console.log('Guidelines saved to Supabase:', data);
       return data?.[0];
     } catch (error) {
-      console.error('💥 Guidelines save error:', error);
+      console.error('Guidelines save error:', error);
       throw error;
     }
   },
 
   // Update guidelines - OFFICIAL METHOD
   async updateGuidelines(guidelineId: number, guidelineData: any) {
-    console.log('📋 Updating guidelines:', { guidelineId, guidelineData });
+    console.log('Updating guidelines:', { guidelineId, guidelineData });
     
     try {
       const { data, error } = await supabase
@@ -530,17 +528,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Guidelines updated:', data);
+      console.log('Guidelines updated:', data);
       return data?.[0];
     } catch (error) {
-      console.error('💥 Guidelines update error:', error);
+      console.error('Guidelines update error:', error);
       throw error;
     }
   },
 
   // Delete guidelines - OFFICIAL METHOD
   async deleteGuidelines(guidelineId: number) {
-    console.log('📋 Deleting guidelines:', guidelineId);
+    console.log('Deleting guidelines:', guidelineId);
     
     try {
       const { error } = await supabase
@@ -552,10 +550,10 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Guidelines deleted');
+      console.log('Guidelines deleted');
       return true;
     } catch (error) {
-      console.error('💥 Guidelines delete error:', error);
+      console.error('Guidelines delete error:', error);
       throw error;
     }
   }
@@ -616,7 +614,7 @@ function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
               fontSize: '14px'
             }}
           >
-            🗂️ Manage Templates
+            Manage Templates
           </button>
           <button
             onClick={() => setActiveTab('libraries')}
@@ -631,7 +629,7 @@ function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
               fontSize: '14px'
             }}
           >
-            📚 Libraries
+            Libraries
           </button>
           <button
             onClick={() => setActiveTab('brand')}
@@ -646,7 +644,7 @@ function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
               fontSize: '14px'
             }}
           >
-            🏢 Brand Kit
+            Brand Kit
           </button>
         </div>
       </div>
@@ -732,7 +730,7 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
   return (
     <div style={{ padding: '20px', backgroundColor: theme.background }}>
       <h2 style={{ color: theme.textPrimary, fontSize: '20px', fontWeight: 'bold', margin: '0 0 8px 0' }}>
-        🗂️ Manage Templates
+        Manage Templates
       </h2>
       <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 30px 0' }}>
         Create, edit, and manage your content templates
@@ -755,7 +753,7 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
             transition: 'all 0.2s ease'
           }}
         >
-          {showBuilder ? '📋 View Templates' : '➕ Create New Template'}
+          {showBuilder ? 'View Templates' : 'Create New Template'}
         </button>
       </div>
 
@@ -773,7 +771,7 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
             fontSize: '18px', 
             fontWeight: 'bold' 
           }}>
-            🗂️ Template Builder
+            Template Builder
           </h3>
           
           <div style={{ display: 'grid', gap: '25px' }}>
@@ -914,7 +912,7 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                         fontWeight: 'bold'
                       }}
                     >
-                      ✖
+                      Remove
                     </button>
                   )}
                 </div>
@@ -934,7 +932,7 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                   marginTop: '8px'
                 }}
               >
-                ➕ Add Field
+                Add Field
               </button>
             </div>
 
@@ -969,7 +967,7 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                   fontWeight: 'bold'
                 }}
               >
-                💾 Save Template
+                Save Template
               </button>
             </div>
           </div>
@@ -991,7 +989,7 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
               fontSize: '18px', 
               fontWeight: 'bold' 
             }}>
-              📚 Template Library
+              Template Library
             </h3>
             
             <div style={{ display: 'grid', gap: '16px' }}>
@@ -1049,7 +1047,7 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                         fontWeight: 'bold',
                         cursor: 'pointer'
                       }}>
-                        ✏️ Edit
+                        Edit
                       </button>
                       <button style={{ 
                         padding: '8px 16px', 
@@ -1061,7 +1059,7 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                         fontWeight: 'bold',
                         cursor: 'pointer'
                       }}>
-                        📋 Use
+                        Use
                       </button>
                     </div>
                   </div>
@@ -1117,7 +1115,7 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
               background: theme.gradientBlue
             }}>
               <h3 style={{ color: theme.textPrimary, marginBottom: '12px', fontSize: '18px', fontWeight: 'bold' }}>
-                🗂️ External Builder Tools
+                External Builder Tools
               </h3>
               <p style={{ color: theme.textSecondary, fontSize: '14px', marginBottom: '20px' }}>
                 External integration for automated generation
@@ -1172,7 +1170,7 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                         {tool.desc}
                       </div>
                     </div>
-                    <span style={{ fontSize: '12px', fontWeight: 'bold' }}>🔗 Open</span>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold' }}>Open</span>
                   </a>
                 ))}
               </div>
@@ -1186,7 +1184,7 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
               background: theme.gradientGreen
             }}>
               <h3 style={{ color: theme.textPrimary, marginBottom: '12px', fontSize: '18px', fontWeight: 'bold' }}>
-                🎮 3C Brand Products
+                3C Brand Products
               </h3>
               <p style={{ color: theme.textSecondary, fontSize: '14px', marginBottom: '20px' }}>
                 External app editors for interactive app loaders
@@ -1236,7 +1234,7 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                         {tool.desc}
                       </div>
                     </div>
-                    <span style={{ fontSize: '12px', fontWeight: 'bold' }}>🔗 Open</span>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold' }}>Open</span>
                   </a>
                 ))}
               </div>
@@ -1374,7 +1372,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
             fontSize: '12px',
             fontWeight: 'bold'
           }}>
-            {connected ? '✅ Connected' : '⏱ Ready to Connect'}
+            {connected ? 'Connected' : 'Ready to Connect'}
           </span>
           <button
             onClick={onToggle}
@@ -1390,7 +1388,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
               transition: 'all 0.2s ease'
             }}
           >
-            {connected ? 'Disconnect' : '🔗 Connect'}
+            {connected ? 'Disconnect' : 'Connect'}
           </button>
         </div>
       </div>
@@ -1432,7 +1430,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
       )}
 
       <h2 style={{ color: theme.textPrimary, fontSize: '20px', fontWeight: 'bold', margin: '0 0 8px 0' }}>
-        📚 Libraries
+        Libraries
       </h2>
       <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 30px 0' }}>
         External service integrations and storage management
@@ -1444,7 +1442,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
         <IntegrationCard
           title="Notion Integration"
           subtitle="Content management and documentation"
-          emoji="📚"
+          emoji=""
           connected={notionConnected}
           onToggle={handleNotionToggle}
           gradientColor={theme.gradientBlue}
@@ -1452,7 +1450,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
           {notionConnected ? (
             <div>
               <h4 style={{ color: theme.textPrimary, marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
-                📄 Connected to Internal Hub
+                Connected to Internal Hub
               </h4>
               <div style={{ fontSize: '14px', color: theme.textSecondary, marginBottom: '20px' }}>
                 Content Calendar • Brand Guidelines • Templates
@@ -1464,7 +1462,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
                 border: `1px solid ${theme.borderColor}`
               }}>
                 <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
-                  🔗 Main Hub Link:
+                  Main Hub Link:
                 </p>
                 <a
                   href="https://www.notion.so/INTERNAL-HUB-2256ace1e8398087a3c9d25c1cf253e5"
@@ -1498,7 +1496,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
         <IntegrationCard
           title="Wasabi Cloud Storage"
           subtitle="Internal assets & public member content storage"
-          emoji="📦"
+          emoji=""
           connected={wasabiConnected}
           onToggle={handleWasabiToggle}
           gradientColor={theme.gradientRed}
@@ -1506,7 +1504,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
           {wasabiConnected ? (
             <div>
               <h4 style={{ color: theme.textPrimary, marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
-                📦 Storage Connected
+                Storage Connected
               </h4>
               <div style={{ fontSize: '14px', color: theme.textSecondary, marginBottom: '20px' }}>
                 Internal Assets • Member Content • Media Library
@@ -1561,7 +1559,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
                         fontWeight: 'bold'
                       }}
                     >
-                      🔍 Browse
+                      Browse
                     </button>
                     <button 
                       onClick={handleWasabiUpload}
@@ -1576,7 +1574,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
                         fontWeight: 'bold'
                       }}
                     >
-                      ⬆️ Upload
+                      Upload
                     </button>
                   </div>
                 </div>
@@ -1599,7 +1597,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
         <IntegrationCard
           title="Canva Integration"
           subtitle="Design templates and brand assets"
-          emoji="🎨"
+          emoji=""
           connected={canvaConnected}
           onToggle={handleCanvaToggle}
           gradientColor={theme.gradientPurple}
@@ -1607,7 +1605,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
           {canvaConnected ? (
             <div>
               <h4 style={{ color: theme.textPrimary, marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
-                🎨 Design Library Connected
+                Design Library Connected
               </h4>
               <div style={{ fontSize: '14px', color: theme.textSecondary, marginBottom: '20px' }}>
                 Brand Templates • Design Assets • Collaborative Workspace
@@ -1858,7 +1856,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
           fontSize: '18px',
           fontWeight: 'bold'
         }}>
-          📄 Processing...
+          Processing...
         </div>
       )}
 
@@ -1913,7 +1911,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
         <h2 style={{ color: theme.textPrimary, fontSize: '20px', fontWeight: 'bold', margin: '0' }}>
-          🏢 Brand Kit
+          Brand Kit
         </h2>
         <button
           onClick={loadDataFromSupabase}
@@ -1928,7 +1926,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
             fontWeight: 'bold'
           }}
         >
-          🔄 Refresh from Supabase
+          Refresh from Supabase
         </button>
       </div>
       <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0 0 30px 0' }}>
@@ -1945,10 +1943,10 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
         borderRadius: '8px 8px 0 0'
       }}>
         {[
-          { id: 'colors', label: '🎨 Colours' },
-          { id: 'logos', label: '🏷️ Logos' },
-          { id: 'fonts', label: '🔤 Typography' },
-          { id: 'guidelines', label: '📋 Guidelines' }
+          { id: 'colors', label: 'Colours' },
+          { id: 'logos', label: 'Logos' },
+          { id: 'fonts', label: 'Typography' },
+          { id: 'guidelines', label: 'Guidelines' }
         ].map((section) => (
           <button
             key={section.id}
@@ -1981,7 +1979,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
             <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              🎨 Brand Colours ({brandColors.length} colours)
+              Brand Colours ({brandColors.length} colours)
             </h3>
             <button 
               onClick={handleAddColor}
@@ -1996,7 +1994,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                 fontWeight: 'bold'
               }}
             >
-              ➕ Add Colour
+              Add Colour
             </button>
           </div>
 
@@ -2011,7 +2009,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
               boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)'
             }}>
               <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🎨 {editingColor ? 'Edit Brand Colour' : 'Add New Brand Colour'}
+                {editingColor ? 'Edit Brand Colour' : 'Add New Brand Colour'}
               </h4>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
@@ -2176,7 +2174,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                       fontWeight: 'bold'
                     }}
                   >
-                    🗑️ Delete
+                    Delete
                   </button>
                 )}
                 <button
@@ -2192,7 +2190,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                     fontWeight: 'bold'
                   }}
                 >
-                  💾 Save Colour
+                  Save Colour
                 </button>
               </div>
             </div>
@@ -2227,7 +2225,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                   fontWeight: 'bold'
                 }}
               >
-                ➕ Add Your First Colour
+                Add Your First Colour
               </button>
             </div>
           ) : (
@@ -2285,7 +2283,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                         cursor: 'pointer'
                       }}
                     >
-                      📋 Copy
+                      Copy
                     </button>
                     <button 
                       onClick={() => handleEditColor(color)}
@@ -2300,7 +2298,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                         cursor: 'pointer'
                       }}
                     >
-                      ✏️ Edit
+                      Edit
                     </button>
                   </div>
                 </div>
@@ -2321,7 +2319,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
             <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              🏷️ Brand Logos ({logos.length} logos)
+              Brand Logos ({logos.length} logos)
             </h3>
             <button 
               onClick={() => setShowLogoForm(true)}
@@ -2336,7 +2334,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                 fontWeight: 'bold'
               }}
             >
-              ➕ Add Logo
+              Add Logo
             </button>
           </div>
 
@@ -2351,7 +2349,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
               boxShadow: '0 4px 12px rgba(245, 158, 11, 0.25)'
             }}>
               <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🏷️ {editingLogo ? 'Edit Brand Logo' : 'Add New Brand Logo'}
+                {editingLogo ? 'Edit Brand Logo' : 'Add New Brand Logo'}
               </h4>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
@@ -2543,7 +2541,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                     fontWeight: 'bold'
                   }}
                 >
-                  💾 Save Logo
+                  Save Logo
                 </button>
               </div>
             </div>
@@ -2578,7 +2576,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                   fontWeight: 'bold'
                 }}
               >
-                ➕ Add Your First Logo
+                Add Your First Logo
               </button>
             </div>
           ) : (
@@ -2662,7 +2660,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                         cursor: 'pointer'
                       }}
                     >
-                      ✏️ Edit
+                      Edit
                     </button>
                     <button 
                       onClick={async () => {
@@ -2691,7 +2689,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                         cursor: 'pointer'
                       }}
                     >
-                      🗑️ Delete
+                      Delete
                     </button>
                   </div>
                 </div>
@@ -2712,7 +2710,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
             <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              🔤 Typography ({fonts.length} fonts)
+              Typography ({fonts.length} fonts)
             </h3>
             <button 
               onClick={() => setShowFontForm(true)}
@@ -2727,7 +2725,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                 fontWeight: 'bold'
               }}
             >
-              ➕ Add Font
+              Add Font
             </button>
           </div>
 
@@ -2742,7 +2740,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
               boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
             }}>
               <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                🔤 {editingFont ? 'Edit Typography' : 'Add New Typography'}
+                {editingFont ? 'Edit Typography' : 'Add New Typography'}
               </h4>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
@@ -2925,7 +2923,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                     fontWeight: 'bold'
                   }}
                 >
-                  💾 Save Font
+                  Save Font
                 </button>
               </div>
             </div>
@@ -2960,7 +2958,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                   fontWeight: 'bold'
                 }}
               >
-                ➕ Add Your First Font
+                Add Your First Font
               </button>
             </div>
           ) : (
@@ -3030,7 +3028,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                         cursor: 'pointer'
                       }}
                     >
-                      ✏️ Edit
+                      Edit
                     </button>
                     <button 
                       onClick={async () => {
@@ -3059,7 +3057,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                         cursor: 'pointer'
                       }}
                     >
-                      🗑️ Delete
+                      Delete
                     </button>
                   </div>
                 </div>
@@ -3080,7 +3078,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
             <h3 style={{ color: theme.textPrimary, fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
-              📋 Brand Guidelines ({guidelines.length} sections)
+              Brand Guidelines ({guidelines.length} sections)
             </h3>
             <button 
               onClick={() => setShowGuidelinesForm(true)}
@@ -3095,7 +3093,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                 fontWeight: 'bold'
               }}
             >
-              ➕ Add Guideline
+              Add Guideline
             </button>
           </div>
 
@@ -3110,7 +3108,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
               boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)'
             }}>
               <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                📋 {editingGuideline ? 'Edit Guideline' : 'Add New Guideline'}
+                {editingGuideline ? 'Edit Guideline' : 'Add New Guideline'}
               </h4>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
@@ -3266,7 +3264,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                     fontWeight: 'bold'
                   }}
                 >
-                  💾 Save Guideline
+                  Save Guideline
                 </button>
               </div>
             </div>
@@ -3301,7 +3299,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                   fontWeight: 'bold'
                 }}
               >
-                ➕ Add Your First Guideline
+                Add Your First Guideline
               </button>
             </div>
           ) : (
@@ -3359,7 +3357,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                           cursor: 'pointer'
                         }}
                       >
-                        ✏️ Edit
+                        Edit
                       </button>
                       <button 
                         onClick={async () => {
@@ -3388,7 +3386,7 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                           cursor: 'pointer'
                         }}
                       >
-                        🗑️ Delete
+                        Delete
                       </button>
                     </div>
                   </div>
