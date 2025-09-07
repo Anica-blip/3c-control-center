@@ -11,12 +11,66 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // =============================================================================
-// DOCUMENTATION-COMPLIANT SUPABASE API METHODS
+// BUCKET COMPLIANT SUPABASE API METHODS - USES MEDIA BUCKET PATTERN
 // =============================================================================
 
 const supabaseAPI = {
-  // Validate bucket exists - DEBUG VERSION
-  async validateBucket(bucketName: string) {
+  // Upload to MEDIA bucket with metadata tracking - CORRECT PATTERN
+  async uploadFileToBucket(file: File, fileName: string, assetType = 'logo') {
+    console.log('📄 Uploading file to MEDIA bucket:', { fileName, assetType, size: file.size });
+    
+    try {
+      // Upload to your working 'media' bucket (not brand-assets)
+      const { data, error } = await supabase.storage
+        .from('media')
+        .upload(fileName, file, {
+          upsert: false
+        });
+      
+      if (error) {
+        console.error('Upload error details:', error);
+        throw new Error(`Upload to media bucket failed: ${error.message}`);
+      }
+      
+      // Get public URL from media bucket
+      const { data: urlData } = supabase.storage
+        .from('media')
+        .getPublicUrl(fileName);
+      
+      // Save metadata to brand_assets_metadata table
+      const { data: metadata, error: metadataError } = await supabase
+        .from('brand_assets_metadata')
+        .insert({
+          file_name: fileName,
+          file_path: data.path,
+          file_url: urlData.publicUrl,
+          file_size: Math.round(file.size / 1024),
+          mime_type: file.type,
+          bucket_name: 'media',
+          asset_type: assetType
+        })
+        .select();
+      
+      if (metadataError) {
+        console.warn('Metadata save failed, but upload succeeded:', metadataError);
+        // Don't fail upload if metadata fails
+      }
+      
+      console.log('✅ File uploaded to MEDIA bucket successfully');
+      return {
+        path: data.path,
+        fullPath: data.fullPath,
+        publicUrl: urlData.publicUrl,
+        metadata: metadata?.[0]
+      };
+    } catch (error) {
+      console.error('💥 Media bucket upload error:', error);
+      throw error;
+    }
+  },
+
+  // Validate bucket exists - MEDIA BUCKET VERSION
+  async validateBucket(bucketName: string = 'media') {
     try {
       console.log('🔍 Looking for bucket:', bucketName);
       
@@ -38,19 +92,6 @@ const supabaseAPI = {
       }
       
       console.log('✅ Bucket found:', bucketName);
-      
-      // TEST: Try to list objects to verify access
-      const { data: objects, error: listError } = await supabase.storage
-        .from(bucketName)
-        .list('', { limit: 1 });
-        
-      if (listError) {
-        console.warn('⚠️ Bucket access test failed:', listError.message);
-        // Don't throw - bucket exists but might have permission issues
-      } else {
-        console.log('✅ Bucket access confirmed');
-      }
-      
       return true;
     } catch (error) {
       console.error('💥 Bucket validation error:', error);
@@ -58,54 +99,9 @@ const supabaseAPI = {
     }
   },
 
-  // Upload file to Supabase Storage bucket - COMPLIANCE METHOD
-  async uploadFileToBucket(file: File, fileName: string, bucketName = 'brand-assets') {
-    console.log('📄 Uploading file to bucket:', { fileName, bucketName, size: file.size });
-    
-    try {
-      // Validate bucket exists first - COMPLIANCE REQUIREMENT
-      await this.validateBucket(bucketName);
-      
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .upload(fileName, file, {
-          upsert: false
-        });
-      
-      if (error) {
-        // Enhanced error handling for bucket-specific issues
-        if (error.message.includes('bucket')) {
-          throw new Error(`Bucket error: ${error.message}. Check if '${bucketName}' bucket exists and has proper permissions.`);
-        }
-        if (error.message.includes('policy')) {
-          throw new Error(`Permission error: ${error.message}. Check RLS policies for storage.objects table.`);
-        }
-        if (error.message.includes('size')) {
-          throw new Error(`File size error: ${error.message}. File may exceed bucket or global size limits.`);
-        }
-        throw error;
-      }
-      
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from(bucketName)
-        .getPublicUrl(fileName);
-      
-      console.log('✅ File uploaded to bucket:', { data, publicUrl: urlData.publicUrl });
-      return {
-        path: data.path,
-        fullPath: data.fullPath,
-        publicUrl: urlData.publicUrl
-      };
-    } catch (error) {
-      console.error('💥 File upload error:', error);
-      throw error;
-    }
-  },
-
-  // Fetch colors from Supabase - OFFICIAL METHOD
+  // Fetch colours from Supabase - OFFICIAL METHOD
   async fetchColors() {
-    console.log('🎨 Fetching colors from Supabase...');
+    console.log('🎨 Fetching colours from Supabase...');
     
     try {
       const { data, error } = await supabase
@@ -116,17 +112,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Colors fetched from Supabase:', data);
+      console.log('✅ Colours fetched from Supabase:', data);
       return data || [];
     } catch (error) {
-      console.error('💥 Color fetch error:', error);
+      console.error('💥 Colour fetch error:', error);
       return [];
     }
   },
 
-  // Save color to Supabase - SIMPLE VERSION  
+  // Save colour to Supabase - OFFICIAL METHOD
   async saveColor(colorData: any) {
-    console.log('🎨 Saving color to Supabase:', colorData);
+    console.log('🎨 Saving colour to Supabase:', colorData);
     
     try {
       const hex = colorData.hex.replace('#', '');
@@ -149,17 +145,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Color saved to Supabase:', data);
+      console.log('✅ Colour saved to Supabase:', data);
       return data?.[0];
     } catch (error) {
-      console.error('💥 Color save error:', error);
+      console.error('💥 Colour save error:', error);
       throw error;
     }
   },
 
-  // Update color - OFFICIAL METHOD
+  // Update colour - OFFICIAL METHOD
   async updateColor(colorId: number, colorData: any) {
-    console.log('🎨 Updating color:', { colorId, colorData });
+    console.log('🎨 Updating colour:', { colorId, colorData });
     
     try {
       const hex = colorData.hex.replace('#', '');
@@ -183,17 +179,17 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Color updated:', data);
+      console.log('✅ Colour updated:', data);
       return data?.[0];
     } catch (error) {
-      console.error('💥 Color update error:', error);
+      console.error('💥 Colour update error:', error);
       throw error;
     }
   },
 
-  // Delete color - OFFICIAL METHOD
+  // Delete colour - OFFICIAL METHOD
   async deleteColor(colorId: number) {
-    console.log('🎨 Deleting color:', colorId);
+    console.log('🎨 Deleting colour:', colorId);
     
     try {
       const { error } = await supabase
@@ -205,10 +201,10 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Color deleted');
+      console.log('✅ Colour deleted');
       return true;
     } catch (error) {
-      console.error('💥 Color delete error:', error);
+      console.error('💥 Colour delete error:', error);
       throw error;
     }
   },
@@ -236,17 +232,25 @@ const supabaseAPI = {
     }
   },
 
-  // Save logo - OFFICIAL METHOD
+  // Save logo using MEDIA BUCKET + METADATA pattern - CORRECT APPROACH
   async saveLogo(logoData: any, file: File | null = null) {
-    console.log('🏷️ Saving logo to Supabase:', logoData);
+    console.log('🏷️ Saving logo using MEDIA BUCKET pattern:', logoData);
     
     try {
       let logoUrl = null;
+      let assetMetadataId = null;
       
       if (file) {
-        const fileName = `logos/${logoData.name.replace(/[^a-zA-Z0-9]/g, '_')}_logo_${Date.now()}.${file.name.split('.').pop()}`;
-        const uploadResult = await this.uploadFileToBucket(file, fileName, 'brand-assets');
+        // Use brand-assets path WITHIN the media bucket
+        const fileName = `brand-assets/logos/${logoData.name.replace(/[^a-zA-Z0-9]/g, '_')}_logo_${Date.now()}.${file.name.split('.').pop()}`;
+        
+        console.log('📁 Uploading to path in media bucket:', fileName);
+        
+        const uploadResult = await this.uploadFileToBucket(file, fileName, 'logo');
         logoUrl = uploadResult.publicUrl;
+        assetMetadataId = uploadResult.metadata?.id;
+        
+        console.log('📁 Upload result:', { logoUrl, assetMetadataId });
       }
       
       const { data, error } = await supabase
@@ -257,6 +261,7 @@ const supabaseAPI = {
           usage: logoData.usage,
           category: logoData.category || 'Primary Logo',
           logo_url: logoUrl,
+          asset_metadata_id: assetMetadataId, // Link to metadata table
           file_size: file ? Math.round(file.size / 1024) : null,
           mime_type: file ? file.type : null,
           is_active: true
@@ -267,7 +272,7 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Logo saved to Supabase:', data);
+      console.log('✅ Logo saved using MEDIA BUCKET pattern:', data);
       return data?.[0];
     } catch (error) {
       console.error('💥 Logo save error:', error);
@@ -275,17 +280,21 @@ const supabaseAPI = {
     }
   },
 
-  // Update logo - OFFICIAL METHOD
+  // Update logo using MEDIA BUCKET pattern - CORRECT APPROACH
   async updateLogo(logoId: number, logoData: any, file: File | null = null) {
-    console.log('🏷️ Updating logo:', { logoId, logoData });
+    console.log('🏷️ Updating logo using MEDIA BUCKET pattern:', { logoId, logoData });
     
     try {
       let logoUrl = null;
+      let assetMetadataId = null;
       
       if (file) {
-        const fileName = `logos/${logoData.name.replace(/[^a-zA-Z0-9]/g, '_')}_logo_${Date.now()}.${file.name.split('.').pop()}`;
-        const uploadResult = await this.uploadFileToBucket(file, fileName, 'brand-assets');
+        // Use brand-assets path WITHIN the media bucket
+        const fileName = `brand-assets/logos/${logoData.name.replace(/[^a-zA-Z0-9]/g, '_')}_logo_${Date.now()}.${file.name.split('.').pop()}`;
+        
+        const uploadResult = await this.uploadFileToBucket(file, fileName, 'logo');
         logoUrl = uploadResult.publicUrl;
+        assetMetadataId = uploadResult.metadata?.id;
       }
       
       const updateData: any = {
@@ -297,6 +306,7 @@ const supabaseAPI = {
       
       if (logoUrl) {
         updateData.logo_url = logoUrl;
+        updateData.asset_metadata_id = assetMetadataId;
       }
       
       const { data, error } = await supabase
@@ -309,7 +319,7 @@ const supabaseAPI = {
         throw error;
       }
       
-      console.log('✅ Logo updated:', data);
+      console.log('✅ Logo updated using MEDIA BUCKET pattern:', data);
       return data?.[0];
     } catch (error) {
       console.error('💥 Logo update error:', error);
