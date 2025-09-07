@@ -317,34 +317,54 @@ const MarketingControlCenter = () => {
     border: `2px dashed ${isDarkMode ? '#4b5563' : '#d1d5db'}`
   };
 
-  // Persona and Audience Dropdown Component (updated styles)
+  // Persona and Audience Dropdown Component (side-by-side layout with proper dark mode)
   const PersonaAudienceSelect = ({ personaValue, audienceValue, onPersonaChange, onAudienceChange, required = false }) => (
-    <div style={formGridStyle}>
-      <div>
+    <div style={{ display: 'flex', gap: '20px', alignItems: 'end' }}>
+      <div style={{ flex: 1 }}>
         <label style={labelStyle}>Persona {required && '*'}</label>
         <select 
           value={personaValue} 
           onChange={(e) => onPersonaChange(e.target.value)}
-          style={selectStyle}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
+            borderRadius: '8px',
+            fontSize: '14px',
+            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+            color: isDarkMode ? '#f9fafb' : '#1f2937',
+            outline: 'none',
+            fontFamily: 'inherit'
+          }}
           required={required}
         >
-          <option value="">Select persona</option>
+          <option value="" style={{ backgroundColor: isDarkMode ? '#374151' : '#ffffff', color: isDarkMode ? '#f9fafb' : '#1f2937' }}>Select persona</option>
           {PERSONA_OPTIONS.map(persona => (
-            <option key={persona} value={persona}>{persona}</option>
+            <option key={persona} value={persona} style={{ backgroundColor: isDarkMode ? '#374151' : '#ffffff', color: isDarkMode ? '#f9fafb' : '#1f2937' }}>{persona}</option>
           ))}
         </select>
       </div>
-      <div>
+      <div style={{ flex: 1 }}>
         <label style={labelStyle}>Audience Segment {required && '*'}</label>
         <select 
           value={audienceValue} 
           onChange={(e) => onAudienceChange(e.target.value)}
-          style={selectStyle}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
+            borderRadius: '8px',
+            fontSize: '14px',
+            backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+            color: isDarkMode ? '#f9fafb' : '#1f2937',
+            outline: 'none',
+            fontFamily: 'inherit'
+          }}
           required={required}
         >
-          <option value="">Select audience</option>
+          <option value="" style={{ backgroundColor: isDarkMode ? '#374151' : '#ffffff', color: isDarkMode ? '#f9fafb' : '#1f2937' }}>Select audience</option>
           {AUDIENCE_OPTIONS.map(audience => (
-            <option key={audience.value} value={audience.value}>{audience.label}</option>
+            <option key={audience.value} value={audience.value} style={{ backgroundColor: isDarkMode ? '#374151' : '#ffffff', color: isDarkMode ? '#f9fafb' : '#1f2937' }}>{audience.label}</option>
           ))}
         </select>
       </div>
