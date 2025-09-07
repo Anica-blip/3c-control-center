@@ -718,6 +718,8 @@ const MarketingControlCenter = () => {
 
       {/* Tab 3: Channel Mapper */}
       {activeTab === 'channels' && (
+      {/* Tab 4: Channel Mapper */}
+      {activeTab === 'channels' && (
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>Channel Mapper</h2>
           <div style={formGridStyle}>
@@ -736,7 +738,7 @@ const MarketingControlCenter = () => {
               <select 
                 value={newChannel.status}
                 onChange={(e) => setNewChannel({...newChannel, status: e.target.value})}
-                style={inputStyle}
+                style={selectStyle}
               >
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
@@ -751,7 +753,7 @@ const MarketingControlCenter = () => {
               onChange={(e) => setNewChannel({...newChannel, priorityChangeLog: e.target.value})}
               placeholder="Document priority changes and notes"
               rows={3}
-              style={{ ...inputStyle, resize: 'vertical' }}
+              style={textareaStyle}
             />
           </div>
           <div style={{ marginTop: '20px', textAlign: 'right' }}>
