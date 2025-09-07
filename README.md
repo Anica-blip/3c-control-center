@@ -64,7 +64,7 @@
 
 | Category | Technology |
 |----------|------------|
-| **Frontend** | React 18, TypeScript, Tailwind CSS |
+| **Frontend** | React 18, TypeScript, Inline CSS |
 | **Backend** | Supabase (PostgreSQL, Real-time, Auth, Storage) |
 | **UI Components** | Radix UI, Lucide Icons, Recharts |
 | **Build Tools** | Vite, PostCSS, Autoprefixer |
