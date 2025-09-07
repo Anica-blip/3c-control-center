@@ -1,36 +1,151 @@
 import React, { useState, useEffect } from 'react';
+import { personasAPI } from '../supabase/config';
+
+// Type definitions
+interface Persona {
+  id: string;
+  name: string;
+  audience_segment: string;
+  user_role?: string;
+  description?: string;
+  key_messages?: string;
+  last_edited_by?: string;
+  created_at: string;
+}
+
+interface Keyword {
+  id: number;
+  keyword: string;
+  dateAdded: string;
+  addedBy: string;
+}
+
+interface Channel {
+  id: number;
+  channelName: string;
+  priorityChangeLog: string;
+  date: string;
+  status: 'Active' | 'Inactive' | 'Pending';
+}
+
+interface Strategy {
+  id: number;
+  contentTitle: string;
+  status: string;
+  aiSuggestionRating: string;
+  hashtags: string;
+  tags: string;
+  persona: string;
+  audienceSegment: string;
+  version: number;
+  createdAt: string;
+}
+
+interface IntelEntry {
+  id: number;
+  priorityLevel: string;
+  insightEntry: string;
+  audioFile: File | null;
+  persona: string;
+  audienceSegment: string;
+  submittedAt: string;
+}
+
+interface ResearchInsight {
+  id: number;
+  insight: string;
+  persona: string;
+  audienceSegment: string;
+  reviewStatus: 'new' | 'in-review' | 'archived';
+  uploadDate: string;
+}
+
+interface AnalyticsTool {
+  id: number;
+  name: string;
+  category: string;
+  status: 'Active' | 'Inactive';
+  url: string;
+  notes: string;
+}
+
+interface Trends {
+  tracked: number;
+  flagged: number;
+  commercialIntent: number;
+}
+
+interface AudienceOption {
+  value: string;
+  label: string;
+}
+
+interface TabGroup {
+  name: string;
+  color: string;
+  tabs: Tab[];
+}
+
+interface Tab {
+  id: string;
+  label: string;
+}
+
+interface ExtendedTab extends Tab {
+  groupColor: string;
+  groupName: string;
+}
+
+// Component Props Interfaces
+interface PersonaAudienceSelectProps {
+  personaValue: string;
+  audienceValue: string;
+  onPersonaChange: (value: string) => void;
+  onAudienceChange: (value: string) => void;
+  required?: boolean;
+}
+
+interface ErrorAlertProps {
+  message: string | null;
+  onClose: () => void;
+}
 
 // Import Inter font
-const fontStyle = {
+const fontStyle: React.CSSProperties = {
   fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
 };
 
 // Define global persona and audience options
-const PERSONA_OPTIONS = ['Falcon', 'Panther', 'Wolf', 'Lion'];
-const AUDIENCE_OPTIONS = [
+const PERSONA_OPTIONS: string[] = ['Falcon', 'Panther', 'Wolf', 'Lion'];
+const AUDIENCE_OPTIONS: AudienceOption[] = [
   { value: 'EM', label: 'Existing Member (EM)' },
   { value: 'NM', label: 'New Member (NM)' },
   { value: 'GP', label: 'General Public (GP)' }
 ];
 
-const MarketingControlCenter = () => {
-  const [activeTab, setActiveTab] = useState('personas');
-  const [isDarkMode, setIsDarkMode] = useState(() => {
+const MarketingControlCenter: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<string>('personas');
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return localStorage.getItem('darkMode') === 'true';
   });
 
   // State for all sections
-  const [personas, setPersonas] = useState([]);
-  const [keywords, setKeywords] = useState([]);
-  const [channels, setChannels] = useState([]);
-  const [trends, setTrends] = useState({ tracked: 247, flagged: 18, commercialIntent: 68 });
-  const [strategies, setStrategies] = useState([]);
-  const [intelEntries, setIntelEntries] = useState([]);
-  const [hashtags, setHashtags] = useState([]);
-  const [archives, setArchives] = useState([]);
-  const [researchInsights, setResearchInsights] = useState([]);
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  const [keywords, setKeywords] = useState<Keyword[]>([]);
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [trends, setTrends] = useState<Trends>({ tracked: 247, flagged: 18, commercialIntent: 68 });
+  const [strategies, setStrategies] = useState<Strategy[]>([]);
+  const [intelEntries, setIntelEntries] = useState<IntelEntry[]>([]);
+  const [hashtags, setHashtags] = useState<any[]>([]);
+  const [archives, setArchives] = useState<any[]>([]);
+  const [researchInsights, setResearchInsights] = useState<ResearchInsight[]>([]);
   
-  const [analyticsTools, setAnalyticsTools] = useState([
+  // Loading and error states for Supabase operations
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
+  
+  const [analyticsTools, setAnalyticsTools] = useState<AnalyticsTool[]>([
     {
       id: 1,
       name: "Matomo (Piwik)",
@@ -65,30 +180,54 @@ const MarketingControlCenter = () => {
     }
   ]);
 
-  // Form states
-  const [newPersona, setNewPersona] = useState({
+  // Form states - Updated to match database fields
+  const [newPersona, setNewPersona] = useState<{
+    name: string;
+    audience_segment: string;
+    user_role: string;
+    description: string;
+    key_messages: string;
+    last_edited_by: string;
+  }>({
     name: '',
-    audienceSegment: '',
-    userRole: '',
+    audience_segment: '',
+    user_role: '',
     description: '',
-    keyMessages: '',
-    lastEditedBy: ''
+    key_messages: '',
+    last_edited_by: ''
   });
 
-  const [newKeyword, setNewKeyword] = useState({
+  const [newKeyword, setNewKeyword] = useState<{
+    keyword: string;
+    dateAdded: string;
+    addedBy: string;
+  }>({
     keyword: '',
     dateAdded: new Date().toISOString().split('T')[0],
     addedBy: ''
   });
 
-  const [newChannel, setNewChannel] = useState({
+  const [newChannel, setNewChannel] = useState<{
+    channelName: string;
+    priorityChangeLog: string;
+    date: string;
+    status: 'Active' | 'Inactive' | 'Pending';
+  }>({
     channelName: '',
     priorityChangeLog: '',
     date: new Date().toISOString().split('T')[0],
     status: 'Active'
   });
 
-  const [newStrategy, setNewStrategy] = useState({
+  const [newStrategy, setNewStrategy] = useState<{
+    contentTitle: string;
+    status: string;
+    aiSuggestionRating: string;
+    hashtags: string;
+    tags: string;
+    persona: string;
+    audienceSegment: string;
+  }>({
     contentTitle: '',
     status: '',
     aiSuggestionRating: '',
@@ -98,7 +237,13 @@ const MarketingControlCenter = () => {
     audienceSegment: ''
   });
 
-  const [newIntel, setNewIntel] = useState({
+  const [newIntel, setNewIntel] = useState<{
+    priorityLevel: string;
+    insightEntry: string;
+    audioFile: File | null;
+    persona: string;
+    audienceSegment: string;
+  }>({
     priorityLevel: '',
     insightEntry: '',
     audioFile: null,
@@ -106,7 +251,13 @@ const MarketingControlCenter = () => {
     audienceSegment: ''
   });
 
-  const [newResearchInsight, setNewResearchInsight] = useState({
+  const [newResearchInsight, setNewResearchInsight] = useState<{
+    insight: string;
+    persona: string;
+    audienceSegment: string;
+    reviewStatus: 'new' | 'in-review' | 'archived';
+    uploadDate: string;
+  }>({
     insight: '',
     persona: '',
     audienceSegment: '',
@@ -114,7 +265,13 @@ const MarketingControlCenter = () => {
     uploadDate: new Date().toISOString().split('T')[0]
   });
 
-  const [newTool, setNewTool] = useState({
+  const [newTool, setNewTool] = useState<{
+    name: string;
+    category: string;
+    status: 'Active' | 'Inactive';
+    url: string;
+    notes: string;
+  }>({
     name: '',
     category: '',
     status: 'Active',
@@ -122,8 +279,26 @@ const MarketingControlCenter = () => {
     notes: ''
   });
 
+  // Load personas on component mount
+  useEffect(() => {
+    loadPersonas();
+  }, []);
+
+  const loadPersonas = async (): Promise<void> => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await personasAPI.fetchPersonas();
+      setPersonas(data);
+    } catch (err) {
+      setError('Failed to load personas: ' + (err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Tab definitions organized by workflow groups
-  const tabGroups = [
+  const tabGroups: TabGroup[] = [
     {
       name: 'Content Creation',
       color: '#3b82f6', // Blue
@@ -152,7 +327,7 @@ const MarketingControlCenter = () => {
     }
   ];
 
-  const allTabs = tabGroups.flatMap(group => 
+  const allTabs: ExtendedTab[] = tabGroups.flatMap(group => 
     group.tabs.map(tab => ({
       ...tab,
       groupColor: group.color,
@@ -161,7 +336,7 @@ const MarketingControlCenter = () => {
   );
 
   // Styles (updated with Inter font and improved dark mode)
-  const containerStyle = {
+  const containerStyle: React.CSSProperties = {
     ...fontStyle,
     padding: '20px',
     minHeight: '100vh',
@@ -169,7 +344,7 @@ const MarketingControlCenter = () => {
     color: isDarkMode ? '#f9fafb' : '#111827'
   };
 
-  const tabsContainerStyle = {
+  const tabsContainerStyle: React.CSSProperties = {
     borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
     backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
     borderRadius: '8px 8px 0 0',
@@ -179,7 +354,7 @@ const MarketingControlCenter = () => {
       : '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
   };
 
-  const getTabStyle = (tab) => ({
+  const getTabStyle = (tab: ExtendedTab): React.CSSProperties => ({
     padding: '12px 16px',
     borderBottom: activeTab === tab.id ? `3px solid ${tab.groupColor}` : '3px solid transparent',
     borderTop: activeTab === tab.id ? `2px solid ${tab.groupColor}` : '2px solid transparent',
@@ -195,7 +370,7 @@ const MarketingControlCenter = () => {
     position: 'relative'
   });
 
-  const cardStyle = {
+  const cardStyle: React.CSSProperties = {
     backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
     borderRadius: '12px',
     padding: '24px',
@@ -206,14 +381,14 @@ const MarketingControlCenter = () => {
     border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
   };
 
-  const sectionTitleStyle = {
+  const sectionTitleStyle: React.CSSProperties = {
     fontSize: '18px',
     fontWeight: 'bold',
     marginBottom: '16px',
     color: isDarkMode ? '#f9fafb' : '#111827'
   };
 
-  const inputStyle = {
+  const inputStyle: React.CSSProperties = {
     width: '90%',
     padding: '12px 16px',
     border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
@@ -226,7 +401,7 @@ const MarketingControlCenter = () => {
     fontFamily: 'inherit'
   };
 
-  const selectStyle = {
+  const selectStyle: React.CSSProperties = {
     ...inputStyle,
     width: '100%',
     appearance: 'none',
@@ -239,13 +414,13 @@ const MarketingControlCenter = () => {
     paddingRight: '48px'
   };
 
-  const textareaStyle = {
+  const textareaStyle: React.CSSProperties = {
     ...inputStyle,
     resize: 'vertical',
     fontFamily: 'inherit'
   };
 
-  const labelStyle = {
+  const labelStyle: React.CSSProperties = {
     display: 'block',
     marginBottom: '8px',
     fontWeight: '600',
@@ -254,7 +429,7 @@ const MarketingControlCenter = () => {
     fontFamily: 'inherit'
   };
 
-  const buttonStyle = {
+  const buttonStyle: React.CSSProperties = {
     padding: '12px 20px',
     borderRadius: '8px',
     border: 'none',
@@ -265,21 +440,21 @@ const MarketingControlCenter = () => {
     fontFamily: 'inherit'
   };
 
-  const primaryButtonStyle = {
+  const primaryButtonStyle: React.CSSProperties = {
     ...buttonStyle,
     backgroundColor: '#3b82f6',
     color: '#ffffff',
     boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.3)'
   };
 
-  const secondaryButtonStyle = {
+  const secondaryButtonStyle: React.CSSProperties = {
     ...buttonStyle,
     backgroundColor: isDarkMode ? '#4b5563' : '#f3f4f6',
     color: isDarkMode ? '#f9fafb' : '#374151',
     border: `1px solid ${isDarkMode ? '#6b7280' : '#d1d5db'}`
   };
 
-  const smallButtonStyle = {
+  const smallButtonStyle: React.CSSProperties = {
     padding: '8px 12px',
     borderRadius: '6px',
     border: 'none',
@@ -292,13 +467,13 @@ const MarketingControlCenter = () => {
     fontFamily: 'inherit'
   };
 
-  const formGridStyle = {
+  const formGridStyle: React.CSSProperties = {
     display: 'grid',
     gap: '20px',
     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))'
   };
 
-  const statsCardStyle = {
+  const statsCardStyle: React.CSSProperties = {
     textAlign: 'center',
     padding: '20px',
     backgroundColor: isDarkMode ? '#111827' : '#ffffff',
@@ -309,7 +484,7 @@ const MarketingControlCenter = () => {
       : '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
   };
 
-  const emptyStateStyle = {
+  const emptyStateStyle: React.CSSProperties = {
     padding: '48px',
     textAlign: 'center',
     backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
@@ -317,8 +492,288 @@ const MarketingControlCenter = () => {
     border: `2px dashed ${isDarkMode ? '#4b5563' : '#d1d5db'}`
   };
 
+  // CRUD Functions - Real Supabase Database Operations
+  const addPersona = async (): Promise<void> => {
+    if (!newPersona.name || !newPersona.audience_segment) {
+      setError('Persona name and audience segment are required');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await personasAPI.insertPersona(newPersona);
+      setPersonas([data, ...personas]);
+      resetPersonaForm();
+    } catch (err) {
+      setError('Failed to add persona: ' + (err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const editPersona = (persona: Persona): void => {
+    setEditingPersona(persona);
+    setNewPersona({
+      name: persona.name,
+      audience_segment: persona.audience_segment,
+      user_role: persona.user_role || '',
+      description: persona.description || '',
+      key_messages: persona.key_messages || '',
+      last_edited_by: persona.last_edited_by || ''
+    });
+  };
+
+  const updatePersona = async (): Promise<void> => {
+    if (!editingPersona || !newPersona.name || !newPersona.audience_segment) {
+      setError('Persona name and audience segment are required');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const updatedData = await personasAPI.updatePersona(editingPersona.id, newPersona);
+      setPersonas(personas.map(p => p.id === editingPersona.id ? updatedData : p));
+      resetPersonaForm();
+      setEditingPersona(null);
+    } catch (err) {
+      setError('Failed to update persona: ' + (err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deletePersona = async (id: string): Promise<void> => {
+    if (!confirm('Are you sure you want to delete this persona?')) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      await personasAPI.deletePersona(id);
+      setPersonas(personas.filter(p => p.id !== id));
+    } catch (err) {
+      setError('Failed to delete persona: ' + (err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelEdit = (): void => {
+    setEditingPersona(null);
+    resetPersonaForm();
+    setError(null);
+  };
+
+  const addKeyword = (): void => {
+    if (newKeyword.keyword) {
+      const keyword: Keyword = {
+        id: Date.now(),
+        ...newKeyword
+      };
+      setKeywords([...keywords, keyword]);
+      resetKeywordForm();
+    }
+  };
+
+  const addChannel = (): void => {
+    if (newChannel.channelName) {
+      const channel: Channel = {
+        id: Date.now(),
+        ...newChannel
+      };
+      setChannels([...channels, channel]);
+      resetChannelForm();
+    }
+  };
+
+  const addStrategy = (): void => {
+    if (newStrategy.contentTitle) {
+      const strategy: Strategy = {
+        id: Date.now(),
+        ...newStrategy,
+        version: 1,
+        createdAt: new Date().toISOString()
+      };
+      setStrategies([...strategies, strategy]);
+      resetStrategyForm();
+    }
+  };
+
+  const addIntel = (): void => {
+    if (newIntel.insightEntry) {
+      const intel: IntelEntry = {
+        id: Date.now(),
+        ...newIntel,
+        submittedAt: new Date().toISOString()
+      };
+      setIntelEntries([...intelEntries, intel]);
+      resetIntelForm();
+    }
+  };
+
+  const addResearchInsight = (): void => {
+    if (newResearchInsight.insight) {
+      const insight: ResearchInsight = {
+        id: Date.now(),
+        ...newResearchInsight
+      };
+      setResearchInsights([...researchInsights, insight]);
+      resetResearchForm();
+    }
+  };
+
+  const addAnalyticsTool = (): void => {
+    if (newTool.name && newTool.category) {
+      setAnalyticsTools([...analyticsTools, {
+        id: Date.now(),
+        ...newTool
+      }]);
+      resetToolForm();
+    }
+  };
+
+  // Reset form functions
+  const resetPersonaForm = (): void => {
+    setNewPersona({
+      name: '',
+      audience_segment: '',
+      user_role: '',
+      description: '',
+      key_messages: '',
+      last_edited_by: ''
+    });
+  };
+
+  // Error Alert Component
+  const ErrorAlert: React.FC<ErrorAlertProps> = ({ message, onClose }) => (
+    message ? (
+      <div style={{
+        backgroundColor: isDarkMode ? '#7f1d1d' : '#fee2e2',
+        border: `1px solid ${isDarkMode ? '#dc2626' : '#f87171'}`,
+        borderRadius: '8px',
+        padding: '12px 16px',
+        marginBottom: '16px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <span style={{ color: isDarkMode ? '#fca5a5' : '#dc2626', fontSize: '14px' }}>
+          {message}
+        </span>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: isDarkMode ? '#fca5a5' : '#dc2626',
+            cursor: 'pointer',
+            fontSize: '16px',
+            padding: '0',
+            marginLeft: '12px'
+          }}
+        >
+          ×
+        </button>
+      </div>
+    ) : null
+  );
+
+  const resetKeywordForm = (): void => {
+    setNewKeyword({
+      keyword: '',
+      dateAdded: new Date().toISOString().split('T')[0],
+      addedBy: ''
+    });
+  };
+
+  const resetChannelForm = (): void => {
+    setNewChannel({
+      channelName: '',
+      priorityChangeLog: '',
+      date: new Date().toISOString().split('T')[0],
+      status: 'Active'
+    });
+  };
+
+  const resetStrategyForm = (): void => {
+    setNewStrategy({
+      contentTitle: '',
+      status: '',
+      aiSuggestionRating: '',
+      hashtags: '',
+      tags: '',
+      persona: '',
+      audienceSegment: ''
+    });
+  };
+
+  const resetIntelForm = (): void => {
+    setNewIntel({
+      priorityLevel: '',
+      insightEntry: '',
+      audioFile: null,
+      persona: '',
+      audienceSegment: ''
+    });
+  };
+
+  const resetResearchForm = (): void => {
+    setNewResearchInsight({
+      insight: '',
+      persona: '',
+      audienceSegment: '',
+      reviewStatus: 'new',
+      uploadDate: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const resetToolForm = (): void => {
+    setNewTool({
+      name: '',
+      category: '',
+      status: 'Active',
+      url: '',
+      notes: ''
+    });
+  };
+
+  // Advanced functions (to be implemented)
+  const generateHashtagsAndTags = (): void => {
+    console.log('Generating hashtags and tags...');
+  };
+
+  const insertHashtagsAndTags = (): void => {
+    console.log('Inserting hashtags and tags...');
+  };
+
+  const handleAudioUpload = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setNewIntel({...newIntel, audioFile: file});
+    }
+  };
+
+  const importFromKeywordPlanner = (): void => {
+    console.log('Importing from Keyword Planner...');
+  };
+
+  const importFromGSC = (): void => {
+    console.log('Importing from GSC...');
+  };
+
+  const importCSV = (): void => {
+    console.log('Importing CSV...');
+  };
+
   // Persona and Audience Dropdown Component (side-by-side layout with proper dark mode)
-  const PersonaAudienceSelect = ({ personaValue, audienceValue, onPersonaChange, onAudienceChange, required = false }) => (
+  const PersonaAudienceSelect: React.FC<PersonaAudienceSelectProps> = ({ 
+    personaValue, 
+    audienceValue, 
+    onPersonaChange, 
+    onAudienceChange, 
+    required = false 
+  }) => (
     <div style={{ display: 'flex', gap: '20px', alignItems: 'end' }}>
       <div style={{ flex: 1 }}>
         <label style={labelStyle}>Persona {required && '*'}</label>
@@ -371,186 +826,6 @@ const MarketingControlCenter = () => {
     </div>
   );
 
-  // CRUD Functions
-  const addPersona = () => {
-    if (newPersona.name && newPersona.audienceSegment) {
-      const persona = {
-        id: Date.now(),
-        ...newPersona,
-        lastEditedAt: new Date().toISOString().split('T')[0]
-      };
-      setPersonas([...personas, persona]);
-      resetPersonaForm();
-    }
-  };
-
-  const addKeyword = () => {
-    if (newKeyword.keyword) {
-      const keyword = {
-        id: Date.now(),
-        ...newKeyword
-      };
-      setKeywords([...keywords, keyword]);
-      resetKeywordForm();
-    }
-  };
-
-  const addChannel = () => {
-    if (newChannel.channelName) {
-      const channel = {
-        id: Date.now(),
-        ...newChannel
-      };
-      setChannels([...channels, channel]);
-      resetChannelForm();
-    }
-  };
-
-  const addStrategy = () => {
-    if (newStrategy.contentTitle) {
-      const strategy = {
-        id: Date.now(),
-        ...newStrategy,
-        version: 1,
-        createdAt: new Date().toISOString()
-      };
-      setStrategies([...strategies, strategy]);
-      resetStrategyForm();
-    }
-  };
-
-  const addIntel = () => {
-    if (newIntel.insightEntry) {
-      const intel = {
-        id: Date.now(),
-        ...newIntel,
-        submittedAt: new Date().toISOString()
-      };
-      setIntelEntries([...intelEntries, intel]);
-      resetIntelForm();
-    }
-  };
-
-  const addResearchInsight = () => {
-    if (newResearchInsight.insight) {
-      const insight = {
-        id: Date.now(),
-        ...newResearchInsight
-      };
-      setResearchInsights([...researchInsights, insight]);
-      resetResearchForm();
-    }
-  };
-
-  const addAnalyticsTool = () => {
-    if (newTool.name && newTool.category) {
-      setAnalyticsTools([...analyticsTools, {
-        id: Date.now(),
-        ...newTool
-      }]);
-      resetToolForm();
-    }
-  };
-
-  // Reset form functions
-  const resetPersonaForm = () => {
-    setNewPersona({
-      name: '',
-      audienceSegment: '',
-      userRole: '',
-      description: '',
-      keyMessages: '',
-      lastEditedBy: ''
-    });
-  };
-
-  const resetKeywordForm = () => {
-    setNewKeyword({
-      keyword: '',
-      dateAdded: new Date().toISOString().split('T')[0],
-      addedBy: ''
-    });
-  };
-
-  const resetChannelForm = () => {
-    setNewChannel({
-      channelName: '',
-      priorityChangeLog: '',
-      date: new Date().toISOString().split('T')[0],
-      status: 'Active'
-    });
-  };
-
-  const resetStrategyForm = () => {
-    setNewStrategy({
-      contentTitle: '',
-      status: '',
-      aiSuggestionRating: '',
-      hashtags: '',
-      tags: '',
-      persona: '',
-      audienceSegment: ''
-    });
-  };
-
-  const resetIntelForm = () => {
-    setNewIntel({
-      priorityLevel: '',
-      insightEntry: '',
-      audioFile: null,
-      persona: '',
-      audienceSegment: ''
-    });
-  };
-
-  const resetResearchForm = () => {
-    setNewResearchInsight({
-      insight: '',
-      persona: '',
-      audienceSegment: '',
-      reviewStatus: 'new',
-      uploadDate: new Date().toISOString().split('T')[0]
-    });
-  };
-
-  const resetToolForm = () => {
-    setNewTool({
-      name: '',
-      category: '',
-      status: 'Active',
-      url: '',
-      notes: ''
-    });
-  };
-
-  // Advanced functions (to be implemented)
-  const generateHashtagsAndTags = () => {
-    console.log('Generating hashtags and tags...');
-  };
-
-  const insertHashtagsAndTags = () => {
-    console.log('Inserting hashtags and tags...');
-  };
-
-  const handleAudioUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setNewIntel({...newIntel, audioFile: file});
-    }
-  };
-
-  const importFromKeywordPlanner = () => {
-    console.log('Importing from Keyword Planner...');
-  };
-
-  const importFromGSC = () => {
-    console.log('Importing from GSC...');
-  };
-
-  const importCSV = () => {
-    console.log('Importing CSV...');
-  };
-
   return (
     <div style={containerStyle}>
       <div style={tabsContainerStyle}>
@@ -577,6 +852,7 @@ const MarketingControlCenter = () => {
               <nav style={{ display: 'flex', gap: '4px' }}>
                 {group.tabs.map((tab) => {
                   const fullTab = allTabs.find(t => t.id === tab.id);
+                  if (!fullTab) return null;
                   return (
                     <button
                       key={tab.id}
@@ -608,23 +884,28 @@ const MarketingControlCenter = () => {
       {/* Tab 1: Persona Manager */}
       {activeTab === 'personas' && (
         <div style={{ display: 'grid', gap: '24px' }}>
+          {/* Error Display */}
+          <ErrorAlert message={error} onClose={() => setError(null)} />
+          
           <div style={cardStyle}>
             <div style={{
               borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
               paddingBottom: '16px',
               marginBottom: '24px'
             }}>
-              <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Add New Persona</h2>
+              <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>
+                {editingPersona ? 'Edit Persona' : 'Add New Persona'}
+              </h2>
               <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-                Create and manage marketing personas with audience targeting
+                {editingPersona ? 'Update persona details' : 'Create and manage marketing personas with audience targeting'}
               </p>
             </div>
             
             <PersonaAudienceSelect
               personaValue={newPersona.name}
-              audienceValue={newPersona.audienceSegment}
+              audienceValue={newPersona.audience_segment}
               onPersonaChange={(value) => setNewPersona({...newPersona, name: value})}
-              onAudienceChange={(value) => setNewPersona({...newPersona, audienceSegment: value})}
+              onAudienceChange={(value) => setNewPersona({...newPersona, audience_segment: value})}
               required={true}
             />
             
@@ -632,8 +913,8 @@ const MarketingControlCenter = () => {
               <label style={labelStyle}>User Role</label>
               <input 
                 type="text"
-                value={newPersona.userRole}
-                onChange={(e) => setNewPersona({...newPersona, userRole: e.target.value})}
+                value={newPersona.user_role}
+                onChange={(e) => setNewPersona({...newPersona, user_role: e.target.value})}
                 placeholder="Enter user role"
                 style={inputStyle}
               />
@@ -653,8 +934,8 @@ const MarketingControlCenter = () => {
             <div style={{ marginTop: '20px' }}>
               <label style={labelStyle}>Key Messages</label>
               <textarea 
-                value={newPersona.keyMessages}
-                onChange={(e) => setNewPersona({...newPersona, keyMessages: e.target.value})}
+                value={newPersona.key_messages}
+                onChange={(e) => setNewPersona({...newPersona, key_messages: e.target.value})}
                 placeholder="Key messages and positioning"
                 rows={3}
                 style={textareaStyle}
@@ -665,23 +946,33 @@ const MarketingControlCenter = () => {
               <label style={labelStyle}>Last Edited By</label>
               <input 
                 type="text"
-                value={newPersona.lastEditedBy}
-                onChange={(e) => setNewPersona({...newPersona, lastEditedBy: e.target.value})}
+                value={newPersona.last_edited_by}
+                onChange={(e) => setNewPersona({...newPersona, last_edited_by: e.target.value})}
                 placeholder="Enter your name"
                 style={inputStyle}
               />
             </div>
             
-            <div style={{ marginTop: '24px', textAlign: 'right' }}>
+            <div style={{ marginTop: '24px', textAlign: 'right', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              {editingPersona && (
+                <button 
+                  onClick={cancelEdit} 
+                  style={secondaryButtonStyle}
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+              )}
               <button 
-                onClick={addPersona} 
+                onClick={editingPersona ? updatePersona : addPersona} 
                 style={{
                   ...primaryButtonStyle,
-                  opacity: newPersona.name && newPersona.audienceSegment ? 1 : 0.5,
-                  cursor: newPersona.name && newPersona.audienceSegment ? 'pointer' : 'not-allowed'
+                  opacity: (newPersona.name && newPersona.audience_segment && !loading) ? 1 : 0.5,
+                  cursor: (newPersona.name && newPersona.audience_segment && !loading) ? 'pointer' : 'not-allowed'
                 }}
+                disabled={!newPersona.name || !newPersona.audience_segment || loading}
               >
-                + Add Persona
+                {loading ? 'Saving...' : (editingPersona ? 'Update Persona' : '+ Add Persona')}
               </button>
             </div>
           </div>
@@ -689,7 +980,11 @@ const MarketingControlCenter = () => {
           {/* Display existing personas */}
           <div style={cardStyle}>
             <h2 style={sectionTitleStyle}>Active Personas ({personas.length})</h2>
-            {personas.length === 0 ? (
+            {loading && personas.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                Loading personas...
+              </div>
+            ) : personas.length === 0 ? (
               <div style={emptyStateStyle}>
                 <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center', fontSize: '16px', margin: '0' }}>
                   No personas created yet. Add your first persona above to get started.
@@ -702,27 +997,53 @@ const MarketingControlCenter = () => {
                     padding: '16px',
                     border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
                     borderRadius: '8px',
-                    backgroundColor: '#334155' // Hardcoded dark background
+                    backgroundColor: '#334155'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                       <div style={{ flex: 1 }}>
-                        <h4 style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#ffffff' }}> {/* Hardcoded white text */}
-                          {persona.name} - {persona.audienceSegment}
+                        <h4 style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#ffffff' }}>
+                          {persona.name} - {AUDIENCE_OPTIONS.find(opt => opt.value === persona.audience_segment)?.label || persona.audience_segment}
                         </h4>
-                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#d1d5db' }}> {/* Hardcoded light text */}
-                          Role: {persona.userRole}
+                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#d1d5db' }}>
+                          Role: {persona.user_role || 'Not specified'}
                         </p>
-                        <p style={{ margin: '0', fontSize: '14px', color: '#d1d5db' }}> {/* Hardcoded light text */}
-                          {persona.description}
+                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#d1d5db' }}>
+                          {persona.description || 'No description provided'}
+                        </p>
+                        {persona.key_messages && (
+                          <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#9ca3af' }}>
+                            Key Messages: {persona.key_messages}
+                          </p>
+                        )}
+                        <p style={{ margin: '0', fontSize: '12px', color: '#9ca3af' }}>
+                          Last edited by: {persona.last_edited_by || 'Unknown'} • 
+                          Created: {new Date(persona.created_at).toLocaleDateString()}
                         </p>
                       </div>
-                      <button style={{
-                        ...smallButtonStyle,
-                        backgroundColor: '#3b82f6',
-                        color: 'white'
-                      }}>
-                        Edit
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={() => editPersona(persona)}
+                          style={{
+                            ...smallButtonStyle,
+                            backgroundColor: '#3b82f6',
+                            color: 'white'
+                          }}
+                          disabled={loading}
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => deletePersona(persona.id)}
+                          style={{
+                            ...smallButtonStyle,
+                            backgroundColor: '#dc2626',
+                            color: 'white'
+                          }}
+                          disabled={loading}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1069,7 +1390,7 @@ const MarketingControlCenter = () => {
               <label style={labelStyle}>Status</label>
               <select 
                 value={newChannel.status}
-                onChange={(e) => setNewChannel({...newChannel, status: e.target.value})}
+                onChange={(e) => setNewChannel({...newChannel, status: e.target.value as 'Active' | 'Inactive' | 'Pending'})}
                 style={{
                   width: '100%',
                   padding: '12px 16px',
@@ -1365,7 +1686,7 @@ const MarketingControlCenter = () => {
                 <label style={labelStyle}>Review Status</label>
                 <select 
                   value={newResearchInsight.reviewStatus}
-                  onChange={(e) => setNewResearchInsight({...newResearchInsight, reviewStatus: e.target.value})}
+                  onChange={(e) => setNewResearchInsight({...newResearchInsight, reviewStatus: e.target.value as 'new' | 'in-review' | 'archived'})}
                   style={{
                     width: '100%',
                     padding: '12px 16px',
@@ -1540,7 +1861,7 @@ const MarketingControlCenter = () => {
                 />
                 <select 
                   value={newTool.status} 
-                  onChange={(e) => setNewTool({...newTool, status: e.target.value})}
+                  onChange={(e) => setNewTool({...newTool, status: e.target.value as 'Active' | 'Inactive'})}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
@@ -1692,4 +2013,4 @@ const MarketingControlCenter = () => {
   );
 };
 
-export default MarketingControlCenter;
+export default MarketingComponent;
