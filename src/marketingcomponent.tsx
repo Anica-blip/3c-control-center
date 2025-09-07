@@ -1,98 +1,123 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+// Define global persona and audience options
+const PERSONA_OPTIONS = ['Falcon', 'Panther', 'Wolf', 'Lion'];
+const AUDIENCE_OPTIONS = [
+  { value: 'EM', label: 'Existing Member (EM)' },
+  { value: 'NM', label: 'New Member (NM)' },
+  { value: 'GP', label: 'General Public (GP)' }
+];
 
 const MarketingControlCenter = () => {
-  const [personas, setPersonas] = useState([]);
   const [activeTab, setActiveTab] = useState('personas');
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('darkMode') === 'true';
   });
+
+  // State for all sections
+  const [personas, setPersonas] = useState([]);
+  const [keywords, setKeywords] = useState([]);
+  const [channels, setChannels] = useState([]);
+  const [trends, setTrends] = useState({ tracked: 247, flagged: 18, commercialIntent: 68 });
+  const [strategies, setStrategies] = useState([]);
+  const [intelEntries, setIntelEntries] = useState([]);
+  const [hashtags, setHashtags] = useState([]);
+  const [archives, setArchives] = useState([]);
+  const [researchInsights, setResearchInsights] = useState([]);
   
   const [analyticsTools, setAnalyticsTools] = useState([
     {
       id: 1,
       name: "Matomo (Piwik)",
-      type: "SEO / Web Analytics",
+      category: "SEO / Web Analytics",
       status: "Active",
-      accessMethod: "URL",
-      link: "https://matomo.org/",
+      url: "https://matomo.org/",
       notes: "Open-source Google Analytics alternative"
     },
     {
       id: 2,
       name: "Plausible Analytics",
-      type: "SEO / Web Analytics", 
+      category: "SEO / Web Analytics", 
       status: "Active",
-      accessMethod: "URL",
-      link: "https://plausible.io/",
+      url: "https://plausible.io/",
       notes: "Lightweight, privacy-focused analytics"
     },
     {
       id: 3,
       name: "Google Search Console",
-      type: "SEO",
+      category: "SEO",
       status: "Active",
-      accessMethod: "URL",
-      link: "https://search.google.com/search-console",
+      url: "https://search.google.com/search-console",
       notes: "Must-have for SEO data"
     },
     {
       id: 4,
       name: "SparkToro",
-      type: "Audience Research",
+      category: "Audience Research",
       status: "Active",
-      accessMethod: "URL",
-      link: "https://sparktoro.com/audience",
+      url: "https://sparktoro.com/audience",
       notes: "Great for audience insights"
-    },
-    {
-      id: 5,
-      name: "YouTube Studio Analytics",
-      type: "Video Analytics",
-      status: "Inactive",
-      accessMethod: "URL",
-      link: "https://studio.youtube.com/channel/UC/analytics",
-      notes: "Activate when video content grows"
-    },
-    {
-      id: 6,
-      name: "RiteTag",
-      type: "Hashtag Analysis",
-      status: "Inactive",
-      accessMethod: "URL",
-      link: "https://ritetag.com/",
-      notes: "Hashtag research and tracking"
-    },
-    {
-      id: 7,
-      name: "Hashtagify",
-      type: "Hashtag Analysis",
-      status: "Inactive",
-      accessMethod: "URL",
-      link: "https://hashtagify.me/",
-      notes: "Hashtag discovery and monitoring"
     }
   ]);
 
+  // Form states
   const [newPersona, setNewPersona] = useState({
     name: '',
+    audienceSegment: '',
     userRole: '',
     description: '',
-    targetAudience: '',
     keyMessages: '',
-    lastEditedBy: '',
-    lastEditedAt: new Date().toISOString().split('T')[0]
+    lastEditedBy: ''
+  });
+
+  const [newKeyword, setNewKeyword] = useState({
+    keyword: '',
+    dateAdded: new Date().toISOString().split('T')[0],
+    addedBy: ''
+  });
+
+  const [newChannel, setNewChannel] = useState({
+    channelName: '',
+    priorityChangeLog: '',
+    date: new Date().toISOString().split('T')[0],
+    status: 'Active'
+  });
+
+  const [newStrategy, setNewStrategy] = useState({
+    contentTitle: '',
+    status: '',
+    aiSuggestionRating: '',
+    hashtags: '',
+    tags: '',
+    persona: '',
+    audienceSegment: ''
+  });
+
+  const [newIntel, setNewIntel] = useState({
+    priorityLevel: '',
+    insightEntry: '',
+    audioFile: null,
+    persona: '',
+    audienceSegment: ''
+  });
+
+  const [newResearchInsight, setNewResearchInsight] = useState({
+    insight: '',
+    persona: '',
+    audienceSegment: '',
+    reviewStatus: 'new',
+    uploadDate: new Date().toISOString().split('T')[0]
   });
 
   const [newTool, setNewTool] = useState({
     name: '',
-    type: '',
+    category: '',
     status: 'Active',
-    accessMethod: 'URL',
-    link: '',
+    url: '',
     notes: ''
   });
 
-  // Styles
+  // Styles (keeping existing styles but updating as needed)
   const containerStyle = {
     padding: '20px',
     minHeight: '100vh',
@@ -111,10 +136,10 @@ const MarketingControlCenter = () => {
   };
 
   const getTabStyle = (tabId) => ({
-    padding: '16px 24px',
+    padding: '12px 16px',
     borderBottom: activeTab === tabId ? '2px solid #3b82f6' : '2px solid transparent',
     fontWeight: '500',
-    fontSize: '14px',
+    fontSize: '12px',
     color: activeTab === tabId ? '#2563eb' : (isDarkMode ? '#d1d5db' : '#6b7280'),
     backgroundColor: 'transparent',
     border: 'none',
@@ -209,64 +234,261 @@ const MarketingControlCenter = () => {
     border: `2px dashed ${isDarkMode ? '#4b5563' : '#d1d5db'}`
   };
 
+  // Persona and Audience Dropdown Component
+  const PersonaAudienceSelect = ({ personaValue, audienceValue, onPersonaChange, onAudienceChange, required = false }) => (
+    <div style={formGridStyle}>
+      <div>
+        <label style={labelStyle}>Persona {required && '*'}</label>
+        <select 
+          value={personaValue} 
+          onChange={(e) => onPersonaChange(e.target.value)}
+          style={inputStyle}
+          required={required}
+        >
+          <option value="">Select persona</option>
+          {PERSONA_OPTIONS.map(persona => (
+            <option key={persona} value={persona}>{persona}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label style={labelStyle}>Audience Segment {required && '*'}</label>
+        <select 
+          value={audienceValue} 
+          onChange={(e) => onAudienceChange(e.target.value)}
+          style={inputStyle}
+          required={required}
+        >
+          <option value="">Select audience</option>
+          {AUDIENCE_OPTIONS.map(audience => (
+            <option key={audience.value} value={audience.value}>{audience.label}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+
+  // CRUD Functions
   const addPersona = () => {
-    if (newPersona.name && newPersona.userRole) {
-      setPersonas([...personas, {
+    if (newPersona.name && newPersona.audienceSegment) {
+      const persona = {
         id: Date.now(),
         ...newPersona,
         lastEditedAt: new Date().toISOString().split('T')[0]
-      }]);
-      setNewPersona({
-        name: '',
-        userRole: '',
-        description: '',
-        targetAudience: '',
-        keyMessages: '',
-        lastEditedBy: '',
-        lastEditedAt: new Date().toISOString().split('T')[0]
-      });
+      };
+      setPersonas([...personas, persona]);
+      // TODO: Save to Supabase Personas DB
+      resetPersonaForm();
     }
   };
 
-  const toggleToolStatus = (id) => {
-    setAnalyticsTools(analyticsTools.map(tool => 
-      tool.id === id 
-        ? { ...tool, status: tool.status === 'Active' ? 'Inactive' : 'Active' }
-        : tool
-    ));
+  const addKeyword = () => {
+    if (newKeyword.keyword) {
+      const keyword = {
+        id: Date.now(),
+        ...newKeyword
+      };
+      setKeywords([...keywords, keyword]);
+      // TODO: Save to Supabase Keywords DB
+      resetKeywordForm();
+    }
+  };
+
+  const addChannel = () => {
+    if (newChannel.channelName) {
+      const channel = {
+        id: Date.now(),
+        ...newChannel
+      };
+      setChannels([...channels, channel]);
+      // TODO: Save to Supabase Channels DB
+      resetChannelForm();
+    }
+  };
+
+  const addStrategy = () => {
+    if (newStrategy.contentTitle) {
+      const strategy = {
+        id: Date.now(),
+        ...newStrategy,
+        version: 1,
+        createdAt: new Date().toISOString()
+      };
+      setStrategies([...strategies, strategy]);
+      // TODO: Save to Supabase Strategy Vault DB with version control
+      resetStrategyForm();
+    }
+  };
+
+  const addIntel = () => {
+    if (newIntel.insightEntry) {
+      const intel = {
+        id: Date.now(),
+        ...newIntel,
+        submittedAt: new Date().toISOString()
+      };
+      setIntelEntries([...intelEntries, intel]);
+      // TODO: Save to Supabase Intel DB
+      resetIntelForm();
+    }
+  };
+
+  const addResearchInsight = () => {
+    if (newResearchInsight.insight) {
+      const insight = {
+        id: Date.now(),
+        ...newResearchInsight
+      };
+      setResearchInsights([...researchInsights, insight]);
+      // TODO: Save to Supabase Research Board DB
+      resetResearchForm();
+    }
   };
 
   const addAnalyticsTool = () => {
-    if (newTool.name && newTool.type) {
+    if (newTool.name && newTool.category) {
       setAnalyticsTools([...analyticsTools, {
         id: Date.now(),
         ...newTool
       }]);
-      setNewTool({
-        name: '',
-        type: '',
-        status: 'Active',
-        accessMethod: 'URL',
-        link: '',
-        notes: ''
-      });
+      // TODO: Save to Supabase Analytics Tools DB
+      resetToolForm();
     }
   };
 
-  const removeTool = (id) => {
-    setAnalyticsTools(analyticsTools.filter(tool => tool.id !== id));
+  // Reset form functions
+  const resetPersonaForm = () => {
+    setNewPersona({
+      name: '',
+      audienceSegment: '',
+      userRole: '',
+      description: '',
+      keyMessages: '',
+      lastEditedBy: ''
+    });
   };
+
+  const resetKeywordForm = () => {
+    setNewKeyword({
+      keyword: '',
+      dateAdded: new Date().toISOString().split('T')[0],
+      addedBy: ''
+    });
+  };
+
+  const resetChannelForm = () => {
+    setNewChannel({
+      channelName: '',
+      priorityChangeLog: '',
+      date: new Date().toISOString().split('T')[0],
+      status: 'Active'
+    });
+  };
+
+  const resetStrategyForm = () => {
+    setNewStrategy({
+      contentTitle: '',
+      status: '',
+      aiSuggestionRating: '',
+      hashtags: '',
+      tags: '',
+      persona: '',
+      audienceSegment: ''
+    });
+  };
+
+  const resetIntelForm = () => {
+    setNewIntel({
+      priorityLevel: '',
+      insightEntry: '',
+      audioFile: null,
+      persona: '',
+      audienceSegment: ''
+    });
+  };
+
+  const resetResearchForm = () => {
+    setNewResearchInsight({
+      insight: '',
+      persona: '',
+      audienceSegment: '',
+      reviewStatus: 'new',
+      uploadDate: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const resetToolForm = () => {
+    setNewTool({
+      name: '',
+      category: '',
+      status: 'Active',
+      url: '',
+      notes: ''
+    });
+  };
+
+  // Advanced functions (to be implemented)
+  const generateHashtagsAndTags = () => {
+    // TODO: Implement AI-powered hashtag and tag generation
+    console.log('Generating hashtags and tags...');
+  };
+
+  const insertHashtagsAndTags = () => {
+    // TODO: Implement hashtag/tag insertion into strategy
+    console.log('Inserting hashtags and tags...');
+  };
+
+  const handleAudioUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setNewIntel({...newIntel, audioFile: file});
+      // TODO: Upload to storage and save reference
+    }
+  };
+
+  const importFromKeywordPlanner = () => {
+    // TODO: Implement import from Google Keyword Planner
+    console.log('Importing from Keyword Planner...');
+  };
+
+  const importFromGSC = () => {
+    // TODO: Implement import from Google Search Console
+    console.log('Importing from GSC...');
+  };
+
+  const importCSV = () => {
+    // TODO: Implement CSV import functionality
+    console.log('Importing CSV...');
+  };
+
+  const archiveItem = (itemId, itemType) => {
+    // TODO: Move item to archive database
+    console.log(`Archiving ${itemType} with ID: ${itemId}`);
+  };
+
+  const restoreItem = (itemId, itemType) => {
+    // TODO: Restore item from archive
+    console.log(`Restoring ${itemType} with ID: ${itemId}`);
+  };
+
+  // Tab definitions with updated structure
+  const tabs = [
+    { id: 'personas', label: 'Persona Manager' },
+    { id: 'keywords', label: 'Keyword Intel' },
+    { id: 'channels', label: 'Channel Mapper' },
+    { id: 'trends', label: 'Search Trends' },
+    { id: 'strategy', label: 'Strategy Vault' },
+    { id: 'intel', label: 'Intel Drop' },
+    { id: 'hashtags', label: 'Hashtags & Tags' },
+    { id: 'archives', label: 'Media Archives' },
+    { id: 'analytics', label: 'Analytics & Insights' }
+  ];
 
   return (
     <div style={containerStyle}>
       <div style={tabsContainerStyle}>
-        <nav style={{ display: 'flex', gap: '0', padding: '0 24px' }}>
-          {[
-            { id: 'personas', label: 'Persona Manager' },
-            { id: 'content', label: 'Content & Strategy' },
-            { id: 'research', label: 'Research & Analytics' },
-            { id: 'tools', label: 'Archive & Tools' }
-          ].map((tab) => (
+        <nav style={{ display: 'flex', gap: '0', padding: '0 12px', overflowX: 'auto' }}>
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -290,6 +512,7 @@ const MarketingControlCenter = () => {
         </nav>
       </div>
 
+      {/* Tab 1: Persona Manager */}
       {activeTab === 'personas' && (
         <div style={{ display: 'grid', gap: '24px' }}>
           <div style={cardStyle}>
@@ -300,34 +523,27 @@ const MarketingControlCenter = () => {
             }}>
               <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Add New Persona</h2>
               <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-                Create and manage marketing personas with role-based access control
+                Create and manage marketing personas with audience targeting
               </p>
             </div>
             
-            <div style={formGridStyle}>
-              <div>
-                <label style={labelStyle}>Persona Name</label>
-                <input 
-                  type="text"
-                  value={newPersona.name}
-                  onChange={(e) => setNewPersona({...newPersona, name: e.target.value})}
-                  placeholder="Enter persona name"
-                  style={inputStyle}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>User Role</label>
-                <select 
-                  value={newPersona.userRole} 
-                  onChange={(e) => setNewPersona({...newPersona, userRole: e.target.value})}
-                  style={inputStyle}
-                >
-                  <option value="">Select role</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Editor">Editor</option>
-                  <option value="Viewer">Viewer</option>
-                </select>
-              </div>
+            <PersonaAudienceSelect
+              personaValue={newPersona.name}
+              audienceValue={newPersona.audienceSegment}
+              onPersonaChange={(value) => setNewPersona({...newPersona, name: value})}
+              onAudienceChange={(value) => setNewPersona({...newPersona, audienceSegment: value})}
+              required={true}
+            />
+            
+            <div style={{ marginTop: '20px' }}>
+              <label style={labelStyle}>User Role</label>
+              <input 
+                type="text"
+                value={newPersona.userRole}
+                onChange={(e) => setNewPersona({...newPersona, userRole: e.target.value})}
+                placeholder="Enter user role"
+                style={inputStyle}
+              />
             </div>
             
             <div style={{ marginTop: '20px' }}>
@@ -336,17 +552,6 @@ const MarketingControlCenter = () => {
                 value={newPersona.description}
                 onChange={(e) => setNewPersona({...newPersona, description: e.target.value})}
                 placeholder="Describe this persona"
-                rows={3}
-                style={{ ...inputStyle, resize: 'vertical' }}
-              />
-            </div>
-            
-            <div style={{ marginTop: '20px' }}>
-              <label style={labelStyle}>Target Audience</label>
-              <textarea 
-                value={newPersona.targetAudience}
-                onChange={(e) => setNewPersona({...newPersona, targetAudience: e.target.value})}
-                placeholder="Define the target audience for this persona"
                 rows={3}
                 style={{ ...inputStyle, resize: 'vertical' }}
               />
@@ -379,363 +584,632 @@ const MarketingControlCenter = () => {
                 onClick={addPersona} 
                 style={{
                   ...primaryButtonStyle,
-                  opacity: newPersona.name && newPersona.userRole ? 1 : 0.5,
-                  cursor: newPersona.name && newPersona.userRole ? 'pointer' : 'not-allowed'
-                }}
-                onMouseOver={(e) => {
-                  if (newPersona.name && newPersona.userRole) {
-                    e.currentTarget.style.backgroundColor = '#2563eb';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (newPersona.name && newPersona.userRole) {
-                    e.currentTarget.style.backgroundColor = '#3b82f6';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }
+                  opacity: newPersona.name && newPersona.audienceSegment ? 1 : 0.5,
+                  cursor: newPersona.name && newPersona.audienceSegment ? 'pointer' : 'not-allowed'
                 }}
               >
-                ➕ Add Persona
+                + Add Persona
               </button>
             </div>
           </div>
 
+          {/* Display existing personas */}
           <div style={cardStyle}>
-            <div style={{
-              borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-              paddingBottom: '16px',
-              marginBottom: '24px'
-            }}>
-              <h2 style={{ ...sectionTitleStyle, margin: '0' }}>Active Personas</h2>
-            </div>
-            
+            <h2 style={sectionTitleStyle}>Active Personas ({personas.length})</h2>
             {personas.length === 0 ? (
               <div style={emptyStateStyle}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>👥</div>
-                <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center', fontSize: '16px', margin: '0 0 8px 0' }}>
-                  No personas created yet
-                </p>
-                <p style={{ color: isDarkMode ? '#6b7280' : '#9ca3af', textAlign: 'center', fontSize: '14px', margin: '0' }}>
-                  Add your first persona above to get started
+                <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center', fontSize: '16px', margin: '0' }}>
+                  No personas created yet. Add your first persona above to get started.
                 </p>
               </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead style={{ backgroundColor: isDarkMode ? '#111827' : '#f9fafb' }}>
-                    <tr>
-                      <th style={{ 
-                        padding: '12px 16px', 
-                        textAlign: 'left', 
-                        fontSize: '12px', 
-                        fontWeight: '600', 
-                        color: isDarkMode ? '#9ca3af' : '#6b7280', 
-                        textTransform: 'uppercase', 
-                        letterSpacing: '0.05em',
-                        borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
-                      }}>Name</th>
-                      <th style={{ 
-                        padding: '12px 16px', 
-                        textAlign: 'left', 
-                        fontSize: '12px', 
-                        fontWeight: '600', 
-                        color: isDarkMode ? '#9ca3af' : '#6b7280', 
-                        textTransform: 'uppercase', 
-                        letterSpacing: '0.05em',
-                        borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
-                      }}>Role</th>
-                      <th style={{ 
-                        padding: '12px 16px', 
-                        textAlign: 'left', 
-                        fontSize: '12px', 
-                        fontWeight: '600', 
-                        color: isDarkMode ? '#9ca3af' : '#6b7280', 
-                        textTransform: 'uppercase', 
-                        letterSpacing: '0.05em',
-                        borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
-                      }}>Target Audience</th>
-                      <th style={{ 
-                        padding: '12px 16px', 
-                        textAlign: 'left', 
-                        fontSize: '12px', 
-                        fontWeight: '600', 
-                        color: isDarkMode ? '#9ca3af' : '#6b7280', 
-                        textTransform: 'uppercase', 
-                        letterSpacing: '0.05em',
-                        borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
-                      }}>Last Edited</th>
-                      <th style={{ 
-                        padding: '12px 16px', 
-                        textAlign: 'left', 
-                        fontSize: '12px', 
-                        fontWeight: '600', 
-                        color: isDarkMode ? '#9ca3af' : '#6b7280', 
-                        textTransform: 'uppercase', 
-                        letterSpacing: '0.05em',
-                        borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
-                      }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {personas.map((persona) => (
-                      <tr key={persona.id} style={{ borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}` }}>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: '500', color: isDarkMode ? '#f9fafb' : '#111827' }}>
-                          {persona.name}
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <span style={{
-                            display: 'inline-flex',
-                            padding: '4px 12px',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            borderRadius: '12px',
-                            backgroundColor: '#dbeafe',
-                            color: '#1e40af'
-                          }}>
-                            {persona.userRole}
-                          </span>
-                        </td>
-                        <td style={{ 
-                          padding: '12px 16px', 
-                          fontSize: '14px', 
-                          color: isDarkMode ? '#f9fafb' : '#111827', 
-                          maxWidth: '200px', 
-                          overflow: 'hidden', 
-                          textOverflow: 'ellipsis', 
-                          whiteSpace: 'nowrap' 
-                        }}>
-                          {persona.targetAudience}
-                        </td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
-                          {persona.lastEditedAt}
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <button style={{ 
-                            color: '#3b82f6', 
-                            backgroundColor: 'transparent', 
-                            border: 'none', 
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: '500'
-                          }}>
-                            ✏️ Edit
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div style={{ display: 'grid', gap: '16px' }}>
+                {personas.map((persona) => (
+                  <div key={persona.id} style={{
+                    padding: '16px',
+                    border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                    borderRadius: '8px',
+                    backgroundColor: isDarkMode ? '#111827' : '#f9fafb'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'start' }}>
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ margin: '0 0 8px 0', fontWeight: '600', color: isDarkMode ? '#f9fafb' : '#111827' }}>
+                          {persona.name} - {persona.audienceSegment}
+                        </h4>
+                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
+                          Role: {persona.userRole}
+                        </p>
+                        <p style={{ margin: '0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
+                          {persona.description}
+                        </p>
+                      </div>
+                      <button style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        cursor: 'pointer'
+                      }}>
+                        Edit
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </div>
       )}
 
-      {activeTab === 'content' && (
-        <div style={{ display: 'grid', gap: '24px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
-            <div style={cardStyle}>
-              <div style={{
-                borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-                paddingBottom: '16px',
-                marginBottom: '20px'
-              }}>
-                <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Keyword Intelligence</h2>
-                <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-                  Multi-tag filtering and keyword tracking
-                </p>
-              </div>
-              <div style={{ display: 'grid', gap: '16px' }}>
-                <input 
-                  type="text"
-                  placeholder="Search keywords..." 
-                  style={inputStyle}
-                />
-                <select style={inputStyle}>
-                  <option value="">Filter by tags</option>
-                  <option value="seo">SEO</option>
-                  <option value="content">Content</option>
-                  <option value="social">Social Media</option>
-                </select>
-                <button 
-                  style={primaryButtonStyle}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#2563eb';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#3b82f6';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
-                  ➕ Add Keywords
-                </button>
-              </div>
+      {/* Tab 2: Keyword Intelligence */}
+      {activeTab === 'keywords' && (
+        <div style={cardStyle}>
+          <h2 style={sectionTitleStyle}>Keyword Intelligence</h2>
+          <div style={formGridStyle}>
+            <div>
+              <label style={labelStyle}>Keyword *</label>
+              <input 
+                type="text"
+                value={newKeyword.keyword}
+                onChange={(e) => setNewKeyword({...newKeyword, keyword: e.target.value})}
+                placeholder="Enter keyword"
+                style={inputStyle}
+              />
             </div>
-
-            <div style={cardStyle}>
-              <div style={{
-                borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-                paddingBottom: '16px',
-                marginBottom: '20px'
-              }}>
-                <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Channel Mapper</h2>
-                <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-                  Manage channel priorities and review logs
-                </p>
-              </div>
-              <div style={{ display: 'grid', gap: '16px' }}>
-                <input 
-                  type="text"
-                  placeholder="Channel name" 
-                  style={inputStyle}
-                />
-                <textarea 
-                  placeholder="Priority change log..." 
-                  rows={3}
-                  style={{ ...inputStyle, resize: 'vertical' }}
-                />
-                <input 
-                  type="date"
-                  placeholder="Last reviewed" 
-                  style={inputStyle}
-                />
-                <button 
-                  style={primaryButtonStyle}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#2563eb';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#3b82f6';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
-                  ➕ Add Channel
-                </button>
-              </div>
+            <div>
+              <label style={labelStyle}>Added By</label>
+              <input 
+                type="text"
+                value={newKeyword.addedBy}
+                onChange={(e) => setNewKeyword({...newKeyword, addedBy: e.target.value})}
+                placeholder="Your name"
+                style={inputStyle}
+              />
             </div>
           </div>
-
-          <div style={cardStyle}>
-            <div style={{
-              borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-              paddingBottom: '16px',
-              marginBottom: '20px'
-            }}>
-              <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Strategy Vault</h2>
-              <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-                Version-controlled content strategy with AI feedback
-              </p>
-            </div>
-            
-            <div style={formGridStyle}>
-              <div>
-                <label style={labelStyle}>Content Title</label>
-                <input 
-                  type="text"
-                  placeholder="Enter content title" 
-                  style={inputStyle}
-                />
+          <div style={{ marginTop: '20px', textAlign: 'right' }}>
+            <button 
+              onClick={addKeyword}
+              style={{
+                ...primaryButtonStyle,
+                opacity: newKeyword.keyword ? 1 : 0.5,
+                cursor: newKeyword.keyword ? 'pointer' : 'not-allowed'
+              }}
+            >
+              + Add Keyword
+            </button>
+          </div>
+          
+          {/* Display keywords */}
+          <div style={{ marginTop: '24px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
+              Keywords ({keywords.length})
+            </h3>
+            {keywords.length === 0 ? (
+              <div style={emptyStateStyle}>
+                <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
+                  No keywords added yet
+                </p>
               </div>
-              <div>
-                <label style={labelStyle}>Status</label>
-                <select style={inputStyle}>
-                  <option value="">Select status</option>
-                  <option value="pending">Pending</option>
-                  <option value="scheduled">Scheduled</option>
-                  <option value="deployed">Deployed</option>
-                  <option value="archived">Archived</option>
-                </select>
+            ) : (
+              <div style={{ display: 'grid', gap: '8px' }}>
+                {keywords.map((keyword) => (
+                  <div key={keyword.id} style={{
+                    padding: '12px',
+                    border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                    borderRadius: '6px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span style={{ fontWeight: '500' }}>{keyword.keyword}</span>
+                    <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                      {keyword.dateAdded} by {keyword.addedBy}
+                    </span>
+                  </div>
+                ))}
               </div>
-              <div>
-                <label style={labelStyle}>AI Suggestion Rating</label>
-                <select style={inputStyle}>
-                  <option value="">Rate AI suggestion</option>
-                  <option value="useful">Useful</option>
-                  <option value="neutral">Neutral</option>
-                  <option value="not-useful">Not Useful</option>
-                </select>
-              </div>
-            </div>
-            
-            <div style={{ marginTop: '20px', display: 'grid', gap: '16px' }}>
-              <div>
-                <label style={labelStyle}>Hashtags</label>
-                <textarea 
-                  placeholder="Enter hashtags" 
-                  rows={2}
-                  style={{ ...inputStyle, resize: 'vertical' }}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Tags</label>
-                <textarea 
-                  placeholder="Enter tags" 
-                  rows={2}
-                  style={{ ...inputStyle, resize: 'vertical' }}
-                />
-              </div>
-              
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button 
-                  style={{ ...secondaryButtonStyle, flex: 1 }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = isDarkMode ? '#4b5563' : '#e5e7eb';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f3f4f6';
-                  }}
-                >
-                  🔮 Generate Hashtags & Tags
-                </button>
-                <button 
-                  style={{ ...secondaryButtonStyle, flex: 1 }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = isDarkMode ? '#4b5563' : '#e5e7eb';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f3f4f6';
-                  }}
-                >
-                  📝 Insert Hashtags & Tags
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
 
-      {activeTab === 'research' && (
-        <div style={{ display: 'grid', gap: '24px' }}>
-          <div style={cardStyle}>
-            <h2 style={sectionTitleStyle}>Search Trends & Intent Summary</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-              {[
-                { value: '247', label: 'Keywords Tracked', color: '#3b82f6' },
-                { value: '18', label: 'Trends Flagged', color: '#10b981' },
-                { value: '68%', label: 'Commercial Intent', color: '#8b5cf6' }
-              ].map((stat, index) => (
-                <div key={index} style={statsCardStyle}>
-                  <div style={{ 
-                    fontSize: '24px', 
-                    fontWeight: 'bold', 
-                    color: stat.color, 
-                    marginBottom: '8px' 
+      {/* Tab 3: Channel Mapper */}
+      {activeTab === 'channels' && (
+        <div style={cardStyle}>
+          <h2 style={sectionTitleStyle}>Channel Mapper</h2>
+          <div style={formGridStyle}>
+            <div>
+              <label style={labelStyle}>Channel Name *</label>
+              <input 
+                type="text"
+                value={newChannel.channelName}
+                onChange={(e) => setNewChannel({...newChannel, channelName: e.target.value})}
+                placeholder="Enter channel name"
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Status</label>
+              <select 
+                value={newChannel.status}
+                onChange={(e) => setNewChannel({...newChannel, status: e.target.value})}
+                style={inputStyle}
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Pending">Pending</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ marginTop: '20px' }}>
+            <label style={labelStyle}>Priority Change Log</label>
+            <textarea 
+              value={newChannel.priorityChangeLog}
+              onChange={(e) => setNewChannel({...newChannel, priorityChangeLog: e.target.value})}
+              placeholder="Document priority changes and notes"
+              rows={3}
+              style={{ ...inputStyle, resize: 'vertical' }}
+            />
+          </div>
+          <div style={{ marginTop: '20px', textAlign: 'right' }}>
+            <button 
+              onClick={addChannel}
+              style={{
+                ...primaryButtonStyle,
+                opacity: newChannel.channelName ? 1 : 0.5,
+                cursor: newChannel.channelName ? 'pointer' : 'not-allowed'
+              }}
+            >
+              + Add Channel
+            </button>
+          </div>
+
+          {/* Display channels */}
+          <div style={{ marginTop: '24px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
+              Channels ({channels.length})
+            </h3>
+            {channels.length === 0 ? (
+              <div style={emptyStateStyle}>
+                <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
+                  No channels added yet
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {channels.map((channel) => (
+                  <div key={channel.id} style={{
+                    padding: '16px',
+                    border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                    borderRadius: '8px'
                   }}>
-                    {stat.value}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <h4 style={{ margin: '0', fontWeight: '600' }}>{channel.channelName}</h4>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        backgroundColor: channel.status === 'Active' ? '#d1fae5' : '#f3f4f6',
+                        color: channel.status === 'Active' ? '#065f46' : '#374151'
+                      }}>
+                        {channel.status}
+                      </span>
+                    </div>
+                    {channel.priorityChangeLog && (
+                      <p style={{ margin: '0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
+                        {channel.priorityChangeLog}
+                      </p>
+                    )}
                   </div>
-                  <div style={{ 
-                    fontSize: '12px', 
-                    color: isDarkMode ? '#9ca3af' : '#6b7280' 
-                  }}>
-                    {stat.label}
-                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 4: Search Trends & Intent */}
+      {activeTab === 'trends' && (
+        <div style={cardStyle}>
+          <h2 style={sectionTitleStyle}>Search Trends & Intent Summary</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            {[
+              { value: trends.tracked, label: 'Keywords Tracked', color: '#3b82f6' },
+              { value: trends.flagged, label: 'Trends Flagged', color: '#10b981' },
+              { value: `${trends.commercialIntent}%`, label: 'Commercial Intent', color: '#8b5cf6' }
+            ].map((stat, index) => (
+              <div key={index} style={statsCardStyle}>
+                <div style={{ 
+                  fontSize: '24px', 
+                  fontWeight: 'bold', 
+                  color: stat.color, 
+                  marginBottom: '8px' 
+                }}>
+                  {stat.value}
                 </div>
-              ))}
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: isDarkMode ? '#9ca3af' : '#6b7280' 
+                }}>
+                  {stat.label}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div style={{ marginTop: '24px', padding: '16px', backgroundColor: isDarkMode ? '#111827' : '#f9fafb', borderRadius: '8px' }}>
+            <p style={{ margin: '0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
+              This data is pulled from your connected tracking tools and updated automatically.
+              Connect additional tools in the Analytics & Insights panel to enhance trend detection.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 5: Strategy Vault */}
+      {activeTab === 'strategy' && (
+        <div style={cardStyle}>
+          <div style={{
+            borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+            paddingBottom: '16px',
+            marginBottom: '20px'
+          }}>
+            <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Strategy Vault</h2>
+            <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
+              Version-controlled content strategy with AI feedback and persona targeting
+            </p>
+          </div>
+          
+          <div style={formGridStyle}>
+            <div>
+              <label style={labelStyle}>Content Title *</label>
+              <input 
+                type="text"
+                value={newStrategy.contentTitle}
+                onChange={(e) => setNewStrategy({...newStrategy, contentTitle: e.target.value})}
+                placeholder="Enter content title" 
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Status</label>
+              <select 
+                value={newStrategy.status}
+                onChange={(e) => setNewStrategy({...newStrategy, status: e.target.value})}
+                style={inputStyle}
+              >
+                <option value="">Select status</option>
+                <option value="pending">Pending</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="deployed">Deployed</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>AI Suggestion Rating</label>
+              <select 
+                value={newStrategy.aiSuggestionRating}
+                onChange={(e) => setNewStrategy({...newStrategy, aiSuggestionRating: e.target.value})}
+                style={inputStyle}
+              >
+                <option value="">Rate AI suggestion</option>
+                <option value="useful">Useful</option>
+                <option value="neutral">Neutral</option>
+                <option value="not-useful">Not Useful</option>
+              </select>
             </div>
           </div>
 
+          <div style={{ marginTop: '20px' }}>
+            <PersonaAudienceSelect
+              personaValue={newStrategy.persona}
+              audienceValue={newStrategy.audienceSegment}
+              onPersonaChange={(value) => setNewStrategy({...newStrategy, persona: value})}
+              onAudienceChange={(value) => setNewStrategy({...newStrategy, audienceSegment: value})}
+            />
+          </div>
+          
+          <div style={{ marginTop: '20px', display: 'grid', gap: '16px' }}>
+            <div>
+              <label style={labelStyle}>Hashtags</label>
+              <textarea 
+                value={newStrategy.hashtags}
+                onChange={(e) => setNewStrategy({...newStrategy, hashtags: e.target.value})}
+                placeholder="Enter hashtags" 
+                rows={2}
+                style={{ ...inputStyle, resize: 'vertical' }}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Tags</label>
+              <textarea 
+                value={newStrategy.tags}
+                onChange={(e) => setNewStrategy({...newStrategy, tags: e.target.value})}
+                placeholder="Enter tags" 
+                rows={2}
+                style={{ ...inputStyle, resize: 'vertical' }}
+              />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={generateHashtagsAndTags}
+                style={{ ...secondaryButtonStyle, flex: 1 }}
+              >
+                Generate Hashtags & Tags
+              </button>
+              <button 
+                onClick={insertHashtagsAndTags}
+                style={{ ...secondaryButtonStyle, flex: 1 }}
+              >
+                Insert Hashtags & Tags
+              </button>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '24px', textAlign: 'right' }}>
+            <button 
+              onClick={addStrategy}
+              style={{
+                ...primaryButtonStyle,
+                opacity: newStrategy.contentTitle ? 1 : 0.5,
+                cursor: newStrategy.contentTitle ? 'pointer' : 'not-allowed'
+              }}
+            >
+              + Save Strategy
+            </button>
+          </div>
+
+          {/* Display strategies */}
+          <div style={{ marginTop: '24px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
+              Strategies ({strategies.length})
+            </h3>
+            {strategies.length === 0 ? (
+              <div style={emptyStateStyle}>
+                <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
+                  No strategies saved yet
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {strategies.map((strategy) => (
+                  <div key={strategy.id} style={{
+                    padding: '16px',
+                    border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                    borderRadius: '8px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                      <div>
+                        <h4 style={{ margin: '0 0 8px 0', fontWeight: '600' }}>{strategy.contentTitle}</h4>
+                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
+                          {strategy.persona} - {strategy.audienceSegment} | Status: {strategy.status}
+                        </p>
+                        {strategy.hashtags && (
+                          <p style={{ margin: '0', fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                            {strategy.hashtags}
+                          </p>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                        v{strategy.version}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 6: Intel Drop Zone */}
+      {activeTab === 'intel' && (
+        <div style={cardStyle}>
+          <div style={{
+            borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+            paddingBottom: '16px',
+            marginBottom: '20px'
+          }}>
+            <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Anica's Intel Drop Zone</h2>
+            <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
+              Raw input collection with audio support and persona targeting
+            </p>
+          </div>
+          
+          <div style={formGridStyle}>
+            <div>
+              <label style={labelStyle}>Priority Level</label>
+              <select 
+                value={newIntel.priorityLevel}
+                onChange={(e) => setNewIntel({...newIntel, priorityLevel: e.target.value})}
+                style={inputStyle}
+              >
+                <option value="">Select priority</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '20px' }}>
+            <PersonaAudienceSelect
+              personaValue={newIntel.persona}
+              audienceValue={newIntel.audienceSegment}
+              onPersonaChange={(value) => setNewIntel({...newIntel, persona: value})}
+              onAudienceChange={(value) => setNewIntel({...newIntel, audienceSegment: value})}
+            />
+          </div>
+          
+          <div style={{ marginTop: '20px' }}>
+            <label style={labelStyle}>Insight Entry *</label>
+            <textarea 
+              value={newIntel.insightEntry}
+              onChange={(e) => setNewIntel({...newIntel, insightEntry: e.target.value})}
+              placeholder="Enter intel or insights..." 
+              rows={4}
+              style={{ ...inputStyle, resize: 'vertical' }}
+            />
+          </div>
+          
+          <div style={{ marginTop: '20px' }}>
+            <label style={labelStyle}>Audio Upload</label>
+            <input 
+              type="file"
+              accept="audio/*"
+              onChange={handleAudioUpload}
+              style={{ ...inputStyle, padding: '8px' }}
+            />
+            {newIntel.audioFile && (
+              <p style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280', marginTop: '8px' }}>
+                Selected: {newIntel.audioFile.name}
+              </p>
+            )}
+          </div>
+          
+          <div style={{ marginTop: '24px', textAlign: 'right' }}>
+            <button 
+              onClick={addIntel}
+              style={{
+                ...primaryButtonStyle,
+                opacity: newIntel.insightEntry ? 1 : 0.5,
+                cursor: newIntel.insightEntry ? 'pointer' : 'not-allowed'
+              }}
+            >
+              Submit Intel
+            </button>
+          </div>
+
+          {/* Display intel entries */}
+          <div style={{ marginTop: '24px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
+              Intel Entries ({intelEntries.length})
+            </h3>
+            {intelEntries.length === 0 ? (
+              <div style={emptyStateStyle}>
+                <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
+                  No intel submitted yet
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {intelEntries.map((intel) => (
+                  <div key={intel.id} style={{
+                    padding: '16px',
+                    border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                    borderRadius: '8px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        backgroundColor: intel.priorityLevel === 'high' || intel.priorityLevel === 'urgent' ? '#fee2e2' : '#f3f4f6',
+                        color: intel.priorityLevel === 'high' || intel.priorityLevel === 'urgent' ? '#dc2626' : '#374151'
+                      }}>
+                        {intel.priorityLevel || 'Normal'} Priority
+                      </span>
+                      <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                        {intel.persona} - {intel.audienceSegment}
+                      </span>
+                    </div>
+                    <p style={{ margin: '0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
+                      {intel.insightEntry}
+                    </p>
+                    {intel.audioFile && (
+                      <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#3b82f6' }}>
+                        Audio attached: {intel.audioFile.name}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 7: Hashtags & Tags Manager */}
+      {activeTab === 'hashtags' && (
+        <div style={cardStyle}>
+          <div style={{
+            borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+            paddingBottom: '16px',
+            marginBottom: '20px'
+          }}>
+            <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Hashtag & Tags Manager</h2>
+            <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
+              Import and manage hashtags from various sources
+            </p>
+          </div>
+          
+          <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
+            <button 
+              onClick={importFromKeywordPlanner}
+              style={secondaryButtonStyle}
+            >
+              Import from Keyword Planner
+            </button>
+            <button 
+              onClick={importFromGSC}
+              style={secondaryButtonStyle}
+            >
+              Import from Google Search Console
+            </button>
+            <button 
+              onClick={importCSV}
+              style={secondaryButtonStyle}
+            >
+              Manual CSV Upload
+            </button>
+          </div>
+
+          <div style={emptyStateStyle}>
+            <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
+              No hashtags imported yet. Use the import buttons above to get started.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 8: Media Archives */}
+      {activeTab === 'archives' && (
+        <div style={cardStyle}>
+          <div style={{
+            borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+            paddingBottom: '16px',
+            marginBottom: '20px'
+          }}>
+            <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Caelum Archives</h2>
+            <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
+              Archived content with search and restore functionality
+            </p>
+          </div>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <input 
+              type="text"
+              placeholder="Search archived items..." 
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={emptyStateStyle}>
+            <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center', fontSize: '16px', margin: '0' }}>
+              No archived items yet
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 9: Analytics & Insights */}
+      {activeTab === 'analytics' && (
+        <div style={{ display: 'grid', gap: '24px' }}>
           <div style={cardStyle}>
             <div style={{
               borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
@@ -744,43 +1218,98 @@ const MarketingControlCenter = () => {
             }}>
               <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>SparkToro Research Board</h2>
               <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-                Upload and tag insights with multi-persona support
+                Upload and tag insights with persona targeting
               </p>
             </div>
+            
             <div style={formGridStyle}>
               <div>
-                <label style={labelStyle}>Assign to Personas</label>
-                <select style={inputStyle}>
-                  <option value="">Select personas</option>
-                  <option value="persona1">Marketing Manager</option>
-                  <option value="persona2">Content Creator</option>
-                  <option value="persona3">Data Analyst</option>
-                </select>
-              </div>
-              <div>
                 <label style={labelStyle}>Review Status</label>
-                <select style={inputStyle}>
-                  <option value="">Select status</option>
+                <select 
+                  value={newResearchInsight.reviewStatus}
+                  onChange={(e) => setNewResearchInsight({...newResearchInsight, reviewStatus: e.target.value})}
+                  style={inputStyle}
+                >
                   <option value="new">New</option>
                   <option value="in-review">In Review</option>
                   <option value="archived">Archived</option>
                 </select>
               </div>
             </div>
+
+            <div style={{ marginTop: '20px' }}>
+              <PersonaAudienceSelect
+                personaValue={newResearchInsight.persona}
+                audienceValue={newResearchInsight.audienceSegment}
+                onPersonaChange={(value) => setNewResearchInsight({...newResearchInsight, persona: value})}
+                onAudienceChange={(value) => setNewResearchInsight({...newResearchInsight, audienceSegment: value})}
+              />
+            </div>
+            
+            <div style={{ marginTop: '20px' }}>
+              <label style={labelStyle}>Insight *</label>
+              <textarea 
+                value={newResearchInsight.insight}
+                onChange={(e) => setNewResearchInsight({...newResearchInsight, insight: e.target.value})}
+                placeholder="Enter research insight or finding..." 
+                rows={4}
+                style={{ ...inputStyle, resize: 'vertical' }}
+              />
+            </div>
+            
             <div style={{ marginTop: '20px', textAlign: 'right' }}>
               <button 
-                style={primaryButtonStyle}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#2563eb';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = '#3b82f6';
-                  e.currentTarget.style.transform = 'translateY(0)';
+                onClick={addResearchInsight}
+                style={{
+                  ...primaryButtonStyle,
+                  opacity: newResearchInsight.insight ? 1 : 0.5,
+                  cursor: newResearchInsight.insight ? 'pointer' : 'not-allowed'
                 }}
               >
-                📤 Upload Insight
+                Upload Insight
               </button>
+            </div>
+
+            {/* Display research insights */}
+            <div style={{ marginTop: '24px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
+                Research Insights ({researchInsights.length})
+              </h3>
+              {researchInsights.length === 0 ? (
+                <div style={emptyStateStyle}>
+                  <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
+                    No research insights uploaded yet
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {researchInsights.map((insight) => (
+                    <div key={insight.id} style={{
+                      padding: '16px',
+                      border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                      borderRadius: '8px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          backgroundColor: insight.reviewStatus === 'new' ? '#dbeafe' : '#f3f4f6',
+                          color: insight.reviewStatus === 'new' ? '#1e40af' : '#374151'
+                        }}>
+                          {insight.reviewStatus}
+                        </span>
+                        <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                          {insight.persona} - {insight.audienceSegment}
+                        </span>
+                      </div>
+                      <p style={{ margin: '0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
+                        {insight.insight}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -815,11 +1344,11 @@ const MarketingControlCenter = () => {
                   style={inputStyle}
                 />
                 <select 
-                  value={newTool.type} 
-                  onChange={(e) => setNewTool({...newTool, type: e.target.value})}
+                  value={newTool.category} 
+                  onChange={(e) => setNewTool({...newTool, category: e.target.value})}
                   style={inputStyle}
                 >
-                  <option value="">Select type</option>
+                  <option value="">Select category</option>
                   <option value="SEO">SEO</option>
                   <option value="Social Media">Social Media</option>
                   <option value="Audience Research">Audience Research</option>
@@ -832,9 +1361,9 @@ const MarketingControlCenter = () => {
               <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                 <input 
                   type="text"
-                  placeholder="Access URL or method"
-                  value={newTool.link}
-                  onChange={(e) => setNewTool({...newTool, link: e.target.value})}
+                  placeholder="Tool URL"
+                  value={newTool.url}
+                  onChange={(e) => setNewTool({...newTool, url: e.target.value})}
                   style={inputStyle}
                 />
                 <select 
@@ -862,23 +1391,11 @@ const MarketingControlCenter = () => {
                   onClick={addAnalyticsTool}
                   style={{
                     ...primaryButtonStyle,
-                    opacity: newTool.name && newTool.type ? 1 : 0.5,
-                    cursor: newTool.name && newTool.type ? 'pointer' : 'not-allowed'
-                  }}
-                  onMouseOver={(e) => {
-                    if (newTool.name && newTool.type) {
-                      e.currentTarget.style.backgroundColor = '#2563eb';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    if (newTool.name && newTool.type) {
-                      e.currentTarget.style.backgroundColor = '#3b82f6';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }
+                    opacity: newTool.name && newTool.category ? 1 : 0.5,
+                    cursor: newTool.name && newTool.category ? 'pointer' : 'not-allowed'
                   }}
                 >
-                  ➕ Add Tool
+                  + Add Tool
                 </button>
               </div>
             </div>
@@ -887,7 +1404,7 @@ const MarketingControlCenter = () => {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead style={{ backgroundColor: isDarkMode ? '#111827' : '#f9fafb' }}>
                   <tr>
-                    {['Tool Name', 'Type', 'Status', 'Access', 'Actions'].map((header) => (
+                    {['Tool Name', 'Category', 'Status', 'Access'].map((header) => (
                       <th key={header} style={{ 
                         padding: '12px 16px', 
                         textAlign: 'left', 
@@ -919,7 +1436,7 @@ const MarketingControlCenter = () => {
                         fontSize: '14px', 
                         color: isDarkMode ? '#d1d5db' : '#6b7280' 
                       }}>
-                        {tool.type}
+                        {tool.category}
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{
@@ -935,169 +1452,21 @@ const MarketingControlCenter = () => {
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
-                        {tool.link && (
+                        {tool.url && (
                           <a 
-                            href={tool.link} 
+                            href={tool.url} 
                             target="_blank" 
                             rel="noopener noreferrer" 
-                            style={{ color: '#3b82f6', textDecoration: 'none', fontSize: '16px' }}
+                            style={{ color: '#3b82f6', textDecoration: 'none' }}
                           >
-                            🔗
+                            Open Tool
                           </a>
                         )}
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button 
-                            onClick={() => toggleToolStatus(tool.id)}
-                            style={{ 
-                              color: '#3b82f6', 
-                              backgroundColor: 'transparent', 
-                              border: 'none', 
-                              cursor: 'pointer',
-                              fontSize: '16px'
-                            }}
-                            title={tool.status === 'Active' ? 'Deactivate' : 'Activate'}
-                          >
-                            {tool.status === 'Active' ? '🔀' : '🔄'}
-                          </button>
-                          <button 
-                            onClick={() => removeTool(tool.id)}
-                            style={{ 
-                              color: '#ef4444', 
-                              backgroundColor: 'transparent', 
-                              border: 'none', 
-                              cursor: 'pointer',
-                              fontSize: '16px'
-                            }}
-                            title="Delete tool"
-                          >
-                            🗑️
-                          </button>
-                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'tools' && (
-        <div style={{ display: 'grid', gap: '24px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
-            <div style={cardStyle}>
-              <div style={{
-                borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-                paddingBottom: '16px',
-                marginBottom: '20px'
-              }}>
-                <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Anica's Intel Drop Zone</h2>
-                <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-                  Raw input collection with audio support
-                </p>
-              </div>
-              <div style={{ display: 'grid', gap: '16px' }}>
-                <div>
-                  <label style={labelStyle}>Priority Level</label>
-                  <select style={inputStyle}>
-                    <option value="">Select priority</option>
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-                <textarea 
-                  placeholder="Enter intel or insights..." 
-                  rows={4}
-                  style={{ ...inputStyle, resize: 'vertical' }}
-                />
-                <button 
-                  style={secondaryButtonStyle}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = isDarkMode ? '#4b5563' : '#e5e7eb';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f3f4f6';
-                  }}
-                >
-                  📤 Attach Audio File
-                </button>
-                <button 
-                  style={primaryButtonStyle}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#2563eb';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#3b82f6';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
-                  Submit Intel
-                </button>
-              </div>
-            </div>
-
-            <div style={cardStyle}>
-              <div style={{
-                borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-                paddingBottom: '16px',
-                marginBottom: '20px'
-              }}>
-                <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>External Tools Panel</h2>
-                <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-                  Import data from external sources
-                </p>
-              </div>
-              <div style={{ display: 'grid', gap: '12px' }}>
-                {[
-                  '📤 Import from Keyword Planner',
-                  '📤 Import from GSC',
-                  '📤 Manual CSV Upload'
-                ].map((label, index) => (
-                  <button 
-                    key={index}
-                    style={secondaryButtonStyle}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? '#4b5563' : '#e5e7eb';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f3f4f6';
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div style={cardStyle}>
-            <div style={{
-              borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-              paddingBottom: '16px',
-              marginBottom: '20px'
-            }}>
-              <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Caelum Archives</h2>
-              <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-                Archived items with restore functionality
-              </p>
-            </div>
-            <div style={{ display: 'grid', gap: '16px' }}>
-              <input 
-                type="text"
-                placeholder="Search archived items..." 
-                style={inputStyle}
-              />
-              <div style={emptyStateStyle}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📦</div>
-                <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center', fontSize: '16px', margin: '0' }}>
-                  No archived items yet
-                </p>
-              </div>
             </div>
           </div>
         </div>
