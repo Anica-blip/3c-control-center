@@ -256,7 +256,8 @@ export const keywordsAPI = {
       console.error('Keyword existence check failed:', error);
       throw error;
     }
-  },
+  }
+};
 
 // Tags API Functions
 export const tagsAPI = {
