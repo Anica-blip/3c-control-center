@@ -93,6 +93,168 @@ export const personasAPI = {
       throw error;
     }
   }
+
+// Keywords API functions for Supabase integration
+// Add these functions to your existing supabase/config.js file
+// Import: import { supabase } from './supabase-client';
+
+export const keywordsAPI = {
+  
+  // Fetch all active keywords
+  async fetchKeywords() {
+    try {
+      const { data, error } = await supabase
+        .from('keywords')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching keywords:', error);
+        throw new Error(error.message);
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Keywords fetch failed:', error);
+      throw error;
+    }
+  },
+
+  // Insert new keyword
+  async insertKeyword(keywordData) {
+    try {
+      // Validate required fields
+      if (!keywordData.keyword || keywordData.keyword.trim() === '') {
+        throw new Error('Keyword is required');
+      }
+
+      const insertData = {
+        keyword: keywordData.keyword.trim(),
+        added_by: keywordData.addedBy?.trim() || null,
+        date_added: keywordData.dateAdded || new Date().toISOString().split('T')[0]
+      };
+
+      const { data, error } = await supabase
+        .from('keywords')
+        .insert([insertData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error inserting keyword:', error);
+        throw new Error(error.message);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Keyword insert failed:', error);
+      throw error;
+    }
+  },
+
+  // Update existing keyword
+  async updateKeyword(id, keywordData) {
+    try {
+      if (!id) {
+        throw new Error('Keyword ID is required for update');
+      }
+
+      if (!keywordData.keyword || keywordData.keyword.trim() === '') {
+        throw new Error('Keyword is required');
+      }
+
+      const updateData = {
+        keyword: keywordData.keyword.trim(),
+        added_by: keywordData.addedBy?.trim() || null,
+        date_added: keywordData.dateAdded || new Date().toISOString().split('T')[0],
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('keywords')
+        .update(updateData)
+        .eq('id', id)
+        .eq('is_active', true)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating keyword:', error);
+        throw new Error(error.message);
+      }
+
+      if (!data) {
+        throw new Error('Keyword not found or already deleted');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Keyword update failed:', error);
+      throw error;
+    }
+  },
+
+  // Soft delete keyword
+  async deleteKeyword(id) {
+    try {
+      if (!id) {
+        throw new Error('Keyword ID is required for deletion');
+      }
+
+      const { data, error } = await supabase
+        .from('keywords')
+        .update({ 
+          is_active: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('is_active', true)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error deleting keyword:', error);
+        throw new Error(error.message);
+      }
+
+      if (!data) {
+        throw new Error('Keyword not found or already deleted');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Keyword deletion failed:', error);
+      throw error;
+    }
+  },
+
+  // Check if keyword already exists (for validation)
+  async keywordExists(keyword, excludeId = null) {
+    try {
+      let query = supabase
+        .from('keywords')
+        .select('id')
+        .eq('keyword', keyword.trim())
+        .eq('is_active', true);
+
+      if (excludeId) {
+        query = query.neq('id', excludeId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error checking keyword existence:', error);
+        throw new Error(error.message);
+      }
+
+      return data && data.length > 0;
+    } catch (error) {
+      console.error('Keyword existence check failed:', error);
+      throw error;
+    }
+  }
 };
 
 export default supabase;
