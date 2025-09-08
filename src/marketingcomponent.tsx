@@ -35,7 +35,8 @@ const MarketingComponent = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [editingPersona, setEditingPersona] = useState(null);
-  
+  const [editingKeyword, setEditingKeyword] = useState(null);
+
   const [analyticsTools, setAnalyticsTools] = useState([
     {
       id: 1,
