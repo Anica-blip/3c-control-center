@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { personasAPI, keywordsAPI, tagsAPI } from '../supabase/config';
+import { personasAPI, keywordsAPI, tagsAPI, intelAPI } from '../supabase/config';
 
 // Import Inter font
 const fontStyle = {
@@ -36,11 +36,14 @@ const MarketingComponent = () => {
   const [loading, setLoading] = useState(false);
   const [keywordsLoading, setKeywordsLoading] = useState(false);
   const [tagsLoading, setTagsLoading] = useState(false);
+  const [intelLoading, setIntelLoading] = useState(false);
   const [error, setError] = useState(null);
   const [editingPersona, setEditingPersona] = useState(null);
   const [editingKeyword, setEditingKeyword] = useState(null);
   const [editingTag, setEditingTag] = useState(null);
+  const [editingIntel, setEditingIntel] = useState(null);
   const [csvUploading, setCsvUploading] = useState(false);
+  const [audioUploading, setAudioUploading] = useState(false);
   
   const [analyticsTools, setAnalyticsTools] = useState([
     {
@@ -121,6 +124,8 @@ const MarketingComponent = () => {
     priorityLevel: '',
     insightEntry: '',
     audioFile: null,
+    audioFileUrl: '',
+    audioFilename: '',
     persona: '',
     audienceSegment: ''
   });
@@ -141,11 +146,12 @@ const MarketingComponent = () => {
     notes: ''
   });
 
-  // Load personas, keywords, and tags on component mount
+  // Load personas, keywords, tags, and intel on component mount
   useEffect(() => {
     loadPersonas();
     loadKeywords();
     loadTags();
+    loadIntel();
   }, []);
 
   const loadPersonas = async () => {
@@ -184,6 +190,19 @@ const MarketingComponent = () => {
       setError('Failed to load tags: ' + err.message);
     } finally {
       setTagsLoading(false);
+    }
+  };
+
+  const loadIntel = async () => {
+    try {
+      setIntelLoading(true);
+      setError(null);
+      const data = await intelAPI.fetchIntel();
+      setIntelEntries(data);
+    } catch (err) {
+      setError('Failed to load intel entries: ' + err.message);
+    } finally {
+      setIntelLoading(false);
     }
   };
 
@@ -653,6 +672,132 @@ const MarketingComponent = () => {
     setError(null);
   };
 
+  // Intel CRUD Functions
+  const addIntel = async () => {
+    if (!newIntel.insightEntry.trim()) {
+      setError('Insight entry is required');
+      return;
+    }
+
+    try {
+      setIntelLoading(true);
+      setError(null);
+      
+      let audioFileUrl = '';
+      let audioFilename = '';
+      
+      // Handle audio file upload if present
+      if (newIntel.audioFile) {
+        setAudioUploading(true);
+        const timestamp = Date.now();
+        const fileName = `intel_${timestamp}_${newIntel.audioFile.name}`;
+        
+        const uploadResult = await intelAPI.uploadAudioFile(newIntel.audioFile, fileName);
+        audioFileUrl = uploadResult.publicUrl;
+        audioFilename = newIntel.audioFile.name;
+      }
+      
+      const intelData = {
+        priorityLevel: newIntel.priorityLevel,
+        insightEntry: newIntel.insightEntry.trim(),
+        persona: newIntel.persona,
+        audienceSegment: newIntel.audienceSegment,
+        audioFileUrl,
+        audioFilename
+      };
+      
+      const data = await intelAPI.insertIntel(intelData);
+      setIntelEntries(prevEntries => [data, ...prevEntries]);
+      resetIntelForm();
+    } catch (err) {
+      setError('Failed to add intel entry: ' + err.message);
+    } finally {
+      setIntelLoading(false);
+      setAudioUploading(false);
+    }
+  };
+
+  const editIntel = (intel) => {
+    setEditingIntel(intel);
+    setNewIntel({
+      priorityLevel: intel.priority_level || '',
+      insightEntry: intel.insight_entry || '',
+      persona: intel.persona || '',
+      audienceSegment: intel.audience_segment || '',
+      audioFile: null,
+      audioFileUrl: intel.audio_file_url || '',
+      audioFilename: intel.audio_filename || ''
+    });
+  };
+
+  const updateIntel = async () => {
+    if (!editingIntel || !newIntel.insightEntry.trim()) {
+      setError('Insight entry is required');
+      return;
+    }
+
+    try {
+      setIntelLoading(true);
+      setError(null);
+      
+      let audioFileUrl = newIntel.audioFileUrl;
+      let audioFilename = newIntel.audioFilename;
+      
+      // Handle new audio file upload if present
+      if (newIntel.audioFile) {
+        setAudioUploading(true);
+        const timestamp = Date.now();
+        const fileName = `intel_${timestamp}_${newIntel.audioFile.name}`;
+        
+        const uploadResult = await intelAPI.uploadAudioFile(newIntel.audioFile, fileName);
+        audioFileUrl = uploadResult.publicUrl;
+        audioFilename = newIntel.audioFile.name;
+      }
+      
+      const intelData = {
+        priorityLevel: newIntel.priorityLevel,
+        insightEntry: newIntel.insightEntry.trim(),
+        persona: newIntel.persona,
+        audienceSegment: newIntel.audienceSegment,
+        audioFileUrl,
+        audioFilename
+      };
+      
+      const updatedData = await intelAPI.updateIntel(editingIntel.id, intelData);
+      setIntelEntries(prevEntries => 
+        prevEntries.map(entry => entry.id === editingIntel.id ? updatedData : entry)
+      );
+      resetIntelForm();
+      setEditingIntel(null);
+    } catch (err) {
+      setError('Failed to update intel entry: ' + err.message);
+    } finally {
+      setIntelLoading(false);
+      setAudioUploading(false);
+    }
+  };
+
+  const deleteIntel = async (id) => {
+    if (!confirm('Are you sure you want to delete this intel entry?')) return;
+
+    try {
+      setIntelLoading(true);
+      setError(null);
+      await intelAPI.deleteIntel(id);
+      setIntelEntries(prevEntries => prevEntries.filter(entry => entry.id !== id));
+    } catch (err) {
+      setError('Failed to delete intel entry: ' + err.message);
+    } finally {
+      setIntelLoading(false);
+    }
+  };
+
+  const cancelIntelEdit = () => {
+    setEditingIntel(null);
+    resetIntelForm();
+    setError(null);
+  };
+
   // CSV Import Functions - Enhanced with Google integrations
   const handleCSVUpload = async (event) => {
     const file = event.target.files[0];
@@ -904,18 +1049,6 @@ const MarketingComponent = () => {
     }
   };
 
-  const addIntel = () => {
-    if (newIntel.insightEntry) {
-      const intel = {
-        id: Date.now(),
-        ...newIntel,
-        submittedAt: new Date().toISOString()
-      };
-      setIntelEntries([...intelEntries, intel]);
-      resetIntelForm();
-    }
-  };
-
   const addResearchInsight = () => {
     if (newResearchInsight.insight) {
       const insight = {
@@ -1026,6 +1159,8 @@ const MarketingComponent = () => {
       priorityLevel: '',
       insightEntry: '',
       audioFile: null,
+      audioFileUrl: '',
+      audioFilename: '',
       persona: '',
       audienceSegment: ''
     });
@@ -1063,7 +1198,23 @@ const MarketingComponent = () => {
   const handleAudioUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
+      // Validate file type
+      const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/ogg', 'audio/webm', 'audio/flac'];
+      if (!allowedTypes.includes(file.type) && !file.name.toLowerCase().match(/\.(mp3|wav|m4a|aac|ogg|webm|flac)$/)) {
+        setError('Please upload a valid audio file (MP3, WAV, M4A, AAC, OGG, WebM, FLAC)');
+        event.target.value = '';
+        return;
+      }
+      
+      // Validate file size (50MB limit)
+      if (file.size > 52428800) {
+        setError('Audio file must be less than 50MB');
+        event.target.value = '';
+        return;
+      }
+      
       setNewIntel({...newIntel, audioFile: file});
+      setError(null);
     }
   };
 
@@ -1309,7 +1460,7 @@ const MarketingComponent = () => {
                           </p>
                         )}
                         <p style={{ margin: '0', fontSize: '12px', color: '#9ca3af' }}>
-                          Last edited by: {persona.last_edited_by || 'Unknown'} • 
+                          Last edited by: {persona.last_edited_by || 'Unknown'} •
                           Created: {new Date(persona.created_at).toLocaleDateString()}
                         </p>
                       </div>
@@ -1730,7 +1881,6 @@ const MarketingComponent = () => {
         </div>
       )}
 
-      {/* All other tabs remain exactly as they were in your working version */}
       {/* Tab 3: Strategy Vault */}
       {activeTab === 'strategy' && (
         <div style={cardStyle}>
@@ -1922,8 +2072,7 @@ const MarketingComponent = () => {
         </div>
       )}
 
-      {/* Continue with remaining tabs exactly as in your working version... */}
-      {/* All other tabs remain the same */}
+      {/* Tab 4: Channel Mapper */}
       {activeTab === 'channels' && (
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>Channel Mapper</h2>
@@ -2076,14 +2225,18 @@ const MarketingComponent = () => {
       {/* Tab 6: Intel Drop Zone */}
       {activeTab === 'intel' && (
         <div style={cardStyle}>
+          <ErrorAlert message={error} onClose={() => setError(null)} />
+          
           <div style={{
             borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
             paddingBottom: '16px',
             marginBottom: '20px'
           }}>
-            <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Anica's Intel Drop Zone</h2>
+            <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>
+              {editingIntel ? 'Edit Intel Entry' : 'Anica\'s Intel Drop Zone'}
+            </h2>
             <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-              Raw input collection with audio support and persona targeting
+              {editingIntel ? 'Update intel entry details' : 'Raw input collection with audio support and persona targeting'}
             </p>
           </div>
           
@@ -2145,27 +2298,54 @@ const MarketingComponent = () => {
             <label style={labelStyle}>Audio Upload</label>
             <input 
               type="file"
-              accept="audio/*"
+              accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.webm,.flac"
               onChange={handleAudioUpload}
               style={{ ...inputStyle, padding: '8px', width: '100%' }}
+              disabled={audioUploading}
             />
-            {newIntel.audioFile && (
-              <p style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280', marginTop: '8px' }}>
-                Selected: {newIntel.audioFile.name}
+            {audioUploading && (
+              <p style={{ fontSize: '12px', color: '#3b82f6', marginTop: '8px' }}>
+                Uploading audio file...
               </p>
+            )}
+            {(newIntel.audioFile || newIntel.audioFilename) && (
+              <div style={{ marginTop: '8px' }}>
+                <p style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                  Selected: {newIntel.audioFile ? newIntel.audioFile.name : newIntel.audioFilename}
+                </p>
+                {newIntel.audioFileUrl && (
+                  <audio controls style={{ width: '100%', marginTop: '8px' }}>
+                    <source src={newIntel.audioFileUrl} type="audio/mpeg" />
+                    Your browser does not support the audio element.
+                  </audio>
+                )}
+              </div>
             )}
           </div>
           
-          <div style={{ marginTop: '24px', textAlign: 'right' }}>
+          <div style={{ marginTop: '24px', textAlign: 'right', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            {editingIntel && (
+              <button 
+                onClick={cancelIntelEdit} 
+                style={secondaryButtonStyle}
+                disabled={intelLoading || audioUploading}
+              >
+                Cancel
+              </button>
+            )}
             <button 
-              onClick={addIntel}
+              onClick={editingIntel ? updateIntel : addIntel}
               style={{
                 ...primaryButtonStyle,
-                opacity: newIntel.insightEntry ? 1 : 0.5,
-                cursor: newIntel.insightEntry ? 'pointer' : 'not-allowed'
+                opacity: (newIntel.insightEntry.trim() && !intelLoading && !audioUploading) ? 1 : 0.5,
+                cursor: (newIntel.insightEntry.trim() && !intelLoading && !audioUploading) ? 'pointer' : 'not-allowed'
               }}
+              disabled={!newIntel.insightEntry.trim() || intelLoading || audioUploading}
             >
-              Submit Intel
+              {intelLoading || audioUploading ? 
+                (audioUploading ? 'Uploading Audio...' : 'Saving...') : 
+                (editingIntel ? 'Update Intel' : 'Submit Intel')
+              }
             </button>
           </div>
 
@@ -2174,7 +2354,11 @@ const MarketingComponent = () => {
             <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
               Intel Entries ({intelEntries.length})
             </h3>
-            {intelEntries.length === 0 ? (
+            {intelLoading && intelEntries.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                Loading intel entries...
+              </div>
+            ) : intelEntries.length === 0 ? (
               <div style={emptyStateStyle}>
                 <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
                   No intel submitted yet
@@ -2186,30 +2370,72 @@ const MarketingComponent = () => {
                   <div key={intel.id} style={{
                     padding: '16px',
                     border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-                    borderRadius: '8px'
+                    borderRadius: '8px',
+                    backgroundColor: isDarkMode ? '#374151' : '#ffffff'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        backgroundColor: intel.priorityLevel === 'high' || intel.priorityLevel === 'urgent' ? '#fee2e2' : '#f3f4f6',
-                        color: intel.priorityLevel === 'high' || intel.priorityLevel === 'urgent' ? '#dc2626' : '#374151'
-                      }}>
-                        {intel.priorityLevel || 'Normal'} Priority
-                      </span>
-                      <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
-                        {intel.persona} - {intel.audienceSegment}
-                      </span>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          backgroundColor: 
+                            intel.priority_level === 'high' || intel.priority_level === 'urgent' ? '#fee2e2' : 
+                            intel.priority_level === 'medium' ? '#fef3c7' : '#f3f4f6',
+                          color: 
+                            intel.priority_level === 'high' || intel.priority_level === 'urgent' ? '#dc2626' : 
+                            intel.priority_level === 'medium' ? '#d97706' : '#374151'
+                        }}>
+                          {intel.priority_level || 'Normal'} Priority
+                        </span>
+                        {intel.persona && intel.audience_segment && (
+                          <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                            {intel.persona} - {AUDIENCE_OPTIONS.find(opt => opt.value === intel.audience_segment)?.label || intel.audience_segment}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={() => editIntel(intel)}
+                          style={{
+                            ...smallButtonStyle,
+                            backgroundColor: '#3b82f6',
+                            color: 'white'
+                          }}
+                          disabled={intelLoading}
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => deleteIntel(intel.id)}
+                          style={{
+                            ...smallButtonStyle,
+                            backgroundColor: '#dc2626',
+                            color: 'white'
+                          }}
+                          disabled={intelLoading}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
-                    <p style={{ margin: '0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
-                      {intel.insightEntry}
+                    <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
+                      {intel.insight_entry}
                     </p>
-                    {intel.audioFile && (
-                      <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#3b82f6' }}>
-                        Audio attached: {intel.audioFile.name}
-                      </p>
+                    {intel.audio_file_url && (
+                      <div style={{ marginTop: '12px' }}>
+                        <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#3b82f6' }}>
+                          Audio: {intel.audio_filename}
+                        </p>
+                        <audio controls style={{ width: '100%' }}>
+                          <source src={intel.audio_file_url} type="audio/mpeg" />
+                          Your browser does not support the audio element.
+                        </audio>
+                      </div>
                     )}
+                    <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                      Submitted: {new Date(intel.created_at).toLocaleDateString()} at {new Date(intel.created_at).toLocaleTimeString()}
+                    </p>
                   </div>
                 ))}
               </div>
