@@ -35,8 +35,7 @@ const MarketingComponent = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [editingPersona, setEditingPersona] = useState(null);
-  const [editingKeyword, setEditingKeyword] = useState(null);
-
+  
   const [analyticsTools, setAnalyticsTools] = useState([
     {
       id: 1,
@@ -129,9 +128,10 @@ const MarketingComponent = () => {
     notes: ''
   });
 
-  // Load personas on component mount
+  // Load personas and keywords on component mount
   useEffect(() => {
     loadPersonas();
+    loadKeywords();
   }, []);
 
   const loadPersonas = async () => {
