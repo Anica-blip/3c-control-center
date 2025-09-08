@@ -1075,22 +1075,12 @@ const MarketingComponent = () => {
         <select 
           value={personaValue} 
           onChange={(e) => onPersonaChange(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '12px 16px',
-            border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
-            borderRadius: '8px',
-            fontSize: '14px',
-            backgroundColor: '#334155',
-            color: '#ffffff',
-            outline: 'none',
-            fontFamily: 'inherit'
-          }}
+          style={selectStyle}
           required={required}
         >
-          <option value="" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Select persona</option>
+          <option value="">Select persona</option>
           {PERSONA_OPTIONS.map(persona => (
-            <option key={persona} value={persona} style={{ backgroundColor: '#334155', color: '#ffffff' }}>{persona}</option>
+            <option key={persona} value={persona}>{persona}</option>
           ))}
         </select>
       </div>
@@ -1099,22 +1089,12 @@ const MarketingComponent = () => {
         <select 
           value={audienceValue} 
           onChange={(e) => onAudienceChange(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '12px 16px',
-            border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
-            borderRadius: '8px',
-            fontSize: '14px',
-            backgroundColor: '#334155',
-            color: '#ffffff',
-            outline: 'none',
-            fontFamily: 'inherit'
-          }}
+          style={selectStyle}
           required={required}
         >
-          <option value="" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Select audience</option>
+          <option value="">Select audience</option>
           {AUDIENCE_OPTIONS.map(audience => (
-            <option key={audience.value} value={audience.value} style={{ backgroundColor: '#334155', color: '#ffffff' }}>{audience.label}</option>
+            <option key={audience.value} value={audience.value}>{audience.label}</option>
           ))}
         </select>
       </div>
@@ -1291,25 +1271,25 @@ const MarketingComponent = () => {
                     padding: '16px',
                     border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
                     borderRadius: '8px',
-                    backgroundColor: '#334155'
+                    backgroundColor: isDarkMode ? '#374151' : '#ffffff'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                       <div style={{ flex: 1 }}>
-                        <h4 style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#ffffff' }}>
+                        <h4 style={{ margin: '0 0 8px 0', fontWeight: '600', color: isDarkMode ? '#ffffff' : '#111827' }}>
                           {persona.name} - {AUDIENCE_OPTIONS.find(opt => opt.value === persona.audience_segment)?.label || persona.audience_segment}
                         </h4>
-                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#d1d5db' }}>
+                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
                           Role: {persona.user_role || 'Not specified'}
                         </p>
-                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#d1d5db' }}>
+                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
                           {persona.description || 'No description provided'}
                         </p>
                         {persona.key_messages && (
-                          <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#9ca3af' }}>
+                          <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
                             Key Messages: {persona.key_messages}
                           </p>
                         )}
-                        <p style={{ margin: '0', fontSize: '12px', color: '#9ca3af' }}>
+                        <p style={{ margin: '0', fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
                           Last edited by: {persona.last_edited_by || 'Unknown'} • 
                           Created: {new Date(persona.created_at).toLocaleDateString()}
                         </p>
@@ -1506,342 +1486,12 @@ const MarketingComponent = () => {
                 <select 
                   value={newTag.category}
                   onChange={(e) => setNewTag({...newTag, category: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    backgroundColor: '#334155',
-                    color: '#ffffff',
-                    outline: 'none',
-                    transition: 'border-color 0.2s ease',
-                    fontFamily: 'inherit',
-                    appearance: 'none',
-                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
-                    backgroundPosition: 'right 12px center',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundSize: '16px',
-                    paddingRight: '48px'
-                  }}
+                  style={selectStyle}
                 >
-                  <option value="new" style={{ backgroundColor: '#334155', color: '#ffffff' }}>New</option>
-                  <option value="in-review" style={{ backgroundColor: '#334155', color: '#ffffff' }}>In Review</option>
-                  <option value="archived" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Archived</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={{ marginTop: '20px' }}>
-              <PersonaAudienceSelect
-                personaValue={newResearchInsight.persona}
-                audienceValue={newResearchInsight.audienceSegment}
-                onPersonaChange={(value) => setNewResearchInsight({...newResearchInsight, persona: value})}
-                onAudienceChange={(value) => setNewResearchInsight({...newResearchInsight, audienceSegment: value})}
-              />
-            </div>
-            
-            <div style={{ marginTop: '20px' }}>
-              <label style={labelStyle}>Insight *</label>
-              <textarea 
-                value={newResearchInsight.insight}
-                onChange={(e) => setNewResearchInsight({...newResearchInsight, insight: e.target.value})}
-                placeholder="Enter research insight or finding..." 
-                rows={4}
-                style={textareaStyle}
-              />
-            </div>
-            
-            <div style={{ marginTop: '20px', textAlign: 'right' }}>
-              <button 
-                onClick={addResearchInsight}
-                style={{
-                  ...primaryButtonStyle,
-                  opacity: newResearchInsight.insight ? 1 : 0.5,
-                  cursor: newResearchInsight.insight ? 'pointer' : 'not-allowed'
-                }}
-              >
-                Upload Insight
-              </button>
-            </div>
-
-            {/* Display research insights */}
-            <div style={{ marginTop: '24px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-                Research Insights ({researchInsights.length})
-              </h3>
-              {researchInsights.length === 0 ? (
-                <div style={emptyStateStyle}>
-                  <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
-                    No research insights uploaded yet
-                  </p>
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gap: '12px' }}>
-                  {researchInsights.map((insight) => (
-                    <div key={insight.id} style={{
-                      padding: '16px',
-                      border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-                      borderRadius: '8px'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
-                        <span style={{
-                          padding: '4px 8px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          backgroundColor: insight.reviewStatus === 'new' ? '#dbeafe' : '#f3f4f6',
-                          color: insight.reviewStatus === 'new' ? '#1e40af' : '#374151'
-                        }}>
-                          {insight.reviewStatus}
-                        </span>
-                        <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
-                          {insight.persona} - {insight.audienceSegment}
-                        </span>
-                      </div>
-                      <p style={{ margin: '0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
-                        {insight.insight}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div style={cardStyle}>
-            <div style={{
-              borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-              paddingBottom: '16px',
-              marginBottom: '20px'
-            }}>
-              <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Analytics Tools</h2>
-              <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-                Manage your analytics and research tools
-              </p>
-            </div>
-            
-            <div style={{ 
-              marginBottom: '24px', 
-              padding: '20px', 
-              border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`, 
-              borderRadius: '8px', 
-              backgroundColor: isDarkMode ? '#111827' : '#f9fafb' 
-            }}>
-              <h4 style={{ fontWeight: '600', marginBottom: '16px', fontSize: '16px', margin: '0 0 16px 0' }}>
-                Add New Tool
-              </h4>
-              <div style={formGridStyle}>
-                <input 
-                  type="text"
-                  placeholder="Tool name"
-                  value={newTool.name}
-                  onChange={(e) => setNewTool({...newTool, name: e.target.value})}
-                  style={inputStyle}
-                />
-                <select 
-                  value={newTool.category} 
-                  onChange={(e) => setNewTool({...newTool, category: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    backgroundColor: '#334155',
-                    color: '#ffffff',
-                    outline: 'none',
-                    transition: 'border-color 0.2s ease',
-                    fontFamily: 'inherit',
-                    appearance: 'none',
-                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
-                    backgroundPosition: 'right 12px center',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundSize: '16px',
-                    paddingRight: '48px'
-                  }}
-                >
-                  <option value="" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Select category</option>
-                  <option value="SEO" style={{ backgroundColor: '#334155', color: '#ffffff' }}>SEO</option>
-                  <option value="Social Media" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Social Media</option>
-                  <option value="Audience Research" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Audience Research</option>
-                  <option value="Video Analytics" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Video Analytics</option>
-                  <option value="Hashtag Analysis" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Hashtag Analysis</option>
-                  <option value="Other" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Other</option>
-                </select>
-              </div>
-              
-              <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                <input 
-                  type="text"
-                  placeholder="Tool URL"
-                  value={newTool.url}
-                  onChange={(e) => setNewTool({...newTool, url: e.target.value})}
-                  style={inputStyle}
-                />
-                <select 
-                  value={newTool.status} 
-                  onChange={(e) => setNewTool({...newTool, status: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: '#334155',
-                    color: '#ffffff',
-                    fontFamily: 'inherit',
-                    appearance: 'none',
-                    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 12px center',
-                    backgroundSize: '16px',
-                    paddingRight: '40px'
-                  }}
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </div>
-              
-              <div style={{ marginTop: '16px' }}>
-                <textarea 
-                  placeholder="Notes and setup instructions"
-                  value={newTool.notes}
-                  onChange={(e) => setNewTool({...newTool, notes: e.target.value})}
-                  rows={3}
-                  style={textareaStyle}
-                />
-              </div>
-              
-              <div style={{ marginTop: '20px', textAlign: 'right' }}>
-                <button 
-                  onClick={addAnalyticsTool}
-                  style={{
-                    ...primaryButtonStyle,
-                    opacity: newTool.name && newTool.category ? 1 : 0.5,
-                    cursor: newTool.name && newTool.category ? 'pointer' : 'not-allowed'
-                  }}
-                >
-                  + Add Tool
-                </button>
-              </div>
-            </div>
-
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead style={{ backgroundColor: isDarkMode ? '#111827' : '#f9fafb' }}>
-                  <tr>
-                    {['Tool Name', 'Category', 'Status', 'Access'].map((header) => (
-                      <th key={header} style={{ 
-                        padding: '12px 16px', 
-                        textAlign: 'left', 
-                        fontSize: '12px', 
-                        fontWeight: '600', 
-                        color: isDarkMode ? '#9ca3af' : '#6b7280', 
-                        textTransform: 'uppercase', 
-                        letterSpacing: '0.05em',
-                        borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
-                      }}>
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {analyticsTools.map((tool) => (
-                    <tr key={tool.id} style={{ borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}` }}>
-                      <td style={{ 
-                        padding: '12px 16px', 
-                        fontSize: '14px', 
-                        fontWeight: '500', 
-                        color: isDarkMode ? '#f9fafb' : '#111827' 
-                      }}>
-                        {tool.name}
-                      </td>
-                      <td style={{ 
-                        padding: '12px 16px', 
-                        fontSize: '14px', 
-                        color: isDarkMode ? '#d1d5db' : '#6b7280' 
-                      }}>
-                        {tool.category}
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{
-                          display: 'inline-flex',
-                          padding: '4px 12px',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          borderRadius: '12px',
-                          backgroundColor: tool.status === 'Active' ? '#d1fae5' : '#f3f4f6',
-                          color: tool.status === 'Active' ? '#065f46' : '#374151'
-                        }}>
-                          {tool.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
-                        {tool.url && (
-                          <a 
-                            href={tool.url} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            style={{ color: '#3b82f6', textDecoration: 'none' }}
-                          >
-                            Open Tool
-                          </a>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tab 8: Media Archives */}
-      {activeTab === 'archives' && (
-        <div style={cardStyle}>
-          <div style={{
-            borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-            paddingBottom: '16px',
-            marginBottom: '20px'
-          }}>
-            <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Caelum Archives</h2>
-            <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-              Archived content with search and restore functionality
-            </p>
-          </div>
-          
-          <div style={{ marginBottom: '20px' }}>
-            <input 
-              type="text"
-              placeholder="Search archived items..." 
-              style={inputStyle}
-            />
-          </div>
-
-          <div style={emptyStateStyle}>
-            <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center', fontSize: '16px', margin: '0' }}>
-              No archived items yet
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default MarketingComponent;
-                    color: '#ffffff',
-                    outline: 'none',
-                    fontFamily: 'inherit'
-                  }}
-                >
-                  <option value="hashtag" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Hashtag</option>
-                  <option value="content-tag" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Content Tag</option>
-                  <option value="seo-tag" style={{ backgroundColor: '#334155', color: '#ffffff' }}>SEO Tag</option>
-                  <option value="campaign-tag" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Campaign Tag</option>
+                  <option value="hashtag">Hashtag</option>
+                  <option value="content-tag">Content Tag</option>
+                  <option value="seo-tag">SEO Tag</option>
+                  <option value="campaign-tag">Campaign Tag</option>
                 </select>
               </div>
               <div>
@@ -2081,30 +1731,13 @@ export default MarketingComponent;
               <select 
                 value={newStrategy.status}
                 onChange={(e) => setNewStrategy({...newStrategy, status: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  backgroundColor: '#334155',
-                  color: '#ffffff',
-                  outline: 'none',
-                  transition: 'border-color 0.2s ease',
-                  fontFamily: 'inherit',
-                  appearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
-                  backgroundPosition: 'right 12px center',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundSize: '16px',
-                  paddingRight: '48px'
-                }}
+                style={selectStyle}
               >
-                <option value="" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Select status</option>
-                <option value="pending" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Pending</option>
-                <option value="scheduled" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Scheduled</option>
-                <option value="deployed" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Deployed</option>
-                <option value="archived" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Archived</option>
+                <option value="">Select status</option>
+                <option value="pending">Pending</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="deployed">Deployed</option>
+                <option value="archived">Archived</option>
               </select>
             </div>
             <div>
@@ -2112,29 +1745,12 @@ export default MarketingComponent;
               <select 
                 value={newStrategy.aiSuggestionRating}
                 onChange={(e) => setNewStrategy({...newStrategy, aiSuggestionRating: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  backgroundColor: '#334155',
-                  color: '#ffffff',
-                  outline: 'none',
-                  transition: 'border-color 0.2s ease',
-                  fontFamily: 'inherit',
-                  appearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
-                  backgroundPosition: 'right 12px center',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundSize: '16px',
-                  paddingRight: '48px'
-                }}
+                style={selectStyle}
               >
-                <option value="" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Rate AI suggestion</option>
-                <option value="useful" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Useful</option>
-                <option value="neutral" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Neutral</option>
-                <option value="not-useful" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Not Useful</option>
+                <option value="">Rate AI suggestion</option>
+                <option value="useful">Useful</option>
+                <option value="neutral">Neutral</option>
+                <option value="not-useful">Not Useful</option>
               </select>
             </div>
           </div>
@@ -2262,28 +1878,11 @@ export default MarketingComponent;
               <select 
                 value={newChannel.status}
                 onChange={(e) => setNewChannel({...newChannel, status: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  backgroundColor: '#334155',
-                  color: '#ffffff',
-                  outline: 'none',
-                  transition: 'border-color 0.2s ease',
-                  fontFamily: 'inherit',
-                  appearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
-                  backgroundPosition: 'right 12px center',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundSize: '16px',
-                  paddingRight: '48px'
-                }}
+                style={selectStyle}
               >
-                <option value="Active" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Active</option>
-                <option value="Inactive" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Inactive</option>
-                <option value="Pending" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Pending</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Pending">Pending</option>
               </select>
             </div>
           </div>
@@ -2412,30 +2011,13 @@ export default MarketingComponent;
               <select 
                 value={newIntel.priorityLevel}
                 onChange={(e) => setNewIntel({...newIntel, priorityLevel: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  backgroundColor: '#334155',
-                  color: '#ffffff',
-                  outline: 'none',
-                  transition: 'border-color 0.2s ease',
-                  fontFamily: 'inherit',
-                  appearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
-                  backgroundPosition: 'right 12px center',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundSize: '16px',
-                  paddingRight: '48px'
-                }}
+                style={selectStyle}
               >
-                <option value="" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Select priority</option>
-                <option value="low" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Low</option>
-                <option value="medium" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Medium</option>
-                <option value="high" style={{ backgroundColor: '#334155', color: '#ffffff' }}>High</option>
-                <option value="urgent" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Urgent</option>
+                <option value="">Select priority</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
               </select>
             </div>
           </div>
@@ -2558,28 +2140,11 @@ export default MarketingComponent;
                 <select 
                   value={newResearchInsight.reviewStatus}
                   onChange={(e) => setNewResearchInsight({...newResearchInsight, reviewStatus: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    backgroundColor: '#334155',
-                    color: '#ffffff',
-                    outline: 'none',
-                    transition: 'border-color 0.2s ease',
-                    fontFamily: 'inherit',
-                    appearance: 'none',
-                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
-                    backgroundPosition: 'right 12px center',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundSize: '16px',
-                    paddingRight: '48px'
-                  }}
+                  style={selectStyle}
                 >
-                  <option value="new" style={{ backgroundColor: '#334155', color: '#ffffff' }}>New</option>
-                  <option value="in-review" style={{ backgroundColor: '#334155', color: '#ffffff' }}>In Review</option>
-                  <option value="archived" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Archived</option>
+                  <option value="new">New</option>
+                  <option value="in-review">In Review</option>
+                  <option value="archived">Archived</option>
                 </select>
               </div>
             </div>
@@ -2693,32 +2258,15 @@ export default MarketingComponent;
                 <select 
                   value={newTool.category} 
                   onChange={(e) => setNewTool({...newTool, category: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    backgroundColor: '#334155',
-                    color: '#ffffff',
-                    outline: 'none',
-                    transition: 'border-color 0.2s ease',
-                    fontFamily: 'inherit',
-                    appearance: 'none',
-                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
-                    backgroundPosition: 'right 12px center',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundSize: '16px',
-                    paddingRight: '48px'
-                  }}
+                  style={selectStyle}
                 >
-                  <option value="" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Select category</option>
-                  <option value="SEO" style={{ backgroundColor: '#334155', color: '#ffffff' }}>SEO</option>
-                  <option value="Social Media" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Social Media</option>
-                  <option value="Audience Research" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Audience Research</option>
-                  <option value="Video Analytics" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Video Analytics</option>
-                  <option value="Hashtag Analysis" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Hashtag Analysis</option>
-                  <option value="Other" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Other</option>
+                  <option value="">Select category</option>
+                  <option value="SEO">SEO</option>
+                  <option value="Social Media">Social Media</option>
+                  <option value="Audience Research">Audience Research</option>
+                  <option value="Video Analytics">Video Analytics</option>
+                  <option value="Hashtag Analysis">Hashtag Analysis</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
               
@@ -2733,22 +2281,7 @@ export default MarketingComponent;
                 <select 
                   value={newTool.status} 
                   onChange={(e) => setNewTool({...newTool, status: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: '#334155',
-                    color: '#ffffff',
-                    fontFamily: 'inherit',
-                    appearance: 'none',
-                    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 12px center',
-                    backgroundSize: '16px',
-                    paddingRight: '40px'
-                  }}
+                  style={selectStyle}
                 >
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
