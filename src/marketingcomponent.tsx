@@ -873,11 +873,11 @@ const MarketingComponent = () => {
   };
 
   const importFromKeywordPlanner = () => {
-    document.getElementById('keyword-planner-upload').click();
+    window.open('https://ads.google.com/home/tools/keyword-planner/', '_blank');
   };
 
   const importFromGSC = () => {
-    document.getElementById('gsc-upload').click();
+    window.open('https://search.google.com/search-console', '_blank');
   };
 
   const addChannel = () => {
