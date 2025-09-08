@@ -93,15 +93,13 @@ export const personasAPI = {
       throw error;
     }
   }
+}; // <- This closing brace was missing
 
-// Keywords API functions for Supabase integration
-// Add these functions to your existing supabase/config.js file
-// Import: import { supabase } from './supabase-client';
-
+// Keywords API functions
 export const keywordsAPI = {
-  
   // Fetch all active keywords
   async fetchKeywords() {
+    if (!supabase) return [];
     try {
       const { data, error } = await supabase
         .from('keywords')
@@ -123,6 +121,7 @@ export const keywordsAPI = {
 
   // Insert new keyword
   async insertKeyword(keywordData) {
+    if (!supabase) throw new Error('Supabase not configured');
     try {
       // Validate required fields
       if (!keywordData.keyword || keywordData.keyword.trim() === '') {
@@ -155,6 +154,7 @@ export const keywordsAPI = {
 
   // Update existing keyword
   async updateKeyword(id, keywordData) {
+    if (!supabase) throw new Error('Supabase not configured');
     try {
       if (!id) {
         throw new Error('Keyword ID is required for update');
@@ -197,6 +197,7 @@ export const keywordsAPI = {
 
   // Soft delete keyword
   async deleteKeyword(id) {
+    if (!supabase) throw new Error('Supabase not configured');
     try {
       if (!id) {
         throw new Error('Keyword ID is required for deletion');
@@ -231,6 +232,7 @@ export const keywordsAPI = {
 
   // Check if keyword already exists (for validation)
   async keywordExists(keyword, excludeId = null) {
+    if (!supabase) throw new Error('Supabase not configured');
     try {
       let query = supabase
         .from('keywords')
