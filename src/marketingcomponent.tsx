@@ -1420,20 +1420,61 @@ const MarketingComponent = () => {
                 Import Tags
               </h3>
               <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
-                <button 
-                  onClick={importFromKeywordPlanner}
-                  style={secondaryButtonStyle}
-                  disabled={csvUploading}
-                >
-                  Import from Keyword Planner
-                </button>
-                <button 
-                  onClick={importFromGSC}
-                  style={secondaryButtonStyle}
-                  disabled={csvUploading}
-                >
-                  Import from Google Search Console
-                </button>
+                {/* Keyword Planner Import */}
+                <div>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleKeywordPlannerUpload}
+                    style={{ display: 'none' }}
+                    id="keyword-planner-upload"
+                    disabled={csvUploading}
+                  />
+                  <button 
+                    onClick={importFromKeywordPlanner}
+                    style={{
+                      ...secondaryButtonStyle,
+                      width: '100%',
+                      opacity: csvUploading ? 0.5 : 1,
+                      cursor: csvUploading ? 'not-allowed' : 'pointer'
+                    }}
+                    disabled={csvUploading}
+                  >
+                    {csvUploading ? 'Uploading...' : 'Import from Keyword Planner'}
+                  </button>
+                  <p style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280', marginTop: '4px', margin: '4px 0 0 0' }}>
+                    Export CSV from Google Keyword Planner with keyword, searches, and competition columns
+                  </p>
+                </div>
+
+                {/* Google Search Console Import */}
+                <div>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleGSCFileUpload}
+                    style={{ display: 'none' }}
+                    id="gsc-upload"
+                    disabled={csvUploading}
+                  />
+                  <button 
+                    onClick={importFromGSC}
+                    style={{
+                      ...secondaryButtonStyle,
+                      width: '100%',
+                      opacity: csvUploading ? 0.5 : 1,
+                      cursor: csvUploading ? 'not-allowed' : 'pointer'
+                    }}
+                    disabled={csvUploading}
+                  >
+                    {csvUploading ? 'Uploading...' : 'Import from Google Search Console'}
+                  </button>
+                  <p style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280', marginTop: '4px', margin: '4px 0 0 0' }}>
+                    Export "Queries" CSV from GSC Performance report with query, clicks, and impressions
+                  </p>
+                </div>
+
+                {/* Manual CSV Upload */}
                 <div>
                   <input
                     type="file"
@@ -1444,7 +1485,7 @@ const MarketingComponent = () => {
                     disabled={csvUploading}
                   />
                   <button 
-                    onClick={() => document.getElementById('csv-upload').click()}
+                    onClick={triggerCSVUpload}
                     style={{
                       ...secondaryButtonStyle,
                       width: '100%',
@@ -1455,7 +1496,7 @@ const MarketingComponent = () => {
                   >
                     {csvUploading ? 'Uploading CSV...' : 'Manual CSV Upload'}
                   </button>
-                  <p style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280', marginTop: '8px', margin: '8px 0 0 0' }}>
+                  <p style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280', marginTop: '4px', margin: '4px 0 0 0' }}>
                     CSV format: tag, category, added_by (headers required)
                   </p>
                 </div>
