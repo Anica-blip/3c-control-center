@@ -382,6 +382,233 @@ const MarketingComponent = () => {
     border: `2px dashed ${isDarkMode ? '#4b5563' : '#d1d5db'}`
   };
 
+  // Google Search Console CSV Import
+  const handleGSCFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setError('Please upload a CSV file');
+      return;
+    }
+
+    try {
+      setCsvUploading(true);
+      setError(null);
+      
+      const text = await file.text();
+      const lines = text.split('\n');
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      
+      // Find columns by partial matching for GSC exports
+      const queryIndex = headers.findIndex(h => h.includes('query') || h.includes('keyword'));
+      const clicksIndex = headers.findIndex(h => h.includes('clicks'));
+      const impressionsIndex = headers.findIndex(h => h.includes('impressions'));
+      
+      if (queryIndex === -1) {
+        setError('CSV must contain a "Query" or "Keyword" column');
+        return;
+      }
+      
+      const tagsToImport = [];
+      const currentDate = new Date().toISOString().split('T')[0];
+      
+      for (let i = 1; i < lines.length && i <= 100; i++) { // Limit to 100 items
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+        const query = values[queryIndex];
+        const clicks = clicksIndex !== -1 ? values[clicksIndex] : '0';
+        const impressions = impressionsIndex !== -1 ? values[impressionsIndex] : '0';
+        
+        if (query && query.length > 0) {
+          tagsToImport.push({
+            tag: query,
+            category: 'seo-tag',
+            added_by: `GSC Import (${clicks} clicks, ${impressions} impressions)`,
+            date_added: currentDate
+          });
+        }
+      }
+      
+      if (tagsToImport.length === 0) {
+        setError('No valid queries found in GSC CSV');
+        return;
+      }
+      
+      // Bulk insert tags
+      const insertedTags = await tagsAPI.insertManyTags(tagsToImport);
+      setTags(prevTags => [...insertedTags, ...prevTags]);
+      
+      // Clear file input
+      event.target.value = '';
+      
+      setError(null);
+      alert(`Successfully imported ${insertedTags.length} SEO tags from Google Search Console`);
+      
+    } catch (err) {
+      setError('Failed to import GSC CSV: ' + err.message);
+    } finally {
+      setCsvUploading(false);
+    }
+  };
+
+  // Keyword Planner CSV Import
+  const handleKeywordPlannerUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setError('Please upload a CSV file');
+      return;
+    }
+
+    try {
+      setCsvUploading(true);
+      setError(null);
+      
+      const text = await file.text();
+      const lines = text.split('\n');
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      
+      // Find columns by partial matching for Keyword Planner exports
+      const keywordIndex = headers.findIndex(h => h.includes('keyword') || h.includes('term'));
+      const searchVolumeIndex = headers.findIndex(h => h.includes('search') || h.includes('volume') || h.includes('avg'));
+      const competitionIndex = headers.findIndex(h => h.includes('competition') || h.includes('compete'));
+      
+      if (keywordIndex === -1) {
+        setError('CSV must contain a "Keyword" column');
+        return;
+      }
+      
+      const tagsToImport = [];
+      const currentDate = new Date().toISOString().split('T')[0];
+      
+      for (let i = 1; i < lines.length && i <= 100; i++) { // Limit to 100 items
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+        const keyword = values[keywordIndex];
+        const searchVolume = searchVolumeIndex !== -1 ? values[searchVolumeIndex] : 'Unknown';
+        const competition = competitionIndex !== -1 ? values[competitionIndex] : 'Unknown';
+        
+        if (keyword && keyword.length > 0) {
+          tagsToImport.push({
+            tag: keyword,
+            category: 'hashtag',
+            added_by: `Keyword Planner (${searchVolume} searches, ${competition} competition)`,
+            date_added: currentDate
+          });
+        }
+      }
+      
+      if (tagsToImport.length === 0) {
+        setError('No valid keywords found in Keyword Planner CSV');
+        return;
+      }
+      
+      // Bulk insert tags
+      const insertedTags = await tagsAPI.insertManyTags(tagsToImport);
+      setTags(prevTags => [...insertedTags, ...prevTags]);
+      
+      // Clear file input
+      event.target.value = '';
+      
+      setError(null);
+      alert(`Successfully imported ${insertedTags.length} hashtags from Keyword Planner`);
+      
+    } catch (err) {
+      setError('Failed to import Keyword Planner CSV: ' + err.message);
+    } finally {
+      setCsvUploading(false);
+    }
+  };
+
+  // Manual CSV Upload
+  const handleCSVUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setError('Please upload a CSV file');
+      return;
+    }
+
+    try {
+      setCsvUploading(true);
+      setError(null);
+      
+      const text = await file.text();
+      const lines = text.split('\n');
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      
+      // Expected CSV format: tag, category, added_by
+      const tagIndex = headers.indexOf('tag');
+      const categoryIndex = headers.indexOf('category');
+      const addedByIndex = headers.indexOf('added_by');
+      
+      if (tagIndex === -1) {
+        setError('CSV must contain a "tag" column');
+        return;
+      }
+      
+      const tagsToImport = [];
+      const currentDate = new Date().toISOString().split('T')[0];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const values = line.split(',').map(v => v.trim());
+        const tag = values[tagIndex];
+        
+        if (tag) {
+          tagsToImport.push({
+            tag: tag,
+            category: categoryIndex !== -1 ? (values[categoryIndex] || 'hashtag') : 'hashtag',
+            added_by: addedByIndex !== -1 ? (values[addedByIndex] || 'CSV Import') : 'CSV Import',
+            date_added: currentDate
+          });
+        }
+      }
+      
+      if (tagsToImport.length === 0) {
+        setError('No valid tags found in CSV');
+        return;
+      }
+      
+      // Bulk insert tags
+      const insertedTags = await tagsAPI.insertManyTags(tagsToImport);
+      setTags(prevTags => [...insertedTags, ...prevTags]);
+      
+      // Clear file input
+      event.target.value = '';
+      
+      setError(null);
+      alert(`Successfully imported ${insertedTags.length} tags`);
+      
+    } catch (err) {
+      setError('Failed to import CSV: ' + err.message);
+    } finally {
+      setCsvUploading(false);
+    }
+  };
+
+  // Trigger file input clicks
+  const triggerCSVUpload = () => {
+    document.getElementById('csv-upload').click();
+  };
+
+  const importFromKeywordPlanner = () => {
+    document.getElementById('keyword-planner-upload').click();
+  };
+
+  const importFromGSC = () => {
+    document.getElementById('gsc-upload').click();
+  };
+
   // CRUD Functions - Real Supabase Database Operations
   const addPersona = async () => {
     if (!newPersona.name || !newPersona.audience_segment) {
@@ -651,84 +878,6 @@ const MarketingComponent = () => {
     setEditingTag(null);
     resetTagForm();
     setError(null);
-  };
-
-  // CSV Import Functions
-  const handleCSVUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      setError('Please upload a CSV file');
-      return;
-    }
-
-    try {
-      setCsvUploading(true);
-      setError(null);
-      
-      const text = await file.text();
-      const lines = text.split('\n');
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-      
-      // Expected CSV format: tag, category, added_by
-      const tagIndex = headers.indexOf('tag');
-      const categoryIndex = headers.indexOf('category');
-      const addedByIndex = headers.indexOf('added_by');
-      
-      if (tagIndex === -1) {
-        setError('CSV must contain a "tag" column');
-        return;
-      }
-      
-      const tagsToImport = [];
-      const currentDate = new Date().toISOString().split('T')[0];
-      
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        
-        const values = line.split(',').map(v => v.trim());
-        const tag = values[tagIndex];
-        
-        if (tag) {
-          tagsToImport.push({
-            tag: tag,
-            category: categoryIndex !== -1 ? (values[categoryIndex] || 'hashtag') : 'hashtag',
-            added_by: addedByIndex !== -1 ? (values[addedByIndex] || 'CSV Import') : 'CSV Import',
-            date_added: currentDate
-          });
-        }
-      }
-      
-      if (tagsToImport.length === 0) {
-        setError('No valid tags found in CSV');
-        return;
-      }
-      
-      // Bulk insert tags
-      const insertedTags = await tagsAPI.insertManyTags(tagsToImport);
-      setTags(prevTags => [...insertedTags, ...prevTags]);
-      
-      // Clear file input
-      event.target.value = '';
-      
-      setError(null);
-      alert(`Successfully imported ${insertedTags.length} tags`);
-      
-    } catch (err) {
-      setError('Failed to import CSV: ' + err.message);
-    } finally {
-      setCsvUploading(false);
-    }
-  };
-
-  const importFromKeywordPlanner = () => {
-    setError('Keyword Planner integration coming soon. Please use CSV upload for now.');
-  };
-
-  const importFromGSC = () => {
-    setError('Google Search Console integration coming soon. Please use CSV upload for now.');
   };
 
   const addChannel = () => {
@@ -1364,6 +1513,326 @@ const MarketingComponent = () => {
                     borderRadius: '8px',
                     fontSize: '14px',
                     backgroundColor: '#334155',
+                    color: '#ffffff',
+                    outline: 'none',
+                    transition: 'border-color 0.2s ease',
+                    fontFamily: 'inherit',
+                    appearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                    backgroundPosition: 'right 12px center',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundSize: '16px',
+                    paddingRight: '48px'
+                  }}
+                >
+                  <option value="new" style={{ backgroundColor: '#334155', color: '#ffffff' }}>New</option>
+                  <option value="in-review" style={{ backgroundColor: '#334155', color: '#ffffff' }}>In Review</option>
+                  <option value="archived" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Archived</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '20px' }}>
+              <PersonaAudienceSelect
+                personaValue={newResearchInsight.persona}
+                audienceValue={newResearchInsight.audienceSegment}
+                onPersonaChange={(value) => setNewResearchInsight({...newResearchInsight, persona: value})}
+                onAudienceChange={(value) => setNewResearchInsight({...newResearchInsight, audienceSegment: value})}
+              />
+            </div>
+            
+            <div style={{ marginTop: '20px' }}>
+              <label style={labelStyle}>Insight *</label>
+              <textarea 
+                value={newResearchInsight.insight}
+                onChange={(e) => setNewResearchInsight({...newResearchInsight, insight: e.target.value})}
+                placeholder="Enter research insight or finding..." 
+                rows={4}
+                style={textareaStyle}
+              />
+            </div>
+            
+            <div style={{ marginTop: '20px', textAlign: 'right' }}>
+              <button 
+                onClick={addResearchInsight}
+                style={{
+                  ...primaryButtonStyle,
+                  opacity: newResearchInsight.insight ? 1 : 0.5,
+                  cursor: newResearchInsight.insight ? 'pointer' : 'not-allowed'
+                }}
+              >
+                Upload Insight
+              </button>
+            </div>
+
+            {/* Display research insights */}
+            <div style={{ marginTop: '24px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
+                Research Insights ({researchInsights.length})
+              </h3>
+              {researchInsights.length === 0 ? (
+                <div style={emptyStateStyle}>
+                  <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
+                    No research insights uploaded yet
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {researchInsights.map((insight) => (
+                    <div key={insight.id} style={{
+                      padding: '16px',
+                      border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                      borderRadius: '8px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          backgroundColor: insight.reviewStatus === 'new' ? '#dbeafe' : '#f3f4f6',
+                          color: insight.reviewStatus === 'new' ? '#1e40af' : '#374151'
+                        }}>
+                          {insight.reviewStatus}
+                        </span>
+                        <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                          {insight.persona} - {insight.audienceSegment}
+                        </span>
+                      </div>
+                      <p style={{ margin: '0', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
+                        {insight.insight}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={cardStyle}>
+            <div style={{
+              borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+              paddingBottom: '16px',
+              marginBottom: '20px'
+            }}>
+              <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Analytics Tools</h2>
+              <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
+                Manage your analytics and research tools
+              </p>
+            </div>
+            
+            <div style={{ 
+              marginBottom: '24px', 
+              padding: '20px', 
+              border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`, 
+              borderRadius: '8px', 
+              backgroundColor: isDarkMode ? '#111827' : '#f9fafb' 
+            }}>
+              <h4 style={{ fontWeight: '600', marginBottom: '16px', fontSize: '16px', margin: '0 0 16px 0' }}>
+                Add New Tool
+              </h4>
+              <div style={formGridStyle}>
+                <input 
+                  type="text"
+                  placeholder="Tool name"
+                  value={newTool.name}
+                  onChange={(e) => setNewTool({...newTool, name: e.target.value})}
+                  style={inputStyle}
+                />
+                <select 
+                  value={newTool.category} 
+                  onChange={(e) => setNewTool({...newTool, category: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: '#334155',
+                    color: '#ffffff',
+                    outline: 'none',
+                    transition: 'border-color 0.2s ease',
+                    fontFamily: 'inherit',
+                    appearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                    backgroundPosition: 'right 12px center',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundSize: '16px',
+                    paddingRight: '48px'
+                  }}
+                >
+                  <option value="" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Select category</option>
+                  <option value="SEO" style={{ backgroundColor: '#334155', color: '#ffffff' }}>SEO</option>
+                  <option value="Social Media" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Social Media</option>
+                  <option value="Audience Research" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Audience Research</option>
+                  <option value="Video Analytics" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Video Analytics</option>
+                  <option value="Hashtag Analysis" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Hashtag Analysis</option>
+                  <option value="Other" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Other</option>
+                </select>
+              </div>
+              
+              <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                <input 
+                  type="text"
+                  placeholder="Tool URL"
+                  value={newTool.url}
+                  onChange={(e) => setNewTool({...newTool, url: e.target.value})}
+                  style={inputStyle}
+                />
+                <select 
+                  value={newTool.status} 
+                  onChange={(e) => setNewTool({...newTool, status: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: '#334155',
+                    color: '#ffffff',
+                    fontFamily: 'inherit',
+                    appearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 12px center',
+                    backgroundSize: '16px',
+                    paddingRight: '40px'
+                  }}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+              
+              <div style={{ marginTop: '16px' }}>
+                <textarea 
+                  placeholder="Notes and setup instructions"
+                  value={newTool.notes}
+                  onChange={(e) => setNewTool({...newTool, notes: e.target.value})}
+                  rows={3}
+                  style={textareaStyle}
+                />
+              </div>
+              
+              <div style={{ marginTop: '20px', textAlign: 'right' }}>
+                <button 
+                  onClick={addAnalyticsTool}
+                  style={{
+                    ...primaryButtonStyle,
+                    opacity: newTool.name && newTool.category ? 1 : 0.5,
+                    cursor: newTool.name && newTool.category ? 'pointer' : 'not-allowed'
+                  }}
+                >
+                  + Add Tool
+                </button>
+              </div>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead style={{ backgroundColor: isDarkMode ? '#111827' : '#f9fafb' }}>
+                  <tr>
+                    {['Tool Name', 'Category', 'Status', 'Access'].map((header) => (
+                      <th key={header} style={{ 
+                        padding: '12px 16px', 
+                        textAlign: 'left', 
+                        fontSize: '12px', 
+                        fontWeight: '600', 
+                        color: isDarkMode ? '#9ca3af' : '#6b7280', 
+                        textTransform: 'uppercase', 
+                        letterSpacing: '0.05em',
+                        borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
+                      }}>
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {analyticsTools.map((tool) => (
+                    <tr key={tool.id} style={{ borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}` }}>
+                      <td style={{ 
+                        padding: '12px 16px', 
+                        fontSize: '14px', 
+                        fontWeight: '500', 
+                        color: isDarkMode ? '#f9fafb' : '#111827' 
+                      }}>
+                        {tool.name}
+                      </td>
+                      <td style={{ 
+                        padding: '12px 16px', 
+                        fontSize: '14px', 
+                        color: isDarkMode ? '#d1d5db' : '#6b7280' 
+                      }}>
+                        {tool.category}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          padding: '4px 12px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          borderRadius: '12px',
+                          backgroundColor: tool.status === 'Active' ? '#d1fae5' : '#f3f4f6',
+                          color: tool.status === 'Active' ? '#065f46' : '#374151'
+                        }}>
+                          {tool.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
+                        {tool.url && (
+                          <a 
+                            href={tool.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            style={{ color: '#3b82f6', textDecoration: 'none' }}
+                          >
+                            Open Tool
+                          </a>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 8: Media Archives */}
+      {activeTab === 'archives' && (
+        <div style={cardStyle}>
+          <div style={{
+            borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+            paddingBottom: '16px',
+            marginBottom: '20px'
+          }}>
+            <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Caelum Archives</h2>
+            <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
+              Archived content with search and restore functionality
+            </p>
+          </div>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <input 
+              type="text"
+              placeholder="Search archived items..." 
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={emptyStateStyle}>
+            <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center', fontSize: '16px', margin: '0' }}>
+              No archived items yet
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MarketingComponent;
                     color: '#ffffff',
                     outline: 'none',
                     fontFamily: 'inherit'
