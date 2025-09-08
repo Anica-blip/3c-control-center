@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { personasAPI } from '../supabase/config';
+import { personasAPI, keywordsAPI } from '../supabase/config';
 
 // Import Inter font
 const fontStyle = {
@@ -33,8 +33,10 @@ const MarketingComponent = () => {
   
   // Loading and error states for Supabase operations
   const [loading, setLoading] = useState(false);
+  const [keywordsLoading, setKeywordsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [editingPersona, setEditingPersona] = useState(null);
+  const [editingKeyword, setEditingKeyword] = useState(null);
   
   const [analyticsTools, setAnalyticsTools] = useState([
     {
@@ -144,6 +146,19 @@ const MarketingComponent = () => {
       setError('Failed to load personas: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadKeywords = async () => {
+    try {
+      setKeywordsLoading(true);
+      setError(null);
+      const data = await keywordsAPI.fetchKeywords();
+      setKeywords(data);
+    } catch (err) {
+      setError('Failed to load keywords: ' + err.message);
+    } finally {
+      setKeywordsLoading(false);
     }
   };
 
@@ -415,15 +430,101 @@ const MarketingComponent = () => {
     setError(null);
   };
 
-  const addKeyword = () => {
-    if (newKeyword.keyword) {
-      const keyword = {
-        id: Date.now(),
-        ...newKeyword
-      };
-      setKeywords([...keywords, keyword]);
-      resetKeywordForm();
+  const addKeyword = async () => {
+    if (!newKeyword.keyword.trim()) {
+      setError('Keyword is required');
+      return;
     }
+
+    try {
+      setKeywordsLoading(true);
+      setError(null);
+      
+      // Check if keyword already exists
+      const exists = await keywordsAPI.keywordExists(newKeyword.keyword);
+      if (exists) {
+        setError('This keyword already exists');
+        return;
+      }
+
+      const data = await keywordsAPI.insertKeyword({
+        keyword: newKeyword.keyword.trim(),
+        addedBy: newKeyword.addedBy.trim(),
+        dateAdded: newKeyword.dateAdded
+      });
+      
+      setKeywords(prevKeywords => [data, ...prevKeywords]);
+      resetKeywordForm();
+    } catch (err) {
+      setError('Failed to add keyword: ' + err.message);
+    } finally {
+      setKeywordsLoading(false);
+    }
+  };
+
+  const editKeyword = (keyword) => {
+    setEditingKeyword(keyword);
+    setNewKeyword({
+      keyword: keyword.keyword,
+      addedBy: keyword.added_by || '',
+      dateAdded: keyword.date_added || new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const updateKeyword = async () => {
+    if (!editingKeyword || !newKeyword.keyword.trim()) {
+      setError('Keyword is required');
+      return;
+    }
+
+    try {
+      setKeywordsLoading(true);
+      setError(null);
+      
+      // Check if keyword already exists (excluding current keyword)
+      const exists = await keywordsAPI.keywordExists(newKeyword.keyword, editingKeyword.id);
+      if (exists) {
+        setError('This keyword already exists');
+        return;
+      }
+
+      const updatedData = await keywordsAPI.updateKeyword(editingKeyword.id, {
+        keyword: newKeyword.keyword.trim(),
+        addedBy: newKeyword.addedBy.trim(),
+        dateAdded: newKeyword.dateAdded
+      });
+      
+      setKeywords(prevKeywords => 
+        prevKeywords.map(k => k.id === editingKeyword.id ? updatedData : k)
+      );
+      resetKeywordForm();
+      setEditingKeyword(null);
+    } catch (err) {
+      setError('Failed to update keyword: ' + err.message);
+    } finally {
+      setKeywordsLoading(false);
+    }
+  };
+
+  const deleteKeyword = async (id) => {
+    if (!confirm('Are you sure you want to delete this keyword?')) return;
+
+    try {
+      setKeywordsLoading(true);
+      setError(null);
+      await keywordsAPI.deleteKeyword(id);
+      setKeywords(prevKeywords => prevKeywords.filter(k => k.id !== id));
+    } catch (err) {
+      setError('Failed to delete keyword: ' + err.message);
+    } finally {
+      setKeywordsLoading(false);
+    }
+  };
+
+  const cancelKeywordEdit = () => {
+    setEditingKeyword(null);
+    resetKeywordForm();
+    setError(null);
   };
 
   const addChannel = () => {
@@ -896,10 +997,11 @@ const MarketingComponent = () => {
         </div>
       )}
 
-      {/* Tab 2: Keywords & Content Tools (Combined) */}
+      {/* Tab 2: Keywords & Content Tools */}
       {activeTab === 'content-tools' && (
         <div style={{ display: 'grid', gap: '24px' }}>
-          {/* Keywords Section */}
+          <ErrorAlert message={error} onClose={() => setError(null)} />
+          
           <div style={cardStyle}>
             <div style={{
               borderBottom: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
@@ -960,7 +1062,6 @@ const MarketingComponent = () => {
               </button>
             </div>
             
-            {/* Display keywords */}
             <div style={{ marginTop: '24px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
                 Keywords ({keywords.length})
