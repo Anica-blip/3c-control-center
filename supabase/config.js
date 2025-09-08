@@ -256,7 +256,132 @@ export const keywordsAPI = {
       console.error('Keyword existence check failed:', error);
       throw error;
     }
+  },
+
+// Tags API Functions
+export const tagsAPI = {
+  // Fetch all active tags
+  async fetchTags() {
+    if (!supabase) throw new Error('Supabase not configured');
+    try {
+      const { data, error } = await supabase
+        .from('tags')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+      throw error;
+    }
+  },
+
+  // Insert new tag
+  async insertTag(tagData) {
+    if (!supabase) throw new Error('Supabase not configured');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || null;
+      
+      const { data, error } = await supabase
+        .from('tags')
+        .insert({ 
+          ...tagData, 
+          created_by: userId, 
+          is_active: true 
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error inserting tag:', error);
+      throw error;
+    }
+  },
+
+  // Bulk insert tags (for CSV import)
+  async insertManyTags(tagsArray) {
+    if (!supabase) throw new Error('Supabase not configured');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || null;
+      
+      const tagsWithDefaults = tagsArray.map(tag => ({
+        ...tag,
+        created_by: userId,
+        is_active: true,
+        date_added: tag.date_added || new Date().toISOString().split('T')[0]
+      }));
+      
+      const { data, error } = await supabase
+        .from('tags')
+        .insert(tagsWithDefaults)
+        .select();
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error bulk inserting tags:', error);
+      throw error;
+    }
+  },
+
+  // Update tag
+  async updateTag(id, tagData) {
+    if (!supabase) throw new Error('Supabase not configured');
+    try {
+      const { data, error } = await supabase
+        .from('tags')
+        .update(tagData)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating tag:', error);
+      throw error;
+    }
+  },
+
+  // Soft delete tag
+  async deleteTag(id) {
+    if (!supabase) throw new Error('Supabase not configured');
+    try {
+      const { error } = await supabase
+        .from('tags')
+        .update({ is_active: false })
+        .eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting tag:', error);
+      throw error;
+    }
+  },
+
+  // Check if tag exists (for duplicate prevention)
+  async tagExists(tag, excludeId = null) {
+    if (!supabase) throw new Error('Supabase not configured');
+    try {
+      let query = supabase
+        .from('tags')
+        .select('id')
+        .eq('tag', tag.trim())
+        .eq('is_active', true);
+      
+      if (excludeId) {
+        query = query.neq('id', excludeId);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data && data.length > 0;
+    } catch (error) {
+      console.error('Error checking tag existence:', error);
+      throw error;
+    }
   }
 };
 
-export default supabase;
