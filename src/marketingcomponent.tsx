@@ -905,9 +905,11 @@ const MarketingComponent = () => {
               paddingBottom: '16px',
               marginBottom: '20px'
             }}>
-              <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Keyword Intelligence</h2>
+              <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>
+                {editingKeyword ? 'Edit Keyword' : 'Add New Keyword'}
+              </h2>
               <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-                Track and manage keywords for content strategy
+                {editingKeyword ? 'Update keyword details' : 'Track and manage keywords for content strategy'}
               </p>
             </div>
             
@@ -933,16 +935,27 @@ const MarketingComponent = () => {
                 />
               </div>
             </div>
-            <div style={{ marginTop: '20px', textAlign: 'right' }}>
+            
+            <div style={{ marginTop: '20px', textAlign: 'right', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              {editingKeyword && (
+                <button 
+                  onClick={cancelKeywordEdit} 
+                  style={secondaryButtonStyle}
+                  disabled={keywordsLoading}
+                >
+                  Cancel
+                </button>
+              )}
               <button 
-                onClick={addKeyword}
+                onClick={editingKeyword ? updateKeyword : addKeyword}
                 style={{
                   ...primaryButtonStyle,
-                  opacity: newKeyword.keyword ? 1 : 0.5,
-                  cursor: newKeyword.keyword ? 'pointer' : 'not-allowed'
+                  opacity: (newKeyword.keyword.trim() && !keywordsLoading) ? 1 : 0.5,
+                  cursor: (newKeyword.keyword.trim() && !keywordsLoading) ? 'pointer' : 'not-allowed'
                 }}
+                disabled={!newKeyword.keyword.trim() || keywordsLoading}
               >
-                + Add Keyword
+                {keywordsLoading ? 'Saving...' : (editingKeyword ? 'Update Keyword' : '+ Add Keyword')}
               </button>
             </div>
             
@@ -951,7 +964,11 @@ const MarketingComponent = () => {
               <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
                 Keywords ({keywords.length})
               </h3>
-              {keywords.length === 0 ? (
+              {keywordsLoading && keywords.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                  Loading keywords...
+                </div>
+              ) : keywords.length === 0 ? (
                 <div style={emptyStateStyle}>
                   <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
                     No keywords added yet
@@ -966,12 +983,39 @@ const MarketingComponent = () => {
                       borderRadius: '6px',
                       display: 'flex',
                       justifyContent: 'space-between',
-                      alignItems: 'center'
+                      alignItems: 'center',
+                      backgroundColor: isDarkMode ? '#374151' : '#ffffff'
                     }}>
-                      <span style={{ fontWeight: '500' }}>{keyword.keyword}</span>
-                      <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
-                        {keyword.dateAdded} by {keyword.addedBy}
-                      </span>
+                      <div>
+                        <span style={{ fontWeight: '500' }}>{keyword.keyword}</span>
+                        <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280', marginLeft: '12px' }}>
+                          {keyword.date_added} by {keyword.added_by || 'Unknown'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={() => editKeyword(keyword)}
+                          style={{
+                            ...smallButtonStyle,
+                            backgroundColor: '#3b82f6',
+                            color: 'white'
+                          }}
+                          disabled={keywordsLoading}
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => deleteKeyword(keyword.id)}
+                          style={{
+                            ...smallButtonStyle,
+                            backgroundColor: '#dc2626',
+                            color: 'white'
+                          }}
+                          disabled={keywordsLoading}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
