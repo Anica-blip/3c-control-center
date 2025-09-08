@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { personasAPI, keywordsAPI } from '../supabase/config';
+import { personasAPI, keywordsAPI, tagsAPI } from '../supabase/config';
 
 // Import Inter font
 const fontStyle = {
@@ -23,6 +23,7 @@ const MarketingComponent = () => {
   // State for all sections
   const [personas, setPersonas] = useState([]);
   const [keywords, setKeywords] = useState([]);
+  const [tags, setTags] = useState([]);
   const [channels, setChannels] = useState([]);
   const [trends, setTrends] = useState({ tracked: 247, flagged: 18, commercialIntent: 68 });
   const [strategies, setStrategies] = useState([]);
@@ -34,9 +35,12 @@ const MarketingComponent = () => {
   // Loading and error states for Supabase operations
   const [loading, setLoading] = useState(false);
   const [keywordsLoading, setKeywordsLoading] = useState(false);
+  const [tagsLoading, setTagsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [editingPersona, setEditingPersona] = useState(null);
   const [editingKeyword, setEditingKeyword] = useState(null);
+  const [editingTag, setEditingTag] = useState(null);
+  const [csvUploading, setCsvUploading] = useState(false);
   
   const [analyticsTools, setAnalyticsTools] = useState([
     {
@@ -89,6 +93,13 @@ const MarketingComponent = () => {
     addedBy: ''
   });
 
+  const [newTag, setNewTag] = useState({
+    tag: '',
+    category: 'hashtag',
+    dateAdded: new Date().toISOString().split('T')[0],
+    addedBy: ''
+  });
+
   const [newChannel, setNewChannel] = useState({
     channelName: '',
     priorityChangeLog: '',
@@ -130,10 +141,11 @@ const MarketingComponent = () => {
     notes: ''
   });
 
-  // Load personas and keywords on component mount
+  // Load personas, keywords, and tags on component mount
   useEffect(() => {
     loadPersonas();
     loadKeywords();
+    loadTags();
   }, []);
 
   const loadPersonas = async () => {
@@ -159,6 +171,19 @@ const MarketingComponent = () => {
       setError('Failed to load keywords: ' + err.message);
     } finally {
       setKeywordsLoading(false);
+    }
+  };
+
+  const loadTags = async () => {
+    try {
+      setTagsLoading(true);
+      setError(null);
+      const data = await tagsAPI.fetchTags();
+      setTags(data);
+    } catch (err) {
+      setError('Failed to load tags: ' + err.message);
+    } finally {
+      setTagsLoading(false);
     }
   };
 
@@ -527,6 +552,185 @@ const MarketingComponent = () => {
     setError(null);
   };
 
+  // Tags CRUD Functions
+  const addTag = async () => {
+    if (!newTag.tag.trim()) {
+      setError('Tag is required');
+      return;
+    }
+
+    try {
+      setTagsLoading(true);
+      setError(null);
+      
+      // Check if tag already exists
+      const exists = await tagsAPI.tagExists(newTag.tag);
+      if (exists) {
+        setError('This tag already exists');
+        return;
+      }
+
+      const data = await tagsAPI.insertTag({
+        tag: newTag.tag.trim(),
+        category: newTag.category,
+        added_by: newTag.addedBy.trim(),
+        date_added: newTag.dateAdded
+      });
+      
+      setTags(prevTags => [data, ...prevTags]);
+      resetTagForm();
+    } catch (err) {
+      setError('Failed to add tag: ' + err.message);
+    } finally {
+      setTagsLoading(false);
+    }
+  };
+
+  const editTag = (tag) => {
+    setEditingTag(tag);
+    setNewTag({
+      tag: tag.tag,
+      category: tag.category,
+      addedBy: tag.added_by || '',
+      dateAdded: tag.date_added || new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const updateTag = async () => {
+    if (!editingTag || !newTag.tag.trim()) {
+      setError('Tag is required');
+      return;
+    }
+
+    try {
+      setTagsLoading(true);
+      setError(null);
+      
+      // Check if tag already exists (excluding current tag)
+      const exists = await tagsAPI.tagExists(newTag.tag, editingTag.id);
+      if (exists) {
+        setError('This tag already exists');
+        return;
+      }
+
+      const updatedData = await tagsAPI.updateTag(editingTag.id, {
+        tag: newTag.tag.trim(),
+        category: newTag.category,
+        added_by: newTag.addedBy.trim(),
+        date_added: newTag.dateAdded
+      });
+      
+      setTags(prevTags => 
+        prevTags.map(t => t.id === editingTag.id ? updatedData : t)
+      );
+      resetTagForm();
+      setEditingTag(null);
+    } catch (err) {
+      setError('Failed to update tag: ' + err.message);
+    } finally {
+      setTagsLoading(false);
+    }
+  };
+
+  const deleteTag = async (id) => {
+    if (!confirm('Are you sure you want to delete this tag?')) return;
+
+    try {
+      setTagsLoading(true);
+      setError(null);
+      await tagsAPI.deleteTag(id);
+      setTags(prevTags => prevTags.filter(t => t.id !== id));
+    } catch (err) {
+      setError('Failed to delete tag: ' + err.message);
+    } finally {
+      setTagsLoading(false);
+    }
+  };
+
+  const cancelTagEdit = () => {
+    setEditingTag(null);
+    resetTagForm();
+    setError(null);
+  };
+
+  // CSV Import Functions
+  const handleCSVUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setError('Please upload a CSV file');
+      return;
+    }
+
+    try {
+      setCsvUploading(true);
+      setError(null);
+      
+      const text = await file.text();
+      const lines = text.split('\n');
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      
+      // Expected CSV format: tag, category, added_by
+      const tagIndex = headers.indexOf('tag');
+      const categoryIndex = headers.indexOf('category');
+      const addedByIndex = headers.indexOf('added_by');
+      
+      if (tagIndex === -1) {
+        setError('CSV must contain a "tag" column');
+        return;
+      }
+      
+      const tagsToImport = [];
+      const currentDate = new Date().toISOString().split('T')[0];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const values = line.split(',').map(v => v.trim());
+        const tag = values[tagIndex];
+        
+        if (tag) {
+          tagsToImport.push({
+            tag: tag,
+            category: categoryIndex !== -1 ? (values[categoryIndex] || 'hashtag') : 'hashtag',
+            added_by: addedByIndex !== -1 ? (values[addedByIndex] || 'CSV Import') : 'CSV Import',
+            date_added: currentDate
+          });
+        }
+      }
+      
+      if (tagsToImport.length === 0) {
+        setError('No valid tags found in CSV');
+        return;
+      }
+      
+      // Bulk insert tags
+      const insertedTags = await tagsAPI.insertManyTags(tagsToImport);
+      setTags(prevTags => [...insertedTags, ...prevTags]);
+      
+      // Clear file input
+      event.target.value = '';
+      
+      setError(null);
+      alert(`Successfully imported ${insertedTags.length} tags`);
+      
+    } catch (err) {
+      setError('Failed to import CSV: ' + err.message);
+    } finally {
+      setCsvUploading(false);
+    }
+  };
+
+  const importFromKeywordPlanner = () => {
+    setError('Keyword Planner integration coming soon. Please use CSV upload for now.');
+  };
+
+  const importFromGSC = () => {
+    setError('Google Search Console integration coming soon. Please use CSV upload for now.');
+  };
+
   const addChannel = () => {
     if (newChannel.channelName) {
       const channel = {
@@ -638,6 +842,15 @@ const MarketingComponent = () => {
     });
   };
 
+  const resetTagForm = () => {
+    setNewTag({
+      tag: '',
+      category: 'hashtag',
+      dateAdded: new Date().toISOString().split('T')[0],
+      addedBy: ''
+    });
+  };
+
   const resetChannelForm = () => {
     setNewChannel({
       channelName: '',
@@ -703,18 +916,6 @@ const MarketingComponent = () => {
     if (file) {
       setNewIntel({...newIntel, audioFile: file});
     }
-  };
-
-  const importFromKeywordPlanner = () => {
-    console.log('Importing from Keyword Planner...');
-  };
-
-  const importFromGSC = () => {
-    console.log('Importing from GSC...');
-  };
-
-  const importCSV = () => {
-    console.log('Importing CSV...');
   };
 
   // Persona and Audience Dropdown Component (side-by-side layout with proper dark mode)
@@ -1132,37 +1333,209 @@ const MarketingComponent = () => {
               paddingBottom: '16px',
               marginBottom: '20px'
             }}>
-              <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>Hashtag & Tags Manager</h2>
+              <h2 style={{ ...sectionTitleStyle, margin: '0 0 8px 0' }}>
+                {editingTag ? 'Edit Tag' : 'Add New Tag'}
+              </h2>
               <p style={{ fontSize: '14px', color: isDarkMode ? '#d1d5db' : '#6b7280', margin: '0' }}>
-                Import and manage hashtags from various sources
+                {editingTag ? 'Update tag details' : 'Create and manage hashtags and content tags'}
               </p>
             </div>
             
-            <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
+            <div style={formGridStyle}>
+              <div>
+                <label style={labelStyle}>Tag *</label>
+                <input 
+                  type="text"
+                  value={newTag.tag}
+                  onChange={(e) => setNewTag({...newTag, tag: e.target.value})}
+                  placeholder="Enter tag (without # symbol)"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Category</label>
+                <select 
+                  value={newTag.category}
+                  onChange={(e) => setNewTag({...newTag, category: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: '#334155',
+                    color: '#ffffff',
+                    outline: 'none',
+                    fontFamily: 'inherit'
+                  }}
+                >
+                  <option value="hashtag" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Hashtag</option>
+                  <option value="content-tag" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Content Tag</option>
+                  <option value="seo-tag" style={{ backgroundColor: '#334155', color: '#ffffff' }}>SEO Tag</option>
+                  <option value="campaign-tag" style={{ backgroundColor: '#334155', color: '#ffffff' }}>Campaign Tag</option>
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Added By</label>
+                <input 
+                  type="text"
+                  value={newTag.addedBy}
+                  onChange={(e) => setNewTag({...newTag, addedBy: e.target.value})}
+                  placeholder="Your name"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+            
+            <div style={{ marginTop: '20px', textAlign: 'right', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              {editingTag && (
+                <button 
+                  onClick={cancelTagEdit} 
+                  style={secondaryButtonStyle}
+                  disabled={tagsLoading}
+                >
+                  Cancel
+                </button>
+              )}
               <button 
-                onClick={importFromKeywordPlanner}
-                style={secondaryButtonStyle}
+                onClick={editingTag ? updateTag : addTag}
+                style={{
+                  ...primaryButtonStyle,
+                  opacity: (newTag.tag.trim() && !tagsLoading) ? 1 : 0.5,
+                  cursor: (newTag.tag.trim() && !tagsLoading) ? 'pointer' : 'not-allowed'
+                }}
+                disabled={!newTag.tag.trim() || tagsLoading}
               >
-                Import from Keyword Planner
-              </button>
-              <button 
-                onClick={importFromGSC}
-                style={secondaryButtonStyle}
-              >
-                Import from Google Search Console
-              </button>
-              <button 
-                onClick={importCSV}
-                style={secondaryButtonStyle}
-              >
-                Manual CSV Upload
+                {tagsLoading ? 'Saving...' : (editingTag ? 'Update Tag' : '+ Add Tag')}
               </button>
             </div>
 
-            <div style={emptyStateStyle}>
-              <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
-                No hashtags imported yet. Use the import buttons above to get started.
-              </p>
+            {/* Import Section */}
+            <div style={{ 
+              marginTop: '32px',
+              paddingTop: '24px',
+              borderTop: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
+            }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
+                Import Tags
+              </h3>
+              <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
+                <button 
+                  onClick={importFromKeywordPlanner}
+                  style={secondaryButtonStyle}
+                  disabled={csvUploading}
+                >
+                  Import from Keyword Planner
+                </button>
+                <button 
+                  onClick={importFromGSC}
+                  style={secondaryButtonStyle}
+                  disabled={csvUploading}
+                >
+                  Import from Google Search Console
+                </button>
+                <div>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleCSVUpload}
+                    style={{ display: 'none' }}
+                    id="csv-upload"
+                    disabled={csvUploading}
+                  />
+                  <button 
+                    onClick={() => document.getElementById('csv-upload').click()}
+                    style={{
+                      ...secondaryButtonStyle,
+                      width: '100%',
+                      opacity: csvUploading ? 0.5 : 1,
+                      cursor: csvUploading ? 'not-allowed' : 'pointer'
+                    }}
+                    disabled={csvUploading}
+                  >
+                    {csvUploading ? 'Uploading CSV...' : 'Manual CSV Upload'}
+                  </button>
+                  <p style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280', marginTop: '8px', margin: '8px 0 0 0' }}>
+                    CSV format: tag, category, added_by (headers required)
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Display existing tags */}
+            <div style={{ marginTop: '24px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
+                Tags ({tags.length})
+              </h3>
+              {tagsLoading && tags.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                  Loading tags...
+                </div>
+              ) : tags.length === 0 ? (
+                <div style={emptyStateStyle}>
+                  <p style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>
+                    No tags added yet. Add tags manually or import from CSV.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  {tags.map((tag) => (
+                    <div key={tag.id} style={{
+                      padding: '12px',
+                      border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                      borderRadius: '6px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      backgroundColor: isDarkMode ? '#374151' : '#ffffff'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span style={{ fontWeight: '500' }}>
+                            {tag.category === 'hashtag' ? '#' : ''}{tag.tag}
+                          </span>
+                          <span style={{
+                            fontSize: '11px',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            backgroundColor: tag.category === 'hashtag' ? '#dbeafe' : '#f3f4f6',
+                            color: tag.category === 'hashtag' ? '#1e40af' : '#374151'
+                          }}>
+                            {tag.category}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280', marginTop: '4px', display: 'block' }}>
+                          {tag.date_added} by {tag.added_by || 'Unknown'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={() => editTag(tag)}
+                          style={{
+                            ...smallButtonStyle,
+                            backgroundColor: '#3b82f6',
+                            color: 'white'
+                          }}
+                          disabled={tagsLoading}
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => deleteTag(tag.id)}
+                          style={{
+                            ...smallButtonStyle,
+                            backgroundColor: '#dc2626',
+                            color: 'white'
+                          }}
+                          disabled={tagsLoading}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
