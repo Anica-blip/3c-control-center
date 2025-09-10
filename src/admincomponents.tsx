@@ -1076,7 +1076,7 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                   {
                     name: 'Content Template Engine',
                     desc: 'Comprehensive template creation and management',
-                    url: 'https://anica-blip.github.io/3c-content-template-engine/'
+                    url: 'https://3c-content-template-engine.vercel.app/'
                   },
                   {
                     name: 'Featured Content Templates',
@@ -1563,7 +1563,7 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                 {[
                   { emoji: '📄', title: 'Templates', value: '47 designs' },
-                  { emoji: '🏢', title: 'Brand Kit', value: 'Active' },
+                  { emoji: '🎢', title: 'Brand Kit', value: 'Active' },
                   { emoji: '👥', title: 'Team', value: '5 members' }
                 ].map((item, index) => (
                   <div key={index} style={{
