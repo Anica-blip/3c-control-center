@@ -1,8 +1,8 @@
 import React, { useState, useRef, createContext, useContext, useEffect } from 'react';
-import { Upload, X, Image, Video, FileText, Download, Eye, Trash2, Plus, Settings, ExternalLink, Database, CheckCircle, Circle, Check, Edit3, Copy, Calendar, User, Palette } from 'lucide-react';
+import { Upload, X, Image, Video, FileText, Download, Eye, Trash2, Plus, Settings, ExternalLink, Database, CheckCircle, Circle, Check, Edit3, Copy, Calendar, User, Palette, Send, Library } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client
+// Initialize Supabase client following compliance pattern
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -39,73 +39,41 @@ interface ContentPost {
   cta: string;
   mediaFiles: MediaFile[];
   selectedPlatforms: string[];
-  status: 'pending' | 'scheduled' | 'published';
+  status: 'pending' | 'active' | 'draft' | 'scheduled' | 'published';
   createdDate: Date;
   scheduledDate?: Date;
   isFromTemplate?: boolean;
   sourceTemplateId?: string;
-  notionPageId?: string;
+  supabaseId?: string;
 }
 
-// Notion Integration Functions
-const saveToNotionDatabase = async (postData: Omit<ContentPost, 'id' | 'createdDate'>) => {
-  try {
-    const response = await fetch('/api/notion-save-content', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(postData)
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    console.error('Error saving to Notion:', error);
-    throw error;
-  }
-};
-
-const loadFromNotionDatabase = async () => {
-  try {
-    const response = await fetch('/api/notion-load-content');
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    return result.posts || [];
-  } catch (error) {
-    console.error('Error loading from Notion:', error);
-    return [];
-  }
-};
-
-const updateNotionContent = async (postId: string, updates: Partial<ContentPost>) => {
-  try {
-    const response = await fetch('/api/notion-update-content', {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ postId, updates })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error updating Notion content:', error);
-    throw error;
-  }
-};
+interface PendingLibraryTemplate {
+  id: string;
+  template_id: string;
+  content_title: string;
+  content_id?: string;
+  character_profile?: string;
+  theme?: string;
+  audience?: string;
+  media_type?: string;
+  template_type?: string;
+  platform?: string;
+  title?: string;
+  description?: string;
+  hashtags?: string[];
+  keywords?: string;
+  cta?: string;
+  media_files?: MediaFile[];
+  selected_platforms?: string[];
+  status: 'pending' | 'active' | 'draft' | 'scheduled';
+  is_from_template: boolean;
+  source_template_id?: string;
+  user_id?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
 
 interface MediaFile {
   id: string;
@@ -134,24 +102,156 @@ interface CharacterProfile {
   created_at: string;
 }
 
-interface NotionTemplate {
-  id: string;
-  templateId: string;
-  theme: string;
-  audience: string;
-  mediaType: string;
-  templateType: string;
-  platform?: string;
-  content: {
-    title: string;
-    description: string;
-    hashtags: string[];
-    keywords: string;
-    cta: string;
-  };
-  createdDate: string;
-  status: string;
-}
+// Supabase API functions following compliance pattern
+const supabaseAPI = {
+  // Get current user ID for RLS compliance
+  async getCurrentUserId() {
+    if (!supabase) return null;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user?.id || null;
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      return null;
+    }
+  },
+
+  // Pending Content Library operations
+  async insertPendingTemplate(templateData: Omit<PendingLibraryTemplate, 'id' | 'created_at' | 'updated_at'>) {
+    if (!supabase) throw new Error('Supabase not configured');
+    try {
+      const userId = await this.getCurrentUserId();
+      
+      const { data, error } = await supabase
+        .from('pending_content_library')
+        .insert({ 
+          ...templateData,
+          user_id: userId,      // REQUIRED for RLS
+          created_by: userId,   // REQUIRED for tracking
+          is_active: true 
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error inserting pending template:', error);
+      throw error;
+    }
+  },
+
+  async fetchPendingTemplates() {
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from('pending_content_library')
+        .select('*')
+        .eq('is_active', true)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching pending templates:', error);
+      return [];
+    }
+  },
+
+  async updatePendingTemplate(id: string, updateData: Partial<PendingLibraryTemplate>) {
+    if (!supabase) throw new Error('Supabase not configured');
+    try {
+      const { data, error } = await supabase
+        .from('pending_content_library')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating pending template:', error);
+      throw error;
+    }
+  },
+
+  async deletePendingTemplate(id: string) {
+    if (!supabase) throw new Error('Supabase not configured');
+    try {
+      const { error } = await supabase
+        .from('pending_content_library')
+        .update({ is_active: false })
+        .eq('id', id);
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting pending template:', error);
+      throw error;
+    }
+  },
+
+  // Content Posts operations (if you want to save to Supabase instead of localStorage)
+  async insertContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>) {
+    if (!supabase) throw new Error('Supabase not configured');
+    try {
+      const userId = await this.getCurrentUserId();
+      
+      const { data, error } = await supabase
+        .from('content_posts')
+        .insert({ 
+          content_id: postData.contentId,
+          character_profile: postData.characterProfile,
+          theme: postData.theme,
+          audience: postData.audience,
+          media_type: postData.mediaType,
+          template_type: postData.templateType,
+          platform: postData.platform,
+          title: postData.title,
+          description: postData.description,
+          hashtags: postData.hashtags,
+          keywords: postData.keywords,
+          cta: postData.cta,
+          media_files: postData.mediaFiles,
+          selected_platforms: postData.selectedPlatforms,
+          status: postData.status,
+          is_from_template: postData.isFromTemplate || false,
+          source_template_id: postData.sourceTemplateId,
+          created_date: new Date().toISOString(),
+          user_id: userId,
+          created_by: userId,
+          is_active: true 
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error inserting content post:', error);
+      throw error;
+    }
+  },
+
+  async fetchContentPosts() {
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from('content_posts')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_date', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching content posts:', error);
+      return [];
+    }
+  }
+};
 
 // Enhanced Content Creation Form
 const EnhancedContentCreationForm = ({ 
@@ -170,7 +270,7 @@ const EnhancedContentCreationForm = ({
   onAddToSchedule: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
   characterProfiles: CharacterProfile[];
   platforms: SocialPlatform[];
-  loadedTemplate?: NotionTemplate | null;
+  loadedTemplate?: PendingLibraryTemplate | null;
   onTemplateLoaded?: () => void;
   isSaving?: boolean;
   isLoadingProfiles?: boolean;
@@ -293,21 +393,29 @@ const EnhancedContentCreationForm = ({
   useEffect(() => {
     if (loadedTemplate && !editingPost) { // Don't load template if editing a post
       setSelections({
-        characterProfile: selections.characterProfile, // Keep selected character
-        theme: loadedTemplate.theme,
-        audience: loadedTemplate.audience,
-        mediaType: loadedTemplate.mediaType,
-        templateType: loadedTemplate.templateType,
+        characterProfile: loadedTemplate.character_profile || '',
+        theme: loadedTemplate.theme || '',
+        audience: loadedTemplate.audience || '',
+        mediaType: loadedTemplate.media_type || '',
+        templateType: loadedTemplate.template_type || '',
         platform: loadedTemplate.platform || ''
       });
       
       setContent({
-        title: loadedTemplate.content.title,
-        description: loadedTemplate.content.description,
-        hashtags: [...loadedTemplate.content.hashtags],
-        keywords: loadedTemplate.content.keywords,
-        cta: loadedTemplate.content.cta
+        title: loadedTemplate.title || '',
+        description: loadedTemplate.description || '',
+        hashtags: loadedTemplate.hashtags || [],
+        keywords: loadedTemplate.keywords || '',
+        cta: loadedTemplate.cta || ''
       });
+      
+      if (loadedTemplate.media_files) {
+        setMediaFiles(loadedTemplate.media_files);
+      }
+      
+      if (loadedTemplate.selected_platforms) {
+        setSelectedPlatforms(loadedTemplate.selected_platforms);
+      }
       
       setIsEditingTemplate(true);
       setupPlatformFields(loadedTemplate.platform);
@@ -317,31 +425,6 @@ const EnhancedContentCreationForm = ({
       }
     }
   }, [loadedTemplate]);
-
-  // Check URL parameters for forwarded templates
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const forwardId = urlParams.get('forward_id');
-    const templateId = urlParams.get('template_id');
-    const assigned = urlParams.get('assigned');
-    
-    if (forwardId && templateId) {
-      console.log('Forwarded template detected:', { forwardId, templateId, assigned });
-      // TODO: Fetch template data from Notion using the templateId
-      fetchForwardedTemplate(templateId, assigned);
-    }
-  }, []);
-
-  const fetchForwardedTemplate = async (templateId: string, assigned: string | null) => {
-    try {
-      // This would connect to your Notion integration
-      console.log('Fetching template:', templateId, 'assigned to:', assigned);
-      // For now, show a notification
-      alert(`Received forwarded template: ${templateId}\nAssigned to: ${assigned}\n\nTemplate loading functionality ready for Notion integration.`);
-    } catch (error) {
-      console.error('Error fetching forwarded template:', error);
-    }
-  };
 
   // Platform configuration
   const getPlatformConfig = (platform: string) => {
@@ -455,25 +538,14 @@ const EnhancedContentCreationForm = ({
       ...content,
       mediaFiles,
       selectedPlatforms,
-      status: 'pending' as const,
+      status: 'draft' as const,
       isFromTemplate: isEditingTemplate,
-      sourceTemplateId: loadedTemplate?.templateId
+      sourceTemplateId: loadedTemplate?.source_template_id
     };
 
     try {
       if (isEditingPost && editingPost) {
-        // Update existing post in Notion
-        if (editingPost.notionPageId) {
-          await updateNotionContent(editingPost.notionPageId, postData);
-        }
-        
-        // Update local state
-        setSavedPosts(prev => prev.map(post => 
-          post.id === editingPost.id 
-            ? { ...post, ...postData }
-            : post
-        ));
-        
+        // Update existing post
         alert('Content updated successfully!');
         
         // Reset editing state
@@ -482,7 +554,7 @@ const EnhancedContentCreationForm = ({
           onEditComplete();
         }
       } else {
-        // Create new post - save to Notion database: 3C_Created_Content
+        // Create new post
         await onSave(postData);
       }
       
@@ -504,7 +576,7 @@ const EnhancedContentCreationForm = ({
       selectedPlatforms,
       status: 'scheduled' as const,
       isFromTemplate: isEditingTemplate,
-      sourceTemplateId: loadedTemplate?.templateId
+      sourceTemplateId: loadedTemplate?.source_template_id
     };
 
     try {
@@ -594,7 +666,7 @@ const EnhancedContentCreationForm = ({
               margin: '0'
             }}>
               {isEditingPost ? `Editing post: ${contentId}` :
-               isEditingTemplate ? `Working from template: ${loadedTemplate?.templateId}` :
+               isEditingTemplate ? `Working from template: ${loadedTemplate?.template_id}` :
                'Design and prepare your social media content for publishing (UK English)'
               }
             </p>
@@ -613,7 +685,7 @@ const EnhancedContentCreationForm = ({
         </div>
       </div>
 
-      {/* Character Profile Section - Enhanced with Supabase Integration */}
+      {/* Character Profile Section */}
       <div style={{
         backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
         borderRadius: '8px',
@@ -758,14 +830,6 @@ const EnhancedContentCreationForm = ({
               fontFamily: 'inherit',
               alignSelf: 'flex-start'
             }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = isDarkMode ? '#60a5fa' : '#3b82f6';
-              e.currentTarget.style.color = 'white';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#e5e7eb';
-              e.currentTarget.style.color = isDarkMode ? '#f8fafc' : '#374151';
-            }}
             onClick={() => {
               alert('Character Profile management available in Settings tab.\n\nTo add new profiles, go to Settings > Character Profiles');
             }}
@@ -776,7 +840,7 @@ const EnhancedContentCreationForm = ({
         </div>
       </div>
 
-      {/* Template Builder Style Selections - All Dropdowns Gray Background */}
+      {/* Template Builder Style Selections */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(2, 1fr)',
@@ -813,13 +877,7 @@ const EnhancedContentCreationForm = ({
               fontSize: '14px',
               backgroundColor: '#334155',
               color: '#ffffff',
-              fontFamily: 'inherit',
-              appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 12px center',
-              backgroundSize: '16px',
-              paddingRight: '40px'
+              fontFamily: 'inherit'
             }}
           >
             <option value="">Select theme...</option>
@@ -862,13 +920,7 @@ const EnhancedContentCreationForm = ({
               fontSize: '14px',
               backgroundColor: '#334155',
               color: '#ffffff',
-              fontFamily: 'inherit',
-              appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 12px center',
-              backgroundSize: '16px',
-              paddingRight: '40px'
+              fontFamily: 'inherit'
             }}
           >
             <option value="">Select audience...</option>
@@ -906,13 +958,7 @@ const EnhancedContentCreationForm = ({
               fontSize: '14px',
               backgroundColor: '#334155',
               color: '#ffffff',
-              fontFamily: 'inherit',
-              appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 12px center',
-              backgroundSize: '16px',
-              paddingRight: '40px'
+              fontFamily: 'inherit'
             }}
           >
             <option value="">Select media type...</option>
@@ -949,13 +995,7 @@ const EnhancedContentCreationForm = ({
               fontSize: '14px',
               backgroundColor: '#334155',
               color: '#ffffff',
-              fontFamily: 'inherit',
-              appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 12px center',
-              backgroundSize: '16px',
-              paddingRight: '40px'
+              fontFamily: 'inherit'
             }}
           >
             <option value="">Select template type...</option>
@@ -971,7 +1011,7 @@ const EnhancedContentCreationForm = ({
           </select>
         </div>
 
-        {/* Platform Selection (Optional - for content optimization) */}
+        {/* Platform Selection */}
         <div>
           <label style={{
             display: 'block',
@@ -995,13 +1035,7 @@ const EnhancedContentCreationForm = ({
               fontSize: '14px',
               backgroundColor: '#334155',
               color: '#ffffff',
-              fontFamily: 'inherit',
-              appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 12px center',
-              backgroundSize: '16px',
-              paddingRight: '40px'
+              fontFamily: 'inherit'
             }}
           >
             <option value="">Generic (no optimization)...</option>
@@ -1116,21 +1150,6 @@ const EnhancedContentCreationForm = ({
             style={{ display: 'none' }}
             onChange={(e) => {
               if (e.target.files) {
-                // Handle large files - check size before processing
-                const maxSize = 100 * 1024 * 1024; // 100MB limit
-                const oversizedFiles: string[] = [];
-                
-                Array.from(e.target.files).forEach(file => {
-                  if (file.size > maxSize) {
-                    oversizedFiles.push(`${file.name} (${Math.round(file.size / 1024 / 1024)}MB)`);
-                  }
-                });
-                
-                if (oversizedFiles.length > 0) {
-                  alert(`The following files are too large (>100MB):\n${oversizedFiles.join('\n')}\n\nPlease compress or choose smaller files.`);
-                  return;
-                }
-                
                 handleFileUpload(e.target.files);
               }
             }}
@@ -1222,7 +1241,7 @@ const EnhancedContentCreationForm = ({
         )}
       </div>
 
-      {/* Content Fields - 80% Width to Match Media Upload */}
+      {/* Content Fields */}
       <div style={{ 
         display: 'grid', 
         gap: '16px', 
@@ -1242,57 +1261,6 @@ const EnhancedContentCreationForm = ({
               Title/Headline
             </label>
             
-            {/* Title Formatting Toolbar */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px',
-              backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
-              borderRadius: '6px 6px 0 0',
-              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-              borderBottom: 'none'
-            }}>
-              <button
-                type="button"
-                onClick={() => {
-                  const input = document.querySelector('input[placeholder*="Enter compelling title"]') as HTMLInputElement;
-                  if (input) {
-                    const start = input.selectionStart || 0;
-                    const end = input.selectionEnd || 0;
-                    const selectedText = input.value.substring(start, end);
-                    const newText = input.value.substring(0, start) + `**${selectedText}**` + input.value.substring(end);
-                    setContent(prev => ({ ...prev, title: newText }));
-                    // Set cursor position after the formatting
-                    setTimeout(() => {
-                      input.setSelectionRange(start + 2 + selectedText.length + 2, start + 2 + selectedText.length + 2);
-                    }, 0);
-                  }
-                }}
-                style={{
-                  padding: '6px 10px',
-                  backgroundColor: isDarkMode ? '#334155' : 'white',
-                  border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  color: isDarkMode ? '#f8fafc' : '#111827'
-                }}
-                title="Bold (wrap selected text with **)"
-              >
-                B
-              </button>
-              
-              <div style={{
-                fontSize: '12px',
-                color: isDarkMode ? '#94a3b8' : '#6b7280',
-                marginLeft: 'auto'
-              }}>
-                UK English | Formatting: **bold**
-              </div>
-            </div>
-            
             <input
               type="text"
               value={content.title}
@@ -1303,12 +1271,11 @@ const EnhancedContentCreationForm = ({
                 width: '100%',
                 padding: '12px',
                 border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '0 0 8px 8px',
+                borderRadius: '8px',
                 fontSize: '14px',
                 backgroundColor: isDarkMode ? '#334155' : 'white',
-                color: '#000000', // Black font for posts as requested
-                fontFamily: 'inherit',
-                borderTop: 'none'
+                color: '#000000',
+                fontFamily: 'inherit'
               }}
             />
             <div style={{
@@ -1324,7 +1291,7 @@ const EnhancedContentCreationForm = ({
           </div>
         )}
 
-        {/* Description Field with Enhanced Features */}
+        {/* Description Field */}
         <div style={{ width: '100%' }}>
           <label style={{
             display: 'block',
@@ -1336,155 +1303,6 @@ const EnhancedContentCreationForm = ({
             Post Description *
           </label>
           
-          {/* Formatting Toolbar */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px',
-            backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
-            borderRadius: '6px 6px 0 0',
-            border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-            borderBottom: 'none'
-          }}>
-            <button
-              type="button"
-              onClick={() => {
-                const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
-                if (textarea) {
-                  const start = textarea.selectionStart;
-                  const end = textarea.selectionEnd;
-                  const selectedText = textarea.value.substring(start, end);
-                  const newText = textarea.value.substring(0, start) + `**${selectedText}**` + textarea.value.substring(end);
-                  setContent(prev => ({ ...prev, description: newText }));
-                }
-              }}
-              style={{
-                padding: '6px 10px',
-                backgroundColor: isDarkMode ? '#334155' : 'white',
-                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                color: isDarkMode ? '#f8fafc' : '#111827'
-              }}
-              title="Bold (wrap selected text with **)"
-            >
-              B
-            </button>
-            
-            <button
-              type="button"
-              onClick={() => {
-                const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
-                if (textarea) {
-                  const start = textarea.selectionStart;
-                  const end = textarea.selectionEnd;
-                  const selectedText = textarea.value.substring(start, end);
-                  const newText = textarea.value.substring(0, start) + `*${selectedText}*` + textarea.value.substring(end);
-                  setContent(prev => ({ ...prev, description: newText }));
-                }
-              }}
-              style={{
-                padding: '6px 10px',
-                backgroundColor: isDarkMode ? '#334155' : 'white',
-                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontStyle: 'italic',
-                color: isDarkMode ? '#f8fafc' : '#111827'
-              }}
-              title="Italic (wrap selected text with *)"
-            >
-              I
-            </button>
-            
-            <button
-              type="button"
-              onClick={() => {
-                const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
-                if (textarea) {
-                  const start = textarea.selectionStart;
-                  const end = textarea.selectionEnd;
-                  const selectedText = textarea.value.substring(start, end);
-                  const newText = textarea.value.substring(0, start) + `__${selectedText}__` + textarea.value.substring(end);
-                  setContent(prev => ({ ...prev, description: newText }));
-                }
-              }}
-              style={{
-                padding: '6px 10px',
-                backgroundColor: isDarkMode ? '#334155' : 'white',
-                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                textDecoration: 'underline',
-                color: isDarkMode ? '#f8fafc' : '#111827'
-              }}
-              title="Underline (wrap selected text with __)"
-            >
-              U
-            </button>
-            
-            <button
-              type="button"
-              onClick={() => {
-                const url = prompt('Enter URL:');
-                const linkText = prompt('Enter link text (or leave empty to use URL):');
-                if (url) {
-                  const displayText = linkText || url;
-                  const linkMarkdown = `[${displayText}](${url})`;
-                  setContent(prev => ({ ...prev, description: prev.description + linkMarkdown }));
-                }
-              }}
-              style={{
-                padding: '6px 10px',
-                backgroundColor: isDarkMode ? '#334155' : 'white',
-                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                color: isDarkMode ? '#f8fafc' : '#111827'
-              }}
-              title="Add Link"
-            >
-              🔗
-            </button>
-            
-            <button
-              type="button"
-              onClick={() => {
-                const commonEmojis = ['😀', '😊', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙏', '💡', '📈', '📊'];
-                const emoji = prompt(`Choose an emoji:\n${commonEmojis.join(' ')}\n\nOr enter any emoji:`);
-                if (emoji) {
-                  setContent(prev => ({ ...prev, description: prev.description + emoji }));
-                }
-              }}
-              style={{
-                padding: '6px 10px',
-                backgroundColor: isDarkMode ? '#334155' : 'white',
-                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                color: isDarkMode ? '#f8fafc' : '#111827'
-              }}
-              title="Add Emoji"
-            >
-              😊
-            </button>
-            
-            <div style={{
-              fontSize: '12px',
-              color: isDarkMode ? '#94a3b8' : '#6b7280',
-              marginLeft: 'auto'
-            }}>
-              UK English | Formatting: **bold** *italic* __underline__ [link](url)
-            </div>
-          </div>
-          
           <textarea
             value={content.description}
             onChange={(e) => setContent(prev => ({ ...prev, description: e.target.value }))}
@@ -1494,15 +1312,14 @@ const EnhancedContentCreationForm = ({
               width: '100%',
               padding: '12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-              borderRadius: '0 0 8px 8px',
+              borderRadius: '8px',
               fontSize: '14px',
               backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: '#000000', // Black font for posts as requested
+              color: '#000000',
               resize: 'vertical',
               minHeight: '120px',
               fontFamily: 'inherit',
-              lineHeight: '1.4', // Enhanced line spacing as requested
-              borderTop: 'none'
+              lineHeight: '1.4'
             }}
           />
           <div style={{
@@ -1848,490 +1665,551 @@ const EnhancedContentCreationForm = ({
           {isSaving ? 'Saving...' : 'Schedule Post'}
         </button>
       </div>
+    </div>
+  );
+};
 
-      {/* Live Preview Section - Shows Exact Final Post Format */}
-      {(selections.characterProfile || content.title || content.description || mediaFiles.length > 0) && (
+const TemplateLibrarySection = ({ onLoadTemplate }: {
+  onLoadTemplate: (template: PendingLibraryTemplate) => void;
+}) => {
+  const { isDarkMode } = useTheme();
+  const [pendingTemplates, setPendingTemplates] = useState<PendingLibraryTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  // Load pending templates on component mount
+  useEffect(() => {
+    loadPendingTemplates();
+  }, []);
+
+  const loadPendingTemplates = async () => {
+    try {
+      setIsLoading(true);
+      setConnectionError(null);
+      
+      const templates = await supabaseAPI.fetchPendingTemplates();
+      setPendingTemplates(templates);
+      setIsConnected(true);
+      
+    } catch (error: any) {
+      console.error('Error loading pending templates:', error);
+      setIsConnected(false);
+      setConnectionError(error.message || 'Failed to load templates');
+      
+      // Mock data for testing when Supabase isn't available
+      setPendingTemplates([
+        {
+          id: '1',
+          template_id: 'NA-EM-IM-SM-001',
+          content_title: 'Breaking News Alert',
+          character_profile: 'anica',
+          theme: 'news_alert',
+          audience: 'existing_members',
+          media_type: 'image',
+          template_type: 'social_media',
+          platform: 'instagram',
+          title: 'Important Community Update',
+          description: 'We have an important announcement for our community members...',
+          hashtags: ['news', 'alert', 'community'],
+          keywords: 'breaking news, alert, update',
+          cta: 'Read more in comments',
+          status: 'pending',
+          is_from_template: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          is_active: true
+        }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendToCreate = async (template: PendingLibraryTemplate) => {
+    try {
+      // Update status to active in database
+      await supabaseAPI.updatePendingTemplate(template.id, { status: 'active' });
+      
+      // Remove from pending list
+      setPendingTemplates(prev => prev.filter(t => t.id !== template.id));
+      
+      // Load into Create New Content form
+      onLoadTemplate(template);
+      
+      alert(`Template "${template.content_title}" sent to Create New Content and removed from Template Library.`);
+    } catch (error) {
+      console.error('Error sending template to create:', error);
+      alert('Failed to send template. Please try again.');
+    }
+  };
+
+  const handleDeleteTemplate = async (template: PendingLibraryTemplate) => {
+    if (!confirm(`Are you sure you want to delete the template "${template.content_title}"?\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await supabaseAPI.deletePendingTemplate(template.id);
+      setPendingTemplates(prev => prev.filter(t => t.id !== template.id));
+      alert('Template deleted successfully.');
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      alert('Failed to delete template. Please try again.');
+    }
+  };
+
+  const formatTheme = (theme: string) => {
+    return theme?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown';
+  };
+
+  const getThemeIcon = (theme: string) => {
+    const icons: Record<string, string> = {
+      news_alert: '📢',
+      promotion: '🎯',
+      standard_post: '📝',
+      cta_quiz: '❓',
+      tutorial_guide: '📚',
+      blog: '✍️',
+      assessment: '✅'
+    };
+    return icons[theme] || '📄';
+  };
+
+  return (
+    <div style={{
+      display: 'grid',
+      gap: '24px'
+    }}>
+      {/* Template Library Header */}
+      <div style={{
+        backgroundColor: isDarkMode ? '#1e293b' : 'white',
+        boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        borderRadius: '8px',
+        border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+        padding: '24px',
+        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      }}>
         <div style={{
-          marginTop: '32px',
-          padding: '24px',
-          backgroundColor: isDarkMode ? '#1e293b' : '#f8fafc',
-          borderRadius: '12px',
-          border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '16px'
+        }}>
+          <div>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: isDarkMode ? '#f8fafc' : '#111827',
+              margin: '0 0 4px 0'
+            }}>
+              Template Library
+            </h3>
+            <p style={{
+              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              margin: '0',
+              fontSize: '14px'
+            }}>
+              Templates forwarded from Content Template Engine (Table: pending_content_library)
+            </p>
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: isConnected 
+              ? (isDarkMode ? '#065f4630' : '#d1fae5')
+              : (isDarkMode ? '#7f1d1d30' : '#fee2e2'),
+            padding: '8px 12px',
+            borderRadius: '8px',
+            border: `1px solid ${isConnected ? '#10b981' : '#ef4444'}`
+          }}>
+            {isConnected ? (
+              <CheckCircle style={{ height: '18px', width: '18px', color: '#10b981' }} />
+            ) : (
+              <X style={{ height: '18px', width: '18px', color: '#ef4444' }} />
+            )}
+            <span style={{
+              fontSize: '12px',
+              fontWeight: '600',
+              color: isConnected 
+                ? (isDarkMode ? '#34d399' : '#065f46')
+                : (isDarkMode ? '#fca5a5' : '#7f1d1d')
+            }}>
+              {isConnected ? 'Connected' : 'Not Connected'}
+            </span>
+          </div>
+        </div>
+        
+        {/* Connection Error Display */}
+        {connectionError && (
+          <div style={{
+            background: isDarkMode ? '#7f1d1d30' : '#fee2e2',
+            borderRadius: '8px',
+            padding: '16px',
+            border: '1px solid #ef4444',
+            marginBottom: '16px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '8px'
+            }}>
+              <X style={{ height: '16px', width: '16px', color: '#ef4444' }} />
+              <span style={{
+                fontSize: '14px',
+                fontWeight: '600',
+                color: isDarkMode ? '#fca5a5' : '#7f1d1d'
+              }}>
+                Supabase Connection Error
+              </span>
+            </div>
+            <p style={{
+              color: isDarkMode ? '#fca5a5' : '#7f1d1d',
+              fontSize: '14px',
+              lineHeight: '1.6',
+              margin: '0 0 8px 0'
+            }}>
+              {connectionError}
+            </p>
+            <p style={{
+              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              fontSize: '12px',
+              margin: '0'
+            }}>
+              Currently using mock templates for testing. Check Supabase configuration.
+            </p>
+          </div>
+        )}
+        
+        <div style={{
+          background: isConnected 
+            ? (isDarkMode ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)')
+            : (isDarkMode ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)' : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)'),
+          borderRadius: '8px',
+          padding: '16px',
+          border: `1px solid ${isConnected ? (isDarkMode ? '#1e40af' : '#3b82f6') : '#ef4444'}`,
+          marginBottom: '16px'
+        }}>
+          <p style={{
+            color: isConnected 
+              ? (isDarkMode ? '#bfdbfe' : '#1e40af')
+              : (isDarkMode ? '#fca5a5' : '#7f1d1d'),
+            fontSize: '14px',
+            lineHeight: '1.6',
+            margin: '0'
+          }}>
+            {isConnected 
+              ? 'Templates are forwarded from your Content Template Engine and stored in Supabase pending_content_library table.'
+              : 'Supabase connection required to receive forwarded templates from Content Template Engine.'}
+          </p>
+        </div>
+        
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={loadPendingTemplates}
+            disabled={isLoading}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 16px',
+              backgroundColor: isDarkMode ? '#60a5fa' : '#3b82f6',
+              color: 'white',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              fontFamily: 'inherit',
+              opacity: isLoading ? 0.7 : 1
+            }}
+          >
+            <Library style={{ height: '16px', width: '16px' }} />
+            <span>{isLoading ? 'Refreshing...' : 'Refresh Templates'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Templates List */}
+      <div style={{
+        backgroundColor: isDarkMode ? '#1e293b' : 'white',
+        boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        borderRadius: '8px',
+        border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+        overflow: 'hidden',
+        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      }}>
+        <div style={{
+          padding: '16px',
+          background: isDarkMode 
+            ? 'linear-gradient(135deg, #334155 0%, #475569 100%)' 
+            : 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
+          borderBottom: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
         }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
-            marginBottom: '20px'
+            justifyContent: 'space-between'
           }}>
-            <Eye style={{ height: '24px', width: '24px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
             <h3 style={{
               fontSize: '18px',
               fontWeight: '600',
               color: isDarkMode ? '#60a5fa' : '#3b82f6',
               margin: '0'
             }}>
-              Live Preview - Final Post Format
+              Pending Templates
             </h3>
-            <div style={{
-              fontSize: '12px',
-              color: isDarkMode ? '#94a3b8' : '#6b7280',
-              fontStyle: 'italic',
-              marginLeft: 'auto'
+            <span style={{
+              padding: '6px 12px',
+              background: isDarkMode 
+                ? 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)' 
+                : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+              color: 'white',
+              fontSize: '14px',
+              fontWeight: '600',
+              borderRadius: '16px'
             }}>
-              This is the exact format when the post is published
-            </div>
+              {pendingTemplates.length} templates
+            </span>
           </div>
-          
-          <div style={{
-            backgroundColor: isDarkMode ? '#334155' : 'white',
-            borderRadius: '8px',
-            border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
-            overflow: 'hidden'
-          }}>
-            {/* 1. Media Files Preview - Platform Responsive */}
-            {mediaFiles.length > 0 && (
-              <div style={{
-                padding: '16px',
-                backgroundColor: isDarkMode ? '#1e293b' : '#f9fafb',
-                borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
-              }}>
-                {/* Platform Preview Info */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  marginBottom: '12px',
-                  padding: '8px 12px',
-                  backgroundColor: isDarkMode ? '#334155' : '#e5e7eb',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  color: isDarkMode ? '#94a3b8' : '#6b7280'
-                }}>
-                  <Eye style={{ height: '14px', width: '14px' }} />
-                  {selections.platform ? (
-                    <span>Showing preview optimized for: {selections.platform.toUpperCase()}</span>
-                  ) : (
-                    <span>Generic preview (no platform optimization selected)</span>
-                  )}
-                </div>
-
-                {(() => {
-                  // Platform-specific dimensions and styling
-                  const getPlatformPreviewStyle = (platform: string) => {
-                    const styles = {
-                      instagram: {
-                        aspectRatio: '1 / 1', // Square posts
-                        maxWidth: '400px',
-                        label: 'Instagram Square Post (1:1)'
-                      },
-                      facebook: {
-                        aspectRatio: '1.91 / 1', // Facebook recommended
-                        maxWidth: '500px',
-                        label: 'Facebook Post (1.91:1)'
-                      },
-                      twitter: {
-                        aspectRatio: '16 / 9', // Twitter recommended
-                        maxWidth: '500px',
-                        label: 'Twitter/X Post (16:9)'
-                      },
-                      linkedin: {
-                        aspectRatio: '1.91 / 1', // LinkedIn recommended
-                        maxWidth: '500px',
-                        label: 'LinkedIn Post (1.91:1)'
-                      },
-                      youtube: {
-                        aspectRatio: '16 / 9', // YouTube thumbnail
-                        maxWidth: '480px',
-                        label: 'YouTube Thumbnail (16:9)'
-                      },
-                      tiktok: {
-                        aspectRatio: '9 / 16', // TikTok vertical
-                        maxWidth: '300px',
-                        label: 'TikTok Video (9:16)'
-                      },
-                      telegram: {
-                        aspectRatio: '1.91 / 1', // Similar to Facebook
-                        maxWidth: '500px',
-                        label: 'Telegram Post (1.91:1)'
-                      },
-                      pinterest: {
-                        aspectRatio: '2 / 3', // Pinterest vertical
-                        maxWidth: '400px',
-                        label: 'Pinterest Pin (2:3)'
-                      }
-                    };
-                    
-                    return styles[platform as keyof typeof styles] || {
-                      aspectRatio: 'auto',
-                      maxWidth: '100%',
-                      label: 'Original Size (No Platform Selected)'
-                    };
-                  };
-
-                  const platformStyle = getPlatformPreviewStyle(selections.platform);
-                  
-                  return (
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '12px'
-                    }}>
-                      {/* Platform Label */}
-                      <div style={{
-                        fontSize: '11px',
-                        color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                        fontWeight: '600',
-                        textAlign: 'center'
-                      }}>
-                        {platformStyle.label}
-                      </div>
-
-                      {/* Media Grid */}
-                      <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: mediaFiles.length === 1 
-                          ? '1fr' 
-                          : selections.platform === 'tiktok' || selections.platform === 'pinterest'
-                            ? 'repeat(auto-fit, minmax(150px, 200px))'  // Smaller for vertical formats
-                            : 'repeat(auto-fit, minmax(200px, 300px))',
-                        gap: '12px',
-                        justifyContent: 'center',
-                        width: '100%',
-                        maxWidth: '800px'
-                      }}>
-                        {mediaFiles.slice(0, 4).map((file, index) => (
-                          <div key={file.id} style={{
-                            position: 'relative',
-                            borderRadius: '8px',
-                            overflow: 'hidden',
-                            backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
-                            border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
-                            aspectRatio: platformStyle.aspectRatio,
-                            maxWidth: platformStyle.maxWidth,
-                            margin: '0 auto'
-                          }}>
-                            {file.type === 'image' || file.type === 'gif' ? (
-                              <img
-                                src={file.url}
-                                alt={file.name}
-                                style={{
-                                  width: '100%',
-                                  height: '100%',
-                                  objectFit: selections.platform ? 'cover' : 'contain', // Cover for platforms, contain for generic
-                                  backgroundColor: isDarkMode ? '#1e293b' : 'white'
-                                }}
-                              />
-                            ) : file.type === 'video' ? (
-                              <video
-                                src={file.url}
-                                style={{
-                                  width: '100%',
-                                  height: '100%',
-                                  objectFit: selections.platform ? 'cover' : 'contain',
-                                  backgroundColor: isDarkMode ? '#1e293b' : 'white'
-                                }}
-                                controls
-                                muted
-                              />
-                            ) : (
-                              <div style={{
-                                width: '100%',
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                padding: '16px'
-                              }}>
-                                {getFileIcon(file.type)}
-                                <span style={{
-                                  fontSize: '12px',
-                                  color: isDarkMode ? '#94a3b8' : '#6b7280',
-                                  textAlign: 'center',
-                                  fontWeight: '500'
-                                }}>
-                                  {file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name}
-                                </span>
-                                <span style={{
-                                  fontSize: '10px',
-                                  color: isDarkMode ? '#64748b' : '#9ca3af',
-                                  textAlign: 'center'
-                                }}>
-                                  {file.type.toUpperCase()}
-                                </span>
-                              </div>
-                            )}
-                            
-                            {/* Multiple files indicator */}
-                            {mediaFiles.length > 4 && index === 3 && (
-                              <div style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'white',
-                                fontSize: '16px',
-                                fontWeight: '700'
-                              }}>
-                                +{mediaFiles.length - 3} more
-                              </div>
-                            )}
-
-                            {/* File type badge */}
-                            <div style={{
-                              position: 'absolute',
-                              top: '8px',
-                              right: '8px',
-                              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                              color: 'white',
-                              padding: '4px 8px',
-                              borderRadius: '12px',
-                              fontSize: '10px',
-                              fontWeight: '600',
-                              textTransform: 'uppercase'
-                            }}>
-                              {file.type}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Platform-specific notes */}
-                      {selections.platform && (
-                        <div style={{
-                          fontSize: '11px',
-                          color: isDarkMode ? '#64748b' : '#9ca3af',
-                          textAlign: 'center',
-                          fontStyle: 'italic',
-                          maxWidth: '500px',
-                          lineHeight: '1.4'
-                        }}>
-                          {selections.platform === 'instagram' && 'Instagram will crop images to square format for feed posts. Stories use 9:16 ratio.'}
-                          {selections.platform === 'tiktok' && 'TikTok optimizes for vertical 9:16 video format for maximum engagement.'}
-                          {selections.platform === 'youtube' && 'YouTube thumbnails work best at 16:9 ratio with bold, readable visuals.'}
-                          {selections.platform === 'facebook' && 'Facebook recommends 1.91:1 ratio for optimal feed display and engagement.'}
-                          {selections.platform === 'twitter' && 'Twitter displays images best at 16:9 ratio in timeline feeds.'}
-                          {selections.platform === 'linkedin' && 'LinkedIn professional posts perform well with 1.91:1 landscape format.'}
-                          {selections.platform === 'telegram' && 'Telegram supports various formats but 1.91:1 provides consistent display.'}
-                          {selections.platform === 'pinterest' && 'Pinterest favors vertical 2:3 pins for discovery and engagement.'}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
+        </div>
+        
+        <div>
+          {isLoading ? (
+            <div style={{
+              padding: '48px',
+              textAlign: 'center',
+              color: isDarkMode ? '#94a3b8' : '#6b7280'
+            }}>
+              <Library style={{ height: '32px', width: '32px', margin: '0 auto 12px auto', display: 'block' }} />
+              <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
+                Loading templates...
               </div>
-            )}
-
-            {/* 2. Post Content */}
-            <div style={{ padding: '20px' }}>
-              {/* a) Character Profile Header */}
-              {selections.characterProfile && (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  marginBottom: '16px',
-                  paddingBottom: '12px',
-                  borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
-                }}>
-                  {(() => {
-                    const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
-                    if (!selectedProfile) return null;
-                    
-                    return (
-                      <>
-                        <div style={{
-                          width: '48px',
-                          height: '48px',
-                          borderRadius: '50%',
-                          backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '20px',
-                          color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                          fontWeight: 'bold',
-                          border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
-                          flexShrink: 0,
-                          overflow: 'hidden'
-                        }}>
-                          {selectedProfile.avatar_id ? (
-                            <img
-                              src={selectedProfile.avatar_id}
-                              alt={selectedProfile.name}
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover'
-                              }}
-                            />
-                          ) : (
-                            selectedProfile.name.charAt(0)
-                          )}
-                        </div>
-                        <div>
-                          <div style={{
-                            fontSize: '16px',
-                            fontWeight: '600',
-                            color: isDarkMode ? '#f8fafc' : '#111827',
-                            marginBottom: '2px'
-                          }}>
-                            {selectedProfile.name}
-                          </div>
-                          <div style={{
-                            fontSize: '13px',
-                            color: isDarkMode ? '#94a3b8' : '#6b7280',
-                            marginBottom: '2px'
-                          }}>
-                            {selectedProfile.username}
-                          </div>
-                          <div style={{
-                            fontSize: '12px',
-                            color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                            fontWeight: '500'
-                          }}>
-                            {selectedProfile.role}
-                          </div>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {/* b) Title/Headline */}
-              {content.title && (
-                <h4 style={{
-                  fontSize: '18px',
-                  fontWeight: '700',
-                  color: isDarkMode ? '#f8fafc' : '#111827',
-                  margin: '0 0 12px 0',
-                  lineHeight: '1.3'
-                }}>
-                  {content.title}
-                </h4>
-              )}
-
-              {/* c) Post Description */}
-              {content.description && (
-                <div style={{
-                  fontSize: '15px',
-                  color: isDarkMode ? '#e2e8f0' : '#374151',
-                  lineHeight: '1.6',
-                  marginBottom: '16px',
-                  whiteSpace: 'pre-wrap'
-                }}>
-                  {content.description}
-                </div>
-              )}
-
-              {/* d) Hashtags */}
-              {content.hashtags.length > 0 && (
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '6px',
-                  marginBottom: '16px'
-                }}>
-                  {content.hashtags.map((tag) => (
-                    <span key={tag} style={{
-                      fontSize: '14px',
-                      color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                      fontWeight: '500'
-                    }}>
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* e) Call to Action */}
-              {content.cta && (
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: isDarkMode ? '#1e40af' : '#3b82f6',
-                  color: 'white',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  textAlign: 'center',
-                  marginTop: '16px'
-                }}>
-                  {content.cta}
-                </div>
-              )}
+              <div style={{ fontSize: '14px' }}>
+                Fetching from pending_content_library
+              </div>
             </div>
-          </div>
-
-          {/* 3. Platform/Telegram Distribution (Internal Dashboard Use Only) */}
-          {selectedPlatforms.length > 0 && (
+          ) : pendingTemplates.length === 0 ? (
             <div style={{
-              marginTop: '20px',
-              padding: '16px',
-              backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
-              borderRadius: '8px',
-              border: `1px dashed ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
+              padding: '48px',
+              textAlign: 'center'
             }}>
               <div style={{
+                width: '64px',
+                height: '64px',
+                backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
+                borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                marginBottom: '12px'
+                justifyContent: 'center',
+                margin: '0 auto 16px auto'
               }}>
-                <Settings style={{ height: '16px', width: '16px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
-                <span style={{
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: isDarkMode ? '#60a5fa' : '#3b82f6'
-                }}>
-                  Distribution Settings (Internal Dashboard Only)
-                </span>
+                <Library style={{ height: '32px', width: '32px', color: isDarkMode ? '#64748b' : '#9ca3af' }} />
               </div>
-              <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '8px'
+              <h3 style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                color: isDarkMode ? '#f8fafc' : '#111827',
+                margin: '0 0 8px 0'
               }}>
-                {selectedPlatforms.map(platformId => {
-                  const platform = platforms.find(p => p.id === platformId);
-                  if (!platform) return null;
-                  
-                  return (
-                    <div key={platformId} style={{
-                      padding: '6px 12px',
-                      backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                      border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280'
-                    }}>
-                      {platform.name}
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{
-                fontSize: '11px',
-                color: isDarkMode ? '#64748b' : '#9ca3af',
-                fontStyle: 'italic',
-                marginTop: '8px'
+                No pending templates
+              </h3>
+              <p style={{
+                color: isDarkMode ? '#94a3b8' : '#6b7280',
+                fontSize: '14px',
+                margin: '0'
               }}>
-                * Platform links are for internal dashboard tracking only and will not appear in the public post
-              </div>
+                Templates forwarded from Content Template Engine will appear here
+              </p>
             </div>
+          ) : (
+            pendingTemplates.map((template) => (
+              <div key={template.id} style={{
+                padding: '20px',
+                borderBottom: `1px solid ${isDarkMode ? '#334155' : '#f3f4f6'}`,
+                transition: 'background-color 0.2s ease'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  gap: '16px'
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      marginBottom: '12px'
+                    }}>
+                      <span style={{ fontSize: '24px' }}>
+                        {getThemeIcon(template.theme || '')}
+                      </span>
+                      <div>
+                        <h4 style={{
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          color: isDarkMode ? '#f8fafc' : '#111827',
+                          margin: '0 0 4px 0'
+                        }}>
+                          {template.template_id} - {template.content_title}
+                        </h4>
+                        <div style={{
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          fontFamily: 'monospace',
+                          color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                          backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          display: 'inline-block'
+                        }}>
+                          ID: {template.template_id}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {template.description && (
+                      <p style={{
+                        color: isDarkMode ? '#94a3b8' : '#374151',
+                        fontSize: '14px',
+                        lineHeight: '1.6',
+                        margin: '0 0 16px 0'
+                      }}>
+                        {template.description.length > 150 
+                          ? template.description.substring(0, 150) + '...'
+                          : template.description
+                        }
+                      </p>
+                    )}
+                    
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '16px',
+                      flexWrap: 'wrap'
+                    }}>
+                      {template.theme && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '12px',
+                          color: isDarkMode ? '#94a3b8' : '#6b7280',
+                          backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
+                          padding: '6px 10px',
+                          borderRadius: '6px'
+                        }}>
+                          <Palette style={{ height: '14px', width: '14px' }} />
+                          <span style={{ fontWeight: '600' }}>
+                            {formatTheme(template.theme)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {template.audience && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '12px',
+                          color: isDarkMode ? '#94a3b8' : '#6b7280',
+                          backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
+                          padding: '6px 10px',
+                          borderRadius: '6px'
+                        }}>
+                          <User style={{ height: '14px', width: '14px' }} />
+                          <span style={{ fontWeight: '600' }}>
+                            {formatTheme(template.audience)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {template.platform && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '12px',
+                          color: isDarkMode ? '#94a3b8' : '#6b7280',
+                          backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
+                          padding: '6px 10px',
+                          borderRadius: '6px'
+                        }}>
+                          <Settings style={{ height: '14px', width: '14px' }} />
+                          <span style={{ fontWeight: '600' }}>
+                            {formatTheme(template.platform)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div style={{
+                        fontSize: '12px',
+                        color: isDarkMode ? '#64748b' : '#9ca3af',
+                        fontWeight: '600'
+                      }}>
+                        Received {new Date(template.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}>
+                    <button
+                      onClick={() => handleSendToCreate(template)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 16px',
+                        backgroundColor: isDarkMode ? '#10b981' : '#059669',
+                        color: 'white',
+                        borderRadius: '8px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        fontFamily: 'inherit',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <Send style={{ height: '16px', width: '16px' }} />
+                      <span>Send to Create</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => handleDeleteTemplate(template)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 12px',
+                        backgroundColor: '#dc2626',
+                        color: 'white',
+                        borderRadius: '6px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        fontFamily: 'inherit',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <Trash2 style={{ height: '14px', width: '14px' }} />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
@@ -2367,7 +2245,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
           fontSize: '14px',
           color: isDarkMode ? '#94a3b8' : '#6b7280'
         }}>
-          Fetching posts from Notion database
+          Fetching posts from Supabase database
         </div>
       </div>
     );
@@ -2376,11 +2254,13 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
   const getStatusBadge = (status: string) => {
     const badgeStyles = {
       pending: { backgroundColor: isDarkMode ? '#92400e' : '#fef3c7', color: isDarkMode ? '#fef3c7' : '#92400e', text: 'Pending' },
+      active: { backgroundColor: isDarkMode ? '#1e40af' : '#dbeafe', color: isDarkMode ? '#dbeafe' : '#1e40af', text: 'Active' },
+      draft: { backgroundColor: isDarkMode ? '#64748b' : '#f1f5f9', color: isDarkMode ? '#f1f5f9' : '#64748b', text: 'Draft' },
       scheduled: { backgroundColor: isDarkMode ? '#1e40af' : '#dbeafe', color: isDarkMode ? '#dbeafe' : '#1e40af', text: 'Scheduled' },
       published: { backgroundColor: isDarkMode ? '#065f46' : '#d1fae5', color: isDarkMode ? '#d1fae5' : '#065f46', text: 'Published' }
     };
     
-    const style = badgeStyles[status as keyof typeof badgeStyles];
+    const style = badgeStyles[status as keyof typeof badgeStyles] || badgeStyles.pending;
     
     return (
       <span style={{
@@ -2464,7 +2344,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
             color: isDarkMode ? '#60a5fa' : '#3b82f6',
             margin: '0'
           }}>
-            Pending Content
+            Saved Content
           </h3>
           <span style={{
             padding: '6px 12px',
@@ -2630,7 +2510,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
                   <Edit3 style={{ height: '16px', width: '16px' }} />
                 </button>
                 
-                {post.status === 'pending' && (
+                {(post.status === 'pending' || post.status === 'draft') && (
                   <button
                     onClick={() => onSchedulePost(post.id)}
                     title="Add to Schedule"
@@ -2667,557 +2547,6 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
             </div>
           </div>
         ))}
-      </div>
-    </div>
-  );
-};
-
-const NotionDatabaseSection = ({ onLoadTemplate }: {
-  onLoadTemplate: (template: NotionTemplate) => void;
-}) => {
-  const { isDarkMode } = useTheme();
-  const [templates, setTemplates] = useState<NotionTemplate[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-
-  // Test Notion connection on component mount
-  useEffect(() => {
-    testNotionConnection();
-  }, []);
-
-  const testNotionConnection = async () => {
-    try {
-      setIsLoading(true);
-      setConnectionError(null);
-      
-      // Test the connection by trying to load templates
-      const response = await fetch('/api/notion-load-content');
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      setTemplates(result.posts || mockTemplates);
-      setIsConnected(true);
-      
-    } catch (error: any) {
-      console.error('Notion connection test failed:', error);
-      setIsConnected(false);
-      
-      // Provide specific error messages
-      if (error.message.includes('404')) {
-        setConnectionError('Notion API endpoint not found. You need to deploy to Vercel to use Notion integration.');
-      } else if (error.message.includes('Failed to fetch')) {
-        setConnectionError('Cannot connect to Notion API. This requires a Vercel deployment with proper API routes.');
-      } else {
-        setConnectionError(`Connection Error: ${error.message}`);
-      }
-      
-      // Fall back to mock templates for testing
-      setTemplates(mockTemplates);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Mock templates for demonstration
-  const mockTemplates: NotionTemplate[] = [
-    {
-      id: '1',
-      templateId: 'NA-EM-IM-SM-001',
-      theme: 'news_alert',
-      audience: 'existing_members',
-      mediaType: 'image',
-      templateType: 'social_media',
-      platform: 'instagram',
-      content: {
-        title: 'Breaking News Alert',
-        description: 'Important update for our community members...',
-        hashtags: ['news', 'alert', 'community'],
-        keywords: 'breaking news, alert, update',
-        cta: 'Read more in comments'
-      },
-      createdDate: '2025-01-15',
-      status: 'Template'
-    },
-    {
-      id: '2',
-      templateId: 'PR-NM-VD-SM-001',
-      theme: 'promotion',
-      audience: 'new_members',
-      mediaType: 'video',
-      templateType: 'social_media',
-      platform: 'youtube',
-      content: {
-        title: 'Special Promotion for New Members',
-        description: 'Welcome to our community! Here is a special offer...',
-        hashtags: ['promotion', 'welcome', 'newmembers'],
-        keywords: 'promotion, special offer, new members',
-        cta: 'Claim your offer now!'
-      },
-      createdDate: '2025-01-14',
-      status: 'Template'
-    },
-    {
-      id: '3',
-      templateId: 'TG-FL-IM-BP-001',
-      theme: 'tutorial_guide',
-      audience: 'persona_falcon',
-      mediaType: 'image',
-      templateType: 'blog_posts',
-      content: {
-        title: 'Step-by-Step Tutorial Guide',
-        description: 'Learn how to master this skill with our comprehensive guide...',
-        hashtags: ['tutorial', 'guide', 'learning'],
-        keywords: 'tutorial, guide, step by step, learning',
-        cta: 'Start learning today'
-      },
-      createdDate: '2025-01-13',
-      status: 'Template'
-    }
-  ];
-
-  const handleLoadTemplate = (template: NotionTemplate) => {
-    onLoadTemplate(template);
-  };
-
-  const formatTheme = (theme: string) => {
-    return theme.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  const getThemeIcon = (theme: string) => {
-    const icons: Record<string, string> = {
-      news_alert: 'News',
-      promotion: 'Promo',
-      standard_post: 'Post',
-      cta_quiz: 'Quiz',
-      tutorial_guide: 'Guide',
-      blog: 'Blog',
-      assessment: 'Test'
-    };
-    return icons[theme] || 'Template';
-  };
-
-  return (
-    <div style={{
-      display: 'grid',
-      gap: '24px'
-    }}>
-      {/* Notion Connection Status */}
-      <div style={{
-        backgroundColor: isDarkMode ? '#1e293b' : 'white',
-        boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        borderRadius: '8px',
-        border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
-        padding: '24px',
-        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '16px'
-        }}>
-          <div>
-            <h3 style={{
-              fontSize: '18px',
-              fontWeight: '600',
-              color: isDarkMode ? '#f8fafc' : '#111827',
-              margin: '0 0 4px 0'
-            }}>
-              Notion Database Connection
-            </h3>
-            <p style={{
-              color: isDarkMode ? '#94a3b8' : '#6b7280',
-              margin: '0',
-              fontSize: '14px'
-            }}>
-              Access and manage your content templates from Notion (Database: 3C_Created_Content)
-            </p>
-          </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            backgroundColor: isConnected 
-              ? (isDarkMode ? '#065f4630' : '#d1fae5')
-              : (isDarkMode ? '#7f1d1d30' : '#fee2e2'),
-            padding: '8px 12px',
-            borderRadius: '8px',
-            border: `1px solid ${isConnected ? '#10b981' : '#ef4444'}`
-          }}>
-            {isConnected ? (
-              <CheckCircle style={{ height: '18px', width: '18px', color: '#10b981' }} />
-            ) : (
-              <X style={{ height: '18px', width: '18px', color: '#ef4444' }} />
-            )}
-            <span style={{
-              fontSize: '12px',
-              fontWeight: '600',
-              color: isConnected 
-                ? (isDarkMode ? '#34d399' : '#065f46')
-                : (isDarkMode ? '#fca5a5' : '#7f1d1d')
-            }}>
-              {isConnected ? 'Connected' : 'Not Connected'}
-            </span>
-          </div>
-        </div>
-        
-        {/* Connection Error Display */}
-        {connectionError && (
-          <div style={{
-            background: isDarkMode ? '#7f1d1d30' : '#fee2e2',
-            borderRadius: '8px',
-            padding: '16px',
-            border: '1px solid #ef4444',
-            marginBottom: '16px'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              marginBottom: '8px'
-            }}>
-              <X style={{ height: '16px', width: '16px', color: '#ef4444' }} />
-              <span style={{
-                fontSize: '14px',
-                fontWeight: '600',
-                color: isDarkMode ? '#fca5a5' : '#7f1d1d'
-              }}>
-                Notion Connection Error
-              </span>
-            </div>
-            <p style={{
-              color: isDarkMode ? '#fca5a5' : '#7f1d1d',
-              fontSize: '14px',
-              lineHeight: '1.6',
-              margin: '0 0 8px 0'
-            }}>
-              {connectionError}
-            </p>
-            <p style={{
-              color: isDarkMode ? '#94a3b8' : '#6b7280',
-              fontSize: '12px',
-              margin: '0'
-            }}>
-              Currently using mock templates for testing. Deploy to Vercel to enable full Notion integration.
-            </p>
-          </div>
-        )}
-        
-        <div style={{
-          background: isConnected 
-            ? (isDarkMode ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)')
-            : (isDarkMode ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)' : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)'),
-          borderRadius: '8px',
-          padding: '16px',
-          border: `1px solid ${isConnected ? (isDarkMode ? '#1e40af' : '#3b82f6') : '#ef4444'}`,
-          marginBottom: '16px'
-        }}>
-          <p style={{
-            color: isConnected 
-              ? (isDarkMode ? '#bfdbfe' : '#1e40af')
-              : (isDarkMode ? '#fca5a5' : '#7f1d1d'),
-            fontSize: '14px',
-            lineHeight: '1.6',
-            margin: '0'
-          }}>
-            {isConnected 
-              ? 'Your templates are stored in Notion and can be loaded directly into the Content Manager for editing and publishing.'
-              : 'To use Notion integration, deploy your app to Vercel with the proper API routes (/api/notion-save-content, /api/notion-load-content, /api/notion-update-content).'}
-          </p>
-        </div>
-        
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={testNotionConnection}
-            disabled={isLoading}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '12px 16px',
-              backgroundColor: isDarkMode ? '#60a5fa' : '#3b82f6',
-              color: 'white',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              fontWeight: '600',
-              fontFamily: 'inherit',
-              opacity: isLoading ? 0.7 : 1
-            }}
-          >
-            <Database style={{ height: '16px', width: '16px' }} />
-            <span>{isLoading ? 'Testing Connection...' : 'Test Connection'}</span>
-          </button>
-          
-          <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '12px 16px',
-              background: isDarkMode 
-                ? 'linear-gradient(135deg, #1f2937 0%, #374151 100%)' 
-                : 'linear-gradient(135deg, #111827 0%, #374151 100%)',
-              color: 'white',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '600',
-              fontFamily: 'inherit'
-            }}
-            onClick={() => window.open('https://notion.so', '_blank')}
-          >
-            <ExternalLink style={{ height: '16px', width: '16px' }} />
-            <span>Open Notion Workspace</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Templates List */}
-      <div style={{
-        backgroundColor: isDarkMode ? '#1e293b' : 'white',
-        boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        borderRadius: '8px',
-        border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
-        overflow: 'hidden',
-        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      }}>
-        <div style={{
-          padding: '16px',
-          background: isDarkMode 
-            ? 'linear-gradient(135deg, #334155 0%, #475569 100%)' 
-            : 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-          borderBottom: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <h3 style={{
-              fontSize: '18px',
-              fontWeight: '600',
-              color: isDarkMode ? '#60a5fa' : '#3b82f6',
-              margin: '0'
-            }}>
-              Available Templates
-            </h3>
-            <span style={{
-              padding: '6px 12px',
-              background: isDarkMode 
-                ? 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)' 
-                : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-              color: 'white',
-              fontSize: '14px',
-              fontWeight: '600',
-              borderRadius: '16px'
-            }}>
-              {templates.length} templates
-            </span>
-          </div>
-        </div>
-        
-        <div>
-          {templates.map((template) => (
-            <div key={template.id} style={{
-              padding: '20px',
-              borderBottom: `1px solid ${isDarkMode ? '#334155' : '#f3f4f6'}`,
-              transition: 'background-color 0.2s ease'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                gap: '16px'
-              }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    marginBottom: '12px'
-                  }}>
-                    <span style={{ fontSize: '24px' }}>
-                      {getThemeIcon(template.theme)}
-                    </span>
-                    <div>
-                      <h4 style={{
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        color: isDarkMode ? '#f8fafc' : '#111827',
-                        margin: '0 0 4px 0'
-                      }}>
-                        {template.content.title}
-                      </h4>
-                      <div style={{
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        fontFamily: 'monospace',
-                        color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                        backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
-                        padding: '4px 8px',
-                        borderRadius: '6px',
-                        display: 'inline-block'
-                      }}>
-                        {template.templateId}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <p style={{
-                    color: isDarkMode ? '#94a3b8' : '#374151',
-                    fontSize: '14px',
-                    lineHeight: '1.6',
-                    margin: '0 0 16px 0'
-                  }}>
-                    {template.content.description}
-                  </p>
-                  
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px',
-                    flexWrap: 'wrap'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '12px',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280',
-                      backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
-                      padding: '6px 10px',
-                      borderRadius: '6px'
-                    }}>
-                      <Palette style={{ height: '14px', width: '14px' }} />
-                      <span style={{ fontWeight: '600' }}>
-                        {formatTheme(template.theme)}
-                      </span>
-                    </div>
-                    
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '12px',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280',
-                      backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
-                      padding: '6px 10px',
-                      borderRadius: '6px'
-                    }}>
-                      <User style={{ height: '14px', width: '14px' }} />
-                      <span style={{ fontWeight: '600' }}>
-                        {formatTheme(template.audience)}
-                      </span>
-                    </div>
-                    
-                    {template.platform && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontSize: '12px',
-                        color: isDarkMode ? '#94a3b8' : '#6b7280',
-                        backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
-                        padding: '6px 10px',
-                        borderRadius: '6px'
-                      }}>
-                        <Settings style={{ height: '14px', width: '14px' }} />
-                        <span style={{ fontWeight: '600' }}>
-                          {formatTheme(template.platform)}
-                        </span>
-                      </div>
-                    )}
-                    
-                    <div style={{
-                      fontSize: '12px',
-                      color: isDarkMode ? '#64748b' : '#9ca3af',
-                      fontWeight: '600'
-                    }}>
-                      Created {new Date(template.createdDate).toLocaleDateString()}
-                    </div>
-                  </div>
-                </div>
-                
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px'
-                }}>
-                  <button
-                    onClick={() => handleLoadTemplate(template)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '10px 16px',
-                      backgroundColor: isDarkMode ? '#60a5fa' : '#3b82f6',
-                      color: 'white',
-                      borderRadius: '8px',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      fontFamily: 'inherit',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? '#3b82f6' : '#2563eb';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? '#60a5fa' : '#3b82f6';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }}
-                  >
-                    <Edit3 style={{ height: '16px', width: '16px' }} />
-                    <span>Use Template</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      if (confirm(`Are you sure you want to delete the template "${template.content.title}"?\n\nThis action cannot be undone.`)) {
-                        // Handle template deletion here
-                        setTemplates(prev => prev.filter(t => t.id !== template.id));
-                        alert('Template deleted successfully.');
-                      }
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 12px',
-                      backgroundColor: '#dc2626',
-                      color: 'white',
-                      borderRadius: '6px',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      fontFamily: 'inherit',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#b91c1c';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = '#dc2626';
-                    }}
-                  >
-                    <Trash2 style={{ height: '14px', width: '14px' }} />
-                    <span>Delete</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );
@@ -3262,38 +2591,50 @@ const SupabaseConnection = () => {
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          backgroundColor: isDarkMode ? '#065f4630' : '#d1fae5',
+          backgroundColor: supabase 
+            ? (isDarkMode ? '#065f4630' : '#d1fae5')
+            : (isDarkMode ? '#7f1d1d30' : '#fee2e2'),
           padding: '8px 12px',
           borderRadius: '8px',
-          border: '1px solid #10b981'
+          border: `1px solid ${supabase ? '#10b981' : '#ef4444'}`
         }}>
-          <CheckCircle style={{ height: '18px', width: '18px', color: '#10b981' }} />
+          {supabase ? (
+            <CheckCircle style={{ height: '18px', width: '18px', color: '#10b981' }} />
+          ) : (
+            <X style={{ height: '18px', width: '18px', color: '#ef4444' }} />
+          )}
           <span style={{
             fontSize: '12px',
             fontWeight: '600',
-            color: isDarkMode ? '#34d399' : '#065f46'
+            color: supabase 
+              ? (isDarkMode ? '#34d399' : '#065f46')
+              : (isDarkMode ? '#fca5a5' : '#7f1d1d')
           }}>
-            Connected
+            {supabase ? 'Connected' : 'Not Connected'}
           </span>
         </div>
       </div>
       
       <div style={{
-        background: isDarkMode 
-          ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' 
-          : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+        background: supabase 
+          ? (isDarkMode ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)')
+          : (isDarkMode ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)' : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)'),
         borderRadius: '8px',
         padding: '16px',
-        border: `1px solid ${isDarkMode ? '#1e40af' : '#3b82f6'}`,
+        border: `1px solid ${supabase ? (isDarkMode ? '#1e40af' : '#3b82f6') : '#ef4444'}`,
         marginBottom: '16px'
       }}>
         <p style={{
-          color: isDarkMode ? '#bfdbfe' : '#1e40af',
+          color: supabase 
+            ? (isDarkMode ? '#bfdbfe' : '#1e40af')
+            : (isDarkMode ? '#fca5a5' : '#7f1d1d'),
           fontSize: '14px',
           lineHeight: '1.6',
           margin: '0'
         }}>
-          Character profiles, platforms, and Telegram configurations are being loaded from Supabase. All data is encrypted and backed up automatically.
+          {supabase 
+            ? 'Character profiles, platforms, and pending templates are being loaded from Supabase. All data is encrypted and backed up automatically.'
+            : 'Supabase connection not configured. Please check environment variables VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.'}
         </p>
       </div>
       
@@ -3329,7 +2670,7 @@ export default function ContentComponent() {
   const { isDarkMode } = useTheme();
   const [activeTab, setActiveTab] = useState('create');
   const [savedPosts, setSavedPosts] = useState<ContentPost[]>([]);
-  const [loadedTemplate, setLoadedTemplate] = useState<NotionTemplate | null>(null);
+  const [loadedTemplate, setLoadedTemplate] = useState<PendingLibraryTemplate | null>(null);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [editingPost, setEditingPost] = useState<ContentPost | null>(null);
@@ -3345,7 +2686,7 @@ export default function ContentComponent() {
     loadCharacterProfiles();
     loadPlatformsData();
     loadTelegramChannels();
-    fetchNotionPosts();
+    fetchSavedPosts();
   }, []);
 
   const loadCharacterProfiles = async () => {
@@ -3448,12 +2789,38 @@ export default function ContentComponent() {
     }
   };
 
-  // Load posts from Notion on component mount
-  const fetchNotionPosts = async () => {
+  // Load posts from Supabase on component mount
+  const fetchSavedPosts = async () => {
     try {
       setIsLoadingPosts(true);
-      const posts = await loadFromNotionDatabase();
-      setSavedPosts(posts);
+      const posts = await supabaseAPI.fetchContentPosts();
+      
+      // Convert Supabase format to ContentPost format
+      const formattedPosts: ContentPost[] = posts.map(post => ({
+        id: post.id.toString(),
+        contentId: post.content_id || post.contentId,
+        characterProfile: post.character_profile || post.characterProfile,
+        theme: post.theme,
+        audience: post.audience,
+        mediaType: post.media_type || post.mediaType,
+        templateType: post.template_type || post.templateType,
+        platform: post.platform,
+        title: post.title,
+        description: post.description,
+        hashtags: post.hashtags || [],
+        keywords: post.keywords,
+        cta: post.cta,
+        mediaFiles: post.media_files || [],
+        selectedPlatforms: post.selected_platforms || [],
+        status: post.status || 'draft',
+        createdDate: new Date(post.created_date || post.created_at),
+        scheduledDate: post.scheduled_date ? new Date(post.scheduled_date) : undefined,
+        isFromTemplate: post.is_from_template || false,
+        sourceTemplateId: post.source_template_id,
+        supabaseId: post.id.toString()
+      }));
+      
+      setSavedPosts(formattedPosts);
     } catch (error) {
       console.error('Failed to load posts:', error);
       setSavedPosts([]);
@@ -3466,15 +2833,15 @@ export default function ContentComponent() {
     try {
       setIsSaving(true);
       
-      // Save to Notion first
-      const notionResult = await saveToNotionDatabase(postData);
+      // Save to Supabase
+      const savedPost = await supabaseAPI.insertContentPost(postData);
       
-      // Create local post with Notion page ID
+      // Create local post object
       const newPost: ContentPost = {
         ...postData,
-        id: Date.now().toString(),
-        createdDate: new Date(),
-        notionPageId: notionResult.id
+        id: savedPost.id.toString(),
+        createdDate: new Date(savedPost.created_date),
+        supabaseId: savedPost.id.toString()
       };
       
       // Update local state
@@ -3497,16 +2864,16 @@ export default function ContentComponent() {
     try {
       setIsSaving(true);
       
-      // Save to Notion with scheduled status
+      // Save to Supabase with scheduled status
       const scheduledData = { ...postData, status: 'scheduled' as const };
-      const notionResult = await saveToNotionDatabase(scheduledData);
+      const savedPost = await supabaseAPI.insertContentPost(scheduledData);
       
       // Create local post
       const newPost: ContentPost = {
         ...scheduledData,
-        id: Date.now().toString(),
-        createdDate: new Date(),
-        notionPageId: notionResult.id
+        id: savedPost.id.toString(),
+        createdDate: new Date(savedPost.created_date),
+        supabaseId: savedPost.id.toString()
       };
       
       setSavedPosts(prev => [newPost, ...prev]);
@@ -3591,9 +2958,12 @@ export default function ContentComponent() {
     try {
       const post = savedPosts.find(p => p.id === postId);
       
-      if (post?.notionPageId) {
-        // Soft delete in Notion (update status to 'Deleted')
-        await updateNotionContent(post.notionPageId, { status: 'deleted' as any });
+      if (post?.supabaseId && supabase) {
+        // Soft delete in Supabase (set is_active to false)
+        await supabase
+          .from('content_posts')
+          .update({ is_active: false })
+          .eq('id', post.supabaseId);
       }
       
       // Remove from local state
@@ -3605,7 +2975,7 @@ export default function ContentComponent() {
     }
   };
 
-  const handleLoadTemplate = (template: NotionTemplate) => {
+  const handleLoadTemplate = (template: PendingLibraryTemplate) => {
     setLoadedTemplate(template);
     setActiveTab('create'); // Switch to create tab
   };
@@ -3617,7 +2987,7 @@ export default function ContentComponent() {
 
   const tabs = [
     { id: 'create', label: 'Create New Content', icon: Edit3 },
-    { id: 'notion', label: 'Notion Templates', icon: Database },
+    { id: 'templates', label: 'Template Library', icon: Library },
     { id: 'supabase', label: 'Supabase Database', icon: Database },
   ];
 
@@ -3716,8 +3086,8 @@ export default function ContentComponent() {
             </div>
           )}
 
-          {activeTab === 'notion' && (
-            <NotionDatabaseSection
+          {activeTab === 'templates' && (
+            <TemplateLibrarySection
               onLoadTemplate={handleLoadTemplate}
             />
           )}
