@@ -81,6 +81,8 @@ interface MediaFile {
   type: 'image' | 'video' | 'pdf' | 'gif' | 'interactive' | 'other';
   size: number;
   url: string;
+  supabaseUrl?: string; // Add this for Supabase storage URLs
+  bucketPath?: string;   // Add this to track file location in bucket
 }
 
 interface SocialPlatform {
@@ -113,6 +115,47 @@ const supabaseAPI = {
     } catch (error) {
       console.error('Error getting current user:', error);
       return null;
+    }
+  },
+
+  // File upload to Supabase Storage
+  async uploadFile(file: File, path: string): Promise<string | null> {
+    if (!supabase) throw new Error('Supabase not configured');
+    try {
+      const { data, error } = await supabase.storage
+        .from('content-media') // Bucket name
+        .upload(path, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('content-media')
+        .getPublicUrl(data.path);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      throw error;
+    }
+  },
+
+  // Delete file from Supabase Storage
+  async deleteFile(path: string): Promise<boolean> {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase.storage
+        .from('content-media')
+        .remove([path]);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      return false;
     }
   },
 
@@ -193,7 +236,7 @@ const supabaseAPI = {
     }
   },
 
-  // Content Posts operations (if you want to save to Supabase instead of localStorage)
+  // Content Posts operations with file upload support
   async insertContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>) {
     if (!supabase) throw new Error('Supabase not configured');
     try {
@@ -304,6 +347,7 @@ const EnhancedContentCreationForm = ({
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [hashtagInput, setHashtagInput] = useState('');
   const [fieldConfig, setFieldConfig] = useState<any>(null);
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Generate content ID (Pattern-###CC format)
@@ -502,24 +546,87 @@ const EnhancedContentCreationForm = ({
     }));
   };
 
-  const handleFileUpload = (files: FileList) => {
-    Array.from(files).forEach((file) => {
-      const newFile: MediaFile = {
-        id: Date.now().toString() + Math.random(),
-        name: file.name,
-        type: file.type.startsWith('image/') ? 'image' : 
-              file.type.startsWith('video/') ? 'video' :
-              file.type === 'application/pdf' ? 'pdf' :
-              file.name.toLowerCase().includes('.gif') ? 'gif' :
-              file.name.toLowerCase().includes('.html') ? 'interactive' : 'other',
-        size: file.size,
-        url: URL.createObjectURL(file),
-      };
-      setMediaFiles(prev => [...prev, newFile]);
-    });
+  const handleFileUpload = async (files: FileList) => {
+    if (!supabase) {
+      // Fallback to local URLs if Supabase not configured
+      Array.from(files).forEach((file) => {
+        const newFile: MediaFile = {
+          id: Date.now().toString() + Math.random(),
+          name: file.name,
+          type: file.type.startsWith('image/') ? 'image' : 
+                file.type.startsWith('video/') ? 'video' :
+                file.type === 'application/pdf' ? 'pdf' :
+                file.name.toLowerCase().includes('.gif') ? 'gif' :
+                file.name.toLowerCase().includes('.html') ? 'interactive' : 'other',
+          size: file.size,
+          url: URL.createObjectURL(file),
+        };
+        setMediaFiles(prev => [...prev, newFile]);
+      });
+      return;
+    }
+
+    try {
+      setIsUploadingFiles(true);
+      
+      const uploadPromises = Array.from(files).map(async (file) => {
+        // Generate unique path for file
+        const timestamp = Date.now();
+        const randomId = Math.random().toString(36).substr(2, 9);
+        const fileExtension = file.name.split('.').pop();
+        const fileName = `${timestamp}-${randomId}.${fileExtension}`;
+        const filePath = `content-media/${fileName}`;
+
+        try {
+          // Upload to Supabase Storage
+          const supabaseUrl = await supabaseAPI.uploadFile(file, filePath);
+          
+          if (supabaseUrl) {
+            const newFile: MediaFile = {
+              id: Date.now().toString() + Math.random(),
+              name: file.name,
+              type: file.type.startsWith('image/') ? 'image' : 
+                    file.type.startsWith('video/') ? 'video' :
+                    file.type === 'application/pdf' ? 'pdf' :
+                    file.name.toLowerCase().includes('.gif') ? 'gif' :
+                    file.name.toLowerCase().includes('.html') ? 'interactive' : 'other',
+              size: file.size,
+              url: URL.createObjectURL(file), // Local preview URL
+              supabaseUrl: supabaseUrl,       // Supabase public URL
+              bucketPath: filePath            // Path in bucket for deletion
+            };
+            
+            setMediaFiles(prev => [...prev, newFile]);
+          }
+        } catch (error) {
+          console.error(`Failed to upload ${file.name}:`, error);
+          alert(`Failed to upload ${file.name}. Please try again.`);
+        }
+      });
+
+      await Promise.all(uploadPromises);
+      
+    } catch (error) {
+      console.error('File upload error:', error);
+      alert('Some files failed to upload. Please try again.');
+    } finally {
+      setIsUploadingFiles(false);
+    }
   };
 
-  const handleRemoveFile = (fileId: string) => {
+  const handleRemoveFile = async (fileId: string) => {
+    const fileToRemove = mediaFiles.find(f => f.id === fileId);
+    
+    // Remove from Supabase Storage if it exists there
+    if (fileToRemove?.bucketPath && supabase) {
+      try {
+        await supabaseAPI.deleteFile(fileToRemove.bucketPath);
+      } catch (error) {
+        console.error('Failed to delete file from storage:', error);
+      }
+    }
+    
+    // Remove from local state
     setMediaFiles(prev => prev.filter(f => f.id !== fileId));
   };
 
@@ -1098,7 +1205,7 @@ const EnhancedContentCreationForm = ({
           color: isDarkMode ? '#f8fafc' : '#111827',
           marginBottom: '12px'
         }}>
-          Media Upload
+          Media Upload {supabase && '(Supabase Storage)'}
         </label>
         <div
           onClick={() => fileInputRef.current?.click()}
@@ -1110,7 +1217,8 @@ const EnhancedContentCreationForm = ({
             cursor: 'pointer',
             backgroundColor: isDarkMode ? '#1e3a8a20' : '#f8fafc',
             transition: 'all 0.3s ease',
-            width: '100%'
+            width: '100%',
+            opacity: isUploadingFiles ? 0.7 : 1
           }}
         >
           <Upload style={{
@@ -1126,7 +1234,7 @@ const EnhancedContentCreationForm = ({
             color: isDarkMode ? '#f8fafc' : '#111827',
             margin: '0 0 6px 0'
           }}>
-            Upload your media files
+            {isUploadingFiles ? 'Uploading files...' : 'Upload your media files'}
           </h3>
           <p style={{
             fontSize: '14px',
@@ -1141,6 +1249,7 @@ const EnhancedContentCreationForm = ({
             margin: '0'
           }}>
             Support for Images, Videos, GIFs, PDFs, and Interactive Media (up to 100MB per file)
+            {supabase && ' - Files automatically uploaded to secure cloud storage'}
           </p>
           <input
             ref={fileInputRef}
@@ -1148,6 +1257,7 @@ const EnhancedContentCreationForm = ({
             multiple
             accept="image/*,video/*,.pdf,.gif,.html"
             style={{ display: 'none' }}
+            disabled={isUploadingFiles}
             onChange={(e) => {
               if (e.target.files) {
                 handleFileUpload(e.target.files);
@@ -1218,6 +1328,19 @@ const EnhancedContentCreationForm = ({
                         color: isDarkMode ? '#94a3b8' : '#6b7280'
                       }}>
                         {formatFileSize(file.size)}
+                        {file.supabaseUrl && (
+                          <span style={{
+                            marginLeft: '8px',
+                            padding: '2px 6px',
+                            backgroundColor: isDarkMode ? '#065f46' : '#d1fae5',
+                            color: isDarkMode ? '#34d399' : '#065f46',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: '600'
+                          }}>
+                            Cloud Stored
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1284,45 +1407,6 @@ const EnhancedContentCreationForm = ({
               marginTop: '4px',
               fontSize: '12px',
               color: isDarkMode ? '#94a3b8' : '#6b7280'
-            }}
-                title="Bold (wrap selected text with **)"
-              >
-                B
-              </button>
-              }}>              
-              <div style={{
-                fontSize: '12px',
-                color: isDarkMode ? '#94a3b8' : '#6b7280',
-                marginLeft: 'auto'
-              }}>
-                UK English | Formatting: **bold**
-              </div>
-            </div>
-            }}            
-            <input
-              type="text"
-              value={content.title}
-              onChange={(e) => setContent(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="Enter compelling title... (UK English)"
-              maxLength={fieldConfig?.title?.maxLength || 150}
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '0 0 8px 8px',
-                fontSize: '14px',
-                backgroundColor: isDarkMode ? '#334155' : 'white',
-                color: '#000000', // Black font for posts as requested
-                fontFamily: 'inherit',
-                borderTop: 'none'
-              }}
-            />
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginTop: '4px',
-              fontSize: '12px',
-              color: isDarkMode ? '#94a3b8' : '#6b7280'
             }}>
               <span>Create an attention-grabbing headline (UK English)</span>
               <span>{content.title.length}/{fieldConfig?.title?.maxLength || 150}</span>
@@ -1330,15 +1414,6 @@ const EnhancedContentCreationForm = ({
           </div>
         )}
 
-        {/* Description Field */}
-        <div style={{ width: '100%' }}>
-          <label style={{
-            display: 'block',
-            fontSize: '16px',
-            fontWeight: '600',
-            color: isDarkMode ? '#f8fafc' : '#111827',
-            marginBottom: '8px'
-          }}>
         {/* Description Field with Enhanced Features */}
         <div style={{ width: '100%' }}>
           <label style={{
@@ -1465,13 +1540,13 @@ const EnhancedContentCreationForm = ({
               }}
               title="Add Link"
             >
-              ðŸ”—
+              🔗
             </button>
             
             <button
               type="button"
               onClick={() => {
-                const commonEmojis = ['ðŸ˜€', 'ðŸ˜Š', 'ðŸ˜Ž', 'ðŸ¤”', 'ðŸ‘', 'ðŸ‘Ž', 'â¤ï¸', 'ðŸŽ‰', 'ðŸ”¥', 'ðŸ’¯', 'ðŸ“¢', 'âœ¨', 'ðŸ’ª', 'ðŸš€', 'â­', 'ðŸ‘', 'ðŸ™', 'ðŸ’¡', 'ðŸ“ˆ', 'ðŸ“Š'];
+                const commonEmojis = ['😀', '😊', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙏', '💡', '📈', '📊'];
                 const emoji = prompt(`Choose an emoji:\n${commonEmojis.join(' ')}\n\nOr enter any emoji:`);
                 if (emoji) {
                   setContent(prev => ({ ...prev, description: prev.description + emoji }));
@@ -1488,7 +1563,7 @@ const EnhancedContentCreationForm = ({
               }}
               title="Add Emoji"
             >
-              ðŸ˜Š
+              😊
             </button>
             
             <div style={{
@@ -2831,7 +2906,7 @@ const SupabaseConnection = () => {
           margin: '0'
         }}>
           {supabase 
-            ? 'Character profiles, platforms, and pending templates are being loaded from Supabase. All data is encrypted and backed up automatically.'
+            ? 'Character profiles, platforms, and content posts are being loaded from Supabase. Media files are automatically uploaded to secure cloud storage with automatic backups.'
             : 'Supabase connection not configured. Please check environment variables VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.'}
         </p>
       </div>
