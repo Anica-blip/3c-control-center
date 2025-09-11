@@ -81,8 +81,6 @@ interface MediaFile {
   type: 'image' | 'video' | 'pdf' | 'gif' | 'interactive' | 'other';
   size: number;
   url: string;
-  supabaseUrl?: string; // Add this for Supabase storage URLs
-  bucketPath?: string;   // Add this to track file location in bucket
 }
 
 interface SocialPlatform {
