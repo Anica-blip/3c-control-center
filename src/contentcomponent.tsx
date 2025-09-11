@@ -793,7 +793,7 @@ const EnhancedContentCreationForm = ({
           <div>
             <h2 style={{
               fontSize: '20px',
-              fontWeight: 'bold', // Changed from '600' to 'bold'
+              fontWeight: 'bold',
               color: isDarkMode ? '#60a5fa' : '#3b82f6',
               margin: '0 0 8px 0'
             }}>
@@ -817,7 +817,7 @@ const EnhancedContentCreationForm = ({
             padding: '8px 12px',
             borderRadius: '8px',
             fontSize: '14px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             fontFamily: 'monospace'
           }}>
             ID: {contentId}
@@ -842,7 +842,7 @@ const EnhancedContentCreationForm = ({
           <User style={{ height: '20px', width: '20px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
           <h3 style={{
             fontSize: '16px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             color: isDarkMode ? '#f8fafc' : '#111827',
             margin: '0'
           }}>
@@ -927,7 +927,7 @@ const EnhancedContentCreationForm = ({
                     <div style={{ flex: 1 }}>
                       <div style={{
                         fontSize: '14px',
-                        fontWeight: 'bold', // Changed from '600' to 'bold'
+                        fontWeight: 'bold',
                         color: isDarkMode ? '#f8fafc' : '#111827',
                         marginBottom: '2px'
                       }}>
@@ -998,7 +998,7 @@ const EnhancedContentCreationForm = ({
           <label style={{
             display: 'block',
             fontSize: '12px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             color: isDarkMode ? '#94a3b8' : '#1e40af',
             marginBottom: '8px',
             textTransform: 'uppercase',
@@ -1041,7 +1041,7 @@ const EnhancedContentCreationForm = ({
           <label style={{
             display: 'block',
             fontSize: '12px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             color: isDarkMode ? '#bfdbfe' : '#1e40af',
             marginBottom: '8px',
             textTransform: 'uppercase',
@@ -1079,7 +1079,7 @@ const EnhancedContentCreationForm = ({
           <label style={{
             display: 'block',
             fontSize: '12px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             color: isDarkMode ? '#bfdbfe' : '#1e40af',
             marginBottom: '8px',
             textTransform: 'uppercase',
@@ -1116,7 +1116,7 @@ const EnhancedContentCreationForm = ({
           <label style={{
             display: 'block',
             fontSize: '12px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             color: isDarkMode ? '#bfdbfe' : '#1e40af',
             marginBottom: '8px',
             textTransform: 'uppercase',
@@ -1156,7 +1156,7 @@ const EnhancedContentCreationForm = ({
           <label style={{
             display: 'block',
             fontSize: '12px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             color: isDarkMode ? '#bfdbfe' : '#1e40af',
             marginBottom: '8px',
             textTransform: 'uppercase',
@@ -1203,7 +1203,7 @@ const EnhancedContentCreationForm = ({
         }}>
           <h4 style={{
             fontSize: '14px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             color: isDarkMode ? '#60a5fa' : '#1e40af',
             margin: '0 0 8px 0'
           }}>
@@ -1225,14 +1225,28 @@ const EnhancedContentCreationForm = ({
             <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#1e40af' }}>
               Hashtags: {fieldConfig.hashtags.maxCount} max ({fieldConfig.hashtags.recommended} recommended)
             </div>
-            {/* Display Telegram media sizing info */}
+            {/* Enhanced Telegram media sizing info display */}
             {selections.platform === 'telegram' && fieldConfig.media && (
               <>
-                <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#1e40af' }}>
-                  Static Media: {fieldConfig.media.static.width}×{fieldConfig.media.static.height} pixels ({fieldConfig.media.static.format})
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: isDarkMode ? '#34d399' : '#059669',
+                  fontWeight: 'bold',
+                  backgroundColor: isDarkMode ? '#065f4630' : '#d1fae5',
+                  padding: '6px 8px',
+                  borderRadius: '4px'
+                }}>
+                  📸 Static: {fieldConfig.media.static.width}×{fieldConfig.media.static.height}px ({fieldConfig.media.static.format})
                 </div>
-                <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#1e40af' }}>
-                  Video Media: {fieldConfig.media.video.width}×{fieldConfig.media.video.height} pixels ({fieldConfig.media.video.format})
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: isDarkMode ? '#34d399' : '#059669',
+                  fontWeight: 'bold',
+                  backgroundColor: isDarkMode ? '#065f4630' : '#d1fae5',
+                  padding: '6px 8px',
+                  borderRadius: '4px'
+                }}>
+                  🎥 Video: {fieldConfig.media.video.width}×{fieldConfig.media.video.height}px ({fieldConfig.media.video.format})
                 </div>
               </>
             )}
@@ -1241,29 +1255,29 @@ const EnhancedContentCreationForm = ({
       )}
 
       {/* Media Upload */}
-      <div style={{ marginBottom: '24px', width: '90%' }}> {/* Changed from 80% to 90% */}
+      <div style={{ marginBottom: '24px', width: '90%' }}>
         <label style={{
           display: 'block',
           fontSize: '16px',
-          fontWeight: 'bold', // Changed from '600' to 'bold'
+          fontWeight: 'bold',
           color: isDarkMode ? '#f8fafc' : '#111827',
           marginBottom: '12px'
         }}>
-          Media Upload {supabase ? '(Brand Assets Bucket)' : '(Local Storage Only)'}
+          Media Upload (Local + Cloud Storage)
         </label>
         
-        {/* Supabase Status Indicator */}
+        {/* Enhanced Upload Status Indicator */}
         <div style={{
           padding: '8px 12px',
           marginBottom: '12px',
           borderRadius: '6px',
           fontSize: '12px',
-          fontWeight: 'bold', // Changed from '600' to 'bold'
-          backgroundColor: supabase ? (isDarkMode ? '#065f4630' : '#d1fae5') : (isDarkMode ? '#7f1d1d30' : '#fee2e2'),
-          color: supabase ? (isDarkMode ? '#34d399' : '#065f46') : (isDarkMode ? '#fca5a5' : '#7f1d1d'),
-          border: `1px solid ${supabase ? '#10b981' : '#ef4444'}`
+          fontWeight: 'bold',
+          backgroundColor: isDarkMode ? '#065f4630' : '#d1fae5',
+          color: isDarkMode ? '#34d399' : '#065f46',
+          border: '1px solid #10b981'
         }}>
-          {supabase ? 'Connected: Files uploaded to brand-assets bucket with user paths' : 'Not Connected: Files stored locally only'}
+          ✅ PC Upload Available: Files work locally + cloud backup {supabase ? '(connected)' : '(local only)'}
         </div>
         
         <div
@@ -1289,18 +1303,18 @@ const EnhancedContentCreationForm = ({
           }} />
           <h3 style={{
             fontSize: '16px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             color: isDarkMode ? '#f8fafc' : '#111827',
             margin: '0 0 6px 0'
           }}>
-            {isUploadingFiles ? 'Uploading files...' : 'Upload your media files'}
+            {isUploadingFiles ? 'Uploading files...' : 'Upload your media files from PC'}
           </h3>
           <p style={{
             fontSize: '14px',
             color: isDarkMode ? '#94a3b8' : '#6b7280',
             margin: '0 0 4px 0'
           }}>
-            Drop files here or click to browse
+            Drop files here or click to browse from your computer
           </p>
           <p style={{
             fontSize: '12px',
@@ -1308,7 +1322,7 @@ const EnhancedContentCreationForm = ({
             margin: '0'
           }}>
             Support for Images, Videos, GIFs, PDFs, and Interactive Media (up to 100MB per file)
-            {supabase ? ' - Files automatically uploaded to secure cloud storage' : ' - Files stored locally in browser session'}
+            <br />Files work immediately + auto-backup to cloud storage
           </p>
           <input
             ref={fileInputRef}
@@ -1336,7 +1350,7 @@ const EnhancedContentCreationForm = ({
             }}>
               <h4 style={{
                 fontSize: '14px',
-                fontWeight: 'bold', // Changed from '600' to 'bold'
+                fontWeight: 'bold',
                 color: isDarkMode ? '#f8fafc' : '#111827',
                 margin: '0'
               }}>
@@ -1347,7 +1361,7 @@ const EnhancedContentCreationForm = ({
                 backgroundColor: isDarkMode ? '#60a5fa' : '#3b82f6',
                 color: 'white',
                 fontSize: '12px',
-                fontWeight: 'bold', // Changed from '600' to 'bold'
+                fontWeight: 'bold',
                 borderRadius: '12px'
               }}>
                 {mediaFiles.length} files
@@ -1376,7 +1390,7 @@ const EnhancedContentCreationForm = ({
                     <div>
                       <div style={{
                         fontSize: '13px',
-                        fontWeight: 'bold', // Changed from '600' to 'bold'
+                        fontWeight: 'bold',
                         color: isDarkMode ? '#f8fafc' : '#111827',
                         marginBottom: '2px'
                       }}>
@@ -1395,7 +1409,7 @@ const EnhancedContentCreationForm = ({
                             color: isDarkMode ? '#34d399' : '#065f46',
                             borderRadius: '4px',
                             fontSize: '10px',
-                            fontWeight: 'bold' // Changed from '600' to 'bold'
+                            fontWeight: 'bold'
                           }}>
                             Cloud Stored
                           </span>
@@ -1428,7 +1442,7 @@ const EnhancedContentCreationForm = ({
         display: 'grid', 
         gap: '16px', 
         marginBottom: '24px',
-        width: '90%' // Changed from 80% to 90%
+        width: '90%'
       }}>
         {/* Title Field */}
         {(!fieldConfig || fieldConfig.title?.show !== false) && (
@@ -1436,7 +1450,7 @@ const EnhancedContentCreationForm = ({
             <label style={{
               display: 'block',
               fontSize: '16px',
-              fontWeight: 'bold', // Changed from '600' to 'bold'
+              fontWeight: 'bold',
               color: isDarkMode ? '#f8fafc' : '#111827',
               marginBottom: '8px'
             }}>
@@ -1478,7 +1492,7 @@ const EnhancedContentCreationForm = ({
           <label style={{
             display: 'block',
             fontSize: '16px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             color: isDarkMode ? '#f8fafc' : '#111827',
             marginBottom: '8px'
           }}>
@@ -1605,7 +1619,7 @@ const EnhancedContentCreationForm = ({
             <button
               type="button"
               onClick={() => {
-                const commonEmojis = ['😀', '😊', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙏', '💡', '📈', '📊'];
+                const commonEmojis = ['😀', '😊', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙌', '💡', '📈', '📊'];
                 const emoji = prompt(`Choose an emoji:\n${commonEmojis.join(' ')}\n\nOr enter any emoji:`);
                 if (emoji) {
                   setContent(prev => ({ ...prev, description: prev.description + emoji }));
@@ -1673,7 +1687,7 @@ const EnhancedContentCreationForm = ({
           <label style={{
             display: 'block',
             fontSize: '16px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             color: isDarkMode ? '#f8fafc' : '#111827',
             marginBottom: '8px'
           }}>
@@ -1789,7 +1803,7 @@ const EnhancedContentCreationForm = ({
           <label style={{
             display: 'block',
             fontSize: '16px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             color: isDarkMode ? '#f8fafc' : '#111827',
             marginBottom: '8px'
           }}>
@@ -1825,7 +1839,7 @@ const EnhancedContentCreationForm = ({
           <label style={{
             display: 'block',
             fontSize: '16px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             color: isDarkMode ? '#f8fafc' : '#111827',
             marginBottom: '8px'
           }}>
@@ -1866,7 +1880,7 @@ const EnhancedContentCreationForm = ({
         <label style={{
           display: 'block',
           fontSize: '16px',
-          fontWeight: 'bold', // Changed from '600' to 'bold'
+          fontWeight: 'bold',
           color: isDarkMode ? '#f8fafc' : '#111827',
           marginBottom: '12px'
         }}>
@@ -1909,7 +1923,7 @@ const EnhancedContentCreationForm = ({
               <div style={{ flex: 1 }}>
                 <div style={{
                   fontSize: '14px',
-                  fontWeight: 'bold', // Changed from '600' to 'bold'
+                  fontWeight: 'bold',
                   color: isDarkMode ? '#f8fafc' : '#111827',
                   marginBottom: '2px'
                 }}>
@@ -1920,7 +1934,7 @@ const EnhancedContentCreationForm = ({
                     display: 'inline-block',
                     padding: '1px 6px',
                     fontSize: '10px',
-                    fontWeight: 'bold', // Changed from '600' to 'bold'
+                    fontWeight: 'bold',
                     backgroundColor: '#10b981',
                     color: 'white',
                     borderRadius: '8px'
@@ -1947,7 +1961,7 @@ const EnhancedContentCreationForm = ({
           style={{
             padding: '12px 20px',
             fontSize: '14px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             borderRadius: '8px',
             border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
             cursor: 'pointer',
@@ -1965,7 +1979,7 @@ const EnhancedContentCreationForm = ({
           style={{
             padding: '12px 20px',
             fontSize: '14px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             borderRadius: '8px',
             border: 'none',
             cursor: (canSave && !isSaving) ? 'pointer' : 'not-allowed',
@@ -1984,7 +1998,7 @@ const EnhancedContentCreationForm = ({
           style={{
             padding: '12px 20px',
             fontSize: '14px',
-            fontWeight: 'bold', // Changed from '600' to 'bold'
+            fontWeight: 'bold',
             borderRadius: '8px',
             border: 'none',
             cursor: (canSave && !isSaving) ? 'pointer' : 'not-allowed',
@@ -2131,7 +2145,7 @@ const TemplateLibrarySection = ({ onLoadTemplate }: {
           <div>
             <h3 style={{
               fontSize: '18px',
-              fontWeight: 'bold', // Changed from '600' to 'bold'
+              fontWeight: 'bold',
               color: isDarkMode ? '#f8fafc' : '#111827',
               margin: '0 0 4px 0'
             }}>
@@ -2163,7 +2177,7 @@ const TemplateLibrarySection = ({ onLoadTemplate }: {
             )}
             <span style={{
               fontSize: '12px',
-              fontWeight: 'bold', // Changed from '600' to 'bold'
+              fontWeight: 'bold',
               color: isConnected 
                 ? (isDarkMode ? '#34d399' : '#065f46')
                 : (isDarkMode ? '#fca5a5' : '#7f1d1d')
@@ -2191,7 +2205,7 @@ const TemplateLibrarySection = ({ onLoadTemplate }: {
               <X style={{ height: '16px', width: '16px', color: '#ef4444' }} />
               <span style={{
                 fontSize: '14px',
-                fontWeight: 'bold', // Changed from '600' to 'bold'
+                fontWeight: 'bold',
                 color: isDarkMode ? '#fca5a5' : '#7f1d1d'
               }}>
                 Supabase Connection Error
@@ -2253,7 +2267,7 @@ const TemplateLibrarySection = ({ onLoadTemplate }: {
               border: 'none',
               cursor: isLoading ? 'not-allowed' : 'pointer',
               fontSize: '14px',
-              fontWeight: 'bold', // Changed from '600' to 'bold'
+              fontWeight: 'bold',
               fontFamily: 'inherit',
               opacity: isLoading ? 0.7 : 1
             }}
