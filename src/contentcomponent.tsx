@@ -651,26 +651,38 @@ const EnhancedContentCreationForm = ({
     };
 
     try {
-      if (isEditingPost && editingPost) {
-        // Update existing post
-        alert('Content updated successfully!');
-        
-        // Reset editing state
-        setIsEditingPost(false);
-        if (onEditComplete) {
-          onEditComplete();
+      setIsSaving(true);
+      
+      if (supabase) {
+        // Try Supabase save
+        try {
+          await onSave(postData);
+          resetForm();
+          return;
+        } catch (error) {
+          console.error('Supabase save failed:', error);
+          // Fall through to localStorage save
         }
-      } else {
-        // Create new post
-        await onSave(postData);
       }
       
-      // Only reset form if save was successful
+      // Fallback to localStorage save
+      const existingPosts = JSON.parse(localStorage.getItem('contentPosts') || '[]');
+      const newPost = {
+        ...postData,
+        id: Date.now().toString(),
+        createdDate: new Date().toISOString()
+      };
+      existingPosts.unshift(newPost);
+      localStorage.setItem('contentPosts', JSON.stringify(existingPosts));
+      
+      alert('Content saved to local storage (Supabase not available)');
       resetForm();
+      
     } catch (error) {
-      // Don't reset form on error - preserve user's work
-      console.error('Save failed, preserving form data:', error);
+      console.error('Save failed completely:', error);
       alert('Failed to save content. Your content is preserved and not lost.\n\nError: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1205,7 +1217,7 @@ const EnhancedContentCreationForm = ({
           color: isDarkMode ? '#f8fafc' : '#111827',
           marginBottom: '12px'
         }}>
-          Media Upload {supabase ? '(Supabase Cloud Storage)' : '(Local Storage Only)'}
+          Media Upload {supabase ? '(Brand Assets Bucket)' : '(Local Storage Only)'}
         </label>
         
         {/* Supabase Status Indicator */}
@@ -1219,7 +1231,8 @@ const EnhancedContentCreationForm = ({
           color: supabase ? (isDarkMode ? '#34d399' : '#065f46') : (isDarkMode ? '#fca5a5' : '#7f1d1d'),
           border: `1px solid ${supabase ? '#10b981' : '#ef4444'}`
         }}>
-          {supabase ? 'Supabase Storage: Connected - Files will be uploaded to cloud storage' : 'Supabase Storage: Not Available - Files will be stored locally only'}
+          {supabase ? 'Connected: Files uploaded to brand-assets bucket with user paths' : 'Not Connected: Files stored locally only'}
+        </div>
         </div>
         
         <div
