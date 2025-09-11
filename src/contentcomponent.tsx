@@ -1205,8 +1205,23 @@ const EnhancedContentCreationForm = ({
           color: isDarkMode ? '#f8fafc' : '#111827',
           marginBottom: '12px'
         }}>
-          Media Upload {supabase && '(Supabase Storage)'}
+          Media Upload {supabase ? '(Supabase Cloud Storage)' : '(Local Storage Only)'}
         </label>
+        
+        {/* Supabase Status Indicator */}
+        <div style={{
+          padding: '8px 12px',
+          marginBottom: '12px',
+          borderRadius: '6px',
+          fontSize: '12px',
+          fontWeight: '600',
+          backgroundColor: supabase ? (isDarkMode ? '#065f4630' : '#d1fae5') : (isDarkMode ? '#7f1d1d30' : '#fee2e2'),
+          color: supabase ? (isDarkMode ? '#34d399' : '#065f46') : (isDarkMode ? '#fca5a5' : '#7f1d1d'),
+          border: `1px solid ${supabase ? '#10b981' : '#ef4444'}`
+        }}>
+          {supabase ? 'Supabase Storage: Connected - Files will be uploaded to cloud storage' : 'Supabase Storage: Not Available - Files will be stored locally only'}
+        </div>
+        
         <div
           onClick={() => fileInputRef.current?.click()}
           style={{
@@ -1214,7 +1229,7 @@ const EnhancedContentCreationForm = ({
             borderRadius: '8px',
             padding: '32px',
             textAlign: 'center',
-            cursor: 'pointer',
+            cursor: isUploadingFiles ? 'not-allowed' : 'pointer',
             backgroundColor: isDarkMode ? '#1e3a8a20' : '#f8fafc',
             transition: 'all 0.3s ease',
             width: '100%',
@@ -1249,7 +1264,7 @@ const EnhancedContentCreationForm = ({
             margin: '0'
           }}>
             Support for Images, Videos, GIFs, PDFs, and Interactive Media (up to 100MB per file)
-            {supabase && ' - Files automatically uploaded to secure cloud storage'}
+            {supabase ? ' - Files automatically uploaded to secure cloud storage' : ' - Files stored locally in browser session'}
           </p>
           <input
             ref={fileInputRef}
