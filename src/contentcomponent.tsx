@@ -1284,12 +1284,12 @@ const EnhancedContentCreationForm = ({
               marginTop: '4px',
               fontSize: '12px',
               color: isDarkMode ? '#94a3b8' : '#6b7280'
-            }}>
+            }}
                 title="Bold (wrap selected text with **)"
               >
                 B
               </button>
-              
+              }}>              
               <div style={{
                 fontSize: '12px',
                 color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1298,7 +1298,7 @@ const EnhancedContentCreationForm = ({
                 UK English | Formatting: **bold**
               </div>
             </div>
-            
+            }}            
             <input
               type="text"
               value={content.title}
