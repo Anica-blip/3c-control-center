@@ -410,15 +410,20 @@ const EnhancedContentCreationForm = ({
 
   // Generate content ID (Pattern-###CC format)
   const generateContentId = () => {
-    const theme = selections.theme ? getThemeCode(selections.theme) : 'XX';
-    const audience = selections.audience ? getAudienceCode(selections.audience) : 'XX';
-    const media = selections.mediaType ? getMediaCode(selections.mediaType) : 'XX';
-    const template = selections.templateType ? getTemplateTypeCode(selections.templateType) : 'XX';
-    const character = selections.characterProfile ? getCharacterCode(selections.characterProfile) : 'XX';
-    const voiceStyle = selections.voiceStyle ? getVoiceStyleCode(selections.voiceStyle) : 'XX';
-    const randomNum = Math.floor(Math.random() * 999) + 1;
-    return `${theme}-${audience}-${media}-${template}-${character}-${voiceStyle}-${String(randomNum).padStart(3, '0')}`;
-  };
+  const theme = selections.theme ? getThemeCode(selections.theme) : 'XX';
+  const audience = selections.audience ? getAudienceCode(selections.audience) : 'XX';
+  const media = selections.mediaType ? getMediaCode(selections.mediaType) : 'XX';
+  const template = selections.templateType ? getTemplateTypeCode(selections.templateType) : 'XX';
+  
+  // Look up character name from the profiles array
+  const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
+  const characterName = selectedProfile ? selectedProfile.name.toLowerCase() : '';
+  const character = characterName ? getCharacterCode(characterName) : 'XX';
+  
+  const voiceStyle = selections.voiceStyle ? getVoiceStyleCode(selections.voiceStyle) : 'XX';
+  const randomNum = Math.floor(Math.random() * 999) + 1;
+  return `${theme}-${audience}-${media}-${template}-${character}-${voiceStyle}-${String(randomNum).padStart(3, '0')}`;
+};
 
   // Code mapping functions for content ID generation
   const getThemeCode = (value: string) => {
