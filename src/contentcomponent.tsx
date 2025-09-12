@@ -32,6 +32,7 @@ interface ContentPost {
   mediaType: string;
   templateType: string;
   platform: string;
+  voiceStyle: string;
   title: string;
   description: string;
   hashtags: string[];
@@ -143,6 +144,7 @@ const supabaseAPI = {
         media_type: postData.mediaType,
         template_type: postData.templateType,
         platform: postData.platform,
+        voice_style: postData.voiceStyle,
         title: postData.title,
         description: postData.description,
         hashtags: postData.hashtags,
@@ -176,6 +178,7 @@ const supabaseAPI = {
         mediaType: data.media_type,
         templateType: data.template_type,
         platform: data.platform,
+        voiceStyle: data.voice_style || '',
         title: data.title,
         description: data.description,
         hashtags: data.hashtags || [],
@@ -221,6 +224,7 @@ const supabaseAPI = {
         mediaType: record.media_type,
         templateType: record.template_type,
         platform: record.platform || '',
+        voiceStyle: record.voice_style || '',
         title: record.title || '',
         description: record.description || '',
         hashtags: record.hashtags || [],
@@ -283,6 +287,7 @@ const supabaseAPI = {
       if (updates.mediaType) updateData.media_type = updates.mediaType;
       if (updates.templateType) updateData.template_type = updates.templateType;
       if (updates.platform) updateData.platform = updates.platform;
+      if (updates.voiceStyle) updateData.voice_style = updates.voiceStyle;
       if (updates.title) updateData.title = updates.title;
       if (updates.description) updateData.description = updates.description;
       if (updates.hashtags) updateData.hashtags = updates.hashtags;
@@ -313,6 +318,7 @@ const supabaseAPI = {
         mediaType: data.media_type,
         templateType: data.template_type,
         platform: data.platform,
+        voiceStyle: data.voice_style || '',
         title: data.title,
         description: data.description,
         hashtags: data.hashtags || [],
@@ -382,7 +388,8 @@ const EnhancedContentCreationForm = ({
     audience: '',
     mediaType: '',
     templateType: '',
-    platform: ''
+    platform: '',
+    voiceStyle: ''
   });
 
   const [content, setContent] = useState({
@@ -407,8 +414,10 @@ const EnhancedContentCreationForm = ({
     const audience = selections.audience ? getAudienceCode(selections.audience) : 'XX';
     const media = selections.mediaType ? getMediaCode(selections.mediaType) : 'XX';
     const template = selections.templateType ? getTemplateTypeCode(selections.templateType) : 'XX';
+    const character = selections.characterProfile ? getCharacterCode(selections.characterProfile) : 'XX';
+    const voiceStyle = selections.voiceStyle ? getVoiceStyleCode(selections.voiceStyle) : 'XX';
     const randomNum = Math.floor(Math.random() * 999) + 1;
-    return `${theme}-${audience}-${media}-${template}-${String(randomNum).padStart(3, '0')}CC`;
+    return `${theme}-${audience}-${media}-${template}-${character}-${voiceStyle}-${String(randomNum).padStart(3, '0')}`;
   };
 
   // Code mapping functions for content ID generation
@@ -448,11 +457,30 @@ const EnhancedContentCreationForm = ({
     return codes[value] || 'XX';
   };
 
+  const getCharacterCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'anica': 'AN',
+      'caelum': 'CA', 
+      'aurion': 'AU'
+    };
+    return codes[value.toLowerCase()] || 'XX';
+  };
+
+  const getVoiceStyleCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'casual': 'CS',
+      'friendly': 'FR',
+      'professional': 'PR',
+      'creative': 'CR'
+    };
+    return codes[value] || 'XX';
+  };
+
   // Initialize and update content ID based on selections
   useEffect(() => {
     const newId = generateContentId();
     setContentId(newId);
-  }, [selections.theme, selections.audience, selections.mediaType, selections.templateType]);
+  }, [selections.theme, selections.audience, selections.mediaType, selections.templateType, selections.characterProfile, selections.voiceStyle]);
 
   // Load editing post data when provided
   useEffect(() => {
@@ -463,7 +491,8 @@ const EnhancedContentCreationForm = ({
         audience: editingPost.audience,
         mediaType: editingPost.mediaType,
         templateType: editingPost.templateType,
-        platform: editingPost.platform
+        platform: editingPost.platform,
+        voiceStyle: editingPost.voiceStyle || ''
       });
       
       setContent({
@@ -652,7 +681,8 @@ const EnhancedContentCreationForm = ({
       audience: '',
       mediaType: '',
       templateType: '',
-      platform: ''
+      platform: '',
+      voiceStyle: ''
     });
     setContent({
       title: '',
@@ -669,7 +699,7 @@ const EnhancedContentCreationForm = ({
   };
 
   const activePlatforms = platforms?.filter(p => p?.isActive) || [];
-  const canSave = selections.characterProfile && selections.theme && selections.audience && selections.mediaType && selections.templateType && content.description;
+  const canSave = selections.characterProfile && selections.theme && selections.audience && selections.mediaType && selections.templateType && selections.voiceStyle && content.description;
 
   const getFileIcon = (type: string) => {
     switch (type) {
@@ -1096,6 +1126,47 @@ const EnhancedContentCreationForm = ({
             <option value="custom_templates">Custom Templates</option>
           </select>
         </div>
+  
+        {/* Voice Style Selection */}
+        <div>
+          <label style={{
+           display: 'block',
+           fontSize: '12px',
+           fontWeight: '600',
+           color: isDarkMode ? '#bfdbfe' : '#1e40af',
+           marginBottom: '8px',
+           textTransform: 'uppercase',
+           letterSpacing: '0.05em'
+         }}>
+           Voice Style *
+         </label>
+         <select
+           value={selections.voiceStyle}
+           onChange={(e) => handleSelectionChange('voiceStyle', e.target.value)}
+           style={{
+             width: '100%',
+             padding: '10px 12px',
+             border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+             borderRadius: '6px',
+             fontSize: '14px',
+             backgroundColor: '#334155',
+             color: '#ffffff',
+             fontFamily: 'inherit',
+             appearance: 'none',
+             backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+             backgroundRepeat: 'no-repeat',
+             backgroundPosition: 'right 12px center',
+             backgroundSize: '16px',
+             paddingRight: '40px'
+           }}
+         >
+           <option value="">Select voice style...</option>
+           <option value="casual">Casual</option>
+           <option value="friendly">Friendly</option>
+           <option value="professional">Professional</option>
+           <option value="creative">Creative</option>
+          </select>
+        </div>
 
         {/* Platform Selection (Optional - for content optimization) */}
         <div>
@@ -1182,7 +1253,7 @@ const EnhancedContentCreationForm = ({
       )}
 
       {/* Media Upload */}
-      <div style={{ marginBottom: '24px', width: '80%' }}>
+      <div style={{ marginBottom: '24px', width: '90%' }}>
         <label style={{
           display: 'block',
           fontSize: '16px',
@@ -1348,12 +1419,12 @@ const EnhancedContentCreationForm = ({
         )}
       </div>
 
-      {/* Content Fields - 80% Width to Match Media Upload */}
+      {/* Content Fields - 90% Width to Match Media Upload */}
       <div style={{ 
         display: 'grid', 
         gap: '16px', 
         marginBottom: '24px',
-        width: '80%'
+        width: '90%'
       }}>
         {/* Title Field */}
         {(!fieldConfig || fieldConfig.title?.show !== false) && (
