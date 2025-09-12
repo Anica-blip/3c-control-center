@@ -355,7 +355,7 @@ const supabaseAPI = {
   }
 };
 
-// Content Creation Form
+// Enhanced Content Creation Form
 const EnhancedContentCreationForm = ({ 
   onSave, 
   onAddToSchedule, 
@@ -377,7 +377,7 @@ const EnhancedContentCreationForm = ({
 }) => {
   const { isDarkMode } = useTheme();
   
-  // Form state matching content structure
+  // Form state matching template builder structure
   const [selections, setSelections] = useState({
     characterProfile: '',
     theme: '',
@@ -741,7 +741,7 @@ const EnhancedContentCreationForm = ({
         </div>
       </div>
 
-      {/* Character Profile Section */}
+      {/* Character Profile Section - Enhanced with Supabase Integration */}
       <div style={{
         backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
         borderRadius: '8px',
@@ -904,7 +904,7 @@ const EnhancedContentCreationForm = ({
         </div>
       </div>
 
-      {/* Content Configuration Selections */}
+      {/* Template Builder Style Selections - All Dropdowns Gray Background */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(2, 1fr)',
@@ -1064,7 +1064,7 @@ const EnhancedContentCreationForm = ({
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
           }}>
-            Content Type *
+            Template Type *
           </label>
           <select
             value={selections.templateType}
@@ -1086,7 +1086,7 @@ const EnhancedContentCreationForm = ({
               paddingRight: '40px'
             }}
           >
-            <option value="">Select content type...</option>
+            <option value="">Select template type...</option>
             <option value="social_media">Social Media</option>
             <option value="presentation">Presentation</option>
             <option value="video_message">Video Message</option>
@@ -1977,7 +1977,7 @@ const EnhancedContentCreationForm = ({
         </button>
       </div>
 
-      {/* Live Preview Section */}
+      {/* Live Preview Section - Shows Exact Final Post Format */}
       {(selections.characterProfile || content.title || content.description || mediaFiles.length > 0) && (
         <div style={{
           marginTop: '32px',
@@ -2017,13 +2017,14 @@ const EnhancedContentCreationForm = ({
             border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
             overflow: 'hidden'
           }}>
-            {/* Media Files Preview */}
+            {/* 1. Media Files Preview - Platform Responsive */}
             {mediaFiles.length > 0 && (
               <div style={{
                 padding: '16px',
                 backgroundColor: isDarkMode ? '#1e293b' : '#f9fafb',
                 borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
               }}>
+                {/* Platform Preview Info */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -2044,124 +2045,223 @@ const EnhancedContentCreationForm = ({
                   )}
                 </div>
 
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: mediaFiles.length === 1 
-                    ? '1fr' 
-                    : 'repeat(auto-fit, minmax(200px, 300px))',
-                  gap: '12px',
-                  justifyContent: 'center',
-                  width: '100%',
-                  maxWidth: '800px'
-                }}>
-                  {mediaFiles.slice(0, 4).map((file, index) => (
-                    <div key={file.id} style={{
-                      position: 'relative',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                      backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
-                      border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+                {(() => {
+                  // Platform-specific dimensions and styling
+                  const getPlatformPreviewStyle = (platform: string) => {
+                    const styles = {
+                      instagram: {
+                        aspectRatio: '1 / 1', // Square posts
+                        maxWidth: '400px',
+                        label: 'Instagram Square Post (1:1)'
+                      },
+                      facebook: {
+                        aspectRatio: '1.91 / 1', // Facebook recommended
+                        maxWidth: '500px',
+                        label: 'Facebook Post (1.91:1)'
+                      },
+                      twitter: {
+                        aspectRatio: '16 / 9', // Twitter recommended
+                        maxWidth: '500px',
+                        label: 'Twitter/X Post (16:9)'
+                      },
+                      linkedin: {
+                        aspectRatio: '1.91 / 1', // LinkedIn recommended
+                        maxWidth: '500px',
+                        label: 'LinkedIn Post (1.91:1)'
+                      },
+                      youtube: {
+                        aspectRatio: '16 / 9', // YouTube thumbnail
+                        maxWidth: '480px',
+                        label: 'YouTube Thumbnail (16:9)'
+                      },
+                      tiktok: {
+                        aspectRatio: '9 / 16', // TikTok vertical
+                        maxWidth: '300px',
+                        label: 'TikTok Video (9:16)'
+                      },
+                      telegram: {
+                        aspectRatio: '1.91 / 1', // Similar to Facebook
+                        maxWidth: '500px',
+                        label: 'Telegram Post (1.91:1)'
+                      },
+                      pinterest: {
+                        aspectRatio: '2 / 3', // Pinterest vertical
+                        maxWidth: '400px',
+                        label: 'Pinterest Pin (2:3)'
+                      }
+                    };
+                    
+                    return styles[platform as keyof typeof styles] || {
                       aspectRatio: 'auto',
                       maxWidth: '100%',
-                      margin: '0 auto'
-                    }}>
-                      {file.type === 'image' || file.type === 'gif' ? (
-                        <img
-                          src={file.url}
-                          alt={file.name}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'contain',
-                            backgroundColor: isDarkMode ? '#1e293b' : 'white'
-                          }}
-                        />
-                      ) : file.type === 'video' ? (
-                        <video
-                          src={file.url}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'contain',
-                            backgroundColor: isDarkMode ? '#1e293b' : 'white'
-                          }}
-                          controls
-                          muted
-                        />
-                      ) : (
-                        <div style={{
-                          width: '100%',
-                          height: '200px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          padding: '16px'
-                        }}>
-                          {getFileIcon(file.type)}
-                          <span style={{
-                            fontSize: '12px',
-                            color: isDarkMode ? '#94a3b8' : '#6b7280',
-                            textAlign: 'center',
-                            fontWeight: '500'
-                          }}>
-                            {file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name}
-                          </span>
-                          <span style={{
-                            fontSize: '10px',
-                            color: isDarkMode ? '#64748b' : '#9ca3af',
-                            textAlign: 'center'
-                          }}>
-                            {file.type.toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                      
-                      {/* Multiple files indicator */}
-                      {mediaFiles.length > 4 && index === 3 && (
-                        <div style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontSize: '16px',
-                          fontWeight: '700'
-                        }}>
-                          +{mediaFiles.length - 3} more
-                        </div>
-                      )}
+                      label: 'Original Size (No Platform Selected)'
+                    };
+                  };
 
-                      {/* File type badge */}
+                  const platformStyle = getPlatformPreviewStyle(selections.platform);
+                  
+                  return (
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}>
+                      {/* Platform Label */}
                       <div style={{
-                        position: 'absolute',
-                        top: '8px',
-                        right: '8px',
-                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                        color: 'white',
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '10px',
+                        fontSize: '11px',
+                        color: isDarkMode ? '#60a5fa' : '#3b82f6',
                         fontWeight: '600',
-                        textTransform: 'uppercase'
+                        textAlign: 'center'
                       }}>
-                        {file.type}
+                        {platformStyle.label}
                       </div>
+
+                      {/* Media Grid */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: mediaFiles.length === 1 
+                          ? '1fr' 
+                          : selections.platform === 'tiktok' || selections.platform === 'pinterest'
+                            ? 'repeat(auto-fit, minmax(150px, 200px))'  // Smaller for vertical formats
+                            : 'repeat(auto-fit, minmax(200px, 300px))',
+                        gap: '12px',
+                        justifyContent: 'center',
+                        width: '100%',
+                        maxWidth: '800px'
+                      }}>
+                        {mediaFiles.slice(0, 4).map((file, index) => (
+                          <div key={file.id} style={{
+                            position: 'relative',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                            border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+                            aspectRatio: platformStyle.aspectRatio,
+                            maxWidth: platformStyle.maxWidth,
+                            margin: '0 auto'
+                          }}>
+                            {file.type === 'image' || file.type === 'gif' ? (
+                              <img
+                                src={file.url}
+                                alt={file.name}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: selections.platform ? 'cover' : 'contain', // Cover for platforms, contain for generic
+                                  backgroundColor: isDarkMode ? '#1e293b' : 'white'
+                                }}
+                              />
+                            ) : file.type === 'video' ? (
+                              <video
+                                src={file.url}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: selections.platform ? 'cover' : 'contain',
+                                  backgroundColor: isDarkMode ? '#1e293b' : 'white'
+                                }}
+                                controls
+                                muted
+                              />
+                            ) : (
+                              <div style={{
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                padding: '16px'
+                              }}>
+                                {getFileIcon(file.type)}
+                                <span style={{
+                                  fontSize: '12px',
+                                  color: isDarkMode ? '#94a3b8' : '#6b7280',
+                                  textAlign: 'center',
+                                  fontWeight: '500'
+                                }}>
+                                  {file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name}
+                                </span>
+                                <span style={{
+                                  fontSize: '10px',
+                                  color: isDarkMode ? '#64748b' : '#9ca3af',
+                                  textAlign: 'center'
+                                }}>
+                                  {file.type.toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                            
+                            {/* Multiple files indicator */}
+                            {mediaFiles.length > 4 && index === 3 && (
+                              <div style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontSize: '16px',
+                                fontWeight: '700'
+                              }}>
+                                +{mediaFiles.length - 3} more
+                              </div>
+                            )}
+
+                            {/* File type badge */}
+                            <div style={{
+                              position: 'absolute',
+                              top: '8px',
+                              right: '8px',
+                              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: '12px',
+                              fontSize: '10px',
+                              fontWeight: '600',
+                              textTransform: 'uppercase'
+                            }}>
+                              {file.type}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Platform-specific notes */}
+                      {selections.platform && (
+                        <div style={{
+                          fontSize: '11px',
+                          color: isDarkMode ? '#64748b' : '#9ca3af',
+                          textAlign: 'center',
+                          fontStyle: 'italic',
+                          maxWidth: '500px',
+                          lineHeight: '1.4'
+                        }}>
+                          {selections.platform === 'instagram' && 'Instagram will crop images to square format for feed posts. Stories use 9:16 ratio.'}
+                          {selections.platform === 'tiktok' && 'TikTok optimizes for vertical 9:16 video format for maximum engagement.'}
+                          {selections.platform === 'youtube' && 'YouTube thumbnails work best at 16:9 ratio with bold, readable visuals.'}
+                          {selections.platform === 'facebook' && 'Facebook recommends 1.91:1 ratio for optimal feed display and engagement.'}
+                          {selections.platform === 'twitter' && 'Twitter displays images best at 16:9 ratio in timeline feeds.'}
+                          {selections.platform === 'linkedin' && 'LinkedIn professional posts perform well with 1.91:1 landscape format.'}
+                          {selections.platform === 'telegram' && 'Telegram supports various formats but 1.91:1 provides consistent display.'}
+                          {selections.platform === 'pinterest' && 'Pinterest favors vertical 2:3 pins for discovery and engagement.'}
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
               </div>
             )}
 
-            {/* Post Content */}
+            {/* 2. Post Content */}
             <div style={{ padding: '20px' }}>
-              {/* Character Profile Header */}
+              {/* a) Character Profile Header */}
               {selections.characterProfile && (
                 <div style={{
                   display: 'flex',
@@ -2236,7 +2336,7 @@ const EnhancedContentCreationForm = ({
                 </div>
               )}
 
-              {/* Title/Headline */}
+              {/* b) Title/Headline */}
               {content.title && (
                 <h4 style={{
                   fontSize: '18px',
@@ -2249,7 +2349,7 @@ const EnhancedContentCreationForm = ({
                 </h4>
               )}
 
-              {/* Post Description */}
+              {/* c) Post Description */}
               {content.description && (
                 <div style={{
                   fontSize: '15px',
@@ -2262,7 +2362,7 @@ const EnhancedContentCreationForm = ({
                 </div>
               )}
 
-              {/* Hashtags */}
+              {/* d) Hashtags */}
               {content.hashtags.length > 0 && (
                 <div style={{
                   display: 'flex',
@@ -2282,7 +2382,7 @@ const EnhancedContentCreationForm = ({
                 </div>
               )}
 
-              {/* Call to Action */}
+              {/* e) Call to Action */}
               {content.cta && (
                 <div style={{
                   padding: '12px 16px',
@@ -2300,42 +2400,61 @@ const EnhancedContentCreationForm = ({
             </div>
           </div>
 
-          {/* Platform Distribution */}
+          {/* 3. Platform/Telegram Distribution (Internal Dashboard Use Only) */}
           {selectedPlatforms.length > 0 && (
             <div style={{
               marginTop: '20px',
               padding: '16px',
               backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
-              borderRadius: '8px'
+              borderRadius: '8px',
+              border: `1px dashed ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
             }}>
-              <h4 style={{
-                fontSize: '14px',
-                fontWeight: '600',
-                color: isDarkMode ? '#f8fafc' : '#111827',
-                margin: '0 0 12px 0'
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '12px'
               }}>
-                Publishing to {selectedPlatforms.length} platform{selectedPlatforms.length > 1 ? 's' : ''}:
-              </h4>
+                <Settings style={{ height: '16px', width: '16px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
+                <span style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#60a5fa' : '#3b82f6'
+                }}>
+                  Distribution Settings (Internal Dashboard Only)
+                </span>
+              </div>
               <div style={{
                 display: 'flex',
                 flexWrap: 'wrap',
                 gap: '8px'
               }}>
                 {selectedPlatforms.map(platformId => {
-                  const platform = activePlatforms.find(p => p.id === platformId);
-                  return platform ? (
-                    <span key={platformId} style={{
-                      padding: '4px 12px',
-                      backgroundColor: isDarkMode ? '#60a5fa' : '#3b82f6',
-                      color: 'white',
+                  const platform = platforms.find(p => p.id === platformId);
+                  if (!platform) return null;
+                  
+                  return (
+                    <div key={platformId} style={{
+                      padding: '6px 12px',
+                      backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                      border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                      borderRadius: '16px',
                       fontSize: '12px',
-                      fontWeight: '600',
-                      borderRadius: '16px'
+                      fontWeight: '500',
+                      color: isDarkMode ? '#94a3b8' : '#6b7280'
                     }}>
                       {platform.name}
-                    </span>
-                  ) : null;
+                    </div>
+                  );
                 })}
+              </div>
+              <div style={{
+                fontSize: '11px',
+                color: isDarkMode ? '#64748b' : '#9ca3af',
+                fontStyle: 'italic',
+                marginTop: '8px'
+              }}>
+                * Platform links are for internal dashboard tracking only and will not appear in the public post
               </div>
             </div>
           )}
@@ -2345,4 +2464,805 @@ const EnhancedContentCreationForm = ({
   );
 };
 
-export default ContentComponent;
+const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoading }: {
+  posts: ContentPost[];
+  onEditPost: (postId: string) => void;
+  onSchedulePost: (postId: string) => void;
+  onDeletePost: (postId: string) => void;
+  isLoading?: boolean;
+}) => {
+  const { isDarkMode } = useTheme();
+  
+  if (isLoading) {
+    return (
+      <div style={{
+        backgroundColor: isDarkMode ? '#1e293b' : 'white',
+        boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+        borderRadius: '8px',
+        padding: '48px',
+        textAlign: 'center',
+        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      }}>
+        <div style={{
+          fontSize: '18px',
+          color: isDarkMode ? '#60a5fa' : '#3b82f6',
+          marginBottom: '12px'
+        }}>
+          Loading your saved content...
+        </div>
+        <div style={{
+          fontSize: '14px',
+          color: isDarkMode ? '#94a3b8' : '#6b7280'
+        }}>
+          Fetching posts from Supabase database
+        </div>
+      </div>
+    );
+  }
+  
+  const getStatusBadge = (status: string) => {
+    const badgeStyles = {
+      pending: { backgroundColor: isDarkMode ? '#92400e' : '#fef3c7', color: isDarkMode ? '#fef3c7' : '#92400e', text: 'Pending' },
+      scheduled: { backgroundColor: isDarkMode ? '#1e40af' : '#dbeafe', color: isDarkMode ? '#dbeafe' : '#1e40af', text: 'Scheduled' },
+      published: { backgroundColor: isDarkMode ? '#065f46' : '#d1fae5', color: isDarkMode ? '#d1fae5' : '#065f46', text: 'Published' }
+    };
+    
+    const style = badgeStyles[status as keyof typeof badgeStyles];
+    
+    return (
+      <span style={{
+        padding: '6px 12px',
+        fontSize: '12px',
+        fontWeight: '600',
+        borderRadius: '20px',
+        ...style
+      }}>
+        {style.text}
+      </span>
+    );
+  };
+
+  if (posts.length === 0) {
+    return (
+      <div style={{
+        backgroundColor: isDarkMode ? '#1e293b' : 'white',
+        boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+        borderRadius: '8px',
+        padding: '48px',
+        textAlign: 'center',
+        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      }}>
+        <div style={{
+          width: '64px',
+          height: '64px',
+          backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 16px auto'
+        }}>
+          <FileText style={{ height: '32px', width: '32px', color: isDarkMode ? '#64748b' : '#9ca3af' }} />
+        </div>
+        <h3 style={{
+          fontSize: '18px',
+          fontWeight: '600',
+          color: isDarkMode ? '#f8fafc' : '#111827',
+          margin: '0 0 8px 0'
+        }}>
+          No content created yet
+        </h3>
+        <p style={{
+          color: isDarkMode ? '#94a3b8' : '#6b7280',
+          fontSize: '14px',
+          margin: '0'
+        }}>
+          Start creating amazing content using the form above
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      backgroundColor: isDarkMode ? '#1e293b' : 'white',
+      boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+      borderRadius: '8px',
+      overflow: 'hidden',
+      fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    }}>
+      <div style={{
+        padding: '16px',
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #334155 0%, #475569 100%)' 
+          : 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
+        borderBottom: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '600',
+            color: isDarkMode ? '#60a5fa' : '#3b82f6',
+            margin: '0'
+          }}>
+            Pending Content
+          </h3>
+          <span style={{
+            padding: '6px 12px',
+            background: isDarkMode 
+              ? 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)' 
+              : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+            color: 'white',
+            fontSize: '14px',
+            fontWeight: '600',
+            borderRadius: '16px'
+          }}>
+            {posts.length} {posts.length === 1 ? 'post' : 'posts'}
+          </span>
+        </div>
+      </div>
+      
+      <div>
+        {posts.map((post) => (
+          <div key={post.id} style={{
+            padding: '16px',
+            borderBottom: `1px solid ${isDarkMode ? '#334155' : '#f3f4f6'}`,
+            transition: 'background-color 0.2s ease'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ flex: 1, marginRight: '16px' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginBottom: '12px'
+                }}>
+                  {getStatusBadge(post.status)}
+                  <span style={{
+                    fontSize: '12px',
+                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                    fontWeight: '600',
+                    fontFamily: 'monospace'
+                  }}>
+                    ID: {post.contentId}
+                  </span>
+                  <span style={{
+                    fontSize: '12px',
+                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    fontWeight: '600'
+                  }}>
+                    Created {post.createdDate.toLocaleDateString()}
+                  </span>
+                  {post.isFromTemplate && (
+                    <span style={{
+                      fontSize: '12px',
+                      color: isDarkMode ? '#34d399' : '#059669',
+                      fontWeight: '600',
+                      backgroundColor: isDarkMode ? '#065f4630' : '#d1fae5',
+                      padding: '4px 8px',
+                      borderRadius: '6px'
+                    }}>
+                      From Template
+                    </span>
+                  )}
+                </div>
+                
+                {post.title && (
+                  <h4 style={{
+                    color: isDarkMode ? '#f8fafc' : '#111827',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    margin: '0 0 8px 0'
+                  }}>
+                    {post.title}
+                  </h4>
+                )}
+                
+                <p style={{
+                  color: isDarkMode ? '#94a3b8' : '#374151',
+                  fontSize: '14px',
+                  lineHeight: '1.6',
+                  margin: '0 0 12px 0'
+                }}>
+                  {post.description}
+                </p>
+                
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  flexWrap: 'wrap'
+                }}>
+                  {post.mediaFiles.length > 0 && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '12px',
+                      color: isDarkMode ? '#94a3b8' : '#6b7280',
+                      backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
+                      padding: '6px 8px',
+                      borderRadius: '6px'
+                    }}>
+                      <Image style={{ height: '14px', width: '14px' }} />
+                      <span style={{ fontWeight: '600' }}>
+                        {post.mediaFiles.length} file{post.mediaFiles.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {post.hashtags.length > 0 && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '12px',
+                      color: isDarkMode ? '#94a3b8' : '#6b7280',
+                      backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
+                      padding: '6px 8px',
+                      borderRadius: '6px'
+                    }}>
+                      <span style={{ fontWeight: '600' }}>
+                        #{post.hashtags.length} hashtags
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '12px',
+                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
+                    padding: '6px 8px',
+                    borderRadius: '6px'
+                  }}>
+                    <Settings style={{ height: '14px', width: '14px' }} />
+                    <span style={{ fontWeight: '600' }}>
+                      {post.selectedPlatforms.length} platform{post.selectedPlatforms.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                <button
+                  onClick={() => onEditPost(post.id)}
+                  title="Edit Content"
+                  style={{
+                    padding: '8px',
+                    backgroundColor: 'transparent',
+                    border: '1px solid transparent',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <Edit3 style={{ height: '16px', width: '16px' }} />
+                </button>
+                
+                {post.status === 'pending' && (
+                  <button
+                    onClick={() => onSchedulePost(post.id)}
+                    title="Add to Schedule"
+                    style={{
+                      padding: '8px',
+                      backgroundColor: 'transparent',
+                      border: '1px solid transparent',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      color: isDarkMode ? '#94a3b8' : '#6b7280',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <Calendar style={{ height: '16px', width: '16px' }} />
+                  </button>
+                )}
+                
+                <button
+                  onClick={() => onDeletePost(post.id)}
+                  title="Delete Content"
+                  style={{
+                    padding: '8px',
+                    backgroundColor: 'transparent',
+                    border: '1px solid transparent',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <Trash2 style={{ height: '16px', width: '16px' }} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const SupabaseConnection = () => {
+  const { isDarkMode } = useTheme();
+  
+  return (
+    <div style={{
+      backgroundColor: isDarkMode ? '#1e293b' : 'white',
+      boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      borderRadius: '8px',
+      border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+      padding: '24px',
+      fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '16px'
+      }}>
+        <div>
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            margin: '0 0 4px 0'
+          }}>
+            Supabase Database
+          </h3>
+          <p style={{
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            margin: '0',
+            fontSize: '14px'
+          }}>
+            Manage your content data storage and connectivity
+          </p>
+        </div>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          backgroundColor: isDarkMode ? '#065f4630' : '#d1fae5',
+          padding: '8px 12px',
+          borderRadius: '8px',
+          border: '1px solid #10b981'
+        }}>
+          <CheckCircle style={{ height: '18px', width: '18px', color: '#10b981' }} />
+          <span style={{
+            fontSize: '12px',
+            fontWeight: '600',
+            color: isDarkMode ? '#34d399' : '#065f46'
+          }}>
+            Connected
+          </span>
+        </div>
+      </div>
+      
+      <div style={{
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' 
+          : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+        borderRadius: '8px',
+        padding: '16px',
+        border: `1px solid ${isDarkMode ? '#1e40af' : '#3b82f6'}`,
+        marginBottom: '16px'
+      }}>
+        <p style={{
+          color: isDarkMode ? '#bfdbfe' : '#1e40af',
+          fontSize: '14px',
+          lineHeight: '1.6',
+          margin: '0'
+        }}>
+          Content posts, media files, character profiles, and platform configurations are stored in Supabase. All data is encrypted and backed up automatically.
+        </p>
+      </div>
+      
+      <button
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '12px 16px',
+          background: isDarkMode 
+            ? 'linear-gradient(135deg, #1f2937 0%, #374151 100%)' 
+            : 'linear-gradient(135deg, #111827 0%, #374151 100%)',
+          color: 'white',
+          borderRadius: '8px',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: '14px',
+          fontWeight: '600',
+          fontFamily: 'inherit'
+        }}
+        onClick={() => window.open('https://supabase.com/dashboard/project/uqyqpwhkzlhqxcqajhkn/database/schemas', '_blank')}
+      >
+        <Database style={{ height: '16px', width: '16px' }} />
+        <span>Open Supabase Project</span>
+        <ExternalLink style={{ height: '14px', width: '14px' }} />
+      </button>
+    </div>
+  );
+};
+
+// Main Component
+export default function ContentComponent() {
+  const { isDarkMode } = useTheme();
+  const [activeTab, setActiveTab] = useState('create');
+  const [savedPosts, setSavedPosts] = useState<ContentPost[]>([]);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingPost, setEditingPost] = useState<ContentPost | null>(null);
+
+  // Supabase data states
+  const [characterProfiles, setCharacterProfiles] = useState<CharacterProfile[]>([]);
+  const [platforms, setPlatforms] = useState<SocialPlatform[]>([]);
+  const [telegramChannels, setTelegramChannels] = useState<any[]>([]);
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(true);
+
+  // Load data from Supabase on component mount
+  useEffect(() => {
+    loadCharacterProfiles();
+    loadPlatformsData();
+    loadTelegramChannels();
+    fetchSupabasePosts();
+  }, []);
+
+  const loadCharacterProfiles = async () => {
+    if (!supabase) {
+      console.warn('Supabase not configured. Using mock character data.');
+      setCharacterProfiles([
+        { id: 'anica', name: 'Anica', username: '@anica', role: 'Community Manager', description: 'Empathetic and supportive communication style', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
+        { id: 'caelum', name: 'Caelum', username: '@caelum', role: 'Strategist', description: 'Analytical and strategic approach', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
+        { id: 'aurion', name: 'Aurion', username: '@aurion', role: 'Creative Director', description: 'Creative and inspiring messaging', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
+      ]);
+      setIsLoadingProfiles(false);
+      return;
+    }
+
+    try {
+      setIsLoadingProfiles(true);
+      const { data, error } = await supabase
+        .from('character_profiles')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setCharacterProfiles(data || []);
+    } catch (error) {
+      console.error('Error loading character profiles:', error);
+      // Fallback to mock data
+      setCharacterProfiles([
+        { id: 'anica', name: 'Anica', username: '@anica', role: 'Community Manager', description: 'Empathetic and supportive communication style', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
+        { id: 'caelum', name: 'Caelum', username: '@caelum', role: 'Strategist', description: 'Analytical and strategic approach', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
+        { id: 'aurion', name: 'Aurion', username: '@aurion', role: 'Creative Director', description: 'Creative and inspiring messaging', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
+      ]);
+    } finally {
+      setIsLoadingProfiles(false);
+    }
+  };
+
+  const loadPlatformsData = async () => {
+    if (!supabase) {
+      console.warn('Supabase not configured. Using mock platform data.');
+      setPlatforms([
+        { id: '1', name: 'Facebook', url: 'https://facebook.com/page', isActive: true, isDefault: false },
+        { id: '2', name: 'Instagram', url: 'https://instagram.com/page', isActive: true, isDefault: true },
+      ]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('social_platforms')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      const platformData = (data || []).map(item => ({
+        id: item.id.toString(),
+        name: item.name,
+        url: item.url,
+        isActive: item.is_active,
+        isDefault: false // You can add this field to your Supabase table if needed
+      }));
+      
+      setPlatforms(platformData);
+    } catch (error) {
+      console.error('Error loading platforms:', error);
+      setPlatforms([]);
+    }
+  };
+
+  const loadTelegramChannels = async () => {
+    if (!supabase) {
+      console.warn('Supabase not configured. Using empty Telegram data.');
+      setTelegramChannels([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('telegram_configurations')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Ensure data has required fields
+      const safeData = (data || []).filter(item => 
+        item && 
+        item.id && 
+        item.name && 
+        typeof item.name === 'string'
+      );
+      
+      setTelegramChannels(safeData);
+    } catch (error) {
+      console.error('Error loading Telegram channels:', error);
+      setTelegramChannels([]);
+    }
+  };
+
+  // Load posts from Supabase on component mount
+  const fetchSupabasePosts = async () => {
+    try {
+      setIsLoadingPosts(true);
+      const posts = await supabaseAPI.loadContentPosts();
+      setSavedPosts(posts);
+    } catch (error) {
+      console.error('Failed to load posts:', error);
+      setSavedPosts([]);
+    } finally {
+      setIsLoadingPosts(false);
+    }
+  };
+
+  const handleSavePost = async (postData: Omit<ContentPost, 'id' | 'createdDate'>) => {
+    try {
+      setIsSaving(true);
+      
+      // Save to Supabase
+      const savedPost = await supabaseAPI.saveContentPost(postData);
+      
+      // Update local state
+      setSavedPosts(prev => [savedPost, ...prev]);
+      
+      alert('Content saved successfully to Supabase database!');
+      
+    } catch (error) {
+      console.error('Save failed:', error);
+      alert('Failed to save content. Please try again.\n\nError: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      // Don't reset form data on error - form content is preserved
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddToSchedule = async (postData: Omit<ContentPost, 'id' | 'createdDate'>) => {
+    try {
+      setIsSaving(true);
+      
+      // Save to Supabase with scheduled status
+      const scheduledData = { ...postData, status: 'scheduled' as const };
+      const savedPost = await supabaseAPI.saveContentPost(scheduledData);
+      
+      setSavedPosts(prev => [savedPost, ...prev]);
+      
+      // Format post for Schedule Manager (convert ContentPost to PendingPost format)
+      const pendingPost = {
+        id: 'pending-' + Date.now(),
+        characterProfile: postData.characterProfile,
+        type: postData.theme.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        template: postData.templateType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        description: postData.description,
+        mediaFiles: postData.mediaFiles,
+        platforms: postData.selectedPlatforms.map(platformId => ({
+          platformId: platformId,
+          platformName: platforms?.find(p => p.id === platformId)?.name || 'Unknown',
+          platformIcon: platforms?.find(p => p.id === platformId)?.name?.substring(0, 2).toUpperCase() || 'UN',
+          status: 'pending' as const
+        })),
+        status: 'pending_schedule' as const,
+        createdDate: new Date(),
+        contentId: postData.contentId // Include the generated content ID
+      };
+      
+      // Send to Schedule Manager - this would typically be done via:
+      // 1. Parent component callback prop
+      // 2. Context/State management
+      // 3. Event system
+      // For now, store in localStorage as bridge between components
+      const existingPending = JSON.parse(localStorage.getItem('pendingSchedulePosts') || '[]');
+      existingPending.unshift(pendingPost);
+      localStorage.setItem('pendingSchedulePosts', JSON.stringify(existingPending));
+      
+      // Dispatch custom event to notify Schedule Manager
+      window.dispatchEvent(new CustomEvent('newPendingPost', { 
+        detail: pendingPost 
+      }));
+      
+      alert('Content sent to Schedule Manager for scheduling!\n\nYou can now set the date and time in the Schedule Manager > Pending Scheduling tab.');
+      
+    } catch (error) {
+      console.error('Schedule save failed:', error);
+      alert('Failed to save content for scheduling. Please try again.\n\nError: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      // Don't reset form data on error - form content is preserved
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEditPost = (postId: string) => {
+    // Find the post to edit
+    const postToEdit = savedPosts.find(p => p.id === postId);
+    if (!postToEdit) {
+      alert('Post not found for editing.');
+      return;
+    }
+
+    // Set the post as currently being edited
+    setEditingPost(postToEdit);
+    
+    // Switch to create tab
+    setActiveTab('create');
+    
+    alert(`Loading "${postToEdit.title || 'Untitled Post'}" into the form for editing.\n\nYou can now modify the content and either save as draft (updates existing) or schedule the post.`);
+  };
+
+  const handleEditComplete = () => {
+    // Clear editing state when edit is complete or cancelled
+    setEditingPost(null);
+    
+    // Refresh posts list to show updated content
+    fetchSupabasePosts();
+  };
+
+  const handleSchedulePost = (postId: string) => {
+    // TODO: Move to scheduler
+    alert('Schedule functionality coming next');
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm('Are you sure you want to delete this content? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await supabaseAPI.deleteContentPost(postId);
+      
+      // Remove from local state
+      setSavedPosts(prev => prev.filter(post => post.id !== postId));
+      
+      alert('Content deleted successfully.');
+      
+    } catch (error) {
+      console.error('Delete failed:', error);
+      alert('Failed to delete content. Please try again.');
+    }
+  };
+
+  const tabs = [
+    { id: 'create', label: 'Create New Content', icon: Edit3 },
+    { id: 'supabase', label: 'Supabase Database', icon: Database },
+  ];
+
+  return (
+    <div style={{
+      fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    }}>
+      <div style={{
+        maxWidth: '1200px',
+        margin: '0 auto',
+        display: 'grid',
+        gap: '24px'
+      }}>
+        {/* Tabs */}
+        <div style={{
+          backgroundColor: isDarkMode ? '#1e293b' : 'white',
+          boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          borderRadius: '8px',
+          border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+          overflow: 'hidden'
+        }}>
+          <div style={{ display: 'flex' }}>
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '16px 24px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    flex: 1,
+                    justifyContent: 'center',
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: activeTab === tab.id ? (isDarkMode ? '#60a5fa' : '#3b82f6') : 'transparent',
+                    color: activeTab === tab.id ? 'white' : (isDarkMode ? '#94a3b8' : '#6b7280'),
+                    transition: 'all 0.2s ease',
+                    fontFamily: 'inherit'
+                  }}
+                  onMouseOver={(e) => {
+                    if (activeTab !== tab.id) {
+                      e.currentTarget.style.backgroundColor = isDarkMode ? '#334155' : '#f9fafb';
+                      e.currentTarget.style.color = isDarkMode ? '#f8fafc' : '#111827';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (activeTab !== tab.id) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = isDarkMode ? '#94a3b8' : '#6b7280';
+                    }
+                  }}
+                >
+                  <Icon style={{ height: '20px', width: '20px' }} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div>
+          {activeTab === 'create' && (
+            <div style={{ display: 'grid', gap: '24px' }}>
+              <EnhancedContentCreationForm
+                onSave={handleSavePost}
+                onAddToSchedule={handleAddToSchedule}
+                characterProfiles={characterProfiles}
+                platforms={[...platforms, ...telegramChannels.map(t => ({
+                  id: t.id ? t.id.toString() : Math.random().toString(),
+                  name: t.name ? `${t.name} (Telegram)` : 'Telegram Channel',
+                  url: t.channel_group_id ? `https://t.me/${t.channel_group_id}` : '',
+                  isActive: true,
+                  isDefault: false
+                }))].filter(p => p.id && p.name)}
+                isSaving={isSaving}
+                isLoadingProfiles={isLoadingProfiles}
+                editingPost={editingPost}
+                onEditComplete={handleEditComplete}
+              />
+              
+              <SavedPostsList
+                posts={savedPosts}
+                onEditPost={handleEditPost}
+                onSchedulePost={handleSchedulePost}
+                onDeletePost={handleDeletePost}
+                isLoading={isLoadingPosts}
+              />
+            </div>
+          )}
+
+          {activeTab === 'supabase' && <SupabaseConnection />}
+        </div>
+      </div>
+    </div>
+  );
+}
