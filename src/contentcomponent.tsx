@@ -546,7 +546,6 @@ const EnhancedContentCreationForm = ({
     if (field === 'platform') {
       setupPlatformFields(value);
     }
-  };
 
   const handleSelectionChange = (field: string, value: string) => {
     setSelections(prev => ({
@@ -632,10 +631,9 @@ const EnhancedContentCreationForm = ({
         } catch (error) {
           console.error(`Failed to upload ${file.name}:`, error);
           alert(`Failed to upload ${file.name}. Please try again.`);
-        }
-      });
-
-      await Promise.all(uploadPromises);
+       };
+       await Promise.all(uploadPromises);
+    };
       
     } catch (error) {
       console.error('File upload error:', error);
