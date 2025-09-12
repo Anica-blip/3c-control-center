@@ -120,26 +120,27 @@ const supabaseAPI = {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || null;
 
-      // Upload media files first
-      const uploadedMediaFiles = await Promise.all(
-        postData.mediaFiles.map(async (mediaFile) => {
-          if (mediaFile.url.startsWith('blob:')) {
-            // Convert blob URL to file and upload
-            const response = await fetch(mediaFile.url);
-            const blob = await response.blob();
-            const file = new File([blob], mediaFile.name, { type: blob.type });
-            
-            const supabaseUrl = await this.uploadMediaFile(file, postData.contentId);
-            
-            return {
-              ...mediaFile,
-              supabaseUrl: supabaseUrl,
-              url: supabaseUrl // Update URL to Supabase URL
-            };
-          }
-          return mediaFile;
-        })
-      );
+// Upload media files first
+const uploadedMediaFiles = await Promise.all(
+  postData.mediaFiles.map(async (mediaFile) => {
+    if (mediaFile.url.startsWith('blob:')) {
+      // Convert blob URL to file and upload
+      const response = await fetch(mediaFile.url);
+      const blob = await response.blob();
+      const file = new File([blob], mediaFile.name, { type: blob.type });
+      
+      // FIX: Pass the userId parameter
+      const supabaseUrl = await this.uploadMediaFile(file, postData.contentId, userId);
+      
+      return {
+        ...mediaFile,
+        supabaseUrl: supabaseUrl,
+        url: supabaseUrl // Update URL to Supabase URL
+      };
+    }
+    return mediaFile;
+  })
+);
 
       // Prepare data for database insert
       const insertData = {
