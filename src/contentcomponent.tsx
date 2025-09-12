@@ -633,7 +633,7 @@ const EnhancedContentCreationForm = ({
           alert(`Failed to upload ${file.name}. Please try again.`);
        }
        await Promise.all(uploadPromises);
-    };
+    }
       
     } catch (error) {
       console.error('File upload error:', error);
