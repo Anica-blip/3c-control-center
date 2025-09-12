@@ -252,33 +252,38 @@ const uploadedMediaFiles = await Promise.all(
   },
 
   // Update content post
-  async updateContentPost(postId: string, updates: Partial<ContentPost>): Promise<ContentPost> {
-    if (!supabase) throw new Error('Supabase not configured');
+async updateContentPost(postId: string, updates: Partial<ContentPost>): Promise<ContentPost> {
+  if (!supabase) throw new Error('Supabase not configured');
+  
+  try {
+    // ADD: Get user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || null;
     
-    try {
-      // Handle media file updates if needed
-      let updatedMediaFiles = updates.mediaFiles;
-      if (updates.mediaFiles) {
-        updatedMediaFiles = await Promise.all(
-          updates.mediaFiles.map(async (mediaFile) => {
-            if (mediaFile.url.startsWith('blob:')) {
-              // Upload new media file
-              const response = await fetch(mediaFile.url);
-              const blob = await response.blob();
-              const file = new File([blob], mediaFile.name, { type: blob.type });
-              
-              const supabaseUrl = await this.uploadMediaFile(file, updates.contentId || 'updated');
-              
-              return {
-                ...mediaFile,
-                supabaseUrl: supabaseUrl,
-                url: supabaseUrl
-              };
-            }
-            return mediaFile;
-          })
-        );
-      }
+    // Handle media file updates if needed
+    let updatedMediaFiles = updates.mediaFiles;
+    if (updates.mediaFiles) {
+      updatedMediaFiles = await Promise.all(
+        updates.mediaFiles.map(async (mediaFile) => {
+          if (mediaFile.url.startsWith('blob:')) {
+            // Upload new media file
+            const response = await fetch(mediaFile.url);
+            const blob = await response.blob();
+            const file = new File([blob], mediaFile.name, { type: blob.type });
+            
+            // FIX: Pass userId parameter
+            const supabaseUrl = await this.uploadMediaFile(file, updates.contentId || 'updated', userId);
+            
+            return {
+              ...mediaFile,
+              supabaseUrl: supabaseUrl,
+              url: supabaseUrl
+            };
+          }
+          return mediaFile;
+        })
+      );
+    }
 
       // Prepare update data
       const updateData: any = {};
