@@ -631,7 +631,7 @@ const EnhancedContentCreationForm = ({
         } catch (error) {
           console.error(`Failed to upload ${file.name}:`, error);
           alert(`Failed to upload ${file.name}. Please try again.`);
-       };
+       }
        await Promise.all(uploadPromises);
     };
       
