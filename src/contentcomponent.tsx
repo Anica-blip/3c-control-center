@@ -108,7 +108,6 @@ const supabaseAPI = {
 
   // Save content post to content_posts table
   async saveContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
-    // ... rest of your function
 
   // Save content post to content_posts table
   async saveContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
