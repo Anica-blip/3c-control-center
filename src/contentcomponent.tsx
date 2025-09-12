@@ -607,41 +607,44 @@ const EnhancedContentCreationForm = ({
         const fileName = `${timestamp}-${randomId}.${fileExtension}`;
         const filePath = `content-media/${fileName}`;
 
-        try {
-          // Upload to Supabase Storage
-          const supabaseUrl = await supabaseAPI.uploadFile(file, filePath);
-          
-          if (supabaseUrl) {
-            const newFile: MediaFile = {
-              id: Date.now().toString() + Math.random(),
-              name: file.name,
-              type: file.type.startsWith('image/') ? 'image' : 
-                    file.type.startsWith('video/') ? 'video' :
-                    file.type === 'application/pdf' ? 'pdf' :
-                    file.name.toLowerCase().includes('.gif') ? 'gif' :
-                    file.name.toLowerCase().includes('.html') ? 'interactive' : 'other',
-              size: file.size,
-              url: URL.createObjectURL(file), // Local preview URL
-              supabaseUrl: supabaseUrl,       // Supabase public URL
-              bucketPath: filePath            // Path in bucket for deletion
-            };
-            
-            setMediaFiles(prev => [...prev, newFile]);
-          }
-        } catch (error) {
-          console.error(`Failed to upload ${file.name}:`, error);
-          alert(`Failed to upload ${file.name}. Please try again.`);
-       }
-       await Promise.all(uploadPromises);
+const handleUpload = async () => {
+  try {
+    for (const file of files) {
+      try {
+        // Upload to Supabase Storage
+        const supabaseUrl = await supabaseAPI.uploadFile(file, filePath);
+
+        if (supabaseUrl) {
+          const newFile: MediaFile = {
+            id: Date.now().toString() + Math.random(),
+            name: file.name,
+            type: file.type.startsWith('image/') ? 'image' :
+                  file.type.startsWith('video/') ? 'video' :
+                  file.type === 'application/pdf' ? 'pdf' :
+                  file.name.toLowerCase().includes('.gif') ? 'gif' :
+                  file.name.toLowerCase().includes('.html') ? 'interactive' : 'other',
+            size: file.size,
+            url: URL.createObjectURL(file), // Local preview URL
+            supabaseUrl: supabaseUrl,       // Supabase public URL
+            bucketPath: filePath            // Path in bucket for deletion
+          };
+
+          setMediaFiles(prev => [...prev, newFile]);
+        }
+      } catch (error) {
+        console.error(`Failed to upload ${file.name}:`, error);
+        alert(`Failed to upload ${file.name}. Please try again.`);
+      }
     }
-      
-    } catch (error) {
-      console.error('File upload error:', error);
-      alert('Some files failed to upload. Please try again.');
-    } finally {
-      setIsUploadingFiles(false);
-    }
-  };
+
+    await Promise.all(uploadPromises);
+  } catch (error) {
+    console.error('File upload error:', error);
+    alert('Some files failed to upload. Please try again.');
+  } finally {
+    setIsUploadingFiles(false);
+  }
+};
 
   const handleRemoveFile = async (fileId: string) => {
     const fileToRemove = mediaFiles.find(f => f.id === fileId);
