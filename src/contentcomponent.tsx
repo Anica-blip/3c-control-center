@@ -75,13 +75,19 @@ interface CharacterProfile {
   created_at: string;
 }
 
-// Simple Supabase Integration - No Auth Checks
+// Supabase Integration Following Your Established Pattern
 const supabaseAPI = {
   // Upload media file to content-media bucket
-  async uploadMediaFile(file: File, contentId: string, userId: string): Promise<string> {
+  async uploadMediaFile(file: File, contentId: string): Promise<string> {
     if (!supabase) throw new Error('Supabase not configured');
     
     try {
+      // Get user ID following your exact pattern
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || null;
+      
+      if (!userId) throw new Error('User not authenticated');
+      
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}/${contentId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
