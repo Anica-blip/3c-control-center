@@ -75,20 +75,16 @@ interface CharacterProfile {
   created_at: string;
 }
 
-// Supabase Integration Functions
+// Simple Supabase Integration - No Auth Checks
 const supabaseAPI = {
   // Upload media file to content-media bucket
-  async uploadMediaFile(file: File, contentId: string): Promise<string> {
+  async uploadMediaFile(file: File, contentId: string, userId: string): Promise<string> {
     if (!supabase) throw new Error('Supabase not configured');
     
     try {
-      // Get current user ID for RLS compliance
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${contentId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      
+      const fileName = `${userId}/${contentId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
       const { data, error } = await supabase.storage
         .from('content-media')
         .upload(fileName, file, {
@@ -108,7 +104,8 @@ const supabaseAPI = {
       console.error('Error uploading media file:', error);
       throw error;
     }
-  },
+  }
+};
 
   // Save content post to content_posts table
   async saveContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
