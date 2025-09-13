@@ -2120,6 +2120,7 @@ const EnhancedContentCreationForm = ({
                 </div>
 
                 {(() => {
+
                   // Platform-specific dimensions and styling
                   const getPlatformPreviewStyle = (platform: string) => {
                     const styles = {
@@ -2154,9 +2155,9 @@ const EnhancedContentCreationForm = ({
                         label: 'TikTok Video (9:16)'
                       },
                       telegram: {
-                        aspectRatio: '1.91 / 1', // Similar to Facebook
-                        maxWidth: '500px',
-                        label: 'Telegram Post (1.91:1)'
+                        aspectRatio: 'auto', // CHANGED: Use original media dimensions
+                        maxWidth: '100%', // CHANGED: Allow full width flexibility
+                        label: 'Telegram Post (Original Size)' // CHANGED: Updated label
                       },
                       pinterest: {
                         aspectRatio: '2 / 3', // Pinterest vertical
@@ -2323,7 +2324,7 @@ const EnhancedContentCreationForm = ({
                           {selections.platform === 'facebook' && 'Facebook recommends 1.91:1 ratio for optimal feed display and engagement.'}
                           {selections.platform === 'twitter' && 'Twitter displays images best at 16:9 ratio in timeline feeds.'}
                           {selections.platform === 'linkedin' && 'LinkedIn professional posts perform well with 1.91:1 landscape format.'}
-                          {selections.platform === 'telegram' && 'Telegram supports various formats but 1.91:1 provides consistent display.'}
+                          {selections.platform === 'telegram' && 'Telegram displays media in original dimensions and automatically adjusts for optimal viewing.'} // CHANGED: New description
                           {selections.platform === 'pinterest' && 'Pinterest favors vertical 2:3 pins for discovery and engagement.'}
                         </div>
                       )}
