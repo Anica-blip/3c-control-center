@@ -372,43 +372,20 @@ const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> =>
       const urlParams = new URLSearchParams(url.split('?')[1] || '');
       const title = decodeURIComponent(urlParams.get('title') || '🔥 Interactive Content');
       const description = decodeURIComponent(urlParams.get('desc') || 'Engage with this interactive content');
-      const type = (urlParams.get('type') || 'Quiz').toLowerCase();
+      const type = urlParams.get('type') || 'Quiz';
+      const size = urlParams.get('size') || 'instagram-square';
       
-      // Create a simple colored rectangle as base64 data URI (no external dependencies)
-      const colors = {
-        'quiz': '#8B5CF6',
-        'game': '#10B981', 
-        'puzzle': '#F59E0B',
-        'challenge': '#EF4444',
-        'assessment': '#6366F1'
-      };
-      
-      const color = colors[type as keyof typeof colors] || colors.quiz;
-      
-      // Generate a simple colored square as data URI
-      const canvas = document.createElement('canvas');
-      canvas.width = 400;
-      canvas.height = 400;
-      const ctx = canvas.getContext('2d');
-      
-      if (ctx) {
-        // Fill with color
-        ctx.fillStyle = color;
-        ctx.fillRect(0, 0, 400, 400);
-        
-        // Add text
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 32px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(type.toUpperCase(), 200, 200);
-      }
-      
-      const imageDataUri = canvas.toDataURL('image/png');
+      // Use your custom screenshot service
+      const screenshotServiceUrl = 'https://your-domain.github.io/screenshot-service.html' + 
+        '?title=' + encodeURIComponent(title) + 
+        '&desc=' + encodeURIComponent(description) + 
+        '&type=' + encodeURIComponent(type) + 
+        '&size=' + encodeURIComponent(size);
       
       return {
         title: title,
         description: description,
-        image: imageDataUri,
+        image: screenshotServiceUrl,
         siteName: '3C Thread To Success'
       };
     }
@@ -420,7 +397,6 @@ const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> =>
       siteName: new URL(url).hostname
     };
   } catch (error) {
-    console.error('Error fetching URL preview:', error);
     return {
       title: 'External Link',
       description: 'Click to visit',
