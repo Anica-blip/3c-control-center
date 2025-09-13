@@ -390,6 +390,24 @@ const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> =>
       };
     }
 
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      return {
+        title: 'YouTube Video',
+        description: 'Video content from YouTube',
+        image: 'https://img.youtube.com/vi/placeholder/maxresdefault.jpg',
+        siteName: 'YouTube'
+      };
+    }
+    
+    if (url.includes('github.com')) {
+      return {
+        title: 'GitHub Repository',
+        description: 'Source code repository',
+        image: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
+        siteName: 'GitHub'
+      };
+    }
+
     return {
       title: 'External Link',
       description: 'Click to visit',
@@ -397,6 +415,7 @@ const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> =>
       siteName: new URL(url).hostname
     };
   } catch (error) {
+    console.error('Error fetching URL preview:', error);
     return {
       title: 'External Link',
       description: 'Click to visit',
