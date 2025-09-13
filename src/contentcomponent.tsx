@@ -368,26 +368,38 @@ const supabaseAPI = {
 // URL Preview Fetcher
 const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> => {
   try {
-    // For demo purposes - in production you'd use a proper service like LinkPreview API
-    // For now, try to extract basic info from common sites
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      return {
-        title: 'YouTube Video',
-        description: 'Video content from YouTube',
-        image: 'https://img.youtube.com/vi/placeholder/maxresdefault.jpg',
-        siteName: 'YouTube'
-      };
+    // Use a screenshot service to capture the actual webpage
+    const screenshotUrl = `https://api.screenshotone.com/take?access_key=YOUR_API_KEY&url=${encodeURIComponent(url)}&viewport_width=400&viewport_height=600&device_scale_factor=2&format=png&cache=true&cache_ttl=2592000`;
+    
+    // For development/testing, you can use this free service (limited requests):
+    const devScreenshotUrl = `https://image.thum.io/get/width/400/crop/600/png/${encodeURIComponent(url)}`;
+    
+    // Extract title from URL parameters if it's your 3C generator
+    let title = 'Interactive Content';
+    let description = 'Click to interact';
+    
+    if (url.includes('anica-blip.github.io/3c-smpost-generator')) {
+      const urlParams = new URLSearchParams(url.split('?')[1] || '');
+      title = decodeURIComponent(urlParams.get('title') || 'Interactive Content');
+      description = decodeURIComponent(urlParams.get('desc') || 'Click to interact');
     }
     
-    if (url.includes('github.com')) {
-      return {
-        title: 'GitHub Repository',
-        description: 'Source code repository',
-        image: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
-        siteName: 'GitHub'
-      };
-    }
-
+    return {
+      title: title,
+      description: description,
+      image: devScreenshotUrl, // This captures the actual webpage as image
+      siteName: new URL(url).hostname
+    };
+  } catch (error) {
+    console.error('Error fetching URL preview:', error);
+    return {
+      title: 'External Link',
+      description: 'Click to visit',
+      image: null,
+      siteName: new URL(url).hostname
+    };
+  }
+};
     // Default fallback
     return {
       title: 'External Link',
