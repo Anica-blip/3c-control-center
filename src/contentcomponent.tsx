@@ -368,53 +368,67 @@ const supabaseAPI = {
 // URL Preview Fetcher
 const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> => {
   try {
-    // Handle your 3C generator URLs with JSON mapping
     if (url.includes('anica-blip.github.io/3c-smpost-generator')) {
       const urlParams = new URLSearchParams(url.split('?')[1] || '');
       const title = decodeURIComponent(urlParams.get('title') || '🔥 Interactive Content');
       const description = decodeURIComponent(urlParams.get('desc') || 'Engage with this interactive content');
       const type = (urlParams.get('type') || 'Quiz').toLowerCase();
-      const size = urlParams.get('size') || 'instagram-square';
       
-      // Load preview mapping
-      const previewData = {
-        "quiz": { image: "https://via.placeholder.com/1080x1080/8B5CF6/FFFFFF?text=🔥+QUIZ" },
-        "game": { image: "https://via.placeholder.com/1080x1080/10B981/FFFFFF?text=🎮+GAME" },
-        "puzzle": { image: "https://via.placeholder.com/1080x1080/F59E0B/FFFFFF?text=🧩+PUZZLE" },
-        "challenge": { image: "https://via.placeholder.com/1080x1080/EF4444/FFFFFF?text=⚡+CHALLENGE" },
-        "assessment": { image: "https://via.placeholder.com/1080x1080/6366F1/FFFFFF?text=📊+ASSESSMENT" }
+      // Create a simple colored rectangle as base64 data URI (no external dependencies)
+      const colors = {
+        'quiz': '#8B5CF6',
+        'game': '#10B981', 
+        'puzzle': '#F59E0B',
+        'challenge': '#EF4444',
+        'assessment': '#6366F1'
       };
       
-      // Get size-specific dimensions
-      const sizeMap = {
-        'instagram-square': '1080x1080',
-        'instagram-story': '1080x1920', 
-        'facebook-post': '1200x630',
-        'twitter-post': '1200x675',
-        'linkedin-post': '1200x627'
-      };
+      const color = colors[type as keyof typeof colors] || colors.quiz;
       
-      const dimensions = sizeMap[size as keyof typeof sizeMap] || '1080x1080';
-      const typeData = previewData[type as keyof typeof previewData] || previewData.quiz;
-      const imageUrl = typeData.image.replace('1080x1080', dimensions);
+      // Generate a simple colored square as data URI
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 400;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        // Fill with color
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 0, 400, 400);
+        
+        // Add text
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 32px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(type.toUpperCase(), 200, 200);
+      }
+      
+      const imageDataUri = canvas.toDataURL('image/png');
       
       return {
         title: title,
         description: description,
-        image: imageUrl,
+        image: imageDataUri,
         siteName: '3C Thread To Success'
       };
     }
 
-    // Handle quiz admin URLs
-    if (url.includes('anica-blip.github.io/3c-quiz-admin')) {
-      return {
-        title: '🔥 What\'s Blocking Your Shine?',
-        description: 'Curious about your hidden strengths? Take this quiz and unlock your potential with personalized insights!',
-        image: 'https://via.placeholder.com/1080x1080/8B5CF6/FFFFFF?text=🔥+QUIZ',
-        siteName: '3C Thread To Success'
-      };
-    }
+    return {
+      title: 'External Link',
+      description: 'Click to visit',
+      image: null,
+      siteName: new URL(url).hostname
+    };
+  } catch (error) {
+    console.error('Error fetching URL preview:', error);
+    return {
+      title: 'External Link',
+      description: 'Click to visit',
+      image: null,
+      siteName: 'External Site'
+    };
+  }
+};
     
     // Default fallback
     return {
