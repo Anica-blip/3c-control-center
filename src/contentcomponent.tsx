@@ -368,65 +368,54 @@ const supabaseAPI = {
 // URL Preview Fetcher
 const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> => {
   try {
-    // Handle your 3C generator URLs specifically
+    // Handle your 3C generator URLs with JSON mapping
     if (url.includes('anica-blip.github.io/3c-smpost-generator')) {
       const urlParams = new URLSearchParams(url.split('?')[1] || '');
       const title = decodeURIComponent(urlParams.get('title') || '🔥 Interactive Content');
       const description = decodeURIComponent(urlParams.get('desc') || 'Engage with this interactive content');
-      const type = urlParams.get('type') || 'Quiz';
+      const type = (urlParams.get('type') || 'Quiz').toLowerCase();
+      const size = urlParams.get('size') || 'instagram-square';
       
-      // Create preview image URL that will generate the actual canvas image
-      const baseUrl = url.split('?')[0];
-      const previewImageUrl = baseUrl + '?preview=image&type=' + encodeURIComponent(type) + '&title=' + encodeURIComponent(title) + '&desc=' + encodeURIComponent(description);
+      // Load preview mapping
+      const previewData = {
+        "quiz": { image: "https://via.placeholder.com/1080x1080/8B5CF6/FFFFFF?text=🔥+QUIZ" },
+        "game": { image: "https://via.placeholder.com/1080x1080/10B981/FFFFFF?text=🎮+GAME" },
+        "puzzle": { image: "https://via.placeholder.com/1080x1080/F59E0B/FFFFFF?text=🧩+PUZZLE" },
+        "challenge": { image: "https://via.placeholder.com/1080x1080/EF4444/FFFFFF?text=⚡+CHALLENGE" },
+        "assessment": { image: "https://via.placeholder.com/1080x1080/6366F1/FFFFFF?text=📊+ASSESSMENT" }
+      };
+      
+      // Get size-specific dimensions
+      const sizeMap = {
+        'instagram-square': '1080x1080',
+        'instagram-story': '1080x1920', 
+        'facebook-post': '1200x630',
+        'twitter-post': '1200x675',
+        'linkedin-post': '1200x627'
+      };
+      
+      const dimensions = sizeMap[size as keyof typeof sizeMap] || '1080x1080';
+      const typeData = previewData[type as keyof typeof previewData] || previewData.quiz;
+      const imageUrl = typeData.image.replace('1080x1080', dimensions);
       
       return {
         title: title,
         description: description,
-        image: previewImageUrl,
+        image: imageUrl,
         siteName: '3C Thread To Success'
       };
     }
 
-    // Handle your quiz admin URLs
+    // Handle quiz admin URLs
     if (url.includes('anica-blip.github.io/3c-quiz-admin')) {
       return {
         title: '🔥 What\'s Blocking Your Shine?',
         description: 'Curious about your hidden strengths? Take this quiz and unlock your potential with personalized insights!',
-        image: 'https://via.placeholder.com/400x600/8B5CF6/FFFFFF?text=🔥+QUIZ',
+        image: 'https://via.placeholder.com/1080x1080/8B5CF6/FFFFFF?text=🔥+QUIZ',
         siteName: '3C Thread To Success'
       };
     }
     
-    // YouTube URLs
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      let videoId = '';
-      if (url.includes('youtube.com/watch?v=')) {
-        videoId = url.split('v=')[1]?.split('&')[0] || '';
-      } else if (url.includes('youtu.be/')) {
-        videoId = url.split('youtu.be/')[1]?.split('?')[0] || '';
-      }
-      
-      return {
-        title: 'YouTube Video',
-        description: 'Video content from YouTube',
-        image: videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : 'https://via.placeholder.com/400x225/FF0000/FFFFFF?text=YouTube',
-        siteName: 'YouTube'
-      };
-    }
-    
-    // GitHub URLs
-    if (url.includes('github.com')) {
-      const pathParts = url.split('github.com/')[1]?.split('/') || [];
-      const repo = pathParts.length >= 2 ? `${pathParts[0]}/${pathParts[1]}` : 'Repository';
-      
-      return {
-        title: `GitHub: ${repo}`,
-        description: 'Source code repository',
-        image: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
-        siteName: 'GitHub'
-      };
-    }
-
     // Default fallback
     return {
       title: 'External Link',
@@ -438,7 +427,7 @@ const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> =>
     console.error('Error fetching URL preview:', error);
     return {
       title: 'External Link',
-      description: 'Click to visit',
+      description: 'Click to visit', 
       image: null,
       siteName: 'External Site'
     };
