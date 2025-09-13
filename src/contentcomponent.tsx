@@ -368,38 +368,65 @@ const supabaseAPI = {
 // URL Preview Fetcher
 const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> => {
   try {
-    // Use a screenshot service to capture the actual webpage
-    const screenshotUrl = `https://api.screenshotone.com/take?access_key=YOUR_API_KEY&url=${encodeURIComponent(url)}&viewport_width=400&viewport_height=600&device_scale_factor=2&format=png&cache=true&cache_ttl=2592000`;
-    
-    // For development/testing, you can use this free service (limited requests):
-    const devScreenshotUrl = `https://image.thum.io/get/width/400/crop/600/png/${encodeURIComponent(url)}`;
-    
-    // Extract title from URL parameters if it's your 3C generator
-    let title = 'Interactive Content';
-    let description = 'Click to interact';
-    
+    // Handle your 3C generator URLs specifically
     if (url.includes('anica-blip.github.io/3c-smpost-generator')) {
       const urlParams = new URLSearchParams(url.split('?')[1] || '');
-      title = decodeURIComponent(urlParams.get('title') || 'Interactive Content');
-      description = decodeURIComponent(urlParams.get('desc') || 'Click to interact');
+      const title = decodeURIComponent(urlParams.get('title') || '🔥 Interactive Content');
+      const description = decodeURIComponent(urlParams.get('desc') || 'Engage with this interactive content');
+      const type = urlParams.get('type') || 'Quiz';
+      
+      // Create preview image URL that will generate the actual canvas image
+      const baseUrl = url.split('?')[0];
+      const previewImageUrl = baseUrl + '?preview=image&type=' + encodeURIComponent(type) + '&title=' + encodeURIComponent(title) + '&desc=' + encodeURIComponent(description);
+      
+      return {
+        title: title,
+        description: description,
+        image: previewImageUrl,
+        siteName: '3C Thread To Success'
+      };
+    }
+
+    // Handle your quiz admin URLs
+    if (url.includes('anica-blip.github.io/3c-quiz-admin')) {
+      return {
+        title: '🔥 What\'s Blocking Your Shine?',
+        description: 'Curious about your hidden strengths? Take this quiz and unlock your potential with personalized insights!',
+        image: 'https://via.placeholder.com/400x600/8B5CF6/FFFFFF?text=🔥+QUIZ',
+        siteName: '3C Thread To Success'
+      };
     }
     
-    return {
-      title: title,
-      description: description,
-      image: devScreenshotUrl, // This captures the actual webpage as image
-      siteName: new URL(url).hostname
-    };
-  } catch (error) {
-    console.error('Error fetching URL preview:', error);
-    return {
-      title: 'External Link',
-      description: 'Click to visit',
-      image: null,
-      siteName: new URL(url).hostname
-    };
-  }
-};
+    // YouTube URLs
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      let videoId = '';
+      if (url.includes('youtube.com/watch?v=')) {
+        videoId = url.split('v=')[1]?.split('&')[0] || '';
+      } else if (url.includes('youtu.be/')) {
+        videoId = url.split('youtu.be/')[1]?.split('?')[0] || '';
+      }
+      
+      return {
+        title: 'YouTube Video',
+        description: 'Video content from YouTube',
+        image: videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : 'https://via.placeholder.com/400x225/FF0000/FFFFFF?text=YouTube',
+        siteName: 'YouTube'
+      };
+    }
+    
+    // GitHub URLs
+    if (url.includes('github.com')) {
+      const pathParts = url.split('github.com/')[1]?.split('/') || [];
+      const repo = pathParts.length >= 2 ? `${pathParts[0]}/${pathParts[1]}` : 'Repository';
+      
+      return {
+        title: `GitHub: ${repo}`,
+        description: 'Source code repository',
+        image: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
+        siteName: 'GitHub'
+      };
+    }
+
     // Default fallback
     return {
       title: 'External Link',
@@ -408,6 +435,7 @@ const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> =>
       siteName: new URL(url).hostname
     };
   } catch (error) {
+    console.error('Error fetching URL preview:', error);
     return {
       title: 'External Link',
       description: 'Click to visit',
