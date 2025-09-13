@@ -1339,8 +1339,8 @@ const EnhancedContentCreationForm = ({
         </div>
       )}
 
-      {/* Media Upload - 90% Width */}
-      <div style={{ marginBottom: '24px', width: '90%' }}>
+      {/* Media Upload - 85% Width */}
+      <div style={{ marginBottom: '24px', width: '85%' }}>
         <label style={{
           display: 'block',
           fontSize: '16px',
@@ -1612,7 +1612,7 @@ const EnhancedContentCreationForm = ({
         )}
       </div>
 
-      {/* Content Fields - 90% Width to Match Media Upload */}
+      {/* Content Fields - 85% Width to Match Media Upload */}
       <div style={{ 
         display: 'grid', 
         gap: '16px', 
@@ -1621,7 +1621,7 @@ const EnhancedContentCreationForm = ({
       }}>
         {/* Title Field */}
         {(!fieldConfig || fieldConfig.title?.show !== false) && (
-          <div style={{ width: '100%' }}>
+          <div style={{ width: '85%' }}>
             <label style={{
               display: 'block',
               fontSize: '16px',
@@ -1715,7 +1715,7 @@ const EnhancedContentCreationForm = ({
         )}
 
         {/* Description Field with Enhanced Features */}
-        <div style={{ width: '100%' }}>
+        <div style={{ width: '85%' }}>
           <label style={{
             display: 'block',
             fontSize: '16px',
@@ -1910,7 +1910,7 @@ const EnhancedContentCreationForm = ({
         </div>
 
         {/* Hashtags Field */}
-        <div style={{ width: '100%' }}>
+        <div style={{ width: '85%' }}>
           <label style={{
             display: 'block',
             fontSize: '16px',
@@ -2026,7 +2026,7 @@ const EnhancedContentCreationForm = ({
         </div>
 
         {/* Keywords Field */}
-        <div style={{ width: '100%' }}>
+        <div style={{ width: '85%' }}>
           <label style={{
             display: 'block',
             fontSize: '16px',
@@ -2062,7 +2062,7 @@ const EnhancedContentCreationForm = ({
         </div>
 
         {/* Call to Action Field */}
-        <div style={{ width: '100%' }}>
+        <div style={{ width: '85%' }}>
           <label style={{
             display: 'block',
             fontSize: '16px',
