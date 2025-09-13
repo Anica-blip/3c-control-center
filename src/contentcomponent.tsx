@@ -365,13 +365,13 @@ const supabaseAPI = {
   }
 };
 
-// URL Preview Fetcher
+// URL Preview Fetcher - Complete Function
 const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> => {
   try {
     // Special handling for interactive content generator
     if (url.includes('anica-blip.github.io/3c-smpost-generator')) {
       const urlParams = new URLSearchParams(url.split('?')[1] || '');
-      const title = decodeURIComponent(urlParams.get('title') || '🔥 Interactive Content');
+      const title = decodeURIComponent(urlParams.get('title') || 'Interactive Content');
       const description = decodeURIComponent(urlParams.get('desc') || 'Engage with this interactive content');
       const type = urlParams.get('type') || 'Quiz';
       const size = urlParams.get('size') || 'instagram-square';
