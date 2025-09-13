@@ -365,13 +365,12 @@ const supabaseAPI = {
   }
 };
 
-// URL Preview Fetcher - FIXED VERSION
+// URL Preview Fetcher
 const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> => {
   try {
-    // Special handling for interactive content generator
     if (url.includes('anica-blip.github.io/3c-smpost-generator')) {
       const urlParams = new URLSearchParams(url.split('?')[1] || '');
-      const title = decodeURIComponent(urlParams.get('title') || '🔥 Interactive Content');
+      const title = decodeURIComponent(urlParams.get('title') || 'ðŸ"¥ Interactive Content');
       const description = decodeURIComponent(urlParams.get('desc') || 'Engage with this interactive content');
       const type = urlParams.get('type') || 'Quiz';
       const size = urlParams.get('size') || 'instagram-square';
@@ -391,7 +390,6 @@ const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> =>
       };
     }
 
-    // YouTube URL handling
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
       return {
         title: 'YouTube Video',
@@ -401,7 +399,6 @@ const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> =>
       };
     }
     
-    // GitHub URL handling
     if (url.includes('github.com')) {
       return {
         title: 'GitHub Repository',
@@ -410,6 +407,23 @@ const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> =>
         siteName: 'GitHub'
       };
     }
+
+    return {
+      title: 'External Link',
+      description: 'Click to visit',
+      image: null,
+      siteName: new URL(url).hostname
+    };
+  } catch (error) {
+    console.error('Error fetching URL preview:', error);
+    return {
+      title: 'External Link',
+      description: 'Click to visit', 
+      image: null,
+      siteName: 'External Site'
+    };
+  }
+};
 
     // Default fallback for all other URLs
     return {
