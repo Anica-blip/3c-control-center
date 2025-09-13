@@ -425,41 +425,22 @@ const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> =>
   }
 };
 
-    // Default fallback for all other URLs
-    return {
-      title: 'External Link',
-      description: 'Click to visit',
-      image: null,
-      siteName: new URL(url).hostname
-    };
-  } catch (error) {
-    console.error('Error fetching URL preview:', error);
-    return {
-      title: 'External Link',
-      description: 'Click to visit',
-      image: null,
-      siteName: 'External Site'
-    };
-  }
-};
-    
-    // Default fallback
-    return {
-      title: 'External Link',
-      description: 'Click to visit',
-      image: null,
-      siteName: new URL(url).hostname
-    };
-  } catch (error) {
-    console.error('Error fetching URL preview:', error);
-    return {
-      title: 'External Link',
-      description: 'Click to visit', 
-      image: null,
-      siteName: 'External Site'
-    };
-  }
-};
+// Default fallback for all other URLs
+  return {
+    title: 'External Link',
+    description: 'Click to visit',
+    image: null,
+    siteName: url ? new URL(url).hostname : 'External Site'
+  };
+} catch (error) {
+  console.error('Error fetching URL preview:', error);
+  return {
+    title: 'External Link',
+    description: 'Click to visit',
+    image: null,
+    siteName: 'External Site'
+  };
+}
 
 // Enhanced Content Creation Form
 const EnhancedContentCreationForm = ({ 
