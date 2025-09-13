@@ -468,16 +468,130 @@ const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> =>
   }
 };
 
+// Internal URL Preview System - Fixed for regular websites
+const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> => {
+  try {
+    // Parse URL to get basic info
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    
+    // Default preview object for ANY website
+    const preview: MediaFile['urlPreview'] = {
+      title: 'External Link',
+      description: 'Click to visit',
+      image: null,
+      siteName: hostname
+    };
+
+    // Domain-specific previews FIRST (before trying to fetch)
+    if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
+      preview.title = 'YouTube Video';
+      preview.description = 'Video content from YouTube';
+      preview.siteName = 'YouTube';
+      
+      // Extract video ID for thumbnail
+      const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+      if (videoIdMatch) {
+        preview.image = `https://img.youtube.com/vi/${videoIdMatch[1]}/maxresdefault.jpg`;
+      }
+      return preview;
+    } 
+    
+    if (hostname.includes('github.com')) {
+      preview.title = 'GitHub Repository';
+      preview.description = 'Source code repository';
+      preview.siteName = 'GitHub';
+      preview.image = 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+      return preview;
+    }
+    
+    if (hostname.includes('twitter.com') || hostname.includes('x.com')) {
+      preview.title = 'Twitter/X Post';
+      preview.description = 'Social media post';
+      preview.siteName = 'Twitter/X';
+      return preview;
+    }
+    
+    if (hostname.includes('linkedin.com')) {
+      preview.title = 'LinkedIn Post';
+      preview.description = 'Professional social media content';
+      preview.siteName = 'LinkedIn';
+      return preview;
+    }
+
+    // ONLY handle the specific SM generator URL (very specific check)
+    if (url.includes('anica-blip.github.io/3c-smpost-generator') && url.includes('?')) {
+      const urlParams = new URLSearchParams(url.split('?')[1] || '');
+      preview.title = decodeURIComponent(urlParams.get('title') || 'Interactive Content');
+      preview.description = decodeURIComponent(urlParams.get('desc') || 'Engage with this interactive content');
+      preview.siteName = '3C Thread To Success';
+      preview.image = generateTextPreviewImage(preview.title, preview.description);
+      return preview;
+    }
+
+    // For ALL other websites, try to fetch actual content
+    try {
+      const response = await fetch(url, { 
+        method: 'GET',
+        mode: 'cors',
+        cache: 'no-cache'
+      });
+      
+      if (response.ok) {
+        const html = await response.text();
+        
+        // Extract metadata from HTML
+        const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
+                         html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["'][^>]*>/i);
+        
+        const ogTitleMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+        const ogDescMatch = html.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+        const ogImageMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+        
+        // Use extracted data
+        if (ogTitleMatch?.[1] || titleMatch?.[1]) {
+          preview.title = (ogTitleMatch?.[1] || titleMatch?.[1])?.trim() || preview.title;
+        }
+        
+        if (ogDescMatch?.[1] || descMatch?.[1]) {
+          preview.description = (ogDescMatch?.[1] || descMatch?.[1])?.trim() || preview.description;
+        }
+        
+        if (ogImageMatch?.[1]) {
+          preview.image = ogImageMatch[1];
+          // Handle relative URLs
+          if (!preview.image.startsWith('http')) {
+            preview.image = new URL(preview.image, url).href;
+          }
+        }
+      }
+    } catch (fetchError) {
+      // If fetch fails, keep the default "External Link" preview
+      console.log('Could not fetch URL content for:', hostname, fetchError);
+    }
+
+    return preview;
+    
+  } catch (error) {
+    console.error('Error creating URL preview:', error);
+    return {
+      title: 'External Link',
+      description: 'Click to visit',
+      image: null,
+      siteName: 'External Site'
+    };
+  }
+};
+
 // Generate a simple text-based preview image using canvas
 const generateTextPreviewImage = (title: string, description: string): string => {
   try {
-    // Create a canvas element
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
     if (!ctx) return '';
     
-    // Set canvas size
     canvas.width = 400;
     canvas.height = 200;
     
@@ -491,7 +605,6 @@ const generateTextPreviewImage = (title: string, description: string): string =>
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     
-    // Wrap text if too long
     const maxWidth = canvas.width - 40;
     const words = title.split(' ');
     let line = '';
@@ -512,14 +625,13 @@ const generateTextPreviewImage = (title: string, description: string): string =>
     }
     ctx.fillText(line, canvas.width / 2, y);
     
-    // Description text
+    // Description
     ctx.font = '14px Arial, sans-serif';
     ctx.fillStyle = '#94a3b8';
     
-    const descWords = description.split(' ').slice(0, 8).join(' '); // Limit words
+    const descWords = description.split(' ').slice(0, 8).join(' ');
     ctx.fillText(descWords, canvas.width / 2, canvas.height * 0.75);
     
-    // Convert to data URL
     return canvas.toDataURL('image/png');
     
   } catch (error) {
