@@ -1,0 +1,30 @@
+{
+  "anica-blip.github.io/3c-smpost-generator": {
+    "quiz": {
+      "image": "https://via.placeholder.com/1080x1080/8B5CF6/FFFFFF?text=🔥+QUIZ",
+      "title_suffix": "Quiz"
+    },
+    "game": {
+      "image": "https://via.placeholder.com/1080x1080/10B981/FFFFFF?text=🎮+GAME", 
+      "title_suffix": "Game"
+    },
+    "puzzle": {
+      "image": "https://via.placeholder.com/1080x1080/F59E0B/FFFFFF?text=🧩+PUZZLE",
+      "title_suffix": "Puzzle"
+    },
+    "challenge": {
+      "image": "https://via.placeholder.com/1080x1080/EF4444/FFFFFF?text=⚡+CHALLENGE",
+      "title_suffix": "Challenge"
+    },
+    "assessment": {
+      "image": "https://via.placeholder.com/1080x1080/6366F1/FFFFFF?text=📊+ASSESSMENT",
+      "title_suffix": "Assessment"
+    }
+  },
+  "anica-blip.github.io/3c-quiz-admin": {
+    "default": {
+      "image": "https://via.placeholder.com/1080x1080/8B5CF6/FFFFFF?text=🔥+QUIZ",
+      "title_suffix": "Quiz"
+    }
+  }
+}
