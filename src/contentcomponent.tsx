@@ -55,6 +55,12 @@ interface MediaFile {
   size: number;
   url: string;
   supabaseUrl?: string; // URL after upload to Supabase
+  urlPreview?: {
+    title?: string;
+    description?: string;
+    image?: string;
+    siteName?: string;
+  };
 }
 
 interface SocialPlatform {
@@ -359,6 +365,46 @@ const supabaseAPI = {
   }
 };
 
+// URL Preview Fetcher
+const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> => {
+  try {
+    // For demo purposes - in production you'd use a proper service like LinkPreview API
+    // For now, try to extract basic info from common sites
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      return {
+        title: 'YouTube Video',
+        description: 'Video content from YouTube',
+        image: 'https://img.youtube.com/vi/placeholder/maxresdefault.jpg',
+        siteName: 'YouTube'
+      };
+    }
+    
+    if (url.includes('github.com')) {
+      return {
+        title: 'GitHub Repository',
+        description: 'Source code repository',
+        image: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
+        siteName: 'GitHub'
+      };
+    }
+
+    // Default fallback
+    return {
+      title: 'External Link',
+      description: 'Click to visit',
+      image: null,
+      siteName: new URL(url).hostname
+    };
+  } catch (error) {
+    return {
+      title: 'External Link',
+      description: 'Click to visit',
+      image: null,
+      siteName: 'External Site'
+    };
+  }
+};
+
 // Enhanced Content Creation Form
 const EnhancedContentCreationForm = ({ 
   onSave, 
@@ -416,7 +462,16 @@ const EnhancedContentCreationForm = ({
     const audience = selections.audience ? getAudienceCode(selections.audience) : 'XX';
     const media = selections.mediaType ? getMediaCode(selections.mediaType) : 'XX';
     const template = selections.templateType ? getTemplateTypeCode(selections.templateType) : 'XX';
-    const character = selections.characterProfile ? getCharacterCode(selections.characterProfile) : 'XX';
+    
+    // FIX: Get character code from actual profile name, not ID
+    let character = 'XX';
+    if (selections.characterProfile) {
+      const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
+      if (selectedProfile) {
+        character = getCharacterCode(selectedProfile.name);
+      }
+    }
+    
     const voiceStyle = selections.voiceStyle ? getVoiceStyleCode(selections.voiceStyle) : 'XX';
     const randomNum = Math.floor(Math.random() * 999) + 1;
     return `${theme}-${audience}-${media}-${template}-${character}-${voiceStyle}-${String(randomNum).padStart(3, '0')}`;
@@ -459,13 +514,13 @@ const EnhancedContentCreationForm = ({
     return codes[value] || 'XX';
   };
 
-  const getCharacterCode = (value: string) => {
+  const getCharacterCode = (name: string) => {
     const codes: Record<string, string> = {
       'anica': 'AN',
       'caelum': 'CA', 
       'aurion': 'AU'
     };
-    return codes[value.toLowerCase()] || 'XX';
+    return codes[name.toLowerCase()] || 'XX';
   };
 
   const getVoiceStyleCode = (value: string) => {
@@ -482,7 +537,7 @@ const EnhancedContentCreationForm = ({
   useEffect(() => {
     const newId = generateContentId();
     setContentId(newId);
-  }, [selections.theme, selections.audience, selections.mediaType, selections.templateType, selections.characterProfile, selections.voiceStyle]);
+  }, [selections.theme, selections.audience, selections.mediaType, selections.templateType, selections.characterProfile, selections.voiceStyle, characterProfiles]);
 
   // Load editing post data when provided
   useEffect(() => {
@@ -612,16 +667,21 @@ const EnhancedContentCreationForm = ({
     setMediaFiles(prev => prev.filter(f => f.id !== fileId));
   };
 
-  const handleAddUrl = () => {
+  const handleAddUrl = async () => {
     if (!urlInput.trim()) return;
     
     const linkTitle = urlTitle.trim() || 'Link';
+    
+    // Fetch URL preview
+    const urlPreview = await fetchUrlPreview(urlInput.trim());
+    
     const newUrlFile: MediaFile = {
       id: Date.now().toString() + Math.random(),
       name: linkTitle,
       type: 'interactive',
       size: 0, // URLs don't have file size
       url: urlInput.trim(),
+      urlPreview: urlPreview
     };
     
     setMediaFiles(prev => [...prev, newUrlFile]);
@@ -738,6 +798,12 @@ const EnhancedContentCreationForm = ({
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // Truncate URL for display
+  const truncateUrl = (url: string, maxLength: number = 50) => {
+    if (url.length <= maxLength) return url;
+    return url.substring(0, maxLength) + '...';
   };
 
   return (
@@ -1273,8 +1339,8 @@ const EnhancedContentCreationForm = ({
         </div>
       )}
 
-      {/* Media Upload */}
-      <div style={{ marginBottom: '24px', width: '80%' }}>
+      {/* Media Upload - 90% Width */}
+      <div style={{ marginBottom: '24px', width: '90%' }}>
         <label style={{
           display: 'block',
           fontSize: '16px',
@@ -1358,7 +1424,7 @@ const EnhancedContentCreationForm = ({
           />
         </div>
 
-        {/* URL Input Section */}
+        {/* URL Input Section - Fixed Container */}
         <div style={{
           backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
           border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
@@ -1481,7 +1547,7 @@ const EnhancedContentCreationForm = ({
                   borderRadius: '6px',
                   border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
                     <div style={{
                       padding: '8px',
                       backgroundColor: isDarkMode ? '#1e293b' : 'white',
@@ -1494,7 +1560,7 @@ const EnhancedContentCreationForm = ({
                         getFileIcon(file.type)
                       )}
                     </div>
-                    <div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
                         fontSize: '13px',
                         fontWeight: '600',
@@ -1508,8 +1574,15 @@ const EnhancedContentCreationForm = ({
                         color: isDarkMode ? '#94a3b8' : '#6b7280'
                       }}>
                         {file.size === 0 ? (
-                          <span style={{ color: isDarkMode ? '#8b5cf6' : '#7c3aed' }}>
-                            {file.url}
+                          <span 
+                            style={{ 
+                              color: isDarkMode ? '#8b5cf6' : '#7c3aed',
+                              wordBreak: 'break-all',
+                              display: 'block'
+                            }}
+                            title={file.url}
+                          >
+                            {truncateUrl(file.url)}
                           </span>
                         ) : (
                           formatFileSize(file.size)
@@ -1525,7 +1598,9 @@ const EnhancedContentCreationForm = ({
                       border: 'none',
                       borderRadius: '6px',
                       cursor: 'pointer',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280'
+                      color: isDarkMode ? '#94a3b8' : '#6b7280',
+                      marginLeft: '8px',
+                      flexShrink: 0
                     }}
                   >
                     <X style={{ height: '16px', width: '16px' }} />
@@ -1771,7 +1846,7 @@ const EnhancedContentCreationForm = ({
             <button
               type="button"
               onClick={() => {
-                const commonEmojis = ['😀', '😊', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙏', '💡', '📈', '📊'];
+                const commonEmojis = ['😀', '😊', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙌', '💡', '📈', '📊'];
                 const emoji = prompt(`Choose an emoji:\n${commonEmojis.join(' ')}\n\nOr enter any emoji:`);
                 if (emoji) {
                   setContent(prev => ({ ...prev, description: prev.description + emoji }));
@@ -2204,7 +2279,7 @@ const EnhancedContentCreationForm = ({
             border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
             overflow: 'hidden'
           }}>
-            {/* 1. Media Files Preview - Platform Responsive */}
+            {/* 1. Media Files Preview - Platform Responsive with URL Preview Support */}
             {mediaFiles.length > 0 && (
               <div style={{
                 padding: '16px',
@@ -2233,7 +2308,6 @@ const EnhancedContentCreationForm = ({
                 </div>
 
                 {(() => {
-
                   // Platform-specific dimensions and styling
                   const getPlatformPreviewStyle = (platform: string) => {
                     const styles = {
@@ -2268,9 +2342,9 @@ const EnhancedContentCreationForm = ({
                         label: 'TikTok Video (9:16)'
                       },
                       telegram: {
-                        aspectRatio: 'auto', // CHANGED: Use original media dimensions
-                        maxWidth: '100%', // CHANGED: Allow full width flexibility
-                        label: 'Telegram Post (Original Size)' // CHANGED: Updated label
+                        aspectRatio: 'auto', // Use original media dimensions
+                        maxWidth: '100%', // Allow full width flexibility
+                        label: 'Telegram Post (Original Size)'
                       },
                       pinterest: {
                         aspectRatio: '2 / 3', // Pinterest vertical
@@ -2311,7 +2385,7 @@ const EnhancedContentCreationForm = ({
                         gridTemplateColumns: mediaFiles.length === 1 
                           ? '1fr' 
                           : selections.platform === 'tiktok' || selections.platform === 'pinterest'
-                            ? 'repeat(auto-fit, minmax(150px, 200px))'  // Smaller for vertical formats
+                            ? 'repeat(auto-fit, minmax(150px, 200px))'
                             : 'repeat(auto-fit, minmax(200px, 300px))',
                         gap: '12px',
                         justifyContent: 'center',
@@ -2336,7 +2410,7 @@ const EnhancedContentCreationForm = ({
                                 style={{
                                   width: '100%',
                                   height: '100%',
-                                  objectFit: selections.platform ? 'cover' : 'contain', // Cover for platforms, contain for generic
+                                  objectFit: selections.platform ? 'cover' : 'contain',
                                   backgroundColor: isDarkMode ? '#1e293b' : 'white'
                                 }}
                               />
@@ -2352,7 +2426,68 @@ const EnhancedContentCreationForm = ({
                                 controls
                                 muted
                               />
+                            ) : file.type === 'interactive' && file.urlPreview ? (
+                              // URL PREVIEW WITH IMAGE - FIXED IMPLEMENTATION
+                              <div style={{
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                backgroundColor: isDarkMode ? '#1e293b' : 'white'
+                              }}>
+                                {/* URL Preview Image */}
+                                {file.urlPreview.image && (
+                                  <div style={{
+                                    flex: 1,
+                                    backgroundImage: `url(${file.urlPreview.image})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    backgroundRepeat: 'no-repeat',
+                                    minHeight: '120px'
+                                  }} />
+                                )}
+                                
+                                {/* URL Preview Info */}
+                                <div style={{
+                                  padding: '12px',
+                                  backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
+                                  borderTop: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+                                }}>
+                                  <div style={{
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    color: isDarkMode ? '#f8fafc' : '#111827',
+                                    marginBottom: '4px',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {file.urlPreview.title || file.name}
+                                  </div>
+                                  <div style={{
+                                    fontSize: '11px',
+                                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                                    marginBottom: '4px',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {file.urlPreview.description || 'Click to visit'}
+                                  </div>
+                                  <div style={{
+                                    fontSize: '10px',
+                                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                                    fontWeight: '500',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {file.urlPreview.siteName || new URL(file.url).hostname}
+                                  </div>
+                                </div>
+                              </div>
                             ) : (
+                              // Fallback for other file types
                               <div style={{
                                 width: '100%',
                                 height: '100%',
@@ -2437,7 +2572,7 @@ const EnhancedContentCreationForm = ({
                           {selections.platform === 'facebook' && 'Facebook recommends 1.91:1 ratio for optimal feed display and engagement.'}
                           {selections.platform === 'twitter' && 'Twitter displays images best at 16:9 ratio in timeline feeds.'}
                           {selections.platform === 'linkedin' && 'LinkedIn professional posts perform well with 1.91:1 landscape format.'}
-                          {selections.platform === 'telegram' && 'Telegram displays media in original dimensions and automatically adjusts for optimal viewing.'} // CHANGED: New description
+                          {selections.platform === 'telegram' && 'Telegram displays media in original dimensions and automatically adjusts for optimal viewing.'}
                           {selections.platform === 'pinterest' && 'Pinterest favors vertical 2:3 pins for discovery and engagement.'}
                         </div>
                       )}
