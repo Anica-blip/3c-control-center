@@ -365,12 +365,12 @@ const supabaseAPI = {
   }
 };
 
-// URL Preview Fetcher
+/ URL Preview Fetcher
 const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> => {
   try {
     if (url.includes('anica-blip.github.io/3c-smpost-generator')) {
       const urlParams = new URLSearchParams(url.split('?')[1] || '');
-      const title = decodeURIComponent(urlParams.get('title') || '🔥 Interactive Content');
+      const title = decodeURIComponent(urlParams.get('title') || 'ðŸ"¥ Interactive Content');
       const description = decodeURIComponent(urlParams.get('desc') || 'Engage with this interactive content');
       const type = urlParams.get('type') || 'Quiz';
       const size = urlParams.get('size') || 'instagram-square';
@@ -408,21 +408,12 @@ const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> =>
       };
     }
 
-    // ✅ Safe fallback for all other URLs
-    let hostname: string;
-    try {
-      hostname = url ? new URL(url).hostname : 'External Site';
-    } catch {
-      hostname = 'External Site';
-    }
-
     return {
       title: 'External Link',
       description: 'Click to visit',
       image: null,
-      siteName: hostname
+      siteName: new URL(url).hostname
     };
-
   } catch (error) {
     console.error('Error fetching URL preview:', error);
     return {
