@@ -426,11 +426,18 @@ const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> =>
 };
 
 // Default fallback for all other URLs
+try {
   return {
     title: 'External Link',
     description: 'Click to visit',
     image: null,
-    siteName: url ? new URL(url).hostname : 'External Site'
+    siteName: (() => {
+      try {
+        return url ? new URL(url).hostname : 'External Site';
+      } catch {
+        return 'External Site';
+      }
+    })()
   };
 } catch (error) {
   console.error('Error fetching URL preview:', error);
