@@ -407,23 +407,20 @@ const EnhancedContentCreationForm = ({
   const [hashtagInput, setHashtagInput] = useState('');
   const [fieldConfig, setFieldConfig] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [urlInput, setUrlInput] = useState('');
+  const [urlTitle, setUrlTitle] = useState('');
 
   // Generate content ID (Pattern-###CC format)
   const generateContentId = () => {
-  const theme = selections.theme ? getThemeCode(selections.theme) : 'XX';
-  const audience = selections.audience ? getAudienceCode(selections.audience) : 'XX';
-  const media = selections.mediaType ? getMediaCode(selections.mediaType) : 'XX';
-  const template = selections.templateType ? getTemplateTypeCode(selections.templateType) : 'XX';
-  
-  // Look up character name from the profiles array
-  const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
-  const characterName = selectedProfile ? selectedProfile.name.toLowerCase() : '';
-  const character = characterName ? getCharacterCode(characterName) : 'XX';
-  
-  const voiceStyle = selections.voiceStyle ? getVoiceStyleCode(selections.voiceStyle) : 'XX';
-  const randomNum = Math.floor(Math.random() * 999) + 1;
-  return `${theme}-${audience}-${media}-${template}-${character}-${voiceStyle}-${String(randomNum).padStart(3, '0')}`;
-};
+    const theme = selections.theme ? getThemeCode(selections.theme) : 'XX';
+    const audience = selections.audience ? getAudienceCode(selections.audience) : 'XX';
+    const media = selections.mediaType ? getMediaCode(selections.mediaType) : 'XX';
+    const template = selections.templateType ? getTemplateTypeCode(selections.templateType) : 'XX';
+    const character = selections.characterProfile ? getCharacterCode(selections.characterProfile) : 'XX';
+    const voiceStyle = selections.voiceStyle ? getVoiceStyleCode(selections.voiceStyle) : 'XX';
+    const randomNum = Math.floor(Math.random() * 999) + 1;
+    return `${theme}-${audience}-${media}-${template}-${character}-${voiceStyle}-${String(randomNum).padStart(3, '0')}`;
+  };
 
   // Code mapping functions for content ID generation
   const getThemeCode = (value: string) => {
@@ -615,6 +612,23 @@ const EnhancedContentCreationForm = ({
     setMediaFiles(prev => prev.filter(f => f.id !== fileId));
   };
 
+  const handleAddUrl = () => {
+    if (!urlInput.trim()) return;
+    
+    const linkTitle = urlTitle.trim() || 'Link';
+    const newUrlFile: MediaFile = {
+      id: Date.now().toString() + Math.random(),
+      name: linkTitle,
+      type: 'interactive',
+      size: 0, // URLs don't have file size
+      url: urlInput.trim(),
+    };
+    
+    setMediaFiles(prev => [...prev, newUrlFile]);
+    setUrlInput('');
+    setUrlTitle('');
+  };
+
   const handlePlatformToggle = (platformId: string) => {
     setSelectedPlatforms(prev => 
       prev.includes(platformId)
@@ -701,6 +715,8 @@ const EnhancedContentCreationForm = ({
     setContentId(generateContentId());
     setIsEditingPost(false);
     setFieldConfig(null);
+    setUrlInput('');
+    setUrlTitle('');
   };
 
   const activePlatforms = platforms?.filter(p => p?.isActive) || [];
@@ -1258,7 +1274,7 @@ const EnhancedContentCreationForm = ({
       )}
 
       {/* Media Upload */}
-      <div style={{ marginBottom: '24px', width: '90%' }}>
+      <div style={{ marginBottom: '24px', width: '80%' }}>
         <label style={{
           display: 'block',
           fontSize: '16px',
@@ -1268,6 +1284,8 @@ const EnhancedContentCreationForm = ({
         }}>
           Media Upload
         </label>
+        
+        {/* File Upload Area */}
         <div
           onClick={() => fileInputRef.current?.click()}
           style={{
@@ -1278,7 +1296,8 @@ const EnhancedContentCreationForm = ({
             cursor: 'pointer',
             backgroundColor: isDarkMode ? '#1e3a8a20' : '#f8fafc',
             transition: 'all 0.3s ease',
-            width: '100%'
+            width: '100%',
+            marginBottom: '16px'
           }}
         >
           <Upload style={{
@@ -1339,7 +1358,91 @@ const EnhancedContentCreationForm = ({
           />
         </div>
 
-        {/* Uploaded Files */}
+        {/* URL Input Section */}
+        <div style={{
+          backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
+          border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+          borderRadius: '8px',
+          padding: '16px'
+        }}>
+          <h4 style={{
+            fontSize: '14px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            margin: '0 0 12px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <ExternalLink style={{ height: '16px', width: '16px' }} />
+            Add URL Links
+          </h4>
+          
+          <div style={{ display: 'grid', gap: '12px' }}>
+            <input
+              type="text"
+              value={urlTitle}
+              onChange={(e) => setUrlTitle(e.target.value)}
+              placeholder="Link title (optional)"
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '6px',
+                fontSize: '14px',
+                backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                color: isDarkMode ? '#f8fafc' : '#111827',
+                fontFamily: 'inherit'
+              }}
+            />
+            
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="url"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="https://example.com"
+                style={{
+                  flex: 1,
+                  padding: '10px 12px',
+                  border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                  color: isDarkMode ? '#f8fafc' : '#111827',
+                  fontFamily: 'inherit'
+                }}
+              />
+              <button
+                onClick={handleAddUrl}
+                disabled={!urlInput.trim()}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: urlInput.trim() ? (isDarkMode ? '#60a5fa' : '#3b82f6') : (isDarkMode ? '#475569' : '#d1d5db'),
+                  color: urlInput.trim() ? 'white' : (isDarkMode ? '#64748b' : '#9ca3af'),
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: urlInput.trim() ? 'pointer' : 'not-allowed',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  fontFamily: 'inherit'
+                }}
+              >
+                Add URL
+              </button>
+            </div>
+          </div>
+          
+          <div style={{
+            fontSize: '12px',
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            marginTop: '8px'
+          }}>
+            Add interactive links, external tools, or web resources to your post
+          </div>
+        </div>
+
+        {/* Uploaded Files and URLs */}
         {mediaFiles.length > 0 && (
           <div style={{ marginTop: '16px' }}>
             <div style={{
@@ -1354,7 +1457,7 @@ const EnhancedContentCreationForm = ({
                 color: isDarkMode ? '#f8fafc' : '#111827',
                 margin: '0'
               }}>
-                Uploaded Files
+                Added Media & Links
               </h4>
               <span style={{
                 padding: '4px 8px',
@@ -1364,7 +1467,7 @@ const EnhancedContentCreationForm = ({
                 fontWeight: '600',
                 borderRadius: '12px'
               }}>
-                {mediaFiles.length} files
+                {mediaFiles.length} items
               </span>
             </div>
             <div style={{ display: 'grid', gap: '8px' }}>
@@ -1385,7 +1488,11 @@ const EnhancedContentCreationForm = ({
                       borderRadius: '6px',
                       boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
                     }}>
-                      {getFileIcon(file.type)}
+                      {file.type === 'interactive' && file.size === 0 ? (
+                        <ExternalLink style={{ height: '16px', width: '16px', color: '#8b5cf6' }} />
+                      ) : (
+                        getFileIcon(file.type)
+                      )}
                     </div>
                     <div>
                       <div style={{
@@ -1400,7 +1507,13 @@ const EnhancedContentCreationForm = ({
                         fontSize: '11px',
                         color: isDarkMode ? '#94a3b8' : '#6b7280'
                       }}>
-                        {formatFileSize(file.size)}
+                        {file.size === 0 ? (
+                          <span style={{ color: isDarkMode ? '#8b5cf6' : '#7c3aed' }}>
+                            {file.url}
+                          </span>
+                        ) : (
+                          formatFileSize(file.size)
+                        )}
                       </div>
                     </div>
                   </div>
