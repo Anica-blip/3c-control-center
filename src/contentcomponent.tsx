@@ -365,67 +365,166 @@ const supabaseAPI = {
   }
 };
 
-// URL Preview Fetcher - Complete Function
+// Internal URL Preview System - No external dependencies
 const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> => {
   try {
-    // Special handling for interactive content generator
-    if (url.includes('anica-blip.github.io/3c-smpost-generator')) {
-      const urlParams = new URLSearchParams(url.split('?')[1] || '');
-      const title = decodeURIComponent(urlParams.get('title') || 'Interactive Content');
-      const description = decodeURIComponent(urlParams.get('desc') || 'Engage with this interactive content');
-      const type = urlParams.get('type') || 'Quiz';
-      const size = urlParams.get('size') || 'instagram-square';
-      
-      // Use your custom screenshot service
-      const screenshotServiceUrl = 'https://your-domain.github.io/screenshot-service.html' + 
-        '?title=' + encodeURIComponent(title) + 
-        '&desc=' + encodeURIComponent(description) + 
-        '&type=' + encodeURIComponent(type) + 
-        '&size=' + encodeURIComponent(size);
-      
-      return {
-        title: title,
-        description: description,
-        image: screenshotServiceUrl,
-        siteName: '3C Thread To Success'
-      };
-    }
-
-    // YouTube URL handling
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      return {
-        title: 'YouTube Video',
-        description: 'Video content from YouTube',
-        image: 'https://img.youtube.com/vi/placeholder/maxresdefault.jpg',
-        siteName: 'YouTube'
-      };
-    }
+    // Parse URL to get basic info
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
     
-    // GitHub URL handling
-    if (url.includes('github.com')) {
-      return {
-        title: 'GitHub Repository',
-        description: 'Source code repository',
-        image: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
-        siteName: 'GitHub'
-      };
-    }
-
-    // Default fallback for all other URLs
-    return {
+    // Default preview object
+    const preview: MediaFile['urlPreview'] = {
       title: 'External Link',
       description: 'Click to visit',
       image: null,
-      siteName: new URL(url).hostname
+      siteName: hostname
     };
+
+    // Try to fetch basic metadata using a CORS proxy or direct fetch
+    try {
+      // For same-origin URLs or CORS-enabled URLs, fetch directly
+      const response = await fetch(url, { 
+        method: 'GET',
+        mode: 'cors',
+        cache: 'no-cache'
+      });
+      
+      if (response.ok) {
+        const html = await response.text();
+        
+        // Extract basic metadata from HTML
+        const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
+                         html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["'][^>]*>/i);
+        
+        const ogTitleMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+        const ogDescMatch = html.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+        const ogImageMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+        
+        // Use Open Graph data first, fallback to regular meta tags
+        preview.title = ogTitleMatch?.[1] || titleMatch?.[1] || 'External Link';
+        preview.description = ogDescMatch?.[1] || descMatch?.[1] || 'Click to visit';
+        preview.image = ogImageMatch?.[1] || null;
+        
+        // Clean up title and description
+        preview.title = preview.title.trim();
+        preview.description = preview.description.trim();
+        
+        // Handle relative image URLs
+        if (preview.image && !preview.image.startsWith('http')) {
+          preview.image = new URL(preview.image, url).href;
+        }
+      }
+    } catch (fetchError) {
+      // If fetch fails (CORS, network, etc.), use URL-based fallbacks
+      console.log('Could not fetch URL content, using fallbacks:', fetchError);
+    }
+
+    // Enhanced fallbacks for known domains
+    if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
+      preview.title = 'YouTube Video';
+      preview.description = 'Video content from YouTube';
+      preview.siteName = 'YouTube';
+      
+      // Extract video ID for thumbnail
+      const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+      if (videoIdMatch) {
+        preview.image = `https://img.youtube.com/vi/${videoIdMatch[1]}/maxresdefault.jpg`;
+      }
+    } else if (hostname.includes('github.com')) {
+      preview.title = 'GitHub Repository';
+      preview.description = 'Source code repository';
+      preview.siteName = 'GitHub';
+      preview.image = 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+    } else if (hostname.includes('twitter.com') || hostname.includes('x.com')) {
+      preview.title = 'Twitter/X Post';
+      preview.description = 'Social media post';
+      preview.siteName = 'Twitter/X';
+    } else if (hostname.includes('linkedin.com')) {
+      preview.title = 'LinkedIn Post';
+      preview.description = 'Professional social media content';
+      preview.siteName = 'LinkedIn';
+    } else if (url.includes('anica-blip.github.io/3c-smpost-generator')) {
+      // Handle your SM generator posts
+      const urlParams = new URLSearchParams(url.split('?')[1] || '');
+      preview.title = decodeURIComponent(urlParams.get('title') || 'Interactive Content');
+      preview.description = decodeURIComponent(urlParams.get('desc') || 'Engage with this interactive content');
+      preview.siteName = '3C Thread To Success';
+      
+      // Generate a simple preview image with text
+      preview.image = generateTextPreviewImage(preview.title, preview.description);
+    }
+
+    return preview;
+    
   } catch (error) {
-    console.error('Error fetching URL preview:', error);
+    console.error('Error creating URL preview:', error);
     return {
       title: 'External Link',
       description: 'Click to visit',
       image: null,
       siteName: 'External Site'
     };
+  }
+};
+
+// Generate a simple text-based preview image using canvas
+const generateTextPreviewImage = (title: string, description: string): string => {
+  try {
+    // Create a canvas element
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return '';
+    
+    // Set canvas size
+    canvas.width = 400;
+    canvas.height = 200;
+    
+    // Background
+    ctx.fillStyle = '#1e40af';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Title text
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 18px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Wrap text if too long
+    const maxWidth = canvas.width - 40;
+    const words = title.split(' ');
+    let line = '';
+    let y = canvas.height * 0.4;
+    
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = ctx.measureText(testLine);
+      const testWidth = metrics.width;
+      
+      if (testWidth > maxWidth && n > 0) {
+        ctx.fillText(line, canvas.width / 2, y);
+        line = words[n] + ' ';
+        y += 25;
+      } else {
+        line = testLine;
+      }
+    }
+    ctx.fillText(line, canvas.width / 2, y);
+    
+    // Description text
+    ctx.font = '14px Arial, sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    
+    const descWords = description.split(' ').slice(0, 8).join(' '); // Limit words
+    ctx.fillText(descWords, canvas.width / 2, canvas.height * 0.75);
+    
+    // Convert to data URL
+    return canvas.toDataURL('image/png');
+    
+  } catch (error) {
+    console.error('Error generating preview image:', error);
+    return '';
   }
 };
 
