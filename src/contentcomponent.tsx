@@ -3717,7 +3717,8 @@ export default function ContentComponent() {
       </div>
     </div>
   );
-}111827',
+}
+
             margin: '0'
           }}>
             Character Profile
