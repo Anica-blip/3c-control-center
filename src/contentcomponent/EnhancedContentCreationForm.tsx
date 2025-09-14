@@ -73,63 +73,6 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
   const [urlInput, setUrlInput] = useState('');
   const [urlTitle, setUrlTitle] = useState('');
 
-  // Platform-specific preview sizing with TELEGRAM as GENERIC
-  const getPlatformPreviewStyle = (platform: string) => {
-    const styles = {
-      instagram: {
-        aspectRatio: '1 / 1', // Square posts
-        maxWidth: '400px',
-        label: 'Instagram Square Post (1:1)'
-      },
-      facebook: {
-        aspectRatio: '1.91 / 1', // Facebook recommended
-        maxWidth: '500px',
-        label: 'Facebook Post (1.91:1)'
-      },
-      twitter: {
-        aspectRatio: '16 / 9', // Twitter recommended
-        maxWidth: '500px',
-        label: 'Twitter/X Post (16:9)'
-      },
-      linkedin: {
-        aspectRatio: '1.91 / 1', // LinkedIn recommended
-        maxWidth: '500px',
-        label: 'LinkedIn Post (1.91:1)'
-      },
-      youtube: {
-        aspectRatio: '16 / 9', // YouTube thumbnail
-        maxWidth: '480px',
-        label: 'YouTube Thumbnail (16:9)'
-      },
-      tiktok: {
-        aspectRatio: '9 / 16', // TikTok vertical
-        maxWidth: '300px',
-        label: 'TikTok Video (9:16)'
-      },
-      telegram: {
-        aspectRatio: 'auto', // GENERIC SIZE as requested
-        maxWidth: '100%', // GENERIC SIZE as requested
-        label: 'Telegram (Original Size)' // Updated label
-      },
-      pinterest: {
-        aspectRatio: '2 / 3', // Pinterest vertical
-        maxWidth: '400px',
-        label: 'Pinterest Pin (2:3)'
-      },
-      whatsapp: {
-        aspectRatio: '16 / 9', // WhatsApp recommended
-        maxWidth: '500px',
-        label: 'WhatsApp Post (16:9)'
-      }
-    };
-    
-    return styles[platform as keyof typeof styles] || {
-      aspectRatio: 'auto',
-      maxWidth: '100%',
-      label: 'Original Size (No Platform Selected)'
-    };
-  };
-
   // Rich text formatting functions
   const applyFormatting = (type: 'bold' | 'italic' | 'underline' | 'link') => {
     const textarea = descriptionRef.current;
@@ -1081,7 +1024,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
         marginBottom: '24px',
         width: '85%'
       }}>
-        {/* Title Field - FIXED with proper structure and bold formatting */}
+        {/* Title Field */}
         {(!fieldConfig || fieldConfig.title?.show !== false) && (
           <div>
             <label style={{
@@ -1094,57 +1037,6 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
               Title/Headline
             </label>
             
-            {/* Title Formatting Toolbar */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px',
-              backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
-              borderRadius: '6px 6px 0 0',
-              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-              borderBottom: 'none'
-            }}>
-              <button
-                type="button"
-                onClick={() => {
-                  const input = document.querySelector('input[placeholder*="Enter compelling title"]') as HTMLInputElement;
-                  if (input) {
-                    const start = input.selectionStart || 0;
-                    const end = input.selectionEnd || 0;
-                    const selectedText = input.value.substring(start, end);
-                    const newText = input.value.substring(0, start) + `**${selectedText}**` + input.value.substring(end);
-                    setContent(prev => ({ ...prev, title: newText }));
-                    // Set cursor position after the formatting
-                    setTimeout(() => {
-                      input.setSelectionRange(start + 2 + selectedText.length + 2, start + 2 + selectedText.length + 2);
-                    }, 0);
-                  }
-                }}
-                style={{
-                  padding: '6px 10px',
-                  backgroundColor: isDarkMode ? '#334155' : 'white',
-                  border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  color: isDarkMode ? '#f8fafc' : '#111827'
-                }}
-                title="Bold (wrap selected text with **)"
-              >
-                B
-              </button>
-              
-              <div style={{
-                fontSize: '12px',
-                color: isDarkMode ? '#94a3b8' : '#6b7280',
-                marginLeft: 'auto'
-              }}>
-                UK English | Formatting: **bold**
-              </div>
-            </div>
-            
             <input
               type="text"
               value={content.title}
@@ -1155,12 +1047,11 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                 width: '100%',
                 padding: '12px',
                 border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '0 0 8px 8px',
+                borderRadius: '8px',
                 fontSize: '14px',
                 backgroundColor: isDarkMode ? '#334155' : 'white',
-                color: '#000000', // Black font for posts as requested
-                fontFamily: 'inherit',
-                borderTop: 'none'
+                color: '#000000',
+                fontFamily: 'inherit'
               }}
             />
             <div style={{
@@ -1627,7 +1518,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
         </button>
       </div>
 
-      {/* Live Preview Section - Platform Responsive */}
+      {/* Live Preview Section */}
       {(selections.characterProfile || content.title || content.description || mediaFiles.length > 0) && (
         <div style={{
           marginTop: '32px',
@@ -1667,255 +1558,182 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
             border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
             overflow: 'hidden'
           }}>
-            {/* Media Files Preview - Platform Responsive */}
+            {/* Media Files Preview */}
             {mediaFiles.length > 0 && (
               <div style={{
                 padding: '16px',
                 backgroundColor: isDarkMode ? '#1e293b' : '#f9fafb',
                 borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
               }}>
-                {/* Platform Preview Info */}
                 <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  marginBottom: '12px',
-                  padding: '8px 12px',
-                  backgroundColor: isDarkMode ? '#334155' : '#e5e7eb',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  color: isDarkMode ? '#94a3b8' : '#6b7280'
+                  display: 'grid',
+                  gridTemplateColumns: mediaFiles.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(200px, 300px))',
+                  gap: '12px',
+                  justifyContent: 'center'
                 }}>
-                  <Eye style={{ height: '14px', width: '14px' }} />
-                  {selections.platform ? (
-                    <span>Showing preview optimized for: {selections.platform.toUpperCase()}</span>
-                  ) : (
-                    <span>Generic preview (no platform optimization selected)</span>
-                  )}
-                </div>
-
-                {(() => {
-                  const platformStyle = getPlatformPreviewStyle(selections.platform);
-                  
-                  return (
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '12px'
+                  {mediaFiles.slice(0, 4).map((file, index) => (
+                    <div key={file.id} style={{
+                      position: 'relative',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                      border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+                      aspectRatio: '16 / 9',
+                      maxWidth: '300px',
+                      margin: '0 auto'
                     }}>
-                      {/* Platform Label */}
-                      <div style={{
-                        fontSize: '11px',
-                        color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                        fontWeight: '600',
-                        textAlign: 'center'
-                      }}>
-                        {platformStyle.label}
-                      </div>
-
-                      {/* Media Grid with Platform-Specific Sizing */}
-                      <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: mediaFiles.length === 1 
-                          ? '1fr' 
-                          : selections.platform === 'tiktok' || selections.platform === 'pinterest'
-                            ? 'repeat(auto-fit, minmax(150px, 200px))'
-                            : 'repeat(auto-fit, minmax(200px, 300px))',
-                        gap: '12px',
-                        justifyContent: 'center',
-                        width: '100%',
-                        maxWidth: '800px'
-                      }}>
-                        {mediaFiles.slice(0, 4).map((file, index) => (
-                          <div key={file.id} style={{
-                            position: 'relative',
-                            borderRadius: '8px',
-                            overflow: 'hidden',
-                            backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
-                            border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
-                            aspectRatio: platformStyle.aspectRatio, // Platform-specific sizing
-                            maxWidth: platformStyle.maxWidth, // Platform-specific sizing
-                            margin: '0 auto'
-                          }}>
-                            {file.type === 'image' || file.type === 'gif' ? (
-                              <img
-                                src={file.url}
-                                alt={file.name}
-                                style={{
-                                  width: '100%',
-                                  height: '100%',
-                                  objectFit: selections.platform && selections.platform !== 'telegram' ? 'cover' : 'contain', // Generic for Telegram
-                                  backgroundColor: isDarkMode ? '#1e293b' : 'white'
-                                }}
-                              />
-                            ) : file.type === 'video' ? (
-                              <video
-                                src={file.url}
-                                style={{
-                                  width: '100%',
-                                  height: '100%',
-                                  objectFit: selections.platform && selections.platform !== 'telegram' ? 'cover' : 'contain', // Generic for Telegram
-                                  backgroundColor: isDarkMode ? '#1e293b' : 'white'
-                                }}
-                                controls
-                                muted
-                              />
-                            ) : file.type === 'interactive' && file.urlPreview ? (
-                              <div style={{
-                                width: '100%',
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                                border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
-                                borderRadius: '8px',
-                                overflow: 'hidden'
-                              }}>
-                                {file.urlPreview.image && (
-                                  <div style={{
-                                    height: '60%',
-                                    backgroundImage: `url(${file.urlPreview.image})`,
-                                    backgroundSize: 'cover',
-                                    backgroundPosition: 'center',
-                                    backgroundRepeat: 'no-repeat'
-                                  }} />
-                                )}
-                                
-                                <div style={{
-                                  padding: '12px',
-                                  backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
-                                  height: file.urlPreview.image ? '40%' : '100%',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  justifyContent: 'center'
-                                }}>
-                                  <div style={{
-                                    fontSize: '13px',
-                                    fontWeight: '600',
-                                    color: isDarkMode ? '#f8fafc' : '#111827',
-                                    marginBottom: '4px',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap'
-                                  }}>
-                                    {file.urlPreview.title || file.name}
-                                  </div>
-                                  <div style={{
-                                    fontSize: '11px',
-                                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                                    marginBottom: '6px',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap'
-                                  }}>
-                                    {file.urlPreview.description || 'Click to visit'}
-                                  </div>
-                                  <div style={{
-                                    fontSize: '10px',
-                                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                                    fontWeight: '500',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                    textDecoration: 'underline'
-                                  }}>
-                                    {file.url}
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div style={{
-                                width: '100%',
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                padding: '16px'
-                              }}>
-                                {getFileIcon(file.type)}
-                                <span style={{
-                                  fontSize: '12px',
-                                  color: isDarkMode ? '#94a3b8' : '#6b7280',
-                                  textAlign: 'center',
-                                  fontWeight: '500'
-                                }}>
-                                  {file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name}
-                                </span>
-                                <span style={{
-                                  fontSize: '10px',
-                                  color: isDarkMode ? '#64748b' : '#9ca3af',
-                                  textAlign: 'center'
-                                }}>
-                                  {file.type.toUpperCase()}
-                                </span>
-                              </div>
-                            )}
-                            
-                            {mediaFiles.length > 4 && index === 3 && (
-                              <div style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'white',
-                                fontSize: '16px',
-                                fontWeight: '700'
-                              }}>
-                                +{mediaFiles.length - 3} more
-                              </div>
-                            )}
-
+                      {file.type === 'image' || file.type === 'gif' ? (
+                        <img
+                          src={file.url}
+                          alt={file.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            backgroundColor: isDarkMode ? '#1e293b' : 'white'
+                          }}
+                        />
+                      ) : file.type === 'video' ? (
+                        <video
+                          src={file.url}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            backgroundColor: isDarkMode ? '#1e293b' : 'white'
+                          }}
+                          controls
+                          muted
+                        />
+                      ) : file.type === 'interactive' && file.urlPreview ? (
+                        <div style={{
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                          border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+                          borderRadius: '8px',
+                          overflow: 'hidden'
+                        }}>
+                          {file.urlPreview.image && (
                             <div style={{
-                              position: 'absolute',
-                              top: '8px',
-                              right: '8px',
-                              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                              color: 'white',
-                              padding: '4px 8px',
-                              borderRadius: '12px',
-                              fontSize: '10px',
+                              height: '60%',
+                              backgroundImage: `url(${file.urlPreview.image})`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                              backgroundRepeat: 'no-repeat'
+                            }} />
+                          )}
+                          
+                          <div style={{
+                            padding: '12px',
+                            backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
+                            height: file.urlPreview.image ? '40%' : '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center'
+                          }}>
+                            <div style={{
+                              fontSize: '13px',
                               fontWeight: '600',
-                              textTransform: 'uppercase'
+                              color: isDarkMode ? '#f8fafc' : '#111827',
+                              marginBottom: '4px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
                             }}>
-                              {file.type}
+                              {file.urlPreview.title || file.name}
+                            </div>
+                            <div style={{
+                              fontSize: '11px',
+                              color: isDarkMode ? '#94a3b8' : '#6b7280',
+                              marginBottom: '6px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {file.urlPreview.description || 'Click to visit'}
+                            </div>
+                            <div style={{
+                              fontSize: '10px',
+                              color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                              fontWeight: '500',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              textDecoration: 'underline'
+                            }}>
+                              {file.url}
                             </div>
                           </div>
-                        ))}
-                      </div>
-
-                      {/* Platform-specific notes */}
-                      {selections.platform && (
+                        </div>
+                      ) : (
                         <div style={{
-                          fontSize: '11px',
-                          color: isDarkMode ? '#64748b' : '#9ca3af',
-                          textAlign: 'center',
-                          fontStyle: 'italic',
-                          maxWidth: '500px',
-                          lineHeight: '1.4'
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          padding: '16px'
                         }}>
-                          {selections.platform === 'instagram' && 'Instagram will crop images to square format for feed posts.'}
-                          {selections.platform === 'tiktok' && 'TikTok optimizes for vertical 9:16 video format.'}
-                          {selections.platform === 'youtube' && 'YouTube thumbnails work best at 16:9 ratio.'}
-                          {selections.platform === 'facebook' && 'Facebook recommends 1.91:1 ratio for optimal display.'}
-                          {selections.platform === 'twitter' && 'Twitter displays images best at 16:9 ratio.'}
-                          {selections.platform === 'linkedin' && 'LinkedIn posts perform well with 1.91:1 format.'}
-                          {selections.platform === 'telegram' && 'Telegram displays content at original size without cropping.'}
-                          {selections.platform === 'pinterest' && 'Pinterest favors vertical 2:3 pins for discovery.'}
-                          {selections.platform === 'whatsapp' && 'WhatsApp supports 16:9 format for optimal sharing.'}
+                          {getFileIcon(file.type)}
+                          <span style={{
+                            fontSize: '12px',
+                            color: isDarkMode ? '#94a3b8' : '#6b7280',
+                            textAlign: 'center',
+                            fontWeight: '500'
+                          }}>
+                            {file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name}
+                          </span>
+                          <span style={{
+                            fontSize: '10px',
+                            color: isDarkMode ? '#64748b' : '#9ca3af',
+                            textAlign: 'center'
+                          }}>
+                            {file.type.toUpperCase()}
+                          </span>
                         </div>
                       )}
+                      
+                      {mediaFiles.length > 4 && index === 3 && (
+                        <div style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontSize: '16px',
+                          fontWeight: '700'
+                        }}>
+                          +{mediaFiles.length - 3} more
+                        </div>
+                      )}
+
+                      <div style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '10px',
+                        fontWeight: '600',
+                        textTransform: 'uppercase'
+                      }}>
+                        {file.type}
+                      </div>
                     </div>
-                  );
-                })()}
+                  ))}
+                </div>
               </div>
             )}
 
@@ -1996,11 +1814,11 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                 </div>
               )}
 
-              {/* Title/Headline */}
+              {/* Title/Headline - FIXED BOLD STYLING */}
               {content.title && (
                 <h4 style={{
                   fontSize: '18px',
-                  fontWeight: '800',
+                  fontWeight: '800',  // Changed to 800 for extra bold
                   color: isDarkMode ? '#f8fafc' : '#111827',
                   margin: '0 0 12px 0',
                   lineHeight: '1.3'
