@@ -5641,10 +5641,13 @@ export default function ContentComponent() {
                 marginTop: '8px'
               }}>
                 * Platform links are for internal dashboard tracking only and will not appear in the public post
-        </div>
+              </div>
+          </div>
+        ))}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
 const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoading }: {
   posts: ContentPost[];
