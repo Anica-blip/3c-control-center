@@ -988,7 +988,8 @@ const EnhancedContentCreationForm = ({
         borderRadius: '8px',
         padding: '16px',
         marginBottom: '24px',
-        border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+        border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+        width: '85%'
       }}>
         <div style={{
           display: 'flex',
@@ -1001,6 +1002,1243 @@ const EnhancedContentCreationForm = ({
             fontSize: '16px',
             fontWeight: '600',
             color: isDarkMode ? '#f8fafc' : '#111827',
+            margin: '0'
+          }}>
+            Character Profile
+          </h3>
+        </div>
+        
+        <div style={{ display: 'grid', gap: '12px' }}>
+          <select
+            value={selections.characterProfile}
+            onChange={(e) => handleSelectionChange('characterProfile', e.target.value)}
+            disabled={isLoadingProfiles}
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: '#334155',
+              color: '#ffffff',
+              fontFamily: 'inherit',
+              opacity: isLoadingProfiles ? 0.7 : 1
+            }}
+          >
+            <option value="">
+              {isLoadingProfiles ? 'Loading character profiles...' : 'Select character profile...'}
+            </option>
+            {!isLoadingProfiles && characterProfiles.map(profile => (
+              <option key={profile.id} value={profile.id}>
+                {profile.name} ({profile.username}) - {profile.role}
+              </option>
+            ))}
+          </select>
+          
+          {/* Character Profile Preview */}
+          {selections.characterProfile && (
+            <div style={{
+              padding: '12px',
+              backgroundColor: isDarkMode ? '#1e293b' : 'white',
+              borderRadius: '6px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
+            }}>
+              {(() => {
+                const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
+                if (!selectedProfile) return null;
+                
+                return (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                  }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                      fontWeight: 'bold',
+                      border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+                      flexShrink: 0,
+                      overflow: 'hidden'
+                    }}>
+                      {selectedProfile.avatar_id ? (
+                        <img
+                          src={selectedProfile.avatar_id}
+                          alt={selectedProfile.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        selectedProfile.name.charAt(0)
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: isDarkMode ? '#f8fafc' : '#111827',
+                        marginBottom: '2px'
+                      }}>
+                        {selectedProfile.name}
+                      </div>
+                      <div style={{
+                        fontSize: '12px',
+                        color: isDarkMode ? '#94a3b8' : '#6b7280',
+                        marginBottom: '2px'
+                      }}>
+                        {selectedProfile.username}
+                      </div>
+                      <div style={{
+                        fontSize: '11px',
+                        color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                        fontWeight: '500'
+                      }}>
+                        {selectedProfile.role}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+          
+          <button
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
+              color: isDarkMode ? '#f8fafc' : '#374151',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: '500',
+              fontFamily: 'inherit',
+              alignSelf: 'flex-start'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = isDarkMode ? '#60a5fa' : '#3b82f6';
+              e.currentTarget.style.color = 'white';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#e5e7eb';
+              e.currentTarget.style.color = isDarkMode ? '#f8fafc' : '#374151';
+            }}
+            onClick={() => {
+              alert('Character Profile management available in Settings tab.\n\nTo add new profiles, go to Settings > Character Profiles');
+            }}
+          >
+            <Plus style={{ height: '16px', width: '16px' }} />
+            Manage Profiles
+          </button>
+        </div>
+      </div>
+
+      {/* Template Builder Style Selections - All Dropdowns Gray Background */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: '16px',
+        padding: '20px',
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #334155 0%, #475569 100%)' 
+          : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+        borderRadius: '8px',
+        border: `1px solid ${isDarkMode ? '#475569' : '#3b82f6'}`,
+        marginBottom: '24px',
+        width: '85%'
+      }}>
+        {/* Theme Selection */}
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '12px',
+            fontWeight: '600',
+            color: isDarkMode ? '#94a3b8' : '#1e40af',
+            marginBottom: '8px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            Theme/Label *
+          </label>
+          <select
+            value={selections.theme}
+            onChange={(e) => handleSelectionChange('theme', e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: '#334155',
+              color: '#ffffff',
+              fontFamily: 'inherit',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              backgroundSize: '16px',
+              paddingRight: '40px'
+            }}
+          >
+            <option value="">Select theme...</option>
+            <option value="news_alert">News Alert</option>
+            <option value="promotion">Promotion</option>
+            <option value="standard_post">Standard Post</option>
+            <option value="cta_quiz">CTA - Quiz</option>
+            <option value="cta_game">CTA - Game</option>
+            <option value="cta_puzzle">CTA - Puzzle</option>
+            <option value="cta_challenge">CTA - Challenge</option>
+            <option value="news">News</option>
+            <option value="blog">Blog</option>
+            <option value="tutorial_guide">Tutorial Guide</option>
+            <option value="course_tool">Course Tool</option>
+            <option value="assessment">Assessment</option>
+          </select>
+        </div>
+
+        {/* Audience Selection */}
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '12px',
+            fontWeight: '600',
+            color: isDarkMode ? '#bfdbfe' : '#1e40af',
+            marginBottom: '8px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            Target Audience *
+          </label>
+          <select
+            value={selections.audience}
+            onChange={(e) => handleSelectionChange('audience', e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: '#334155',
+              color: '#ffffff',
+              fontFamily: 'inherit',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              backgroundSize: '16px',
+              paddingRight: '40px'
+            }}
+          >
+            <option value="">Select audience...</option>
+            <option value="existing_members">Existing Members</option>
+            <option value="new_members">New Members</option>
+            <option value="persona_falcon">Persona FALCON</option>
+            <option value="persona_panther">Persona PANTHER</option>
+            <option value="persona_wolf">Persona WOLF</option>
+            <option value="persona_lion">Persona LION</option>
+            <option value="general_public">General Public</option>
+          </select>
+        </div>
+
+        {/* Media Type Selection */}
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '12px',
+            fontWeight: '600',
+            color: isDarkMode ? '#bfdbfe' : '#1e40af',
+            marginBottom: '8px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            Media Type *
+          </label>
+          <select
+            value={selections.mediaType}
+            onChange={(e) => handleSelectionChange('mediaType', e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: '#334155',
+              color: '#ffffff',
+              fontFamily: 'inherit',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              backgroundSize: '16px',
+              paddingRight: '40px'
+            }}
+          >
+            <option value="">Select media type...</option>
+            <option value="image">Image</option>
+            <option value="video">Video</option>
+            <option value="gifs">GIFs</option>
+            <option value="pdf">PDF</option>
+            <option value="interactive_media">Interactive Media</option>
+            <option value="url_link">URL Link</option>
+          </select>
+        </div>
+
+        {/* Template Type Selection */}
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '12px',
+            fontWeight: '600',
+            color: isDarkMode ? '#bfdbfe' : '#1e40af',
+            marginBottom: '8px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            Template Type *
+          </label>
+          <select
+            value={selections.templateType}
+            onChange={(e) => handleSelectionChange('templateType', e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: '#334155',
+              color: '#ffffff',
+              fontFamily: 'inherit',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              backgroundSize: '16px',
+              paddingRight: '40px'
+            }}
+          >
+            <option value="">Select template type...</option>
+            <option value="social_media">Social Media</option>
+            <option value="presentation">Presentation</option>
+            <option value="video_message">Video Message</option>
+            <option value="anica_chat">Anica Chat</option>
+            <option value="blog_posts">Blog Posts</option>
+            <option value="news_article">News Article</option>
+            <option value="newsletter">Newsletter</option>
+            <option value="email_templates">Email Templates</option>
+            <option value="custom_templates">Custom Templates</option>
+          </select>
+        </div>
+  
+        {/* Voice Style Selection */}
+        <div>
+          <label style={{
+           display: 'block',
+           fontSize: '12px',
+           fontWeight: '600',
+           color: isDarkMode ? '#bfdbfe' : '#1e40af',
+           marginBottom: '8px',
+           textTransform: 'uppercase',
+           letterSpacing: '0.05em'
+         }}>
+           Voice Style *
+         </label>
+         <select
+           value={selections.voiceStyle}
+           onChange={(e) => handleSelectionChange('voiceStyle', e.target.value)}
+           style={{
+             width: '100%',
+             padding: '10px 12px',
+             border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+             borderRadius: '6px',
+             fontSize: '14px',
+             backgroundColor: '#334155',
+             color: '#ffffff',
+             fontFamily: 'inherit',
+             appearance: 'none',
+             backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+             backgroundRepeat: 'no-repeat',
+             backgroundPosition: 'right 12px center',
+             backgroundSize: '16px',
+             paddingRight: '40px'
+           }}
+         >
+           <option value="">Select voice style...</option>
+           <option value="casual">Casual</option>
+           <option value="friendly">Friendly</option>
+           <option value="professional">Professional</option>
+           <option value="creative">Creative</option>
+          </select>
+        </div>
+
+        {/* Platform Selection (Optional - for content optimization) */}
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '12px',
+            fontWeight: '600',
+            color: isDarkMode ? '#bfdbfe' : '#1e40af',
+            marginBottom: '8px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            Optimize For Platform
+          </label>
+          <select
+            value={selections.platform}
+            onChange={(e) => handleSelectionChange('platform', e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: '#334155',
+              color: '#ffffff',
+              fontFamily: 'inherit',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              backgroundSize: '16px',
+              paddingRight: '40px'
+            }}
+          >
+            <option value="">Generic (no optimization)...</option>
+            <option value="instagram">Instagram</option>
+            <option value="facebook">Facebook</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="twitter">Twitter/X</option>
+            <option value="youtube">YouTube</option>
+            <option value="tiktok">TikTok</option>
+            <option value="telegram">Telegram</option>
+            <option value="pinterest">Pinterest</option>
+            <option value="whatsapp">WhatsApp</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Platform-Specific Field Information */}
+      {fieldConfig && (
+        <div style={{
+          backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
+          border: `1px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '24px',
+          width: '85%'
+        }}>
+          <h4 style={{
+            fontSize: '14px',
+            fontWeight: '600',
+            color: isDarkMode ? '#60a5fa' : '#1e40af',
+            margin: '0 0 8px 0'
+          }}>
+            Platform Optimization: {selections.platform?.toUpperCase()}
+          </h4>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+            gap: '12px'
+          }}>
+            {fieldConfig.title?.show && (
+              <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#1e40af' }}>
+                Title: {fieldConfig.title.maxLength} chars
+              </div>
+            )}
+            <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#1e40af' }}>
+              Description: {fieldConfig.description.maxLength} chars
+            </div>
+            <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#1e40af' }}>
+              Hashtags: {fieldConfig.hashtags.maxCount} max ({fieldConfig.hashtags.recommended} recommended)
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Media Upload - 85% Width */}
+      <div style={{ marginBottom: '24px', width: '85%' }}>
+        <label style={{
+          display: 'block',
+          fontSize: '16px',
+          fontWeight: '600',
+          color: isDarkMode ? '#f8fafc' : '#111827',
+          marginBottom: '12px'
+        }}>
+          Media Upload
+        </label>
+        
+        {/* File Upload Area */}
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          style={{
+            border: `2px dashed ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+            borderRadius: '8px',
+            padding: '32px',
+            textAlign: 'center',
+            cursor: 'pointer',
+            backgroundColor: isDarkMode ? '#1e3a8a20' : '#f8fafc',
+            transition: 'all 0.3s ease',
+            width: '100%',
+            marginBottom: '16px'
+          }}
+        >
+          <Upload style={{
+            height: '32px',
+            width: '32px',
+            color: isDarkMode ? '#60a5fa' : '#3b82f6',
+            margin: '0 auto 12px auto',
+            display: 'block'
+          }} />
+          <h3 style={{
+            fontSize: '16px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            margin: '0 0 6px 0'
+          }}>
+            Upload your media files
+          </h3>
+          <p style={{
+            fontSize: '14px',
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            margin: '0 0 4px 0'
+          }}>
+            Drop files here or click to browse
+          </p>
+          <p style={{
+            fontSize: '12px',
+            color: isDarkMode ? '#64748b' : '#9ca3af',
+            margin: '0'
+          }}>
+            Support for Images, Videos, GIFs, PDFs, and Interactive Media (up to 100MB per file)
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*,video/*,.pdf,.gif,.html"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              if (e.target.files) {
+                // Handle large files - check size before processing
+                const maxSize = 100 * 1024 * 1024; // 100MB limit
+                const oversizedFiles: string[] = [];
+                
+                Array.from(e.target.files).forEach(file => {
+                  if (file.size > maxSize) {
+                    oversizedFiles.push(`${file.name} (${Math.round(file.size / 1024 / 1024)}MB)`);
+                  }
+                });
+                
+                if (oversizedFiles.length > 0) {
+                  alert(`The following files are too large (>100MB):\n${oversizedFiles.join('\n')}\n\nPlease compress or choose smaller files.`);
+                  return;
+                }
+                
+                handleFileUpload(e.target.files);
+              }
+            }}
+          />
+        </div>
+
+        {/* URL Input Section */}
+        <div style={{
+          backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
+          border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '16px'
+        }}>
+          <h4 style={{
+            fontSize: '14px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            margin: '0 0 12px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <ExternalLink style={{ height: '16px', width: '16px' }} />
+            Add URL Links
+          </h4>
+          
+          <div style={{ display: 'grid', gap: '12px' }}>
+            <input
+              type="text"
+              value={urlTitle}
+              onChange={(e) => setUrlTitle(e.target.value)}
+              placeholder="Link title"
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '6px',
+                fontSize: '14px',
+                backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                color: isDarkMode ? '#f8fafc' : '#111827',
+                fontFamily: 'inherit'
+              }}
+            />
+            
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="url"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="https://example.com"
+                style={{
+                  flex: 1,
+                  padding: '10px 12px',
+                  border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                  color: isDarkMode ? '#f8fafc' : '#111827',
+                  fontFamily: 'inherit'
+                }}
+              />
+              <button
+                onClick={handleAddUrl}
+                disabled={!urlInput.trim()}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: urlInput.trim() ? (isDarkMode ? '#60a5fa' : '#3b82f6') : (isDarkMode ? '#475569' : '#d1d5db'),
+                  color: urlInput.trim() ? 'white' : (isDarkMode ? '#64748b' : '#9ca3af'),
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: urlInput.trim() ? 'pointer' : 'not-allowed',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  fontFamily: 'inherit'
+                }}
+              >
+                Add URL
+              </button>
+            </div>
+          </div>
+          
+          <div style={{
+            fontSize: '12px',
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            marginTop: '8px'
+          }}>
+            Add interactive links, external tools, or web resources to your post
+          </div>
+        </div>
+
+        {/* Uploaded Files and URLs */}
+        {mediaFiles.length > 0 && (
+          <div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '12px'
+            }}>
+              <h4 style={{
+                fontSize: '14px',
+                fontWeight: '600',
+                color: isDarkMode ? '#f8fafc' : '#111827',
+                margin: '0'
+              }}>
+                Added Media & Links
+              </h4>
+              <span style={{
+                padding: '4px 8px',
+                backgroundColor: isDarkMode ? '#60a5fa' : '#3b82f6',
+                color: 'white',
+                fontSize: '12px',
+                fontWeight: '600',
+                borderRadius: '12px'
+              }}>
+                {mediaFiles.length} items
+              </span>
+            </div>
+            <div style={{ display: 'grid', gap: '8px' }}>
+              {mediaFiles.map((file) => (
+                <div key={file.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px',
+                  backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
+                  borderRadius: '6px',
+                  border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                    <div style={{
+                      padding: '8px',
+                      backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                      borderRadius: '6px',
+                      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                    }}>
+                      {file.type === 'interactive' && file.size === 0 ? (
+                        <ExternalLink style={{ height: '16px', width: '16px', color: '#8b5cf6' }} />
+                      ) : (
+                        getFileIcon(file.type)
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: isDarkMode ? '#f8fafc' : '#111827',
+                        marginBottom: '2px'
+                      }}>
+                        {file.name}
+                      </div>
+                      <div style={{
+                        fontSize: '11px',
+                        color: isDarkMode ? '#94a3b8' : '#6b7280'
+                      }}>
+                        {file.size === 0 ? (
+                          <span 
+                            style={{ 
+                              color: isDarkMode ? '#8b5cf6' : '#7c3aed',
+                              wordBreak: 'break-all',
+                              display: 'block'
+                            }}
+                            title={file.url}
+                          >
+                            {truncateUrl(file.url)}
+                          </span>
+                        ) : (
+                          formatFileSize(file.size)
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleRemoveFile(file.id)}
+                    style={{
+                      padding: '6px',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      color: isDarkMode ? '#94a3b8' : '#6b7280',
+                      marginLeft: '8px',
+                      flexShrink: 0
+                    }}
+                  >
+                    <X style={{ height: '16px', width: '16px' }} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Content Fields - 85% Width to Match Media Upload */}
+      <div style={{ 
+        display: 'grid', 
+        gap: '16px', 
+        marginBottom: '24px',
+        width: '85%'
+      }}>
+        {/* Title Field */}
+        {(!fieldConfig || fieldConfig.title?.show !== false) && (
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '16px',
+              fontWeight: '600',
+              color: isDarkMode ? '#f8fafc' : '#111827',
+              marginBottom: '8px'
+            }}>
+              Title/Headline
+            </label>
+            
+            {/* Title Formatting Toolbar */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px',
+              backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+              borderRadius: '6px 6px 0 0',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderBottom: 'none'
+            }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const input = document.querySelector('input[placeholder*="Enter compelling title"]') as HTMLInputElement;
+                  if (input) {
+                    const start = input.selectionStart || 0;
+                    const end = input.selectionEnd || 0;
+                    const selectedText = input.value.substring(start, end);
+                    const newText = input.value.substring(0, start) + `**${selectedText}**` + input.value.substring(end);
+                    setContent(prev => ({ ...prev, title: newText }));
+                    // Set cursor position after the formatting
+                    setTimeout(() => {
+                      input.setSelectionRange(start + 2 + selectedText.length + 2, start + 2 + selectedText.length + 2);
+                    }, 0);
+                  }
+                }}
+                style={{
+                  padding: '6px 10px',
+                  backgroundColor: isDarkMode ? '#334155' : 'white',
+                  border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  color: isDarkMode ? '#f8fafc' : '#111827'
+                }}
+                title="Bold (wrap selected text with **)"
+              >
+                B
+              </button>
+              
+              <div style={{
+                fontSize: '12px',
+                color: isDarkMode ? '#94a3b8' : '#6b7280',
+                marginLeft: 'auto'
+              }}>
+                UK English | Formatting: **bold**
+              </div>
+            </div>
+            
+            <input
+              type="text"
+              value={content.title}
+              onChange={(e) => setContent(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="Enter compelling title... (UK English)"
+              maxLength={fieldConfig?.title?.maxLength || 150}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '0 0 8px 8px',
+                fontSize: '14px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                color: '#000000', // Black font for posts as requested
+                fontFamily: 'inherit',
+                borderTop: 'none'
+              }}
+            />
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: '4px',
+              fontSize: '12px',
+              color: isDarkMode ? '#94a3b8' : '#6b7280'
+            }}>
+              <span>Create an attention-grabbing headline (UK English)</span>
+              <span>{content.title.length}/{fieldConfig?.title?.maxLength || 150}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Description Field with Enhanced Features */}
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '16px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            marginBottom: '8px'
+          }}>
+            Post Description *
+          </label>
+          
+          {/* Formatting Toolbar */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px',
+            backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+            borderRadius: '6px 6px 0 0',
+            border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+            borderBottom: 'none'
+          }}>
+            <button
+              type="button"
+              onClick={() => {
+                const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
+                if (textarea) {
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+                  const selectedText = textarea.value.substring(start, end);
+                  const newText = textarea.value.substring(0, start) + `**${selectedText}**` + textarea.value.substring(end);
+                  setContent(prev => ({ ...prev, description: newText }));
+                }
+              }}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+              title="Bold (wrap selected text with **)"
+            >
+              B
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => {
+                const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
+                if (textarea) {
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+                  const selectedText = textarea.value.substring(start, end);
+                  const newText = textarea.value.substring(0, start) + `*${selectedText}*` + textarea.value.substring(end);
+                  setContent(prev => ({ ...prev, description: newText }));
+                }
+              }}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontStyle: 'italic',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+              title="Italic (wrap selected text with *)"
+            >
+              I
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => {
+                const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
+                if (textarea) {
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+                  const selectedText = textarea.value.substring(start, end);
+                  const newText = textarea.value.substring(0, start) + `__${selectedText}__` + textarea.value.substring(end);
+                  setContent(prev => ({ ...prev, description: newText }));
+                }
+              }}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                textDecoration: 'underline',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+              title="Underline (wrap selected text with __)"
+            >
+              U
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => {
+                const url = prompt('Enter URL:');
+                const linkText = prompt('Enter link text (or leave empty to use URL):');
+                if (url) {
+                  const displayText = linkText || url;
+                  const linkMarkdown = `[${displayText}](${url})`;
+                  setContent(prev => ({ ...prev, description: prev.description + linkMarkdown }));
+                }
+              }}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+              title="Add Link"
+            >
+              🔗
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => {
+                const commonEmojis = ['😀', '😊', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙌', '💡', '📈', '📊'];
+                const emoji = prompt(`Choose an emoji:\n${commonEmojis.join(' ')}\n\nOr enter any emoji:`);
+                if (emoji) {
+                  setContent(prev => ({ ...prev, description: prev.description + emoji }));
+                }
+              }}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+              title="Add Emoji"
+            >
+              😊
+            </button>
+            
+            <div style={{
+              fontSize: '12px',
+              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              marginLeft: 'auto'
+            }}>
+              UK English | Formatting: **bold** *italic* __underline__ [link](url)
+            </div>
+          </div>
+          
+          <textarea
+            value={content.description}
+            onChange={(e) => setContent(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="Write your post content here... (UK English)"
+            maxLength={fieldConfig?.description?.maxLength || 2200}
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '0 0 8px 8px',
+              fontSize: '14px',
+              backgroundColor: isDarkMode ? '#334155' : 'white',
+              color: '#000000', // Black font for posts as requested
+              resize: 'vertical',
+              minHeight: '120px',
+              fontFamily: 'inherit',
+              lineHeight: '1.4', // Enhanced line spacing as requested
+              borderTop: 'none'
+            }}
+          />
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: '4px',
+            fontSize: '12px',
+            color: content.description.length > (fieldConfig?.description?.maxLength || 2200) * 0.9 
+              ? '#ef4444' 
+              : (isDarkMode ? '#94a3b8' : '#6b7280')
+          }}>
+            <span>Provide engaging content that matches your theme and brand voice (UK English)</span>
+            <span>{content.description.length}/{fieldConfig?.description?.maxLength || 2200}</span>
+          </div>
+        </div>
+
+        {/* Hashtags Field */}
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '16px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            marginBottom: '8px'
+          }}>
+            Hashtags
+          </label>
+          <div style={{
+            backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
+            border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+            borderRadius: '8px',
+            padding: '16px'
+          }}>
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '12px'
+            }}>
+              <input
+                type="text"
+                value={hashtagInput}
+                onChange={(e) => setHashtagInput(e.target.value)}
+                placeholder="Add hashtags (press Enter)"
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddHashtag())}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                  color: isDarkMode ? '#f8fafc' : '#111827',
+                  fontFamily: 'inherit'
+                }}
+              />
+              <button
+                onClick={handleAddHashtag}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: isDarkMode ? '#60a5fa' : '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontFamily: 'inherit'
+                }}
+              >
+                Add
+              </button>
+            </div>
+            
+            {/* Hashtag Display */}
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '8px',
+              minHeight: '40px',
+              padding: '8px',
+              backgroundColor: isDarkMode ? '#1e293b' : 'white',
+              borderRadius: '6px',
+              border: `1px dashed ${isDarkMode ? '#475569' : '#d1d5db'}`
+            }}>
+              {content.hashtags.map((tag) => (
+                <div key={tag} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
+                  color: isDarkMode ? '#60a5fa' : '#1e40af',
+                  padding: '4px 8px',
+                  borderRadius: '16px',
+                  fontSize: '12px',
+                  fontWeight: '500'
+                }}>
+                  #{tag}
+                  <button
+                    onClick={() => handleRemoveHashtag(tag)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'inherit',
+                      cursor: 'pointer',
+                      padding: '0',
+                      fontSize: '14px'
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: '8px',
+              fontSize: '12px',
+              color: isDarkMode ? '#94a3b8' : '#6b7280'
+            }}>
+              <span>Use relevant hashtags to increase discoverability</span>
+              <span style={{
+                color: content.hashtags.length > (fieldConfig?.hashtags?.maxCount || 30) * 0.9 
+                  ? '#ef4444' 
+                  : (isDarkMode ? '#94a3b8' : '#6b7280')
+              }}>
+                {content.hashtags.length}/{fieldConfig?.hashtags?.maxCount || 30}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Keywords Field */}
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '16px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            marginBottom: '8px'
+          }}>
+            SEO Keywords
+          </label>
+          <input
+            type="text"
+            value={content.keywords}
+            onChange={(e) => setContent(prev => ({ ...prev, keywords: e.target.value }))}
+            placeholder="Enter relevant keywords..."
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '8px',
+              fontSize: '14px',
+              backgroundColor: isDarkMode ? '#334155' : 'white',
+              color: isDarkMode ? '#f8fafc' : '#111827',
+              fontFamily: 'inherit'
+            }}
+          />
+          <div style={{
+            fontSize: '12px',
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            marginTop: '4px'
+          }}>
+            Add SEO keywords for better reach (optional)
+          </div>
+        </div>
+
+        {/* Call to Action Field */}
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '16px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            marginBottom: '8px'
+          }}>
+            Call to Action
+          </label>
+          <input
+            type="text"
+            value={content.cta}
+            onChange={(e) => setContent(prev => ({ ...prev, cta: e.target.value }))}
+            placeholder="What action should users take?"
+            maxLength={100}
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '8px',
+              fontSize: '14px',
+              backgroundColor: isDarkMode ? '#334155' : 'white',
+              color: isDarkMode ? '#f8fafc' : '#111827',
+              fontFamily: 'inherit'
+            }}
+          />
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: '4px',
+            fontSize: '12px',
+            color: isDarkMode ? '#94a3b8' : '#6b7280'
+          }}>
+            <span>Clear action you want your audience to take</span>
+            <span>{content.cta.length}/100</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Platform Selection for Publishing */}
+      <div style={{ marginBottom: '24px', width: '85%' }}>
+        <label style={{
+          display: 'block',
+          fontSize: '16px',
+          fontWeight: '600',
+          color: isDarkMode ? '#f8fafc' : '#111827',
           marginBottom: '12px'
         }}>
           Select Publishing Platforms
