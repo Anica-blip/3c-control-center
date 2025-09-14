@@ -5566,69 +5566,68 @@ export default function ContentComponent() {
             </div>
           </div>
 
-      {/* Character Profile Section - Enhanced with Supabase Integration */}
+{/* Character Profile Section - Enhanced with Supabase Integration */}
       <div style={{
-        backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
+        backgroundColor: isDarkMode ? '#334155' : '#f8fafc'
+      }}>
+        {selectedPlatforms.length > 0 && (
+          <div style={{
+            marginTop: '20px',
+            padding: '16px',
+            backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
+            borderRadius: '8px',
+            border: `1px dashed ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
+          }}>
             <div style={{
-              marginTop: '20px',
-              padding: '16px',
-              backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
-              borderRadius: '8px',
-              border: `1px dashed ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px'
             }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '12px'
+              <Settings style={{ height: '16px', width: '16px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
+              <span style={{
+                fontSize: '14px',
+                fontWeight: '600',
+                color: isDarkMode ? '#60a5fa' : '#3b82f6'
               }}>
-                <Settings style={{ height: '16px', width: '16px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
-                <span style={{
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: isDarkMode ? '#60a5fa' : '#3b82f6'
-                }}>
-                  Distribution Settings (Internal Dashboard Only)
-                </span>
-              </div>
-              <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '8px'
-              }}>
-                {selectedPlatforms.map(platformId => {
-                  const platform = platforms.find(p => p.id === platformId);
-                  if (!platform) return null;
-                  
-                  return (
-                    <div key={platformId} style={{
-                      padding: '6px 12px',
-                      backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                      border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280'
-                    }}>
-                      {platform.name}
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{
-                fontSize: '11px',
-                color: isDarkMode ? '#64748b' : '#9ca3af',
-                fontStyle: 'italic',
-                marginTop: '8px'
-              }}>
-                * Platform links are for internal dashboard tracking only and will not appear in the public post
-              </div>
+                Distribution Settings (Internal Dashboard Only)
+              </span>
             </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '8px'
+            }}>
+              {selectedPlatforms.map(platformId => {
+                const platform = platforms.find(p => p.id === platformId);
+                if (!platform) return null;
+                
+                return (
+                  <div key={platformId} style={{
+                    padding: '6px 12px',
+                    backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                    border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                    borderRadius: '16px',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    color: isDarkMode ? '#94a3b8' : '#6b7280'
+                  }}>
+                    {platform.name}
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{
+              fontSize: '11px',
+              color: isDarkMode ? '#64748b' : '#9ca3af',
+              fontStyle: 'italic',
+              marginTop: '8px'
+            }}>
+              * Platform links are for internal dashboard tracking only and will not appear in the public post
+            </div>
+          </div>
+        )}
+      </div>
 
 const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoading }: {
   posts: ContentPost[];
