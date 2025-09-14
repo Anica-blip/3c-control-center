@@ -1001,71 +1001,115 @@ const EnhancedContentCreationForm = ({
             fontSize: '16px',
             fontWeight: '600',
             color: isDarkMode ? '#f8fafc' : '#111827',
-          marginBottom: '12px'
-        }}>
-          Select Publishing Platforms
-        </label>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '12px'
-        }}>
-          {activePlatforms.map((platform) => (
-            <label
-              key={platform.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px',
-                border: selectedPlatforms.includes(platform.id) 
-                  ? `1px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}` 
-                  : `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '8px',
-                cursor: 'pointer',
-                backgroundColor: selectedPlatforms.includes(platform.id) 
-                  ? (isDarkMode ? '#1e3a8a30' : '#dbeafe') 
-                  : '#334155',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={selectedPlatforms.includes(platform.id)}
-                onChange={() => handlePlatformToggle(platform.id)}
-                style={{
-                  height: '16px',
-                  width: '16px',
-                  accentColor: isDarkMode ? '#60a5fa' : '#3b82f6'
-                }}
-              />
-              <div style={{ flex: 1 }}>
-                <div style={{
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: isDarkMode ? '#f8fafc' : '#111827',
-                  marginBottom: '2px'
-                }}>
-                  {platform.name}
-                </div>
-                {platform.isDefault && (
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '1px 6px',
-                    fontSize: '10px',
-                    fontWeight: '600',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    borderRadius: '8px'
-                  }}>
-                    Default
-                  </span>
-                )}
-              </div>
-            </label>
-          ))}
+            margin: '0'
+          }}>
+            Character Profile
+          </h3>
         </div>
-      </div>
+        
+        <div style={{ display: 'grid', gap: '12px' }}>
+          <select
+            value={selections.characterProfile}
+            onChange={(e) => handleSelectionChange('characterProfile', e.target.value)}
+            disabled={isLoadingProfiles}
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: '#334155',
+              color: '#ffffff',
+              fontFamily: 'inherit',
+              opacity: isLoadingProfiles ? 0.7 : 1
+            }}
+          >
+            <option value="">
+              {isLoadingProfiles ? 'Loading character profiles...' : 'Select character profile...'}
+            </option>
+            {!isLoadingProfiles && characterProfiles.map(profile => (
+              <option key={profile.id} value={profile.id}>
+                {profile.name} ({profile.username}) - {profile.role}
+              </option>
+            ))}
+          </select>
+          
+          {/* Character Profile Preview */}
+          {selections.characterProfile && (
+            <div style={{
+              padding: '12px',
+              backgroundColor: isDarkMode ? '#1e293b' : 'white',
+              borderRadius: '6px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
+            }}>
+              {(() => {
+                const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
+                if (!selectedProfile) return null;
+                
+                return (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                  }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                      fontWeight: 'bold',
+                      border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+                      flexShrink: 0,
+                      overflow: 'hidden'
+                    }}>
+                      {selectedProfile.avatar_id ? (
+                        <img
+                          src={selectedProfile.avatar_id}
+                          alt={selectedProfile.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        selectedProfile.name.charAt(0)
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: isDarkMode ? '#f8fafc' : '#111827',
+                        marginBottom: '2px'
+                      }}>
+                        {selectedProfile.name}
+                      </div>
+                      <div style={{
+                        fontSize: '12px',
+                        color: isDarkMode ? '#94a3b8' : '#6b7280',
+                        marginBottom: '2px'
+                      }}>
+                        {selectedProfile.username}
+                      </div>
+                      <div style={{
+                        fontSize: '11px',
+                        color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                        fontWeight: '500'
+                      }}>
+                        {selectedProfile.role}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
           
           <button
             style={{
