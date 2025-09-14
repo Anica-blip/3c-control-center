@@ -71,64 +71,64 @@ export default function ContentComponent() {
     }
   };
 
-const loadPlatformsData = async () => {
-  if (!supabase) {
-    console.warn('Supabase not configured. Using mock platform data.');
-    setPlatforms([
-      { id: '1', name: 'Instagram', url: 'https://instagram.com', isActive: true, isDefault: true },
-      { id: '2', name: 'Facebook', url: 'https://facebook.com', isActive: true, isDefault: false },
-      { id: '3', name: 'LinkedIn', url: 'https://linkedin.com', isActive: true, isDefault: false },
-      { id: '4', name: 'Twitter/X', url: 'https://x.com', isActive: true, isDefault: false },
-      { id: '5', name: 'YouTube', url: 'https://youtube.com', isActive: true, isDefault: false },
-      { id: '6', name: 'TikTok', url: 'https://tiktok.com', isActive: true, isDefault: false },
-      { id: '7', name: 'Pinterest', url: 'https://pinterest.com', isActive: true, isDefault: false },
-      { id: '8', name: 'WhatsApp', url: 'https://whatsapp.com', isActive: true, isDefault: false }
-    ]);
-    return;
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('social_platforms_content')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    
-    const platformData = (data || []).map(item => ({
-      id: item.id.toString(),
-      name: item.display_name || item.name,
-      url: item.url || '',
-      isActive: item.is_active,
-      isDefault: item.is_default || false
-    }));
-    
-    // Add fallback platforms if Supabase is empty
-    if (platformData.length === 0) {
+  const loadPlatformsData = async () => {
+    if (!supabase) {
+      console.warn('Supabase not configured. Using mock platform data.');
       setPlatforms([
         { id: '1', name: 'Instagram', url: 'https://instagram.com', isActive: true, isDefault: true },
         { id: '2', name: 'Facebook', url: 'https://facebook.com', isActive: true, isDefault: false },
         { id: '3', name: 'LinkedIn', url: 'https://linkedin.com', isActive: true, isDefault: false },
         { id: '4', name: 'Twitter/X', url: 'https://x.com', isActive: true, isDefault: false },
         { id: '5', name: 'YouTube', url: 'https://youtube.com', isActive: true, isDefault: false },
-        { id: '6', name: 'TikTok', url: 'https://tiktok.com', isActive: true, isDefault: false }
+        { id: '6', name: 'TikTok', url: 'https://tiktok.com', isActive: true, isDefault: false },
+        { id: '7', name: 'Pinterest', url: 'https://pinterest.com', isActive: true, isDefault: false },
+        { id: '8', name: 'WhatsApp', url: 'https://whatsapp.com', isActive: true, isDefault: false }
       ]);
-    } else {
-      setPlatforms(platformData);
+      return;
     }
-  } catch (error) {
-    console.error('Error loading platforms:', error);
-    // Fallback platforms
-    setPlatforms([
-      { id: '1', name: 'Instagram', url: 'https://instagram.com', isActive: true, isDefault: true },
-      { id: '2', name: 'Facebook', url: 'https://facebook.com', isActive: true, isDefault: false },
-      { id: '3', name: 'LinkedIn', url: 'https://linkedin.com', isActive: true, isDefault: false },
-      { id: '4', name: 'Twitter/X', url: 'https://x.com', isActive: true, isDefault: false },
-      { id: '5', name: 'YouTube', url: 'https://youtube.com', isActive: true, isDefault: false }
-    ]);
-  }
-};
+
+    try {
+      const { data, error } = await supabase
+        .from('social_platforms_content')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      const platformData = (data || []).map(item => ({
+        id: item.id.toString(),
+        name: item.display_name || item.name,
+        url: item.url || '',
+        isActive: item.is_active,
+        isDefault: item.is_default || false
+      }));
+      
+      // Add fallback platforms if Supabase is empty
+      if (platformData.length === 0) {
+        setPlatforms([
+          { id: '1', name: 'Instagram', url: 'https://instagram.com', isActive: true, isDefault: true },
+          { id: '2', name: 'Facebook', url: 'https://facebook.com', isActive: true, isDefault: false },
+          { id: '3', name: 'LinkedIn', url: 'https://linkedin.com', isActive: true, isDefault: false },
+          { id: '4', name: 'Twitter/X', url: 'https://x.com', isActive: true, isDefault: false },
+          { id: '5', name: 'YouTube', url: 'https://youtube.com', isActive: true, isDefault: false },
+          { id: '6', name: 'TikTok', url: 'https://tiktok.com', isActive: true, isDefault: false }
+        ]);
+      } else {
+        setPlatforms(platformData);
+      }
+    } catch (error) {
+      console.error('Error loading platforms:', error);
+      // Fallback platforms
+      setPlatforms([
+        { id: '1', name: 'Instagram', url: 'https://instagram.com', isActive: true, isDefault: true },
+        { id: '2', name: 'Facebook', url: 'https://facebook.com', isActive: true, isDefault: false },
+        { id: '3', name: 'LinkedIn', url: 'https://linkedin.com', isActive: true, isDefault: false },
+        { id: '4', name: 'Twitter/X', url: 'https://x.com', isActive: true, isDefault: false },
+        { id: '5', name: 'YouTube', url: 'https://youtube.com', isActive: true, isDefault: false }
+      ]);
+    }
+  };
 
   const loadTelegramChannels = async () => {
     if (!supabase) {
