@@ -5548,26 +5548,6 @@ export default function ContentComponent() {
                 </div>
               )}
 
-              {/* d) Hashtags */}
-              {content.hashtags.length > 0 && (
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '6px',
-                  marginBottom: '16px'
-                }}>
-                  {content.hashtags.map((tag) => (
-                    <span key={tag} style={{
-                      fontSize: '14px',
-                      color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                      fontWeight: '500'
-                    }}>
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-
               {/* e) Call to Action */}
               {content.cta && (
                 <div style={{
@@ -5648,7 +5628,6 @@ export default function ContentComponent() {
       )}
     </div>
   );
-};
 
 const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoading }: {
   posts: ContentPost[];
