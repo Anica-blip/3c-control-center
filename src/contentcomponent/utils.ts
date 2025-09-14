@@ -56,7 +56,20 @@ export const generateTextPreviewImage = (title: string, description: string): st
   }
 };
 
-// Internal URL Preview System with AllOrigins (CORS-free)
+// Validate if image URL is accessible
+const validateImageUrl = (url: string): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = url;
+    
+    // Timeout after 5 seconds
+    setTimeout(() => resolve(false), 5000);
+  });
+};
+
+// Enhanced URL Preview System with AllOrigins (CORS-free)
 export const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> => {
   try {
     // Validate URL first
@@ -71,14 +84,30 @@ export const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPrevie
       siteName: hostname
     };
 
-    // Domain-specific previews FIRST (keep existing logic)
+    // Domain-specific previews FIRST with enhanced image handling
     if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
       preview.title = 'YouTube Video';
       preview.description = 'Video content from YouTube';
       preview.siteName = 'YouTube';
       const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
       if (videoIdMatch) {
-        preview.image = `https://img.youtube.com/vi/${videoIdMatch[1]}/maxresdefault.jpg`;
+        const videoId = videoIdMatch[1];
+        // Try multiple YouTube thumbnail qualities
+        const thumbnailUrls = [
+          `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+          `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+          `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+          `https://img.youtube.com/vi/${videoId}/default.jpg`
+        ];
+        
+        // Test each thumbnail URL until we find one that works
+        for (const thumbUrl of thumbnailUrls) {
+          const isValid = await validateImageUrl(thumbUrl);
+          if (isValid) {
+            preview.image = thumbUrl;
+            break;
+          }
+        }
       }
       return preview;
     }
@@ -95,6 +124,7 @@ export const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPrevie
       preview.title = 'Twitter/X Post';
       preview.description = 'Social media post';
       preview.siteName = 'Twitter/X';
+      preview.image = 'https://abs.twimg.com/icons/apple-touch-icon-192x192.png';
       return preview;
     }
     
@@ -102,6 +132,23 @@ export const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPrevie
       preview.title = 'LinkedIn Post';
       preview.description = 'Professional social media content';
       preview.siteName = 'LinkedIn';
+      preview.image = 'https://static.licdn.com/sc/h/al2o9zrvru7aqj8e1x2rzsrca';
+      return preview;
+    }
+
+    if (hostname.includes('instagram.com')) {
+      preview.title = 'Instagram Post';
+      preview.description = 'Photo and video sharing';
+      preview.siteName = 'Instagram';
+      preview.image = 'https://static.cdninstagram.com/rsrc.php/v3/yt/r/30PrGfR3xhI.png';
+      return preview;
+    }
+
+    if (hostname.includes('facebook.com')) {
+      preview.title = 'Facebook Post';
+      preview.description = 'Social media content';
+      preview.siteName = 'Facebook';
+      preview.image = 'https://static.xx.fbcdn.net/rsrc.php/yo/r/iRmz9lCMBD2.ico';
       return preview;
     }
 
@@ -115,52 +162,98 @@ export const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPrevie
       return preview;
     }
 
-    // For all other websites - use AllOrigins to bypass CORS
+    // For all other websites - use AllOrigins to bypass CORS with enhanced error handling
     try {
+      console.log('Fetching URL preview for:', hostname);
+      
       const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+      
+      if (!response.ok) {
+        throw new Error(`AllOrigins request failed: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       if (data.contents) {
         const doc = new DOMParser().parseFromString(data.contents, 'text/html');
         
-        // Extract Open Graph and meta tags
-        const title = doc.querySelector("meta[property='og:title']")?.getAttribute('content')
-          || doc.querySelector("title")?.textContent
-          || 'External Link';
-          
-        const description = doc.querySelector("meta[property='og:description']")?.getAttribute('content')
-          || doc.querySelector("meta[name='description']")?.getAttribute('content')
-          || 'Click to visit';
-          
-        const image = doc.querySelector("meta[property='og:image']")?.getAttribute('content')
-          || null;
-          
-        const siteName = doc.querySelector("meta[property='og:site_name']")?.getAttribute('content')
-          || hostname;
+        // Extract Open Graph and meta tags with fallbacks
+        const ogTitle = doc.querySelector("meta[property='og:title']")?.getAttribute('content');
+        const pageTitle = doc.querySelector("title")?.textContent;
+        const title = ogTitle || pageTitle || 'External Link';
+        
+        const ogDescription = doc.querySelector("meta[property='og:description']")?.getAttribute('content');
+        const metaDescription = doc.querySelector("meta[name='description']")?.getAttribute('content');
+        const description = ogDescription || metaDescription || 'Click to visit';
+        
+        const ogImage = doc.querySelector("meta[property='og:image']")?.getAttribute('content');
+        const twitterImage = doc.querySelector("meta[name='twitter:image']")?.getAttribute('content');
+        const linkImage = doc.querySelector("link[rel='image_src']")?.getAttribute('href');
+        
+        const ogSiteName = doc.querySelector("meta[property='og:site_name']")?.getAttribute('content');
+        const siteName = ogSiteName || hostname;
 
-        preview.title = title.trim();
-        preview.description = description.trim();
+        // Update preview with extracted data
+        preview.title = title.trim().substring(0, 100); // Limit title length
+        preview.description = description.trim().substring(0, 200); // Limit description length
         preview.siteName = siteName;
         
-        if (image && !image.startsWith('http')) {
-          preview.image = new URL(image, url).href;
+        // Handle image URL with validation
+        let imageUrl = ogImage || twitterImage || linkImage;
+        
+        if (imageUrl) {
+          // Convert relative URLs to absolute
+          if (!imageUrl.startsWith('http')) {
+            try {
+              imageUrl = new URL(imageUrl, url).href;
+            } catch (urlError) {
+              console.warn('Failed to convert relative image URL:', imageUrl);
+              imageUrl = null;
+            }
+          }
+          
+          // Validate that the image URL is accessible
+          if (imageUrl) {
+            const isImageValid = await validateImageUrl(imageUrl);
+            if (isImageValid) {
+              preview.image = imageUrl;
+            } else {
+              console.warn('Image URL validation failed:', imageUrl);
+              // Generate fallback text-based image
+              preview.image = generateTextPreviewImage(preview.title, preview.description);
+            }
+          }
         } else {
-          preview.image = image;
+          // No image found, generate text-based preview
+          preview.image = generateTextPreviewImage(preview.title, preview.description);
         }
+        
+        console.log('Successfully extracted preview:', preview);
+      } else {
+        console.warn('No content returned from AllOrigins for:', hostname);
+        // Generate fallback preview
+        preview.image = generateTextPreviewImage(preview.title, preview.description);
       }
     } catch (fetchError) {
-      console.log('AllOrigins fetch failed for:', hostname, fetchError);
-      // Keep default preview values
+      console.warn('AllOrigins fetch failed for:', hostname, fetchError);
+      // Generate fallback preview for failed fetches
+      preview.title = `${hostname.charAt(0).toUpperCase() + hostname.slice(1)} Link`;
+      preview.description = 'External website content';
+      preview.image = generateTextPreviewImage(preview.title, preview.description);
     }
 
     return preview;
     
   } catch (error) {
     console.error('Error creating URL preview:', error);
+    // Return safe fallback with generated image
+    const fallbackTitle = 'External Link';
+    const fallbackDescription = 'Click to visit';
+    
     return {
-      title: 'External Link',
-      description: 'Click to visit',
-      image: null,
+      title: fallbackTitle,
+      description: fallbackDescription,
+      image: generateTextPreviewImage(fallbackTitle, fallbackDescription),
       siteName: 'External Site'
     };
   }
