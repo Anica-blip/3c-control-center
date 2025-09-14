@@ -3719,6 +3719,25 @@ export default function ContentComponent() {
   );
 }
 
+      {/* Character Profile Section - Enhanced with Supabase Integration */}
+      <div style={{
+        backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
+        borderRadius: '8px',
+        padding: '16px',
+        marginBottom: '24px',
+        border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: '12px'
+        }}>
+          <User style={{ height: '20px', width: '20px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
+          <h3 style={{
+            fontSize: '16px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
             margin: '0'
           }}>
             Character Profile
