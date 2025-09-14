@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
-import { Upload, X, Image, Video, FileText, Settings, ExternalLink, Plus, User, Eye, Bold, Italic, Underline, Link } from 'lucide-react';
+import { Upload, X, Image, Video, FileText, Settings, ExternalLink, Plus, User, Eye } from 'lucide-react';
 import { ContentPost, MediaFile, SocialPlatform, CharacterProfile } from './types';
 import { supabaseAPI } from './supabaseAPI';
 import { 
@@ -69,49 +69,8 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
   const [hashtagInput, setHashtagInput] = useState('');
   const [fieldConfig, setFieldConfig] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const [urlInput, setUrlInput] = useState('');
   const [urlTitle, setUrlTitle] = useState('');
-
-  // Rich text formatting functions
-  const applyFormatting = (type: 'bold' | 'italic' | 'underline' | 'link') => {
-    const textarea = descriptionRef.current;
-    if (!textarea) return;
-    
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = content.description.substring(start, end);
-    
-    if (selectedText) {
-      let formattedText = '';
-      switch (type) {
-        case 'bold':
-          formattedText = `**${selectedText}**`;
-          break;
-        case 'italic':
-          formattedText = `*${selectedText}*`;
-          break;
-        case 'underline':
-          formattedText = `<u>${selectedText}</u>`;
-          break;
-        case 'link':
-          const url = prompt('Enter URL:');
-          if (url) {
-            formattedText = `[${selectedText}](${url})`;
-          } else {
-            return;
-          }
-          break;
-      }
-      
-      const newDescription = 
-        content.description.substring(0, start) + 
-        formattedText + 
-        content.description.substring(end);
-      
-      setContent(prev => ({ ...prev, description: newDescription }));
-    }
-  };
 
   // Generate content ID (Pattern-###CC format)
   const generateContentId = () => {
@@ -280,14 +239,9 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
       id: Date.now().toString() + Math.random(),
       name: linkTitle,
       type: 'interactive',
-      size: 0,
+      size: 0, // URLs don't have file size
       url: urlInput.trim(),
-      urlPreview: urlPreview || {
-        title: linkTitle,
-        description: 'Click to visit',
-        image: null,
-        siteName: new URL(urlInput.trim()).hostname
-      }
+      urlPreview: urlPreview
     };
     
     setMediaFiles(prev => [...prev, newUrlFile]);
@@ -1067,7 +1021,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
           </div>
         )}
 
-        {/* Description Field with Rich Text Formatting */}
+        {/* Description Field */}
         <div>
           <label style={{
             display: 'block',
@@ -1079,86 +1033,10 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
             Post Description *
           </label>
           
-          {/* Formatting Toolbar */}
-          <div style={{
-            display: 'flex',
-            gap: '8px',
-            marginBottom: '8px',
-            padding: '8px',
-            backgroundColor: isDarkMode ? '#374151' : '#f9fafb',
-            borderRadius: '6px',
-            border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
-          }}>
-            <button
-              type="button"
-              onClick={() => applyFormatting('bold')}
-              style={{
-                padding: '6px 12px',
-                backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                color: isDarkMode ? '#f8fafc' : '#111827'
-              }}
-            >
-              B
-            </button>
-            <button
-              type="button"
-              onClick={() => applyFormatting('italic')}
-              style={{
-                padding: '6px 12px',
-                backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '12px',
-                fontStyle: 'italic',
-                cursor: 'pointer',
-                color: isDarkMode ? '#f8fafc' : '#111827'
-              }}
-            >
-              I
-            </button>
-            <button
-              type="button"
-              onClick={() => applyFormatting('underline')}
-              style={{
-                padding: '6px 12px',
-                backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '12px',
-                textDecoration: 'underline',
-                cursor: 'pointer',
-                color: isDarkMode ? '#f8fafc' : '#111827'
-              }}
-            >
-              U
-            </button>
-            <button
-              type="button"
-              onClick={() => applyFormatting('link')}
-              style={{
-                padding: '6px 12px',
-                backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '12px',
-                cursor: 'pointer',
-                color: isDarkMode ? '#f8fafc' : '#111827'
-              }}
-            >
-              Link
-            </button>
-          </div>
-          
           <textarea
-            ref={descriptionRef}
             value={content.description}
             onChange={(e) => setContent(prev => ({ ...prev, description: e.target.value }))}
-            placeholder="Write your post content here... Use toolbar for formatting (UK English)"
+            placeholder="Write your post content here... (UK English)"
             maxLength={fieldConfig?.description?.maxLength || 2200}
             style={{
               width: '100%',
@@ -1183,7 +1061,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
               ? '#ef4444' 
               : (isDarkMode ? '#94a3b8' : '#6b7280')
           }}>
-            <span>Use **bold**, *italic*, &lt;u&gt;underline&lt;/u&gt;, [links](url) - UK English</span>
+            <span>Provide engaging content that matches your theme and brand voice (UK English)</span>
             <span>{content.description.length}/{fieldConfig?.description?.maxLength || 2200}</span>
           </div>
         </div>
@@ -1611,28 +1489,23 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                           height: '100%',
                           display: 'flex',
                           flexDirection: 'column',
-                          backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                          border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
-                          borderRadius: '8px',
-                          overflow: 'hidden'
+                          backgroundColor: isDarkMode ? '#1e293b' : 'white'
                         }}>
                           {file.urlPreview.image && (
                             <div style={{
-                              height: '60%',
+                              flex: 1,
                               backgroundImage: `url(${file.urlPreview.image})`,
                               backgroundSize: 'cover',
                               backgroundPosition: 'center',
-                              backgroundRepeat: 'no-repeat'
+                              backgroundRepeat: 'no-repeat',
+                              minHeight: '120px'
                             }} />
                           )}
                           
                           <div style={{
                             padding: '12px',
                             backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
-                            height: file.urlPreview.image ? '40%' : '100%',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center'
+                            borderTop: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
                           }}>
                             <div style={{
                               fontSize: '13px',
@@ -1648,7 +1521,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                             <div style={{
                               fontSize: '11px',
                               color: isDarkMode ? '#94a3b8' : '#6b7280',
-                              marginBottom: '6px',
+                              marginBottom: '4px',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap'
@@ -1661,10 +1534,9 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                               fontWeight: '500',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              textDecoration: 'underline'
+                              whiteSpace: 'nowrap'
                             }}>
-                              {file.url}
+                              {file.urlPreview.siteName || new URL(file.url).hostname}
                             </div>
                           </div>
                         </div>
@@ -1814,11 +1686,11 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                 </div>
               )}
 
-              {/* Title/Headline - FIXED BOLD STYLING */}
+              {/* Title/Headline */}
               {content.title && (
                 <h4 style={{
                   fontSize: '18px',
-                  fontWeight: '800',  // Changed to 800 for extra bold
+                  fontWeight: '700',
                   color: isDarkMode ? '#f8fafc' : '#111827',
                   margin: '0 0 12px 0',
                   lineHeight: '1.3'
