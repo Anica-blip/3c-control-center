@@ -5628,6 +5628,9 @@ export default function ContentComponent() {
           </div>
         )}
       </div>
+    </div>
+  );
+};
 
 const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoading }: {
   posts: ContentPost[];
