@@ -62,7 +62,7 @@ export const SavedPostsList: React.FC<SavedPostsListProps> = ({
       published: { backgroundColor: isDarkMode ? '#065f46' : '#d1fae5', color: isDarkMode ? '#d1fae5' : '#065f46', text: 'Published' }
     };
     
-    const style = badgeStyles[status as keyof typeof badgeStyles];
+    const style = badgeStyles[status as keyof typeof badgeStyles] || badgeStyles.pending;
     
     return (
       <span style={{
@@ -146,7 +146,7 @@ export const SavedPostsList: React.FC<SavedPostsListProps> = ({
             color: isDarkMode ? '#60a5fa' : '#3b82f6',
             margin: '0'
           }}>
-            Pending Content
+            Saved Content
           </h3>
           <span style={{
             padding: '6px 12px',
@@ -196,7 +196,7 @@ export const SavedPostsList: React.FC<SavedPostsListProps> = ({
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
                     fontWeight: '600'
                   }}>
-                    Created {post.createdDate.toLocaleDateString()}
+                    Created {post.createdDate instanceof Date ? post.createdDate.toLocaleDateString() : new Date(post.createdDate).toLocaleDateString()}
                   </span>
                   {post.isFromTemplate && (
                     <span style={{
@@ -216,7 +216,7 @@ export const SavedPostsList: React.FC<SavedPostsListProps> = ({
                   <h4 style={{
                     color: isDarkMode ? '#f8fafc' : '#111827',
                     fontSize: '16px',
-                    fontWeight: '600',
+                    fontWeight: '700', // Made bolder
                     margin: '0 0 8px 0'
                   }}>
                     {post.title}
@@ -238,7 +238,7 @@ export const SavedPostsList: React.FC<SavedPostsListProps> = ({
                   gap: '16px',
                   flexWrap: 'wrap'
                 }}>
-                  {post.mediaFiles.length > 0 && (
+                  {post.mediaFiles && post.mediaFiles.length > 0 && (
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -256,7 +256,7 @@ export const SavedPostsList: React.FC<SavedPostsListProps> = ({
                     </div>
                   )}
                   
-                  {post.hashtags.length > 0 && (
+                  {post.hashtags && post.hashtags.length > 0 && (
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -273,21 +273,23 @@ export const SavedPostsList: React.FC<SavedPostsListProps> = ({
                     </div>
                   )}
                   
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '12px',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
-                    padding: '6px 8px',
-                    borderRadius: '6px'
-                  }}>
-                    <Settings style={{ height: '14px', width: '14px' }} />
-                    <span style={{ fontWeight: '600' }}>
-                      {post.selectedPlatforms.length} platform{post.selectedPlatforms.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
+                  {post.selectedPlatforms && post.selectedPlatforms.length > 0 && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '12px',
+                      color: isDarkMode ? '#94a3b8' : '#6b7280',
+                      backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
+                      padding: '6px 8px',
+                      borderRadius: '6px'
+                    }}>
+                      <Settings style={{ height: '14px', width: '14px' }} />
+                      <span style={{ fontWeight: '600' }}>
+                        {post.selectedPlatforms.length} platform{post.selectedPlatforms.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -308,6 +310,14 @@ export const SavedPostsList: React.FC<SavedPostsListProps> = ({
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
                     transition: 'all 0.2s ease'
                   }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#f3f4f6';
+                    e.currentTarget.style.color = isDarkMode ? '#60a5fa' : '#3b82f6';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = isDarkMode ? '#94a3b8' : '#6b7280';
+                  }}
                 >
                   <Edit3 style={{ height: '16px', width: '16px' }} />
                 </button>
@@ -325,6 +335,14 @@ export const SavedPostsList: React.FC<SavedPostsListProps> = ({
                       color: isDarkMode ? '#94a3b8' : '#6b7280',
                       transition: 'all 0.2s ease'
                     }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#f3f4f6';
+                      e.currentTarget.style.color = isDarkMode ? '#34d399' : '#059669';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = isDarkMode ? '#94a3b8' : '#6b7280';
+                    }}
                   >
                     <Calendar style={{ height: '16px', width: '16px' }} />
                   </button>
@@ -341,6 +359,14 @@ export const SavedPostsList: React.FC<SavedPostsListProps> = ({
                     cursor: 'pointer',
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
                     transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#f3f4f6';
+                    e.currentTarget.style.color = '#ef4444';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = isDarkMode ? '#94a3b8' : '#6b7280';
                   }}
                 >
                   <Trash2 style={{ height: '16px', width: '16px' }} />
