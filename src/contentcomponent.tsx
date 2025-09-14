@@ -5642,9 +5642,10 @@ export default function ContentComponent() {
               }}>
                 * Platform links are for internal dashboard tracking only and will not appear in the public post
               </div>
-          </div>
-        ))}
-      </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
