@@ -1,3 +1,18 @@
+export interface MediaFile {
+  id: string;
+  name: string;
+  type: 'image' | 'video' | 'pdf' | 'gif' | 'interactive' | 'other';
+  size: number;
+  url: string;
+  supabaseUrl?: string; // URL after upload to Supabase
+  urlPreview?: {
+    title?: string;
+    description?: string;
+    image?: string;
+    siteName?: string;
+  };
+}
+
 export interface ContentPost {
   id: string;
   contentId: string; // CP-YYYY-### format
@@ -21,21 +36,6 @@ export interface ContentPost {
   isFromTemplate?: boolean;
   sourceTemplateId?: string;
   supabaseId?: string; // Supabase record ID
-}
-
-export interface MediaFile {
-  id: string;
-  name: string;
-  type: 'image' | 'video' | 'pdf' | 'gif' | 'interactive' | 'other';
-  size: number;
-  url: string;
-  supabaseUrl?: string; // URL after upload to Supabase
-  urlPreview?: {
-    title?: string;
-    description?: string;
-    image?: string;
-    siteName?: string;
-  };
 }
 
 export interface SocialPlatform {
