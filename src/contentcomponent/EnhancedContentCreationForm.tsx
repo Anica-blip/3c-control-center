@@ -20,17 +20,70 @@ const ThemeContext = React.createContext({
 
 const useTheme = () => useContext(ThemeContext);
 
-// Telegram Channel interface (RESTORED from EnhancedContentCreationForm(1).tsx)
-interface TelegramChannel {
+// Types
+interface ContentPost {
+  id: string;
+  contentId: string; // CP-YYYY-### format
+  characterProfile: string;
+  theme: string;
+  audience: string;
+  mediaType: string;
+  templateType: string;
+  platform: string;
+  title: string;
+  description: string;
+  hashtags: string[];
+  keywords: string;
+  cta: string;
+  mediaFiles: MediaFile[];
+  selectedPlatforms: string[];
+  status: 'pending' | 'scheduled' | 'published';
+  createdDate: Date;
+  scheduledDate?: Date;
+  isFromTemplate?: boolean;
+  sourceTemplateId?: string;
+  supabaseId?: string; // Supabase record ID
+}
+
+interface MediaFile {
   id: string;
   name: string;
-  channel_group: string;
-  thread_id?: string;
-  type: 'channel' | 'group';
+  type: 'image' | 'video' | 'pdf' | 'gif' | 'interactive' | 'other';
+  size: number;
+  url: string;
+  supabaseUrl?: string; // URL after upload to Supabase
+}
+
+interface SocialPlatform {
+  id: string;
+  name: string;
+  url: string;
+  isActive: boolean;
+  isDefault: boolean;
+}
+
+interface CharacterProfile {
+  id: string;
+  name: string;
+  username: string;
+  role: string;
+  description: string;
+  avatar_id: string | null;
+  is_active: boolean;
   created_at: string;
 }
 
-interface EnhancedContentCreationFormProps {
+// Enhanced Content Creation Form
+const EnhancedContentCreationForm = ({ 
+  onSave, 
+  onAddToSchedule, 
+  characterProfiles, 
+  platforms,
+  isSaving,
+  isLoadingProfiles,
+  editingPost,
+  onEditComplete
+}: {
   onSave: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
   onAddToSchedule: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
   characterProfiles: CharacterProfile[];
@@ -39,46 +92,8 @@ interface EnhancedContentCreationFormProps {
   isLoadingProfiles?: boolean;
   editingPost?: ContentPost | null;
   onEditComplete?: () => void;
-  telegramChannels?: TelegramChannel[]; // RESTORED
-  isLoadingPlatforms?: boolean;
-}
-
-export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormProps> = ({ 
-  onSave, 
-  onAddToSchedule, 
-  characterProfiles, 
-  platforms: propsPlatforms, // Rename to avoid confusion
-  isSaving,
-  isLoadingProfiles,
-  editingPost,
-  onEditComplete,
-  telegramChannels = [], // RESTORED
-  isLoadingPlatforms = false
 }) => {
   const { isDarkMode } = useTheme();
-  
-  // Load platforms from Supabase (mirror settings functionality)
-  const [platforms, setPlatforms] = useState<SocialPlatform[]>([]);
-  const [isLoadingPlatformsState, setIsLoadingPlatformsState] = useState(true);
-
-  // Load platforms on mount
-  useEffect(() => {
-    const loadPlatformsFromSupabase = async () => {
-      try {
-        setIsLoadingPlatformsState(true);
-        const loadedPlatforms = await supabaseAPI.loadPlatforms();
-        setPlatforms(loadedPlatforms);
-      } catch (error) {
-        console.error('Error loading platforms:', error);
-        // Fallback to props platforms if Supabase fails
-        setPlatforms(propsPlatforms || []);
-      } finally {
-        setIsLoadingPlatformsState(false);
-      }
-    };
-
-    loadPlatformsFromSupabase();
-  }, [propsPlatforms]);
   
   // Form state matching template builder structure
   const [selections, setSelections] = useState({
@@ -87,8 +102,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
     audience: '',
     mediaType: '',
     templateType: '',
-    platform: '',
-    voiceStyle: ''
+    platform: ''
   });
 
   const [content, setContent] = useState({
@@ -106,8 +120,71 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
   const [hashtagInput, setHashtagInput] = useState('');
   const [fieldConfig, setFieldConfig] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [urlInput, setUrlInput] = useState('');
-  const [urlTitle, setUrlTitle] = useState('');
+
+  // Generate content ID (Pattern-###CC format)
+  const generateContentId = () => {
+    const theme = selections.theme ? getThemeCode(selections.theme) : 'XX';
+    const audience = selections.audience ? getAudienceCode(selections.audience) : 'XX';
+    const media = selections.mediaType ? getMediaCode(selections.mediaType) : 'XX';
+    const template = selections.templateType ? getTemplateTypeCode(selections.templateType) : 'XX';
+    const randomNum = Math.floor(Math.random() * 999) + 1;
+    return `${theme}-${audience}-${media}-${template}-${String(randomNum).padStart(3, '0')}CC`;
+  };
+
+  // Code mapping functions for content ID generation
+  const getThemeCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'news_alert': 'NA', 'promotion': 'PR', 'standard_post': 'SP',
+      'cta_quiz': 'QZ', 'cta_game': 'GA', 'cta_puzzle': 'PZ',
+      'cta_challenge': 'CH', 'news': 'NS', 'blog': 'BP',
+      'tutorial_guide': 'TG', 'course_tool': 'CT', 'assessment': 'AS'
+    };
+    return codes[value] || 'XX';
+  };
+
+  const getAudienceCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'existing_members': 'EM', 'new_members': 'NM', 'persona_falcon': 'FL',
+      'persona_panther': 'PA', 'persona_wolf': 'WF', 'persona_lion': 'LI',
+      'general_public': 'GP'
+    };
+    return codes[value] || 'XX';
+  };
+
+  const getMediaCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'image': 'IM', 'video': 'VD', 'gifs': 'GF', 'pdf': 'PF',
+      'interactive_media': 'IM', 'url_link': 'UL'
+    };
+    return codes[value] || 'XX';
+  };
+
+  const getTemplateTypeCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'social_media': 'SM', 'presentation': 'PR', 'video_message': 'VM',
+      'anica_chat': 'AC', 'blog_posts': 'BP', 'news_article': 'NA',
+      'newsletter': 'NL', 'email_templates': 'ET', 'custom_templates': 'CT'
+    };
+    return codes[value] || 'XX';
+  };
+    const getCharacterCode = (name: string) => {
+    const codes: Record<string, string> = {
+      'anica': 'AN',
+      'caelum': 'CA', 
+      'aurion': 'AU'
+    };
+    return codes[name.toLowerCase()] || 'XX';
+  };
+
+  const getVoiceStyleCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'casual': 'CS',
+      'friendly': 'FR',
+      'professional': 'PR',
+      'creative': 'CR'
+    };
+    return codes[value] || 'XX';
+  };
 
   // Platform configuration functions (inline implementation)
   const getPlatformConfig = (platform: string) => {
