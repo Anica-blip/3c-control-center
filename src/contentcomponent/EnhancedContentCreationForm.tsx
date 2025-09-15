@@ -43,6 +43,10 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
 }) => {
   const { isDarkMode } = useTheme();
   
+  // Add missing state variables for telegram functionality
+  const [telegramChannels, setTelegramChannels] = useState<any[]>([]);
+  const [isLoadingPlatforms, setIsLoadingPlatforms] = useState(false);
+  
   // Form state matching template builder structure
   const [selections, setSelections] = useState({
     characterProfile: '',
@@ -211,6 +215,24 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
     const newId = generateContentId();
     setContentId(newId);
   }, [selections.theme, selections.audience, selections.mediaType, selections.templateType, selections.characterProfile, selections.voiceStyle, characterProfiles]);
+
+  // Load telegram channels on mount
+  useEffect(() => {
+    const loadTelegramChannels = async () => {
+      setIsLoadingPlatforms(true);
+      try {
+        const channels = await supabaseAPI.loadTelegramChannels();
+        setTelegramChannels(channels);
+      } catch (error) {
+        console.error('Error loading Telegram channels:', error);
+        setTelegramChannels([]);
+      } finally {
+        setIsLoadingPlatforms(false);
+      }
+    };
+    
+    loadTelegramChannels();
+  }, []);
 
   // Load editing post data when provided
   useEffect(() => {
@@ -2179,8 +2201,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                 gap: '8px'
               }}>
                 {selectedPlatforms.map(platformId => {
-                  const platform = enhancedPlatforms.find(p => p.id === platformId) || 
-                                  (platforms || []).find(p => p.id === platformId);
+                  const platform = (platforms || []).find(p => p.id === platformId);
                   if (!platform) return null;
                   
                   const isTelegram = platformId.startsWith('telegram_');
