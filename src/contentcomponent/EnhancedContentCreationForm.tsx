@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Upload, X, Image, Video, FileText, Settings, ExternalLink, Plus, User, Eye } from 'lucide-react';
-import { ContentPost, MediaFile, CharacterProfile } from './types';
+import { ContentPost, MediaFile, SocialPlatform, CharacterProfile } from './types';
 import { supabaseAPI } from './supabaseAPI';
 import { 
   fetchUrlPreview, 
@@ -12,422 +12,21 @@ import {
   getVoiceStyleCode 
 } from './utils';
 
-// Platform Types and Interfaces from platform-config.ts
-export interface SocialPlatform {
-  id: string;
-  name: string;
-  url: string;
-  isActive: boolean;
-  isDefault: boolean;
-}
-
-export interface TelegramChannel {
-  id: string;
-  name: string;
-  channel_group_id?: string;
-  is_active: boolean;
-  created_at: string;
-}
-
-export interface PlatformFieldConfig {
-  title?: {
-    show: boolean;
-    maxLength: number;
-  };
-  description: {
-    maxLength: number;
-  };
-  hashtags: {
-    maxCount: number;
-    recommended: number;
-  };
-}
-
-export interface PlatformPreviewStyle {
-  aspectRatio: string;
-  maxWidth: string;
-  label: string;
-}
-
-// Platform Configuration Functions from platform-config.ts
-export const getPlatformConfig = (platform: string): PlatformFieldConfig => {
-  const configs: Record<string, PlatformFieldConfig> = {
-    instagram: {
-      title: { show: true, maxLength: 125 },
-      description: { maxLength: 2200 },
-      hashtags: { maxCount: 30, recommended: 11 }
-    },
-    twitter: {
-      title: { show: false },
-      description: { maxLength: 280 },
-      hashtags: { maxCount: 2, recommended: 1 }
-    },
-    linkedin: {
-      title: { show: true, maxLength: 150 },
-      description: { maxLength: 3000 },
-      hashtags: { maxCount: 5, recommended: 3 }
-    },
-    youtube: {
-      title: { show: true, maxLength: 100 },
-      description: { maxLength: 5000 },
-      hashtags: { maxCount: 15, recommended: 5 }
-    },
-    facebook: {
-      title: { show: true, maxLength: 120 },
-      description: { maxLength: 2000 },
-      hashtags: { maxCount: 5, recommended: 2 }
-    },
-    tiktok: {
-      title: { show: true, maxLength: 100 },
-      description: { maxLength: 2200 },
-      hashtags: { maxCount: 3, recommended: 2 }
-    },
-    telegram: {
-      title: { show: true, maxLength: 200 },
-      description: { maxLength: 4096 },
-      hashtags: { maxCount: 10, recommended: 5 }
-    },
-    pinterest: {
-      title: { show: true, maxLength: 100 },
-      description: { maxLength: 500 },
-      hashtags: { maxCount: 20, recommended: 5 }
-    },
-    whatsapp: {
-      title: { show: false },
-      description: { maxLength: 4096 },
-      hashtags: { maxCount: 3, recommended: 1 }
-    }
-  };
-  
-  return configs[platform] || {
-    title: { show: true, maxLength: 150 },
-    description: { maxLength: 2200 },
-    hashtags: { maxCount: 30, recommended: 10 }
-  };
-};
-
-// Platform Preview Styling from platform-config.ts
-export const getPlatformPreviewStyle = (platform: string): PlatformPreviewStyle => {
-  const styles: Record<string, PlatformPreviewStyle> = {
-    instagram: {
-      aspectRatio: '1 / 1', // Square posts
-      maxWidth: '400px',
-      label: 'Instagram Square Post (1:1)'
-    },
-    facebook: {
-      aspectRatio: '1.91 / 1', // Facebook recommended
-      maxWidth: '500px',
-      label: 'Facebook Post (1.91:1)'
-    },
-    twitter: {
-      aspectRatio: '16 / 9', // Twitter recommended
-      maxWidth: '500px',
-      label: 'Twitter/X Post (16:9)'
-    },
-    linkedin: {
-      aspectRatio: '1.91 / 1', // LinkedIn recommended
-      maxWidth: '500px',
-      label: 'LinkedIn Post (1.91:1)'
-    },
-    youtube: {
-      aspectRatio: '16 / 9', // YouTube thumbnail
-      maxWidth: '480px',
-      label: 'YouTube Thumbnail (16:9)'
-    },
-    tiktok: {
-      aspectRatio: '9 / 16', // TikTok vertical
-      maxWidth: '300px',
-      label: 'TikTok Video (9:16)'
-    },
-    telegram: {
-      aspectRatio: 'auto', // Use original media dimensions
-      maxWidth: '100%', // Allow full width flexibility
-      label: 'Telegram Post (Original Size)'
-    },
-    pinterest: {
-      aspectRatio: '2 / 3', // Pinterest vertical
-      maxWidth: '400px',
-      label: 'Pinterest Pin (2:3)'
-    },
-    whatsapp: {
-      aspectRatio: 'auto',
-      maxWidth: '100%',
-      label: 'WhatsApp Message (Original Size)'
-    }
-  };
-  
-  return styles[platform] || {
-    aspectRatio: 'auto',
-    maxWidth: '100%',
-    label: 'Original Size (No Platform Selected)'
-  };
-};
-
-// Platform Selection Component from platform-config.ts
-export const PlatformSelector = ({ 
-  platforms, 
-  selectedPlatforms, 
-  onPlatformToggle, 
-  isDarkMode 
-}: {
-  platforms: SocialPlatform[];
-  selectedPlatforms: string[];
-  onPlatformToggle: (platformId: string) => void;
-  isDarkMode: boolean;
-}) => {
-  const activePlatforms = platforms?.filter(p => p?.isActive) || [];
-
-  return (
-    <div style={{ marginBottom: '24px', width: '85%' }}>
-      <label style={{
-        display: 'block',
-        fontSize: '16px',
-        fontWeight: '600',
-        color: isDarkMode ? '#f8fafc' : '#111827',
-        marginBottom: '12px'
-      }}>
-        Select Publishing Platforms
-      </label>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-        gap: '12px'
-      }}>
-        {activePlatforms.map((platform) => (
-          <label
-            key={platform.id}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '12px',
-              border: selectedPlatforms.includes(platform.id) 
-                ? `1px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}` 
-                : `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-              borderRadius: '8px',
-              cursor: 'pointer',
-              backgroundColor: selectedPlatforms.includes(platform.id) 
-                ? (isDarkMode ? '#1e3a8a30' : '#dbeafe') 
-                : '#334155',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={selectedPlatforms.includes(platform.id)}
-              onChange={() => onPlatformToggle(platform.id)}
-              style={{
-                height: '16px',
-                width: '16px',
-                accentColor: isDarkMode ? '#60a5fa' : '#3b82f6'
-              }}
-            />
-            <div style={{ flex: 1 }}>
-              <div style={{
-                fontSize: '14px',
-                fontWeight: '600',
-                color: isDarkMode ? '#f8fafc' : '#111827',
-                marginBottom: '2px'
-              }}>
-                {platform.name}
-              </div>
-            </div>
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Platform Optimization Selection Component from platform-config.ts
-export const PlatformOptimizationSelector = ({ 
-  selectedPlatform, 
-  onPlatformChange, 
-  isDarkMode 
-}: {
-  selectedPlatform: string;
-  onPlatformChange: (platform: string) => void;
-  isDarkMode: boolean;
-}) => (
-  <div>
-    <label style={{
-      display: 'block',
-      fontSize: '12px',
-      fontWeight: '600',
-      color: isDarkMode ? '#bfdbfe' : '#1e40af',
-      marginBottom: '8px',
-      textTransform: 'uppercase',
-      letterSpacing: '0.05em'
-    }}>
-      Optimize For Platform
-    </label>
-    <select
-      value={selectedPlatform}
-      onChange={(e) => onPlatformChange(e.target.value)}
-      style={{
-        width: '100%',
-        padding: '10px 12px',
-        border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-        borderRadius: '6px',
-        fontSize: '14px',
-        backgroundColor: '#334155',
-        color: '#ffffff',
-        fontFamily: 'inherit',
-        appearance: 'none',
-        backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'right 12px center',
-        backgroundSize: '16px',
-        paddingRight: '40px'
-      }}
-    >
-      <option value="">Generic (no optimization)...</option>
-      <option value="instagram">Instagram</option>
-      <option value="facebook">Facebook</option>
-      <option value="linkedin">LinkedIn</option>
-      <option value="twitter">Twitter/X</option>
-      <option value="youtube">YouTube</option>
-      <option value="tiktok">TikTok</option>
-      <option value="telegram">Telegram</option>
-      <option value="pinterest">Pinterest</option>
-      <option value="whatsapp">WhatsApp</option>
-    </select>
-  </div>
-);
-
-// Platform Field Information Component from platform-config.ts
-export const PlatformFieldInfo = ({ 
-  platform, 
-  fieldConfig, 
-  isDarkMode 
-}: {
-  platform: string;
-  fieldConfig: PlatformFieldConfig;
-  isDarkMode: boolean;
-}) => (
-  <div style={{
-    backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
-    border: `1px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
-    borderRadius: '8px',
-    padding: '16px',
-    marginBottom: '24px',
-    width: '85%'
-  }}>
-    <h4 style={{
-      fontSize: '14px',
-      fontWeight: '600',
-      color: isDarkMode ? '#60a5fa' : '#1e40af',
-      margin: '0 0 8px 0'
-    }}>
-      Platform Optimization: {platform?.toUpperCase()}
-    </h4>
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-      gap: '12px'
-    }}>
-      {fieldConfig.title?.show && (
-        <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#1e40af' }}>
-          Title: {fieldConfig.title.maxLength} chars
-        </div>
-      )}
-      <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#1e40af' }}>
-        Description: {fieldConfig.description.maxLength} chars
-      </div>
-      <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#1e40af' }}>
-        Hashtags: {fieldConfig.hashtags.maxCount} max ({fieldConfig.hashtags.recommended} recommended)
-      </div>
-    </div>
-  </div>
-);
-
-// Platform Preview Header Component from platform-config.ts
-export const PlatformPreviewHeader = ({ 
-  platform, 
-  isDarkMode 
-}: {
-  platform: string;
-  isDarkMode: boolean;
-}) => (
-  <div style={{
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginBottom: '12px',
-    padding: '8px 12px',
-    backgroundColor: isDarkMode ? '#334155' : '#e5e7eb',
-    borderRadius: '6px',
-    fontSize: '12px',
-    fontWeight: '600',
-    color: isDarkMode ? '#94a3b8' : '#6b7280'
-  }}>
-    <Eye style={{ height: '14px', width: '14px' }} />
-    {platform ? (
-      <span>Showing preview optimized for: {platform.toUpperCase()}</span>
-    ) : (
-      <span>Generic preview (no platform optimization selected)</span>
-    )}
-  </div>
-);
-
-// Platform-specific notes helper from platform-config.ts
-export const getPlatformNotes = (platform: string): string => {
-  const notes: Record<string, string> = {
-    instagram: 'Instagram will crop images to square format for feed posts. Stories use 9:16 ratio.',
-    tiktok: 'TikTok optimizes for vertical 9:16 video format for maximum engagement.',
-    youtube: 'YouTube thumbnails work best at 16:9 ratio with bold, readable visuals.',
-    facebook: 'Facebook recommends 1.91:1 ratio for optimal feed display and engagement.',
-    twitter: 'Twitter displays images best at 16:9 ratio in timeline feeds.',
-    linkedin: 'LinkedIn professional posts perform well with 1.91:1 landscape format.',
-    telegram: 'Telegram displays media in original dimensions and automatically adjusts for optimal viewing.',
-    pinterest: 'Pinterest favors vertical 2:3 pins for discovery and engagement.',
-    whatsapp: 'WhatsApp supports original dimensions and works well with various media formats.'
-  };
-  
-  return notes[platform] || '';
-};
-
-// Platform Notes Component from platform-config.ts
-export const PlatformNotes = ({ 
-  platform, 
-  isDarkMode 
-}: {
-  platform: string;
-  isDarkMode: boolean;
-}) => {
-  const notes = getPlatformNotes(platform);
-  
-  if (!platform || !notes) return null;
-
-  return (
-    <div style={{
-      fontSize: '11px',
-      color: isDarkMode ? '#64748b' : '#9ca3af',
-      textAlign: 'center',
-      fontStyle: 'italic',
-      maxWidth: '500px',
-      lineHeight: '1.4'
-    }}>
-      {notes}
-    </div>
-  );
-};
-
-// Telegram Channel Integration from platform-config.ts
-export const mergeTelegramChannels = (
-  platforms: SocialPlatform[], 
-  telegramChannels: TelegramChannel[]
-): SocialPlatform[] => {
-  const telegramPlatforms: SocialPlatform[] = telegramChannels.map(t => ({
-    id: t.id ? t.id.toString() : Math.random().toString(),
-    name: t.name ? `${t.name} (Telegram)` : 'Telegram Channel',
-    url: t.channel_group_id ? `https://t.me/${t.channel_group_id}` : '',
-    isActive: true,
-    isDefault: false
-  }));
-
-  return [...platforms, ...telegramPlatforms].filter(p => p.id && p.name);
-};
+// Import platform configuration functions and components
+import {
+  getPlatformConfig,
+  getPlatformPreviewStyle,
+  getPlatformNotes,
+  mergeTelegramChannels,
+  PlatformSelector,
+  PlatformOptimizationSelector,
+  PlatformFieldInfo,
+  PlatformPreviewHeader,
+  PlatformDistributionSettings,
+  PlatformNotes,
+  TelegramChannel,
+  PlatformFieldConfig
+} from './platform-config';
 
 // Theme Context (assuming this comes from your App.tsx)
 const ThemeContext = React.createContext({
@@ -446,6 +45,8 @@ interface EnhancedContentCreationFormProps {
   isLoadingProfiles?: boolean;
   editingPost?: ContentPost | null;
   onEditComplete?: () => void;
+  telegramChannels?: TelegramChannel[];
+  isLoadingPlatforms?: boolean;
 }
 
 export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormProps> = ({ 
@@ -456,7 +57,9 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
   isSaving,
   isLoadingProfiles,
   editingPost,
-  onEditComplete
+  onEditComplete,
+  telegramChannels = [],
+  isLoadingPlatforms = false
 }) => {
   const { isDarkMode } = useTheme();
   
@@ -484,10 +87,15 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
   const [contentId, setContentId] = useState('');
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [hashtagInput, setHashtagInput] = useState('');
-  const [fieldConfig, setFieldConfig] = useState<any>(null);
+  const [fieldConfig, setFieldConfig] = useState<PlatformFieldConfig | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [urlInput, setUrlInput] = useState('');
   const [urlTitle, setUrlTitle] = useState('');
+
+  // Merge platforms with telegram channels
+  const enhancedPlatforms = React.useMemo(() => {
+    return mergeTelegramChannels(platforms, telegramChannels);
+  }, [platforms, telegramChannels]);
 
   // Generate content ID (Pattern-###CC format)
   const generateContentId = () => {
@@ -496,7 +104,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
     const media = selections.mediaType ? getMediaCode(selections.mediaType) : 'XX';
     const template = selections.templateType ? getTemplateTypeCode(selections.templateType) : 'XX';
     
-    // FIX: Get character code from actual profile name, not ID
+    // Get character code from actual profile name, not ID
     let character = 'XX';
     if (selections.characterProfile) {
       const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
@@ -719,7 +327,6 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
     setUrlTitle('');
   };
 
-  const activePlatforms = platforms?.filter(p => p?.isActive) || [];
   const canSave = selections.characterProfile && selections.theme && selections.audience && selections.mediaType && selections.templateType && selections.voiceStyle && content.description;
 
   const getFileIcon = (type: string) => {
@@ -992,9 +599,6 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
           ]},
           { field: 'voiceStyle', label: 'Voice Style *', options: [
             'casual', 'friendly', 'professional', 'creative'
-          ]},
-          { field: 'platform', label: 'Optimize For Platform', options: [
-            'instagram', 'facebook', 'linkedin', 'twitter', 'youtube', 'tiktok', 'telegram', 'pinterest', 'whatsapp'
           ]}
         ].map(({ field, label, options }) => (
           <div key={field}>
@@ -1029,7 +633,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                 paddingRight: '40px'
               }}
             >
-              <option value="">{field === 'platform' ? 'Generic (no optimization)...' : `Select ${label.toLowerCase().replace(' *', '')}...`}</option>
+              <option value="">{`Select ${label.toLowerCase().replace(' *', '')}...`}</option>
               {options.map(option => (
                 <option key={option} value={option}>
                   {option.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
@@ -1038,11 +642,18 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
             </select>
           </div>
         ))}
+
+        {/* Platform Optimization Selector */}
+        <PlatformOptimizationSelector
+          selectedPlatform={selections.platform}
+          onPlatformChange={(platform) => handleSelectionChange('platform', platform)}
+          isDarkMode={isDarkMode}
+        />
       </div>
 
       {/* Platform-Specific Field Information */}
       {fieldConfig && (
-        <PlatformFieldInfo 
+        <PlatformFieldInfo
           platform={selections.platform}
           fieldConfig={fieldConfig}
           isDarkMode={isDarkMode}
@@ -1814,7 +1425,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
 
       {/* Platform Selection for Publishing */}
       <PlatformSelector
-        platforms={platforms}
+        platforms={enhancedPlatforms}
         selectedPlatforms={selectedPlatforms}
         onPlatformToggle={handlePlatformToggle}
         isDarkMode={isDarkMode}
@@ -1931,11 +1542,8 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                 backgroundColor: isDarkMode ? '#1e293b' : '#f9fafb',
                 borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
               }}>
-                {/* Platform Preview Info */}
-                <PlatformPreviewHeader 
-                  platform={selections.platform}
-                  isDarkMode={isDarkMode}
-                />
+                {/* Platform Preview Header */}
+                <PlatformPreviewHeader platform={selections.platform} isDarkMode={isDarkMode} />
 
                 {(() => {
                   const platformStyle = getPlatformPreviewStyle(selections.platform);
@@ -2135,10 +1743,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                       </div>
 
                       {/* Platform-specific notes */}
-                      <PlatformNotes 
-                        platform={selections.platform}
-                        isDarkMode={isDarkMode}
-                      />
+                      <PlatformNotes platform={selections.platform} isDarkMode={isDarkMode} />
                     </div>
                   );
                 })()}
@@ -2286,64 +1891,12 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
             </div>
           </div>
 
-          {/* Platform Distribution */}
-          {selectedPlatforms.length > 0 && (
-            <div style={{
-              marginTop: '20px',
-              padding: '16px',
-              backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
-              borderRadius: '8px',
-              border: `1px dashed ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '12px'
-              }}>
-                <Settings style={{ height: '16px', width: '16px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
-                <span style={{
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: isDarkMode ? '#60a5fa' : '#3b82f6'
-                }}>
-                  Distribution Settings (Internal Dashboard Only)
-                </span>
-              </div>
-              <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '8px'
-              }}>
-                {selectedPlatforms.map(platformId => {
-                  const platform = platforms.find(p => p.id === platformId);
-                  if (!platform) return null;
-                  
-                  return (
-                    <div key={platformId} style={{
-                      padding: '6px 12px',
-                      backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                      border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280'
-                    }}>
-                      {platform.name}
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{
-                fontSize: '11px',
-                color: isDarkMode ? '#64748b' : '#9ca3af',
-                fontStyle: 'italic',
-                marginTop: '8px'
-              }}>
-                * Platform links are for internal dashboard tracking only and will not appear in the public post
-              </div>
-            </div>
-          )}
+          {/* Platform Distribution Settings */}
+          <PlatformDistributionSettings
+            selectedPlatforms={selectedPlatforms}
+            platforms={enhancedPlatforms}
+            isDarkMode={isDarkMode}
+          />
         </div>
       )}
     </div>
