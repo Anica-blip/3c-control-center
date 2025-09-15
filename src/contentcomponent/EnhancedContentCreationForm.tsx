@@ -2174,7 +2174,8 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                 gap: '8px'
               }}>
                 {selectedPlatforms.map(platformId => {
-                  const platform = allPlatforms.find(p => p.id === platformId);
+                  const platform = enhancedPlatforms.find(p => p.id === platformId) || 
+                                  (platforms || []).find(p => p.id === platformId);
                   if (!platform) return null;
                   
                   const isTelegram = platformId.startsWith('telegram_');
@@ -2217,7 +2218,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
               }}>
                 * Platform links are for internal dashboard tracking only and will not appear in the public post
                 <br />
-                * Loaded from social_platforms_content table {telegramChannels.length > 0 && `+ ${telegramChannels.length} Telegram channels`}
+                * {isLoadingPlatforms ? 'Loading platforms...' : `Loaded from database${telegramChannels.length > 0 ? ` + ${telegramChannels.length} Telegram channels` : ''}`}
               </div>
             </div>
           )}
