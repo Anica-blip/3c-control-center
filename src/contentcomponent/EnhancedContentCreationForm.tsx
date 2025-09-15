@@ -394,15 +394,42 @@ const EnhancedContentCreationForm = ({
     });
   };
 
+  const handleRemoveHashtag = (tagToRemove: string) => {
+    setContent(prev => ({
+      ...prev,
+      hashtags: prev.hashtags.filter(tag => tag !== tagToRemove)
+    }));
+  };
+
+  const handleFileUpload = (files: FileList) => {
+    Array.from(files).forEach((file) => {
+      const newFile: MediaFile = {
+        id: Date.now().toString() + Math.random(),
+        name: file.name,
+        type: file.type.startsWith('image/') ? 'image' : 
+              file.type.startsWith('video/') ? 'video' :
+              file.type === 'application/pdf' ? 'pdf' :
+              file.name.toLowerCase().includes('.gif') ? 'gif' :
+              file.name.toLowerCase().includes('.html') ? 'interactive' : 'other',
+        size: file.size,
+        url: URL.createObjectURL(file),
+      };
+      setMediaFiles(prev => [...prev, newFile]);
+    });
+  };
+
   const handleRemoveFile = (fileId: string) => {
     setMediaFiles(prev => prev.filter(f => f.id !== fileId));
   };
 
-  const handleAddUrl = async () => {
-    if (!urlInput.trim()) return;
-    
-    const linkTitle = urlTitle.trim() || 'Link';
-    
+  const handlePlatformToggle = (platformId: string) => {
+    setSelectedPlatforms(prev => 
+      prev.includes(platformId)
+        ? prev.filter(id => id !== platformId)
+        : [...prev, platformId]
+    );
+  };
+
     // Fetch URL preview
     const urlPreview = await fetchUrlPreview(urlInput.trim());
     
@@ -441,7 +468,6 @@ const EnhancedContentCreationForm = ({
 
     try {
       await onAddToSchedule(postData);
-      alert('Post scheduled successfully!');
       resetForm();
     } catch (error) {
       console.error('Schedule failed:', error);
@@ -456,8 +482,7 @@ const EnhancedContentCreationForm = ({
       audience: '',
       mediaType: '',
       templateType: '',
-      platform: '',
-      voiceStyle: ''
+      platform: ''
     });
     setContent({
       title: '',
@@ -471,8 +496,6 @@ const EnhancedContentCreationForm = ({
     setContentId(generateContentId());
     setIsEditingPost(false);
     setFieldConfig(null);
-    setUrlInput('');
-    setUrlTitle('');
   };
 
   const activePlatforms = enhancedPlatforms?.filter(p => p?.isActive) || [];
