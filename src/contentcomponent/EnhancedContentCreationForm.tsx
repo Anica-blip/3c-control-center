@@ -12,22 +12,6 @@ import {
   getVoiceStyleCode 
 } from './utils';
 
-// Import platform configuration functions and components
-import {
-  getPlatformConfig,
-  getPlatformPreviewStyle,
-  getPlatformNotes,
-  mergeTelegramChannels,
-  PlatformSelector,
-  PlatformOptimizationSelector,
-  PlatformFieldInfo,
-  PlatformPreviewHeader,
-  PlatformDistributionSettings,
-  PlatformNotes,
-  TelegramChannel,
-  PlatformFieldConfig
-} from './platform-config';
-
 // Theme Context (assuming this comes from your App.tsx)
 const ThemeContext = React.createContext({
   isDarkMode: false,
@@ -35,6 +19,16 @@ const ThemeContext = React.createContext({
 });
 
 const useTheme = () => useContext(ThemeContext);
+
+// Telegram Channel interface (keep existing)
+interface TelegramChannel {
+  id: string;
+  name: string;
+  channel_group: string;
+  thread_id?: string;
+  type: 'channel' | 'group';
+  created_at: string;
+}
 
 interface EnhancedContentCreationFormProps {
   onSave: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
@@ -53,7 +47,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
   onSave, 
   onAddToSchedule, 
   characterProfiles, 
-  platforms,
+  platforms: propsPlatforms, // Rename to avoid confusion
   isSaving,
   isLoadingProfiles,
   editingPost,
@@ -62,6 +56,29 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
   isLoadingPlatforms = false
 }) => {
   const { isDarkMode } = useTheme();
+  
+  // Load platforms from Supabase (mirror settings functionality)
+  const [platforms, setPlatforms] = useState<SocialPlatform[]>([]);
+  const [isLoadingPlatformsState, setIsLoadingPlatformsState] = useState(true);
+
+  // Load platforms on mount
+  useEffect(() => {
+    const loadPlatformsFromSupabase = async () => {
+      try {
+        setIsLoadingPlatformsState(true);
+        const loadedPlatforms = await supabaseAPI.loadPlatforms();
+        setPlatforms(loadedPlatforms);
+      } catch (error) {
+        console.error('Error loading platforms:', error);
+        // Fallback to props platforms if Supabase fails
+        setPlatforms(propsPlatforms || []);
+      } finally {
+        setIsLoadingPlatformsState(false);
+      }
+    };
+
+    loadPlatformsFromSupabase();
+  }, [propsPlatforms]);
   
   // Form state matching template builder structure
   const [selections, setSelections] = useState({
@@ -92,10 +109,42 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
   const [urlInput, setUrlInput] = useState('');
   const [urlTitle, setUrlTitle] = useState('');
 
-  // Merge platforms with telegram channels using platform-config function
-  const enhancedPlatforms = React.useMemo(() => {
-    return mergeTelegramChannels(platforms, telegramChannels);
-  }, [platforms, telegramChannels]);
+  // Platform configuration functions (inline implementation)
+  const getPlatformConfig = (platform: string) => {
+    const configs: Record<string, any> = {
+      instagram: {
+        title: { show: true, maxLength: 125 },
+        description: { maxLength: 2200 },
+        hashtags: { maxCount: 30, recommended: 11 }
+      },
+      twitter: {
+        title: { show: false },
+        description: { maxLength: 280 },
+        hashtags: { maxCount: 2, recommended: 1 }
+      },
+      linkedin: {
+        title: { show: true, maxLength: 150 },
+        description: { maxLength: 3000 },
+        hashtags: { maxCount: 5, recommended: 3 }
+      },
+      youtube: {
+        title: { show: true, maxLength: 100 },
+        description: { maxLength: 5000 },
+        hashtags: { maxCount: 15, recommended: 5 }
+      },
+      facebook: {
+        title: { show: true, maxLength: 120 },
+        description: { maxLength: 2000 },
+        hashtags: { maxCount: 5, recommended: 2 }
+      }
+    };
+    
+    return configs[platform] || {
+      title: { show: true, maxLength: 150 },
+      description: { maxLength: 2200 },
+      hashtags: { maxCount: 30, recommended: 10 }
+    };
+  };
 
   // Platform-specific preview sizing with TELEGRAM as GENERIC
   const getPlatformPreviewStyle = (platform: string) => {
@@ -154,6 +203,28 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
     };
   };
 
+  // Merge platforms with telegram channels (keep existing functionality)
+  const enhancedPlatforms = React.useMemo(() => {
+    // Convert telegram channels to platform format and merge
+    const telegramPlatforms = telegramChannels.map(channel => ({
+      id: `telegram_${channel.id}`,
+      name: `${channel.name} (Telegram)`,
+      display_name: `${channel.name} (${channel.type})`,
+      displayName: `${channel.name} (${channel.type})`,
+      url: `https://telegram.org`,
+      is_active: true,
+      isActive: true,
+      is_default: false,
+      isDefault: false,
+      channel_group: channel.channel_group,
+      thread_id: channel.thread_id,
+      type: channel.type,
+      created_at: channel.created_at
+    }));
+
+    return [...platforms, ...telegramPlatforms];
+  }, [platforms, telegramChannels]);
+
   // Generate content ID (Pattern-###CC format)
   const generateContentId = () => {
     const theme = selections.theme ? getThemeCode(selections.theme) : 'XX';
@@ -173,62 +244,6 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
     const voiceStyle = selections.voiceStyle ? getVoiceStyleCode(selections.voiceStyle) : 'XX';
     const randomNum = Math.floor(Math.random() * 999) + 1;
     return `${theme}-${audience}-${media}-${template}-${character}-${voiceStyle}-${String(randomNum).padStart(3, '0')}`;
-  };
-
-  // Code mapping functions for content ID generation
-  const getThemeCode = (value: string) => {
-    const codes: Record<string, string> = {
-      'news_alert': 'NA', 'promotion': 'PR', 'standard_post': 'SP',
-      'cta_quiz': 'QZ', 'cta_game': 'GA', 'cta_puzzle': 'PZ',
-      'cta_challenge': 'CH', 'news': 'NS', 'blog': 'BP',
-      'tutorial_guide': 'TG', 'course_tool': 'CT', 'assessment': 'AS'
-    };
-    return codes[value] || 'XX';
-  };
-
-  const getAudienceCode = (value: string) => {
-    const codes: Record<string, string> = {
-      'existing_members': 'EM', 'new_members': 'NM', 'persona_falcon': 'FL',
-      'persona_panther': 'PA', 'persona_wolf': 'WF', 'persona_lion': 'LI',
-      'general_public': 'GP'
-    };
-    return codes[value] || 'XX';
-  };
-
-  const getMediaCode = (value: string) => {
-    const codes: Record<string, string> = {
-      'image': 'IM', 'video': 'VD', 'gifs': 'GF', 'pdf': 'PF',
-      'interactive_media': 'IM', 'url_link': 'UL'
-    };
-    return codes[value] || 'XX';
-  };
-
-  const getTemplateTypeCode = (value: string) => {
-    const codes: Record<string, string> = {
-      'social_media': 'SM', 'presentation': 'PR', 'video_message': 'VM',
-      'anica_chat': 'AC', 'blog_posts': 'BP', 'news_article': 'NA',
-      'newsletter': 'NL', 'email_templates': 'ET', 'custom_templates': 'CT'
-    };
-    return codes[value] || 'XX';
-  };
-
-  const getCharacterCode = (name: string) => {
-    const codes: Record<string, string> = {
-      'anica': 'AN',
-      'caelum': 'CA', 
-      'aurion': 'AU'
-    };
-    return codes[name.toLowerCase()] || 'XX';
-  };
-
-  const getVoiceStyleCode = (value: string) => {
-    const codes: Record<string, string> = {
-      'casual': 'CS',
-      'friendly': 'FR',
-      'professional': 'PR',
-      'creative': 'CR'
-    };
-    return codes[value] || 'XX';
   };
 
   // Initialize and update content ID based on selections
@@ -267,43 +282,6 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
       console.log('Post loaded into form for editing:', editingPost.contentId);
     }
   }, [editingPost]);
-
-  // Platform configuration
-  const getPlatformConfig = (platform: string) => {
-    const configs: Record<string, any> = {
-      instagram: {
-        title: { show: true, maxLength: 125 },
-        description: { maxLength: 2200 },
-        hashtags: { maxCount: 30, recommended: 11 }
-      },
-      twitter: {
-        title: { show: false },
-        description: { maxLength: 280 },
-        hashtags: { maxCount: 2, recommended: 1 }
-      },
-      linkedin: {
-        title: { show: true, maxLength: 150 },
-        description: { maxLength: 3000 },
-        hashtags: { maxCount: 5, recommended: 3 }
-      },
-      youtube: {
-        title: { show: true, maxLength: 100 },
-        description: { maxLength: 5000 },
-        hashtags: { maxCount: 15, recommended: 5 }
-      },
-      facebook: {
-        title: { show: true, maxLength: 120 },
-        description: { maxLength: 2000 },
-        hashtags: { maxCount: 5, recommended: 2 }
-      }
-    };
-    
-    return configs[platform] || {
-      title: { show: true, maxLength: 150 },
-      description: { maxLength: 2200 },
-      hashtags: { maxCount: 30, recommended: 10 }
-    };
-  };
 
   const setupPlatformFields = (platform: string) => {
     if (platform) {
@@ -794,7 +772,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
           </div>
         ))}
         
-        {/* Platform Optimization Selector using imported component */}
+        {/* Platform Optimization Selector */}
         <div>
           <label style={{
             display: 'block',
@@ -1383,29 +1361,6 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
               🔗
             </button>
             
-            <button
-              type="button"
-              onClick={() => {
-                const commonEmojis = ['😀', '😊', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙌', '💡', '📈', '📊'];
-                const emoji = prompt(`Choose an emoji:\n${commonEmojis.join(' ')}\n\nOr enter any emoji:`);
-                if (emoji) {
-                  setContent(prev => ({ ...prev, description: prev.description + emoji }));
-                }
-              }}
-              style={{
-                padding: '6px 10px',
-                backgroundColor: isDarkMode ? '#334155' : 'white',
-                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                color: isDarkMode ? '#f8fafc' : '#111827'
-              }}
-              title="Add Emoji"
-            >
-              😊
-            </button>
-            
             <div style={{
               fontSize: '12px',
               color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1642,7 +1597,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
         </div>
       </div>
 
-      {/* Platform Selection for Publishing */}
+      {/* Platform Selection for Publishing - Using loaded platforms from Supabase */}
       <div style={{ marginBottom: '24px', width: '85%' }}>
         <label style={{
           display: 'block',
@@ -1652,6 +1607,16 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
           marginBottom: '12px'
         }}>
           Select Publishing Platforms
+          {(isLoadingPlatformsState || isLoadingPlatforms) && (
+            <span style={{ 
+              fontSize: '12px', 
+              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              marginLeft: '8px',
+              fontStyle: 'italic'
+            }}>
+              (Loading platforms...)
+            </span>
+          )}
         </label>
         <div style={{
           display: 'grid',
@@ -1694,7 +1659,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                   color: isDarkMode ? '#f8fafc' : '#111827',
                   marginBottom: '2px'
                 }}>
-                  {platform.name}
+                  {platform.displayName || platform.display_name || platform.name}
                 </div>
                 {platform.isDefault && (
                   <span style={{
@@ -1713,6 +1678,24 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
             </label>
           ))}
         </div>
+        
+        {activePlatforms.length === 0 && !isLoadingPlatformsState && !isLoadingPlatforms && (
+          <div style={{
+            padding: '32px',
+            textAlign: 'center',
+            backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
+            border: `2px dashed ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+            borderRadius: '8px',
+            color: isDarkMode ? '#94a3b8' : '#6b7280'
+          }}>
+            <p style={{ margin: '0 0 8px 0', fontSize: '16px' }}>
+              No active platforms found
+            </p>
+            <p style={{ margin: '0', fontSize: '14px' }}>
+              Go to Settings > Social Platforms to add your publishing destinations
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}
@@ -2255,7 +2238,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                       fontWeight: '500',
                       color: isDarkMode ? '#94a3b8' : '#6b7280'
                     }}>
-                      {platform.name}
+                      {platform.displayName || platform.display_name || platform.name}
                     </div>
                   );
                 })}
