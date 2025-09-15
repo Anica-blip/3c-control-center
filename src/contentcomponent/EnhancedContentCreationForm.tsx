@@ -971,16 +971,16 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
         )}
       </div>
 
-      {/* Content Fields - 85% Width to Match Media Upload */}
+      {/* Content Fields - Title, Description, Hashtags, Keywords, CTA */}
       <div style={{ 
         display: 'grid', 
         gap: '16px', 
         marginBottom: '24px',
-        width: '90%'
+        width: '85%'
       }}>
         {/* Title Field */}
         {(!fieldConfig || fieldConfig.title?.show !== false) && (
-          <div style={{ width: '85%' }}>
+          <div>
             <label style={{
               display: 'block',
               fontSize: '16px',
@@ -990,6 +990,36 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
             }}>
               Title/Headline
             </label>
+            
+            <input
+              type="text"
+              value={content.title}
+              onChange={(e) => setContent(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="Enter compelling title... (UK English)"
+              maxLength={fieldConfig?.title?.maxLength || 150}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '8px',
+                fontSize: '14px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                color: '#000000',
+                fontFamily: 'inherit'
+              }}
+            />
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: '4px',
+              fontSize: '12px',
+              color: isDarkMode ? '#94a3b8' : '#6b7280'
+            }}>
+              <span>Create an attention-grabbing headline (UK English)</span>
+              <span>{content.title.length}/{fieldConfig?.title?.maxLength || 150}</span>
+            </div>
+          </div>
+        )}
             
             {/* Title Formatting Toolbar */}
             <div style={{
@@ -1082,8 +1112,50 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
             color: isDarkMode ? '#f8fafc' : '#111827',
             marginBottom: '8px'
           }}>
+        {/* Description Field */}
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '16px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            marginBottom: '8px'
+          }}>
             Post Description *
           </label>
+          
+          <textarea
+            value={content.description}
+            onChange={(e) => setContent(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="Write your post content here... (UK English)"
+            maxLength={fieldConfig?.description?.maxLength || 2200}
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '8px',
+              fontSize: '14px',
+              backgroundColor: isDarkMode ? '#334155' : 'white',
+              color: '#000000',
+              resize: 'vertical',
+              minHeight: '120px',
+              fontFamily: 'inherit',
+              lineHeight: '1.4'
+            }}
+          />
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: '4px',
+            fontSize: '12px',
+            color: content.description.length > (fieldConfig?.description?.maxLength || 2200) * 0.9 
+              ? '#ef4444' 
+              : (isDarkMode ? '#94a3b8' : '#6b7280')
+          }}>
+            <span>Provide engaging content that matches your theme and brand voice (UK English)</span>
+            <span>{content.description.length}/{fieldConfig?.description?.maxLength || 2200}</span>
+          </div>
+        </div>
           
           {/* Formatting Toolbar */}
           <div style={{
