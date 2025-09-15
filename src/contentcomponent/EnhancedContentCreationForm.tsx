@@ -2174,20 +2174,37 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                 gap: '8px'
               }}>
                 {selectedPlatforms.map(platformId => {
-                  const platform = platforms.find(p => p.id === platformId);
+                  const platform = allPlatforms.find(p => p.id === platformId);
                   if (!platform) return null;
+                  
+                  const isTelegram = platformId.startsWith('telegram_');
                   
                   return (
                     <div key={platformId} style={{
                       padding: '6px 12px',
                       backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                      border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                      border: `1px solid ${isTelegram ? '#0088cc' : (isDarkMode ? '#475569' : '#d1d5db')}`,
                       borderRadius: '16px',
                       fontSize: '12px',
                       fontWeight: '500',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280'
+                      color: isTelegram ? '#0088cc' : (isDarkMode ? '#94a3b8' : '#6b7280'),
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
                     }}>
-                      {platform.name}
+                      {isTelegram && '📱'}
+                      {platform.display_name || platform.name}
+                      {isTelegram && platform.telegram_config && (
+                        <span style={{
+                          fontSize: '10px',
+                          backgroundColor: '#0088cc20',
+                          padding: '1px 4px',
+                          borderRadius: '4px',
+                          marginLeft: '4px'
+                        }}>
+                          ID: {platform.telegram_config.id}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
@@ -2199,6 +2216,8 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                 marginTop: '8px'
               }}>
                 * Platform links are for internal dashboard tracking only and will not appear in the public post
+                <br />
+                * Loaded from social_platforms_content table {telegramChannels.length > 0 && `+ ${telegramChannels.length} Telegram channels`}
               </div>
             </div>
           )}
