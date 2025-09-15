@@ -971,17 +971,16 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
         )}
       </div>
 
-      {/* Content Fields - Title, Description, Hashtags, Keywords, CTA */}
+      {/* Content Fields - 85% Width to Match Media Upload */}
       <div style={{ 
         display: 'grid', 
         gap: '16px', 
         marginBottom: '24px',
-        width: '85%'
+        width: '90%'
       }}>
-
-        {/* Title Field - FIXED with proper structure and bold formatting */}
+        {/* Title Field */}
         {(!fieldConfig || fieldConfig.title?.show !== false) && (
-          <div>
+          <div style={{ width: '85%' }}>
             <label style={{
               display: 'block',
               fontSize: '16px',
@@ -1074,8 +1073,8 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
           </div>
         )}
 
-        {/* Description Field with Rich Text Formatting */}
-        <div>
+        {/* Description Field with Enhanced Features */}
+        <div style={{ width: '85%' }}>
           <label style={{
             display: 'block',
             fontSize: '16px',
@@ -1089,96 +1088,170 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
           {/* Formatting Toolbar */}
           <div style={{
             display: 'flex',
+            alignItems: 'center',
             gap: '8px',
-            marginBottom: '8px',
             padding: '8px',
-            backgroundColor: isDarkMode ? '#374151' : '#f9fafb',
-            borderRadius: '6px',
-            border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+            backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+            borderRadius: '6px 6px 0 0',
+            border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+            borderBottom: 'none'
           }}>
             <button
               type="button"
-              onClick={() => applyFormatting('bold')}
+              onClick={() => {
+                const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
+                if (textarea) {
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+                  const selectedText = textarea.value.substring(start, end);
+                  const newText = textarea.value.substring(0, start) + `**${selectedText}**` + textarea.value.substring(end);
+                  setContent(prev => ({ ...prev, description: newText }));
+                }
+              }}
               style={{
-                padding: '6px 12px',
-                backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
-                border: 'none',
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
                 borderRadius: '4px',
-                fontSize: '12px',
-                fontWeight: 'bold',
                 cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold',
                 color: isDarkMode ? '#f8fafc' : '#111827'
               }}
+              title="Bold (wrap selected text with **)"
             >
               B
             </button>
+            
             <button
               type="button"
-              onClick={() => applyFormatting('italic')}
+              onClick={() => {
+                const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
+                if (textarea) {
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+                  const selectedText = textarea.value.substring(start, end);
+                  const newText = textarea.value.substring(0, start) + `*${selectedText}*` + textarea.value.substring(end);
+                  setContent(prev => ({ ...prev, description: newText }));
+                }
+              }}
               style={{
-                padding: '6px 12px',
-                backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
-                border: 'none',
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
                 borderRadius: '4px',
-                fontSize: '12px',
-                fontStyle: 'italic',
                 cursor: 'pointer',
+                fontSize: '14px',
+                fontStyle: 'italic',
                 color: isDarkMode ? '#f8fafc' : '#111827'
               }}
+              title="Italic (wrap selected text with *)"
             >
               I
             </button>
+            
             <button
               type="button"
-              onClick={() => applyFormatting('underline')}
+              onClick={() => {
+                const textarea = document.querySelector('textarea[placeholder*="Write your post content"]') as HTMLTextAreaElement;
+                if (textarea) {
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+                  const selectedText = textarea.value.substring(start, end);
+                  const newText = textarea.value.substring(0, start) + `__${selectedText}__` + textarea.value.substring(end);
+                  setContent(prev => ({ ...prev, description: newText }));
+                }
+              }}
               style={{
-                padding: '6px 12px',
-                backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
-                border: 'none',
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
                 borderRadius: '4px',
-                fontSize: '12px',
-                textDecoration: 'underline',
                 cursor: 'pointer',
+                fontSize: '14px',
+                textDecoration: 'underline',
                 color: isDarkMode ? '#f8fafc' : '#111827'
               }}
+              title="Underline (wrap selected text with __)"
             >
               U
             </button>
+            
             <button
               type="button"
-              onClick={() => applyFormatting('link')}
+              onClick={() => {
+                const url = prompt('Enter URL:');
+                const linkText = prompt('Enter link text (or leave empty to use URL):');
+                if (url) {
+                  const displayText = linkText || url;
+                  const linkMarkdown = `[${displayText}](${url})`;
+                  setContent(prev => ({ ...prev, description: prev.description + linkMarkdown }));
+                }
+              }}
               style={{
-                padding: '6px 12px',
-                backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
-                border: 'none',
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
                 borderRadius: '4px',
-                fontSize: '12px',
                 cursor: 'pointer',
+                fontSize: '14px',
                 color: isDarkMode ? '#f8fafc' : '#111827'
               }}
+              title="Add Link"
             >
-              Link
+              🔗
             </button>
+            
+            <button
+              type="button"
+              onClick={() => {
+                const commonEmojis = ['😀', '😊', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙌', '💡', '📈', '📊'];
+                const emoji = prompt(`Choose an emoji:\n${commonEmojis.join(' ')}\n\nOr enter any emoji:`);
+                if (emoji) {
+                  setContent(prev => ({ ...prev, description: prev.description + emoji }));
+                }
+              }}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+              title="Add Emoji"
+            >
+              😊
+            </button>
+            
+            <div style={{
+              fontSize: '12px',
+              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              marginLeft: 'auto'
+            }}>
+              UK English | Formatting: **bold** *italic* __underline__ [link](url)
+            </div>
           </div>
           
           <textarea
-            ref={descriptionRef}
             value={content.description}
             onChange={(e) => setContent(prev => ({ ...prev, description: e.target.value }))}
-            placeholder="Write your post content here... Use toolbar for formatting (UK English)"
+            placeholder="Write your post content here... (UK English)"
             maxLength={fieldConfig?.description?.maxLength || 2200}
             style={{
               width: '100%',
               padding: '12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-              borderRadius: '8px',
+              borderRadius: '0 0 8px 8px',
               fontSize: '14px',
               backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: '#000000',
+              color: '#000000', // Black font for posts as requested
               resize: 'vertical',
               minHeight: '120px',
               fontFamily: 'inherit',
-              lineHeight: '1.4'
+              lineHeight: '1.4', // Enhanced line spacing as requested
+              borderTop: 'none'
             }}
           />
           <div style={{
@@ -1190,7 +1263,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
               ? '#ef4444' 
               : (isDarkMode ? '#94a3b8' : '#6b7280')
           }}>
-            <span>Use **bold**, *italic*, &lt;u&gt;underline&lt;/u&gt;, [links](url) - UK English</span>
+            <span>Provide engaging content that matches your theme and brand voice (UK English)</span>
             <span>{content.description.length}/{fieldConfig?.description?.maxLength || 2200}</span>
           </div>
         </div>
