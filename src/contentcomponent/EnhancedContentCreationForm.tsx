@@ -978,6 +978,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
         marginBottom: '24px',
         width: '85%'
       }}>
+
         {/* Title Field - FIXED with proper structure and bold formatting */}
         {(!fieldConfig || fieldConfig.title?.show !== false) && (
           <div>
