@@ -1104,6 +1104,33 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
               Title/Headline
             </label>
             
+            <input
+              type="text"
+              value={content.title}
+              onChange={(e) => setContent(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="Enter compelling title... (UK English)"
+              maxLength={fieldConfig?.title?.maxLength || 150}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '8px',
+                fontSize: '14px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                color: '#000000',
+                fontFamily: 'inherit'
+              }}
+            />
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: '4px',
+              fontSize: '12px',
+              color: isDarkMode ? '#94a3b8' : '#6b7280'
+            }}>
+              <span>Create an attention-grabbing headline (UK English)</span>
+              <span>{content.title.length}/{fieldConfig?.title?.maxLength || 150}</span>
+            }}>
             {/* Title Formatting Toolbar */}
             <div style={{
               display: 'flex',
@@ -1168,7 +1195,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                 borderRadius: '0 0 8px 8px',
                 fontSize: '14px',
                 backgroundColor: isDarkMode ? '#334155' : 'white',
-                color: '#000000',
+                color: '#000000', // Black font for posts as requested
                 fontFamily: 'inherit',
                 borderTop: 'none'
               }}
@@ -1186,6 +1213,15 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
           </div>
         )}
 
+        {/* Description Field with Enhanced Features */}
+        <div style={{ width: '85%' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '16px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            marginBottom: '8px'
+          }}>
         {/* Description Field */}
         <div>
           <label style={{
@@ -1198,6 +1234,34 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
             Post Description *
           </label>
           
+          <textarea
+            value={content.description}
+            onChange={(e) => setContent(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="Write your post content here... (UK English)"
+            maxLength={fieldConfig?.description?.maxLength || 2200}
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '8px',
+              fontSize: '14px',
+              backgroundColor: isDarkMode ? '#334155' : 'white',
+              color: '#000000',
+              resize: 'vertical',
+              minHeight: '120px',
+              fontFamily: 'inherit',
+              lineHeight: '1.4'
+            }}
+          />
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: '4px',
+            fontSize: '12px',
+            color: content.description.length > (fieldConfig?.description?.maxLength || 2200) * 0.9 
+              ? '#ef4444' 
+              : (isDarkMode ? '#94a3b8' : '#6b7280')
+          }}>
           {/* Formatting Toolbar */}
           <div style={{
             display: 'flex',
@@ -1359,11 +1423,11 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
               borderRadius: '0 0 8px 8px',
               fontSize: '14px',
               backgroundColor: isDarkMode ? '#334155' : 'white',
-              color: '#000000',
+              color: '#000000', // Black font for posts as requested
               resize: 'vertical',
               minHeight: '120px',
               fontFamily: 'inherit',
-              lineHeight: '1.4',
+              lineHeight: '1.4', // Enhanced line spacing as requested
               borderTop: 'none'
             }}
           />
@@ -1819,8 +1883,8 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                             overflow: 'hidden',
                             backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
                             border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
-                            aspectRatio: platformStyle.aspectRatio,
-                            maxWidth: platformStyle.maxWidth,
+                            aspectRatio: platformStyle.aspectRatio, // Platform-specific sizing
+                            maxWidth: platformStyle.maxWidth, // Platform-specific sizing
                             margin: '0 auto'
                           }}>
                             {file.type === 'image' || file.type === 'gif' ? (
@@ -1830,7 +1894,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                                 style={{
                                   width: '100%',
                                   height: '100%',
-                                  objectFit: selections.platform && selections.platform !== 'telegram' ? 'cover' : 'contain',
+                                  objectFit: selections.platform && selections.platform !== 'telegram' ? 'cover' : 'contain', // Generic for Telegram
                                   backgroundColor: isDarkMode ? '#1e293b' : 'white'
                                 }}
                               />
@@ -1840,7 +1904,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                                 style={{
                                   width: '100%',
                                   height: '100%',
-                                  objectFit: selections.platform && selections.platform !== 'telegram' ? 'cover' : 'contain',
+                                  objectFit: selections.platform && selections.platform !== 'telegram' ? 'cover' : 'contain', // Generic for Telegram
                                   backgroundColor: isDarkMode ? '#1e293b' : 'white'
                                 }}
                                 controls
@@ -2174,38 +2238,20 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                 gap: '8px'
               }}>
                 {selectedPlatforms.map(platformId => {
-                  const platform = enhancedPlatforms.find(p => p.id === platformId) || 
-                                  (platforms || []).find(p => p.id === platformId);
+                  const platform = platforms.find(p => p.id === platformId);
                   if (!platform) return null;
-                  
-                  const isTelegram = platformId.startsWith('telegram_');
                   
                   return (
                     <div key={platformId} style={{
                       padding: '6px 12px',
                       backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                      border: `1px solid ${isTelegram ? '#0088cc' : (isDarkMode ? '#475569' : '#d1d5db')}`,
+                      border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
                       borderRadius: '16px',
                       fontSize: '12px',
                       fontWeight: '500',
-                      color: isTelegram ? '#0088cc' : (isDarkMode ? '#94a3b8' : '#6b7280'),
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
+                      color: isDarkMode ? '#94a3b8' : '#6b7280'
                     }}>
-                      {isTelegram && '📱'}
-                      {platform.display_name || platform.name}
-                      {isTelegram && platform.telegram_config && (
-                        <span style={{
-                          fontSize: '10px',
-                          backgroundColor: '#0088cc20',
-                          padding: '1px 4px',
-                          borderRadius: '4px',
-                          marginLeft: '4px'
-                        }}>
-                          ID: {platform.telegram_config.id}
-                        </span>
-                      )}
+                      {platform.name}
                     </div>
                   );
                 })}
@@ -2217,8 +2263,6 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                 marginTop: '8px'
               }}>
                 * Platform links are for internal dashboard tracking only and will not appear in the public post
-                <br />
-                * {isLoadingPlatforms ? 'Loading platforms...' : `Loaded from database${telegramChannels.length > 0 ? ` + ${telegramChannels.length} Telegram channels` : ''}`}
               </div>
             </div>
           )}
@@ -2227,4 +2271,3 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
     </div>
   );
 };
-
