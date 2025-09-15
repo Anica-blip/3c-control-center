@@ -1073,7 +1073,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
           </div>
         )}
 
-        {/* Description Field */}
+        {/* Description Field with Rich Text Formatting */}
         <div>
           <label style={{
             display: 'block',
@@ -1085,10 +1085,86 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
             Post Description *
           </label>
           
+          {/* Formatting Toolbar */}
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            marginBottom: '8px',
+            padding: '8px',
+            backgroundColor: isDarkMode ? '#374151' : '#f9fafb',
+            borderRadius: '6px',
+            border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+          }}>
+            <button
+              type="button"
+              onClick={() => applyFormatting('bold')}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+            >
+              B
+            </button>
+            <button
+              type="button"
+              onClick={() => applyFormatting('italic')}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontStyle: 'italic',
+                cursor: 'pointer',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+            >
+              I
+            </button>
+            <button
+              type="button"
+              onClick={() => applyFormatting('underline')}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+            >
+              U
+            </button>
+            <button
+              type="button"
+              onClick={() => applyFormatting('link')}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: 'pointer',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+            >
+              Link
+            </button>
+          </div>
+          
           <textarea
+            ref={descriptionRef}
             value={content.description}
             onChange={(e) => setContent(prev => ({ ...prev, description: e.target.value }))}
-            placeholder="Write your post content here... (UK English)"
+            placeholder="Write your post content here... Use toolbar for formatting (UK English)"
             maxLength={fieldConfig?.description?.maxLength || 2200}
             style={{
               width: '100%',
@@ -1113,7 +1189,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
               ? '#ef4444' 
               : (isDarkMode ? '#94a3b8' : '#6b7280')
           }}>
-            <span>Provide engaging content that matches your theme and brand voice (UK English)</span>
+            <span>Use **bold**, *italic*, &lt;u&gt;underline&lt;/u&gt;, [links](url) - UK English</span>
             <span>{content.description.length}/{fieldConfig?.description?.maxLength || 2200}</span>
           </div>
         </div>
