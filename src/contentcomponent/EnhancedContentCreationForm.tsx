@@ -351,44 +351,6 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
     );
   };
 
-  // RESTORED: Save as Draft function
-  const handleSave = async () => {
-    const postData = {
-      contentId,
-      ...selections,
-      ...content,
-      mediaFiles,
-      selectedPlatforms,
-      status: 'pending' as const, // This ensures it's saved as draft
-      isFromTemplate: false
-    };
-
-    try {
-      if (isEditingPost && editingPost) {
-        // Update existing post
-        const updatedPost = await supabaseAPI.updateContentPost(editingPost.id, postData);
-        alert('Content updated successfully!');
-        
-        // Reset editing state
-        setIsEditingPost(false);
-        if (onEditComplete) {
-          onEditComplete();
-        }
-      } else {
-        // Create new post as draft
-        await onSave(postData);
-        alert('Content saved as draft successfully!');
-      }
-      
-      // Only reset form if save was successful
-      resetForm();
-    } catch (error) {
-      // Don't reset form on error - preserve user's work
-      console.error('Save failed, preserving form data:', error);
-      alert('Failed to save content. Your content is preserved and not lost.\n\nError: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
-  };
-
   const handleAddToSchedule = async () => {
     const postData = {
       contentId,
