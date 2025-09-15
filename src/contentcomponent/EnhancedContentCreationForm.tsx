@@ -1017,10 +1017,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
             }}>
               <span>Create an attention-grabbing headline (UK English)</span>
               <span>{content.title.length}/{fieldConfig?.title?.maxLength || 150}</span>
-            </div>
-          </div>
-        )}
-            
+            }}>
             {/* Title Formatting Toolbar */}
             <div style={{
               display: 'flex',
@@ -1152,11 +1149,6 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
               ? '#ef4444' 
               : (isDarkMode ? '#94a3b8' : '#6b7280')
           }}>
-            <span>Provide engaging content that matches your theme and brand voice (UK English)</span>
-            <span>{content.description.length}/{fieldConfig?.description?.maxLength || 2200}</span>
-          </div>
-        </div>
-          
           {/* Formatting Toolbar */}
           <div style={{
             display: 'flex',
