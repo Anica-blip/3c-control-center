@@ -978,16 +978,6 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
         marginBottom: '24px',
         width: '85%'
       }}>
-        {/* Title Field */}
-        {(!fieldConfig || fieldConfig.title?.show !== false) && (
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '16px',
-              fontWeight: '600',
-              color: isDarkMode ? '#f8fafc' : '#111827',
-              marginBottom: '8px'
-            }}>
         {/* Title Field - FIXED with proper structure and bold formatting */}
         {(!fieldConfig || fieldConfig.title?.show !== false) && (
           <div>
