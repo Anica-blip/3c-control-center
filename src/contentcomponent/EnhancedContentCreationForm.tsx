@@ -2636,4 +2636,4 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
   );
 };
 
-export default EnhancedContentCreationForm;
+export { EnhancedContentCreationForm, SavedPostsList };
