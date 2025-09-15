@@ -92,7 +92,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
   const [urlInput, setUrlInput] = useState('');
   const [urlTitle, setUrlTitle] = useState('');
 
-  // Merge platforms with telegram channels
+  // Merge platforms with telegram channels using platform-config function
   const enhancedPlatforms = React.useMemo(() => {
     return mergeTelegramChannels(platforms, telegramChannels);
   }, [platforms, telegramChannels]);
@@ -104,7 +104,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
     const media = selections.mediaType ? getMediaCode(selections.mediaType) : 'XX';
     const template = selections.templateType ? getTemplateTypeCode(selections.templateType) : 'XX';
     
-    // Get character code from actual profile name, not ID
+    // FIX: Get character code from actual profile name, not ID
     let character = 'XX';
     if (selections.characterProfile) {
       const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
@@ -116,6 +116,62 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
     const voiceStyle = selections.voiceStyle ? getVoiceStyleCode(selections.voiceStyle) : 'XX';
     const randomNum = Math.floor(Math.random() * 999) + 1;
     return `${theme}-${audience}-${media}-${template}-${character}-${voiceStyle}-${String(randomNum).padStart(3, '0')}`;
+  };
+
+  // Code mapping functions for content ID generation
+  const getThemeCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'news_alert': 'NA', 'promotion': 'PR', 'standard_post': 'SP',
+      'cta_quiz': 'QZ', 'cta_game': 'GA', 'cta_puzzle': 'PZ',
+      'cta_challenge': 'CH', 'news': 'NS', 'blog': 'BP',
+      'tutorial_guide': 'TG', 'course_tool': 'CT', 'assessment': 'AS'
+    };
+    return codes[value] || 'XX';
+  };
+
+  const getAudienceCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'existing_members': 'EM', 'new_members': 'NM', 'persona_falcon': 'FL',
+      'persona_panther': 'PA', 'persona_wolf': 'WF', 'persona_lion': 'LI',
+      'general_public': 'GP'
+    };
+    return codes[value] || 'XX';
+  };
+
+  const getMediaCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'image': 'IM', 'video': 'VD', 'gifs': 'GF', 'pdf': 'PF',
+      'interactive_media': 'IM', 'url_link': 'UL'
+    };
+    return codes[value] || 'XX';
+  };
+
+  const getTemplateTypeCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'social_media': 'SM', 'presentation': 'PR', 'video_message': 'VM',
+      'anica_chat': 'AC', 'blog_posts': 'BP', 'news_article': 'NA',
+      'newsletter': 'NL', 'email_templates': 'ET', 'custom_templates': 'CT'
+    };
+    return codes[value] || 'XX';
+  };
+
+  const getCharacterCode = (name: string) => {
+    const codes: Record<string, string> = {
+      'anica': 'AN',
+      'caelum': 'CA', 
+      'aurion': 'AU'
+    };
+    return codes[name.toLowerCase()] || 'XX';
+  };
+
+  const getVoiceStyleCode = (value: string) => {
+    const codes: Record<string, string> = {
+      'casual': 'CS',
+      'friendly': 'FR',
+      'professional': 'PR',
+      'creative': 'CR'
+    };
+    return codes[value] || 'XX';
   };
 
   // Initialize and update content ID based on selections
@@ -327,6 +383,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
     setUrlTitle('');
   };
 
+  const activePlatforms = enhancedPlatforms?.filter(p => p?.isActive) || [];
   const canSave = selections.characterProfile && selections.theme && selections.audience && selections.mediaType && selections.templateType && selections.voiceStyle && content.description;
 
   const getFileIcon = (type: string) => {
@@ -643,7 +700,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
           </div>
         ))}
 
-        {/* Platform Optimization Selector */}
+        {/* Platform Optimization Selector using imported component */}
         <PlatformOptimizationSelector
           selectedPlatform={selections.platform}
           onPlatformChange={(platform) => handleSelectionChange('platform', platform)}
@@ -651,7 +708,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
         />
       </div>
 
-      {/* Platform-Specific Field Information */}
+      {/* Platform-Specific Field Information using imported component */}
       {fieldConfig && (
         <PlatformFieldInfo
           platform={selections.platform}
@@ -1423,7 +1480,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
         </div>
       </div>
 
-      {/* Platform Selection for Publishing */}
+      {/* Platform Selection for Publishing using imported component */}
       <PlatformSelector
         platforms={enhancedPlatforms}
         selectedPlatforms={selectedPlatforms}
@@ -1542,7 +1599,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                 backgroundColor: isDarkMode ? '#1e293b' : '#f9fafb',
                 borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
               }}>
-                {/* Platform Preview Header */}
+                {/* Platform Preview Header using imported component */}
                 <PlatformPreviewHeader platform={selections.platform} isDarkMode={isDarkMode} />
 
                 {(() => {
@@ -1742,7 +1799,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                         ))}
                       </div>
 
-                      {/* Platform-specific notes */}
+                      {/* Platform-specific notes using imported component */}
                       <PlatformNotes platform={selections.platform} isDarkMode={isDarkMode} />
                     </div>
                   );
@@ -1891,7 +1948,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
             </div>
           </div>
 
-          {/* Platform Distribution Settings */}
+          {/* Platform Distribution Settings using imported component */}
           <PlatformDistributionSettings
             selectedPlatforms={selectedPlatforms}
             platforms={enhancedPlatforms}
