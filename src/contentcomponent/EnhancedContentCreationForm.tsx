@@ -20,7 +20,7 @@ const ThemeContext = React.createContext({
 
 const useTheme = () => useContext(ThemeContext);
 
-// Telegram Channel interface (keep existing)
+// Telegram Channel interface (RESTORED from EnhancedContentCreationForm(1).tsx)
 interface TelegramChannel {
   id: string;
   name: string;
@@ -39,7 +39,7 @@ interface EnhancedContentCreationFormProps {
   isLoadingProfiles?: boolean;
   editingPost?: ContentPost | null;
   onEditComplete?: () => void;
-  telegramChannels?: TelegramChannel[];
+  telegramChannels?: TelegramChannel[]; // RESTORED
   isLoadingPlatforms?: boolean;
 }
 
@@ -52,7 +52,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
   isLoadingProfiles,
   editingPost,
   onEditComplete,
-  telegramChannels = [],
+  telegramChannels = [], // RESTORED
   isLoadingPlatforms = false
 }) => {
   const { isDarkMode } = useTheme();
@@ -203,7 +203,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
     };
   };
 
-  // Merge platforms with telegram channels (keep existing functionality)
+  // RESTORED: Merge platforms with telegram channels functionality
   const enhancedPlatforms = React.useMemo(() => {
     // Convert telegram channels to platform format and merge
     const telegramPlatforms = telegramChannels.map(channel => ({
@@ -214,7 +214,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
       url: `https://telegram.org`,
       is_active: true,
       isActive: true,
-      is_default: false,
+      is_default: false, // NO defaults for telegram channels
       isDefault: false,
       channel_group: channel.channel_group,
       thread_id: channel.thread_id,
@@ -373,6 +373,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
     );
   };
 
+  // RESTORED: Save as Draft function
   const handleSave = async () => {
     const postData = {
       contentId,
@@ -380,7 +381,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
       ...content,
       mediaFiles,
       selectedPlatforms,
-      status: 'pending' as const,
+      status: 'pending' as const, // This ensures it's saved as draft
       isFromTemplate: false
     };
 
@@ -396,8 +397,9 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
           onEditComplete();
         }
       } else {
-        // Create new post
+        // Create new post as draft
         await onSave(postData);
+        alert('Content saved as draft successfully!');
       }
       
       // Only reset form if save was successful
@@ -422,6 +424,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
 
     try {
       await onAddToSchedule(postData);
+      alert('Post scheduled successfully!');
       resetForm();
     } catch (error) {
       console.error('Schedule failed:', error);
@@ -1597,7 +1600,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
         </div>
       </div>
 
-      {/* Platform Selection for Publishing - Using loaded platforms from Supabase */}
+      {/* Platform Selection for Publishing - Using loaded platforms from Supabase with RESTORED Telegram Channels */}
       <div style={{ marginBottom: '24px', width: '85%' }}>
         <label style={{
           display: 'block',
@@ -1723,6 +1726,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
           Reset Form
         </button>
         
+        {/* RESTORED: Save as Draft Button */}
         <button
           onClick={handleSave}
           disabled={!canSave || isSaving}
