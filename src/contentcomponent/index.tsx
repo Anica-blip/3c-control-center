@@ -75,14 +75,8 @@ export default function ContentComponent() {
     if (!supabase) {
       console.warn('Supabase not configured. Using mock platform data.');
       setPlatforms([
-        { id: '1', name: 'Instagram', url: 'https://instagram.com', isActive: true, isDefault: true },
-        { id: '2', name: 'Facebook', url: 'https://facebook.com', isActive: true, isDefault: false },
-        { id: '3', name: 'LinkedIn', url: 'https://linkedin.com', isActive: true, isDefault: false },
-        { id: '4', name: 'Twitter/X', url: 'https://x.com', isActive: true, isDefault: false },
-        { id: '5', name: 'YouTube', url: 'https://youtube.com', isActive: true, isDefault: false },
-        { id: '6', name: 'TikTok', url: 'https://tiktok.com', isActive: true, isDefault: false },
-        { id: '7', name: 'Pinterest', url: 'https://pinterest.com', isActive: true, isDefault: false },
-        { id: '8', name: 'WhatsApp', url: 'https://whatsapp.com', isActive: true, isDefault: false }
+        { id: '1', name: 'Facebook', url: 'https://facebook.com/page', isActive: true, isDefault: false },
+        { id: '2', name: 'Instagram', url: 'https://instagram.com/page', isActive: true, isDefault: true },
       ]);
       return;
     }
@@ -98,35 +92,16 @@ export default function ContentComponent() {
       
       const platformData = (data || []).map(item => ({
         id: item.id.toString(),
-        name: item.display_name || item.name,
-        url: item.url || '',
+        name: item.name,
+        url: item.url,
         isActive: item.is_active,
         isDefault: item.is_default || false
       }));
       
-      // Add fallback platforms if Supabase is empty
-      if (platformData.length === 0) {
-        setPlatforms([
-          { id: '1', name: 'Instagram', url: 'https://instagram.com', isActive: true, isDefault: true },
-          { id: '2', name: 'Facebook', url: 'https://facebook.com', isActive: true, isDefault: false },
-          { id: '3', name: 'LinkedIn', url: 'https://linkedin.com', isActive: true, isDefault: false },
-          { id: '4', name: 'Twitter/X', url: 'https://x.com', isActive: true, isDefault: false },
-          { id: '5', name: 'YouTube', url: 'https://youtube.com', isActive: true, isDefault: false },
-          { id: '6', name: 'TikTok', url: 'https://tiktok.com', isActive: true, isDefault: false }
-        ]);
-      } else {
-        setPlatforms(platformData);
-      }
+      setPlatforms(platformData);
     } catch (error) {
       console.error('Error loading platforms:', error);
-      // Fallback platforms
-      setPlatforms([
-        { id: '1', name: 'Instagram', url: 'https://instagram.com', isActive: true, isDefault: true },
-        { id: '2', name: 'Facebook', url: 'https://facebook.com', isActive: true, isDefault: false },
-        { id: '3', name: 'LinkedIn', url: 'https://linkedin.com', isActive: true, isDefault: false },
-        { id: '4', name: 'Twitter/X', url: 'https://x.com', isActive: true, isDefault: false },
-        { id: '5', name: 'YouTube', url: 'https://youtube.com', isActive: true, isDefault: false }
-      ]);
+      setPlatforms([]);
     }
   };
 
@@ -403,3 +378,4 @@ export default function ContentComponent() {
     </div>
   );
 }
+
