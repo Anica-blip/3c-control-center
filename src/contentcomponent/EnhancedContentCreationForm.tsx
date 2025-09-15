@@ -1846,7 +1846,8 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                                 controls
                                 muted
                               />
-                            ) : file.type === 'interactive' && file.urlPreview ? (
+                            ) : file.type === 'interactive' && file.size === 0 ? (
+                              // Interactive media (URL with preview) - show preview image/content
                               <div style={{
                                 width: '100%',
                                 height: '100%',
@@ -1857,9 +1858,9 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                                 borderRadius: '8px',
                                 overflow: 'hidden'
                               }}>
-                                {file.urlPreview.image && (
+                                {file.urlPreview?.image && (
                                   <div style={{
-                                    height: '60%',
+                                    height: selections.platform === 'telegram' ? '70%' : '60%',
                                     backgroundImage: `url(${file.urlPreview.image})`,
                                     backgroundSize: 'cover',
                                     backgroundPosition: 'center',
@@ -1868,15 +1869,15 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                                 )}
                                 
                                 <div style={{
-                                  padding: '12px',
+                                  padding: selections.platform === 'telegram' ? '8px' : '12px',
                                   backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
-                                  height: file.urlPreview.image ? '40%' : '100%',
+                                  height: file.urlPreview?.image ? (selections.platform === 'telegram' ? '30%' : '40%') : '100%',
                                   display: 'flex',
                                   flexDirection: 'column',
                                   justifyContent: 'center'
                                 }}>
                                   <div style={{
-                                    fontSize: '13px',
+                                    fontSize: selections.platform === 'telegram' ? '12px' : '13px',
                                     fontWeight: '600',
                                     color: isDarkMode ? '#f8fafc' : '#111827',
                                     marginBottom: '4px',
@@ -1884,32 +1885,36 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap'
                                   }}>
-                                    {file.urlPreview.title || file.name}
+                                    {file.urlPreview?.title || file.name}
                                   </div>
+                                  {file.urlPreview?.description && (
+                                    <div style={{
+                                      fontSize: selections.platform === 'telegram' ? '10px' : '11px',
+                                      color: isDarkMode ? '#94a3b8' : '#6b7280',
+                                      marginBottom: '4px',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      {file.urlPreview.description}
+                                    </div>
+                                  )}
                                   <div style={{
-                                    fontSize: '11px',
-                                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                                    marginBottom: '6px',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap'
-                                  }}>
-                                    {file.urlPreview.description || 'Click to visit'}
-                                  </div>
-                                  <div style={{
-                                    fontSize: '10px',
+                                    fontSize: '9px',
                                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                                     fontWeight: '500',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap',
-                                    textDecoration: 'underline'
+                                    textDecoration: 'underline',
+                                    fontFamily: 'monospace'
                                   }}>
                                     {file.url}
                                   </div>
                                 </div>
                               </div>
                             ) : (
+                              // Other file types (PDF, etc.)
                               <div style={{
                                 width: '100%',
                                 height: '100%',
