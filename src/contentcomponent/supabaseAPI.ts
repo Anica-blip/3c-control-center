@@ -347,7 +347,7 @@ export const supabaseAPI = {
     if (!supabase) {
       console.warn('Supabase not configured - returning mock platforms');
       return [
-        { id: '1', name: 'Instagram', display_name: 'Instagram', url: 'https://instagram.com', is_active: true, isActive: true, isDefault: true, is_default: true },
+        { id: '1', name: 'Instagram', display_name: 'Instagram', url: 'https://instagram.com', is_active: true, isActive: true, isDefault: false, is_default: false },
         { id: '2', name: 'Facebook', display_name: 'Facebook', url: 'https://facebook.com', is_active: true, isActive: true, isDefault: false, is_default: false },
         { id: '3', name: 'LinkedIn', display_name: 'LinkedIn', url: 'https://linkedin.com', is_active: true, isActive: true, isDefault: false, is_default: false },
         { id: '4', name: 'Twitter', display_name: 'Twitter/X', url: 'https://x.com', is_active: true, isActive: true, isDefault: false, is_default: false },
