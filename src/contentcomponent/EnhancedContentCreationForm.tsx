@@ -206,7 +206,6 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
     return codes[value] || 'XX';
   };
 
-
   // Initialize and update content ID based on selections
   useEffect(() => {
     const newId = generateContentId();
