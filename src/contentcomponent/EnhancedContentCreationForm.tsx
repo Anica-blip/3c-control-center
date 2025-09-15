@@ -2199,6 +2199,503 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
             </div>
           </div>
 
+      {/* Platform Selection for Publishing */}
+      <div style={{ marginBottom: '24px', width: '85%' }}>
+        <label style={{
+          display: 'block',
+          fontSize: '16px',
+          fontWeight: '600',
+          color: isDarkMode ? '#f8fafc' : '#111827',
+          marginBottom: '12px'
+        }}>
+          Select Publishing Platforms
+        </label>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '12px'
+        }}>
+          {activePlatforms.map((platform) => (
+            <label
+              key={platform.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px',
+                border: selectedPlatforms.includes(platform.id) 
+                  ? `1px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}` 
+                  : `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '8px',
+                cursor: 'pointer',
+                backgroundColor: selectedPlatforms.includes(platform.id) 
+                  ? (isDarkMode ? '#1e3a8a30' : '#dbeafe') 
+                  : '#334155',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={selectedPlatforms.includes(platform.id)}
+                onChange={() => handlePlatformToggle(platform.id)}
+                style={{
+                  height: '16px',
+                  width: '16px',
+                  accentColor: isDarkMode ? '#60a5fa' : '#3b82f6'
+                }}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#f8fafc' : '#111827',
+                  marginBottom: '2px'
+                }}>
+                  {platform.name}
+                </div>
+                {platform.isDefault && (
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '1px 6px',
+                    fontSize: '10px',
+                    fontWeight: '600',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    borderRadius: '8px'
+                  }}>
+                    Default
+                  </span>
+                )}
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: '12px',
+        paddingTop: '16px',
+        borderTop: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
+      }}>
+        <button
+          onClick={resetForm}
+          style={{
+            padding: '12px 20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            borderRadius: '8px',
+            border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+            cursor: 'pointer',
+            backgroundColor: 'transparent',
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            fontFamily: 'inherit'
+          }}
+        >
+          Reset Form
+        </button>
+        
+        <button
+          onClick={handleSave}
+          disabled={!canSave || isSaving}
+          style={{
+            padding: '12px 20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            borderRadius: '8px',
+            border: 'none',
+            cursor: (canSave && !isSaving) ? 'pointer' : 'not-allowed',
+            backgroundColor: (canSave && !isSaving) ? (isDarkMode ? '#64748b' : '#6b7280') : (isDarkMode ? '#475569' : '#d1d5db'),
+            color: (canSave && !isSaving) ? 'white' : (isDarkMode ? '#64748b' : '#9ca3af'),
+            fontFamily: 'inherit',
+            opacity: isSaving ? 0.7 : 1
+          }}
+        >
+          {isSaving ? 'Saving...' : (isEditingPost ? 'Update Draft' : 'Save as Draft')}
+        </button>
+        
+        <button
+          onClick={handleAddToSchedule}
+          disabled={!canSave || isSaving}
+          style={{
+            padding: '12px 20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            borderRadius: '8px',
+            border: 'none',
+            cursor: (canSave && !isSaving) ? 'pointer' : 'not-allowed',
+            backgroundColor: (canSave && !isSaving) ? (isDarkMode ? '#60a5fa' : '#3b82f6') : (isDarkMode ? '#475569' : '#d1d5db'),
+            color: (canSave && !isSaving) ? 'white' : (isDarkMode ? '#64748b' : '#9ca3af'),
+            fontFamily: 'inherit',
+            opacity: isSaving ? 0.7 : 1
+          }}
+        >
+          {isSaving ? 'Saving...' : 'Schedule Post'}
+        </button>
+      </div>
+
+      {/* Live Preview Section */}
+      {(selections.characterProfile || content.title || content.description || mediaFiles.length > 0) && (
+        <div style={{
+          marginTop: '32px',
+          padding: '24px',
+          backgroundColor: isDarkMode ? '#1e293b' : '#f8fafc',
+          borderRadius: '12px',
+          border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '20px'
+          }}>
+            <Eye style={{ height: '24px', width: '24px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: isDarkMode ? '#60a5fa' : '#3b82f6',
+              margin: '0'
+            }}>
+              Live Preview - Final Post Format
+            </h3>
+            <div style={{
+              fontSize: '12px',
+              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              fontStyle: 'italic',
+              marginLeft: 'auto'
+            }}>
+              This is the exact format when the post is published
+            </div>
+          </div>
+          
+          <div style={{
+            backgroundColor: isDarkMode ? '#334155' : 'white',
+            borderRadius: '8px',
+            border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+            overflow: 'hidden'
+          }}>
+            {/* Media Files Preview */}
+            {mediaFiles.length > 0 && (
+              <div style={{
+                padding: '16px',
+                backgroundColor: isDarkMode ? '#1e293b' : '#f9fafb',
+                borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+              }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: mediaFiles.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(200px, 300px))',
+                  gap: '12px',
+                  justifyContent: 'center'
+                }}>
+                  {mediaFiles.slice(0, 4).map((file, index) => (
+                    <div key={file.id} style={{
+                      position: 'relative',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                      border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+                      aspectRatio: '16 / 9',
+                      maxWidth: '300px',
+                      margin: '0 auto'
+                    }}>
+                      {file.type === 'image' || file.type === 'gif' ? (
+                        <img
+                          src={file.url}
+                          alt={file.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            backgroundColor: isDarkMode ? '#1e293b' : 'white'
+                          }}
+                        />
+                      ) : file.type === 'video' ? (
+                        <video
+                          src={file.url}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            backgroundColor: isDarkMode ? '#1e293b' : 'white'
+                          }}
+                          controls
+                          muted
+                        />
+                      ) : file.type === 'interactive' && file.urlPreview ? (
+                        <div style={{
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                          border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+                          borderRadius: '8px',
+                          overflow: 'hidden'
+                        }}>
+                          {file.urlPreview.image && (
+                            <div style={{
+                              height: '60%',
+                              backgroundImage: `url(${file.urlPreview.image})`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                              backgroundRepeat: 'no-repeat'
+                            }} />
+                          )}
+                          
+                          <div style={{
+                            padding: '12px',
+                            backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
+                            height: file.urlPreview.image ? '40%' : '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center'
+                          }}>
+                            <div style={{
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              color: isDarkMode ? '#f8fafc' : '#111827',
+                              marginBottom: '4px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {file.urlPreview.title || file.name}
+                            </div>
+                            <div style={{
+                              fontSize: '11px',
+                              color: isDarkMode ? '#94a3b8' : '#6b7280',
+                              marginBottom: '6px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {file.urlPreview.description || 'Click to visit'}
+                            </div>
+                            <div style={{
+                              fontSize: '10px',
+                              color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                              fontWeight: '500',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              textDecoration: 'underline'
+                            }}>
+                              {file.url}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          padding: '16px'
+                        }}>
+                          {getFileIcon(file.type)}
+                          <span style={{
+                            fontSize: '12px',
+                            color: isDarkMode ? '#94a3b8' : '#6b7280',
+                            textAlign: 'center',
+                            fontWeight: '500'
+                          }}>
+                            {file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name}
+                          </span>
+                          <span style={{
+                            fontSize: '10px',
+                            color: isDarkMode ? '#64748b' : '#9ca3af',
+                            textAlign: 'center'
+                          }}>
+                            {file.type.toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {mediaFiles.length > 4 && index === 3 && (
+                        <div style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontSize: '16px',
+                          fontWeight: '700'
+                        }}>
+                          +{mediaFiles.length - 3} more
+                        </div>
+                      )}
+
+                      <div style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '10px',
+                        fontWeight: '600',
+                        textTransform: 'uppercase'
+                      }}>
+                        {file.type}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Post Content */}
+            <div style={{ padding: '20px' }}>
+              {/* Character Profile Header */}
+              {selections.characterProfile && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginBottom: '16px',
+                  paddingBottom: '12px',
+                  borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+                }}>
+                  {(() => {
+                    const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
+                    if (!selectedProfile) return null;
+                    
+                    return (
+                      <>
+                        <div style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '50%',
+                          backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '20px',
+                          color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                          fontWeight: 'bold',
+                          border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+                          flexShrink: 0,
+                          overflow: 'hidden'
+                        }}>
+                          {selectedProfile.avatar_id ? (
+                            <img
+                              src={selectedProfile.avatar_id}
+                              alt={selectedProfile.name}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          ) : (
+                            selectedProfile.name.charAt(0)
+                          )}
+                        </div>
+                        <div>
+                          <div style={{
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            color: isDarkMode ? '#f8fafc' : '#111827',
+                            marginBottom: '2px'
+                          }}>
+                            {selectedProfile.name}
+                          </div>
+                          <div style={{
+                            fontSize: '13px',
+                            color: isDarkMode ? '#94a3b8' : '#6b7280',
+                            marginBottom: '2px'
+                          }}>
+                            {selectedProfile.username}
+                          </div>
+                          <div style={{
+                            fontSize: '12px',
+                            color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                            fontWeight: '500'
+                          }}>
+                            {selectedProfile.role}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* Title/Headline - FIXED BOLD STYLING */}
+              {content.title && (
+                <h4 style={{
+                  fontSize: '18px',
+                  fontWeight: '800',  // Changed to 800 for extra bold
+                  color: isDarkMode ? '#f8fafc' : '#111827',
+                  margin: '0 0 12px 0',
+                  lineHeight: '1.3'
+                }}>
+                  {content.title}
+                </h4>
+              )}
+
+              {/* Post Description */}
+              {content.description && (
+                <div style={{
+                  fontSize: '15px',
+                  color: isDarkMode ? '#e2e8f0' : '#374151',
+                  lineHeight: '1.6',
+                  marginBottom: '16px',
+                  whiteSpace: 'pre-wrap'
+                }}>
+                  {content.description}
+                </div>
+              )}
+
+              {/* Hashtags */}
+              {content.hashtags.length > 0 && (
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '6px',
+                  marginBottom: '16px'
+                }}>
+                  {content.hashtags.map((tag) => (
+                    <span key={tag} style={{
+                      fontSize: '14px',
+                      color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                      fontWeight: '500'
+                    }}>
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Call to Action */}
+              {content.cta && (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: isDarkMode ? '#1e40af' : '#3b82f6',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  textAlign: 'center',
+                  marginTop: '16px'
+                }}>
+                  {content.cta}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Platform Distribution */}
           {selectedPlatforms.length > 0 && (
             <div style={{
@@ -2229,7 +2726,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                 gap: '8px'
               }}>
                 {selectedPlatforms.map(platformId => {
-                  const platform = enhancedPlatforms.find(p => p.id === platformId);
+                  const platform = platforms.find(p => p.id === platformId);
                   if (!platform) return null;
                   
                   return (
@@ -2242,7 +2739,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
                       fontWeight: '500',
                       color: isDarkMode ? '#94a3b8' : '#6b7280'
                     }}>
-                      {platform.displayName || platform.display_name || platform.name}
+                      {platform.name}
                     </div>
                   );
                 })}
