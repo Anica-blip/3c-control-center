@@ -1692,7 +1692,7 @@ export const EnhancedContentCreationForm: React.FC<EnhancedContentCreationFormPr
               No active platforms found
             </p>
             <p style={{ margin: '0', fontSize: '14px' }}>
-              Go to Settings > Social Platforms to add your publishing destinations
+              Go to Settings &gt; Social Platforms to add your publishing destinations
             </p>
           </div>
         )}
