@@ -1765,7 +1765,144 @@ const EnhancedContentCreationForm = ({
         </button>
       </div>
 
-      {/* Live Preview Section - Platform Responsive */}
+      {/* Platform Selection for Publishing */}
+      <div style={{ marginBottom: '24px' }}>
+        <label style={{
+          display: 'block',
+          fontSize: '16px',
+          fontWeight: '600',
+          color: isDarkMode ? '#f8fafc' : '#111827',
+          marginBottom: '12px'
+        }}>
+          Select Publishing Platforms
+        </label>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '12px'
+        }}>
+          {activePlatforms.map((platform) => (
+            <label
+              key={platform.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px',
+                border: selectedPlatforms.includes(platform.id) 
+                  ? `1px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}` 
+                  : `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '8px',
+                cursor: 'pointer',
+                backgroundColor: selectedPlatforms.includes(platform.id) 
+                  ? (isDarkMode ? '#1e3a8a30' : '#dbeafe') 
+                  : '#334155',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={selectedPlatforms.includes(platform.id)}
+                onChange={() => handlePlatformToggle(platform.id)}
+                style={{
+                  height: '16px',
+                  width: '16px',
+                  accentColor: isDarkMode ? '#60a5fa' : '#3b82f6'
+                }}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#f8fafc' : '#111827',
+                  marginBottom: '2px'
+                }}>
+                  {platform.name}
+                </div>
+                {platform.isDefault && (
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '1px 6px',
+                    fontSize: '10px',
+                    fontWeight: '600',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    borderRadius: '8px'
+                  }}>
+                    Default
+                  </span>
+                )}
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: '12px',
+        paddingTop: '16px',
+        borderTop: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
+      }}>
+        <button
+          onClick={resetForm}
+          style={{
+            padding: '12px 20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            borderRadius: '8px',
+            border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+            cursor: 'pointer',
+            backgroundColor: 'transparent',
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            fontFamily: 'inherit'
+          }}
+        >
+          Reset Form
+        </button>
+        
+        <button
+          onClick={handleSave}
+          disabled={!canSave || isSaving}
+          style={{
+            padding: '12px 20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            borderRadius: '8px',
+            border: 'none',
+            cursor: (canSave && !isSaving) ? 'pointer' : 'not-allowed',
+            backgroundColor: (canSave && !isSaving) ? (isDarkMode ? '#64748b' : '#6b7280') : (isDarkMode ? '#475569' : '#d1d5db'),
+            color: (canSave && !isSaving) ? 'white' : (isDarkMode ? '#64748b' : '#9ca3af'),
+            fontFamily: 'inherit',
+            opacity: isSaving ? 0.7 : 1
+          }}
+        >
+          {isSaving ? 'Saving...' : (isEditingPost ? 'Update Draft' : 'Save as Draft')}
+        </button>
+        
+        <button
+          onClick={handleAddToSchedule}
+          disabled={!canSave || isSaving}
+          style={{
+            padding: '12px 20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            borderRadius: '8px',
+            border: 'none',
+            cursor: (canSave && !isSaving) ? 'pointer' : 'not-allowed',
+            backgroundColor: (canSave && !isSaving) ? (isDarkMode ? '#60a5fa' : '#3b82f6') : (isDarkMode ? '#475569' : '#d1d5db'),
+            color: (canSave && !isSaving) ? 'white' : (isDarkMode ? '#64748b' : '#9ca3af'),
+            fontFamily: 'inherit',
+            opacity: isSaving ? 0.7 : 1
+          }}
+        >
+          {isSaving ? 'Saving...' : 'Schedule Post'}
+        </button>
+      </div>
+
+      {/* Live Preview Section - Shows Exact Final Post Format */}
       {(selections.characterProfile || content.title || content.description || mediaFiles.length > 0) && (
         <div style={{
           marginTop: '32px',
@@ -1805,7 +1942,7 @@ const EnhancedContentCreationForm = ({
             border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
             overflow: 'hidden'
           }}>
-            {/* Media Files Preview - Platform Responsive */}
+            {/* 1. Media Files Preview - Platform Responsive with URL Preview Support */}
             {mediaFiles.length > 0 && (
               <div style={{
                 padding: '16px',
@@ -1834,6 +1971,58 @@ const EnhancedContentCreationForm = ({
                 </div>
 
                 {(() => {
+                  // Platform-specific dimensions and styling
+                  const getPlatformPreviewStyle = (platform: string) => {
+                    const styles = {
+                      instagram: {
+                        aspectRatio: '1 / 1', // Square posts
+                        maxWidth: '400px',
+                        label: 'Instagram Square Post (1:1)'
+                      },
+                      facebook: {
+                        aspectRatio: '1.91 / 1', // Facebook recommended
+                        maxWidth: '500px',
+                        label: 'Facebook Post (1.91:1)'
+                      },
+                      twitter: {
+                        aspectRatio: '16 / 9', // Twitter recommended
+                        maxWidth: '500px',
+                        label: 'Twitter/X Post (16:9)'
+                      },
+                      linkedin: {
+                        aspectRatio: '1.91 / 1', // LinkedIn recommended
+                        maxWidth: '500px',
+                        label: 'LinkedIn Post (1.91:1)'
+                      },
+                      youtube: {
+                        aspectRatio: '16 / 9', // YouTube thumbnail
+                        maxWidth: '480px',
+                        label: 'YouTube Thumbnail (16:9)'
+                      },
+                      tiktok: {
+                        aspectRatio: '9 / 16', // TikTok vertical
+                        maxWidth: '300px',
+                        label: 'TikTok Video (9:16)'
+                      },
+                      telegram: {
+                        aspectRatio: 'auto', // Use original media dimensions
+                        maxWidth: '100%', // Allow full width flexibility
+                        label: 'Telegram Post (Original Size)'
+                      },
+                      pinterest: {
+                        aspectRatio: '2 / 3', // Pinterest vertical
+                        maxWidth: '400px',
+                        label: 'Pinterest Pin (2:3)'
+                      }
+                    };
+                    
+                    return styles[platform as keyof typeof styles] || {
+                      aspectRatio: 'auto',
+                      maxWidth: '100%',
+                      label: 'Original Size (No Platform Selected)'
+                    };
+                  };
+
                   const platformStyle = getPlatformPreviewStyle(selections.platform);
                   
                   return (
@@ -1853,7 +2042,7 @@ const EnhancedContentCreationForm = ({
                         {platformStyle.label}
                       </div>
 
-                      {/* Media Grid with Platform-Specific Sizing */}
+                      {/* Media Grid */}
                       <div style={{
                         display: 'grid',
                         gridTemplateColumns: mediaFiles.length === 1 
@@ -1873,8 +2062,8 @@ const EnhancedContentCreationForm = ({
                             overflow: 'hidden',
                             backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
                             border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
-                            aspectRatio: platformStyle.aspectRatio, // Platform-specific sizing
-                            maxWidth: platformStyle.maxWidth, // Platform-specific sizing
+                            aspectRatio: platformStyle.aspectRatio,
+                            maxWidth: platformStyle.maxWidth,
                             margin: '0 auto'
                           }}>
                             {file.type === 'image' || file.type === 'gif' ? (
@@ -1884,7 +2073,7 @@ const EnhancedContentCreationForm = ({
                                 style={{
                                   width: '100%',
                                   height: '100%',
-                                  objectFit: selections.platform && selections.platform !== 'telegram' ? 'cover' : 'contain', // Generic for Telegram
+                                  objectFit: selections.platform ? 'cover' : 'contain',
                                   backgroundColor: isDarkMode ? '#1e293b' : 'white'
                                 }}
                               />
@@ -1894,40 +2083,38 @@ const EnhancedContentCreationForm = ({
                                 style={{
                                   width: '100%',
                                   height: '100%',
-                                  objectFit: selections.platform && selections.platform !== 'telegram' ? 'cover' : 'contain', // Generic for Telegram
+                                  objectFit: selections.platform ? 'cover' : 'contain',
                                   backgroundColor: isDarkMode ? '#1e293b' : 'white'
                                 }}
                                 controls
                                 muted
                               />
                             ) : file.type === 'interactive' && file.urlPreview ? (
+                              // URL PREVIEW WITH IMAGE - FIXED IMPLEMENTATION
                               <div style={{
                                 width: '100%',
                                 height: '100%',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                                border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
-                                borderRadius: '8px',
-                                overflow: 'hidden'
+                                backgroundColor: isDarkMode ? '#1e293b' : 'white'
                               }}>
+                                {/* URL Preview Image */}
                                 {file.urlPreview.image && (
                                   <div style={{
-                                    height: '60%',
+                                    flex: 1,
                                     backgroundImage: `url(${file.urlPreview.image})`,
                                     backgroundSize: 'cover',
                                     backgroundPosition: 'center',
-                                    backgroundRepeat: 'no-repeat'
+                                    backgroundRepeat: 'no-repeat',
+                                    minHeight: '120px'
                                   }} />
                                 )}
                                 
+                                {/* URL Preview Info */}
                                 <div style={{
                                   padding: '12px',
                                   backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
-                                  height: file.urlPreview.image ? '40%' : '100%',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  justifyContent: 'center'
+                                  borderTop: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
                                 }}>
                                   <div style={{
                                     fontSize: '13px',
@@ -1943,7 +2130,7 @@ const EnhancedContentCreationForm = ({
                                   <div style={{
                                     fontSize: '11px',
                                     color: isDarkMode ? '#94a3b8' : '#6b7280',
-                                    marginBottom: '6px',
+                                    marginBottom: '4px',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap'
@@ -1956,14 +2143,14 @@ const EnhancedContentCreationForm = ({
                                     fontWeight: '500',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                    textDecoration: 'underline'
+                                    whiteSpace: 'nowrap'
                                   }}>
-                                    {file.url}
+                                    {file.urlPreview.siteName || new URL(file.url).hostname}
                                   </div>
                                 </div>
                               </div>
                             ) : (
+                              // Fallback for other file types
                               <div style={{
                                 width: '100%',
                                 height: '100%',
@@ -1993,6 +2180,7 @@ const EnhancedContentCreationForm = ({
                               </div>
                             )}
                             
+                            {/* Multiple files indicator */}
                             {mediaFiles.length > 4 && index === 3 && (
                               <div style={{
                                 position: 'absolute',
@@ -2012,6 +2200,7 @@ const EnhancedContentCreationForm = ({
                               </div>
                             )}
 
+                            {/* File type badge */}
                             <div style={{
                               position: 'absolute',
                               top: '8px',
@@ -2029,6 +2218,237 @@ const EnhancedContentCreationForm = ({
                           </div>
                         ))}
                       </div>
+
+                      {/* Platform-specific notes */}
+                      {selections.platform && (
+                        <div style={{
+                          fontSize: '11px',
+                          color: isDarkMode ? '#64748b' : '#9ca3af',
+                          textAlign: 'center',
+                          fontStyle: 'italic',
+                          maxWidth: '500px',
+                          lineHeight: '1.4'
+                        }}>
+                          {selections.platform === 'instagram' && 'Instagram will crop images to square format for feed posts. Stories use 9:16 ratio.'}
+                          {selections.platform === 'tiktok' && 'TikTok optimizes for vertical 9:16 video format for maximum engagement.'}
+                          {selections.platform === 'youtube' && 'YouTube thumbnails work best at 16:9 ratio with bold, readable visuals.'}
+                          {selections.platform === 'facebook' && 'Facebook recommends 1.91:1 ratio for optimal feed display and engagement.'}
+                          {selections.platform === 'twitter' && 'Twitter displays images best at 16:9 ratio in timeline feeds.'}
+                          {selections.platform === 'linkedin' && 'LinkedIn professional posts perform well with 1.91:1 landscape format.'}
+                          {selections.platform === 'telegram' && 'Telegram displays media in original dimensions and automatically adjusts for optimal viewing.'}
+                          {selections.platform === 'pinterest' && 'Pinterest favors vertical 2:3 pins for discovery and engagement.'}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* 2. Post Content */}
+            <div style={{ padding: '20px' }}>
+              {/* a) Character Profile Header */}
+              {selections.characterProfile && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginBottom: '16px',
+                  paddingBottom: '12px',
+                  borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+                }}>
+                  {(() => {
+                    const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
+                    if (!selectedProfile) return null;
+                    
+                    return (
+                      <>
+                        <div style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '50%',
+                          backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '20px',
+                          color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                          fontWeight: 'bold',
+                          border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+                          flexShrink: 0,
+                          overflow: 'hidden'
+                        }}>
+                          {selectedProfile.avatar_id ? (
+                            <img
+                              src={selectedProfile.avatar_id}
+                              alt={selectedProfile.name}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          ) : (
+                            selectedProfile.name.charAt(0)
+                          )}
+                        </div>
+                        <div>
+                          <div style={{
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            color: isDarkMode ? '#f8fafc' : '#111827',
+                            marginBottom: '2px'
+                          }}>
+                            {selectedProfile.name}
+                          </div>
+                          <div style={{
+                            fontSize: '13px',
+                            color: isDarkMode ? '#94a3b8' : '#6b7280',
+                            marginBottom: '2px'
+                          }}>
+                            {selectedProfile.username}
+                          </div>
+                          <div style={{
+                            fontSize: '12px',
+                            color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                            fontWeight: '500'
+                          }}>
+                            {selectedProfile.role}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* b) Title/Headline */}
+              {content.title && (
+                <h4 style={{
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  color: isDarkMode ? '#f8fafc' : '#111827',
+                  margin: '0 0 12px 0',
+                  lineHeight: '1.3'
+                }}>
+                  {content.title}
+                </h4>
+              )}
+
+              {/* c) Post Description */}
+              {content.description && (
+                <div style={{
+                  fontSize: '15px',
+                  color: isDarkMode ? '#e2e8f0' : '#374151',
+                  lineHeight: '1.6',
+                  marginBottom: '16px',
+                  whiteSpace: 'pre-wrap'
+                }}>
+                  {content.description}
+                </div>
+              )}
+
+              {/* d) Hashtags */}
+              {content.hashtags.length > 0 && (
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '6px',
+                  marginBottom: '16px'
+                }}>
+                  {content.hashtags.map((tag) => (
+                    <span key={tag} style={{
+                      fontSize: '14px',
+                      color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                      fontWeight: '500'
+                    }}>
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* e) Call to Action */}
+              {content.cta && (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: isDarkMode ? '#1e40af' : '#3b82f6',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  textAlign: 'center',
+                  marginTop: '16px'
+                }}>
+                  {content.cta}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 3. Platform/Telegram Distribution (Internal Dashboard Use Only) */}
+          {selectedPlatforms.length > 0 && (
+            <div style={{
+              marginTop: '20px',
+              padding: '16px',
+              backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
+              borderRadius: '8px',
+              border: `1px dashed ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '12px'
+              }}>
+                <Settings style={{ height: '16px', width: '16px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
+                <span style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#60a5fa' : '#3b82f6'
+                }}>
+                  Distribution Settings (Internal Dashboard Only)
+                </span>
+              </div>
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px'
+              }}>
+                {selectedPlatforms.map(platformId => {
+                  const platform = platforms.find(p => p.id === platformId);
+                  if (!platform) return null;
+                  
+                  return (
+                    <div key={platformId} style={{
+                      padding: '6px 12px',
+                      backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                      border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                      borderRadius: '16px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      color: isDarkMode ? '#94a3b8' : '#6b7280'
+                    }}>
+                      {platform.name}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{
+                fontSize: '11px',
+                color: isDarkMode ? '#64748b' : '#9ca3af',
+                fontStyle: 'italic',
+                marginTop: '8px'
+              }}>
+                * Platform links are for internal dashboard tracking only and will not appear in the public post
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
           {/* Platform Distribution */}
           {selectedPlatforms.length > 0 && (
@@ -2093,6 +2513,5 @@ const EnhancedContentCreationForm = ({
     </div>
   );
 };
-
 
 export { EnhancedContentCreationForm, SavedPostsList };
