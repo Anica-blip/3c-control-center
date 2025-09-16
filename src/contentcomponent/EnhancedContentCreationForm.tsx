@@ -102,6 +102,29 @@ const EnhancedContentCreationForm = ({
   onEditComplete?: () => void;
 }) => {
   const { isDarkMode } = useTheme();
+
+  // Load platforms from Supabase (mirror settings functionality)
+  const [platforms, setPlatforms] = useState<SocialPlatform[]>([]);
+  const [isLoadingPlatformsState, setIsLoadingPlatformsState] = useState(true);
+
+  // Load platforms on mount
+  useEffect(() => {
+    const loadPlatformsFromSupabase = async () => {
+      try {
+        setIsLoadingPlatformsState(true);
+        const loadedPlatforms = await supabaseAPI.loadPlatforms();
+        setPlatforms(loadedPlatforms);
+      } catch (error) {
+        console.error('Error loading platforms:', error);
+        // Fallback to props platforms if Supabase fails
+        setPlatforms(propsPlatforms || []);
+      } finally {
+        setIsLoadingPlatformsState(false);
+      }
+    };
+
+    loadPlatformsFromSupabase();
+  }, [propsPlatforms]);
   
   // Form state matching template builder structure
   const [selections, setSelections] = useState({
