@@ -1838,13 +1838,13 @@ const EnhancedContentCreationForm = ({
   );
 };
 
-const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoading }: {
+const SavedPostsList: React.FC<{
   posts: ContentPost[];
   onEditPost: (postId: string) => void;
   onSchedulePost: (postId: string) => void;
   onDeletePost: (postId: string) => void;
   isLoading?: boolean;
-}) => {
+}> = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoading }) => {
   const { isDarkMode } = useTheme();
   
   if (isLoading) {
@@ -1870,8 +1870,7 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
           color: isDarkMode ? '#94a3b8' : '#6b7280'
         }}>
           Fetching posts from Supabase database
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
