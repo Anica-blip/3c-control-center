@@ -1,28 +1,16 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { ContentPost, MediaFile } from './types';
-
-// Initialize Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-let supabase = null;
-if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-  console.log('Supabase client created successfully for Content Manager');
-} else {
-  console.warn('Missing Supabase environment variables in Content Manager - running in demo mode');
-}
 
 export const supabaseAPI = {
   // Upload media file to content-media bucket
   async uploadMediaFile(file: File, contentId: string, userId: string): Promise<string> {
-    if (!supabase) throw new Error('Supabase not configured');
+    if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
     
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}/${contentId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-      const { data, error } = await supabase.storage
+      const { data, error } = await supabase!.storage
         .from('content-media')
         .upload(fileName, file, {
           cacheControl: '3600',
@@ -31,7 +19,7 @@ export const supabaseAPI = {
 
       if (error) throw error;
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data: { publicUrl } } = supabase!.storage
         .from('content-media')
         .getPublicUrl(fileName);
 
@@ -44,19 +32,12 @@ export const supabaseAPI = {
 
   // Save content post to content_posts table
   async saveContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
-    if (!supabase) {
-      // Mock implementation for demo mode
-      console.warn('Supabase not configured - using mock data');
-      const mockPost: ContentPost = {
-        id: `mock_${Date.now()}`,
-        createdDate: new Date(),
-        ...postData
-      };
-      return mockPost;
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase not configured - cannot save to database');
     }
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase!.auth.getUser();
       const userId = user?.id || null;
 
       // Upload media files first
@@ -110,7 +91,7 @@ export const supabaseAPI = {
         is_active: true
       };
 
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('content_posts')
         .insert(insertData)
         .select()
@@ -153,13 +134,12 @@ export const supabaseAPI = {
 
   // Load content posts from content_posts table
   async loadContentPosts(): Promise<ContentPost[]> {
-    if (!supabase) {
-      console.warn('Supabase not configured - returning empty array');
-      return [];
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase not configured - cannot load from database');
     }
     
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('content_posts')
         .select('*')
         .eq('is_active', true)
@@ -202,10 +182,10 @@ export const supabaseAPI = {
 
   // Update content post
   async updateContentPost(postId: string, updates: Partial<ContentPost>): Promise<ContentPost> {
-    if (!supabase) throw new Error('Supabase not configured');
+    if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase!.auth.getUser();
       const userId = user?.id || null;
       
       // Handle media file updates if needed
@@ -257,7 +237,7 @@ export const supabaseAPI = {
       
       updateData.updated_at = new Date().toISOString();
 
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('content_posts')
         .update(updateData)
         .eq('id', parseInt(postId))
@@ -301,10 +281,10 @@ export const supabaseAPI = {
 
   // Soft delete content post
   async deleteContentPost(postId: string): Promise<void> {
-    if (!supabase) throw new Error('Supabase not configured');
+    if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
     
     try {
-      const { error } = await supabase
+      const { error } = await supabase!
         .from('content_posts')
         .update({ is_active: false, updated_at: new Date().toISOString() })
         .eq('id', parseInt(postId));
@@ -318,17 +298,12 @@ export const supabaseAPI = {
 
   // Load character profiles
   async loadCharacterProfiles(): Promise<any[]> {
-    if (!supabase) {
-      console.warn('Supabase not configured - returning mock character profiles');
-      return [
-        { id: 'anica', name: 'Anica', username: '@anica', role: 'Community Manager', description: 'Empathetic and supportive communication style', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
-        { id: 'caelum', name: 'Caelum', username: '@caelum', role: 'Strategist', description: 'Analytical and strategic approach', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
-        { id: 'aurion', name: 'Aurion', username: '@aurion', role: 'Creative Director', description: 'Creative and inspiring messaging', avatar_id: null, is_active: true, created_at: new Date().toISOString() }
-      ];
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase not configured - cannot load character profiles');
     }
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('character_profiles')
         .select('*')
         .eq('is_active', true)
@@ -344,23 +319,12 @@ export const supabaseAPI = {
 
   // Load platforms from social_platforms table
   async loadPlatforms(): Promise<any[]> {
-    if (!supabase) {
-      console.warn('Supabase not configured - returning mock platforms');
-      return [
-        { id: '1', name: 'Instagram', display_name: 'Instagram', url: 'https://instagram.com', is_active: true, isActive: true, isDefault: false, is_default: false },
-        { id: '2', name: 'Facebook', display_name: 'Facebook', url: 'https://facebook.com', is_active: true, isActive: true, isDefault: false, is_default: false },
-        { id: '3', name: 'LinkedIn', display_name: 'LinkedIn', url: 'https://linkedin.com', is_active: true, isActive: true, isDefault: false, is_default: false },
-        { id: '4', name: 'Twitter', display_name: 'Twitter/X', url: 'https://x.com', is_active: true, isActive: true, isDefault: false, is_default: false },
-        { id: '5', name: 'YouTube', display_name: 'YouTube', url: 'https://youtube.com', is_active: true, isActive: true, isDefault: false, is_default: false },
-        { id: '6', name: 'TikTok', display_name: 'TikTok', url: 'https://tiktok.com', is_active: true, isActive: true, isDefault: false, is_default: false },
-        { id: '7', name: 'Telegram', display_name: 'Telegram', url: 'https://telegram.org', is_active: true, isActive: true, isDefault: false, is_default: false },
-        { id: '8', name: 'Pinterest', display_name: 'Pinterest', url: 'https://pinterest.com', is_active: true, isActive: true, isDefault: false, is_default: false },
-        { id: '9', name: 'WhatsApp', display_name: 'WhatsApp', url: 'https://whatsapp.com', is_active: true, isActive: true, isDefault: false, is_default: false }
-      ];
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase not configured - cannot load platforms');
     }
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('social_platforms')
         .select('*')
         .eq('is_active', true)
@@ -386,13 +350,12 @@ export const supabaseAPI = {
 
   // Load Telegram configurations
   async loadTelegramChannels(): Promise<any[]> {
-    if (!supabase) {
-      console.warn('Supabase not configured - returning empty Telegram channels');
-      return [];
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase not configured - cannot load Telegram channels');
     }
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('telegram_configurations')
         .select('*')
         .eq('is_active', true)
