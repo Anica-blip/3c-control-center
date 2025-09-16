@@ -103,24 +103,34 @@ const EnhancedContentCreationForm = ({
 }) => {
   const { isDarkMode } = useTheme();
 
-// Load platforms on mount
+// Platform state management - separate from props
+  const [loadedPlatforms, setLoadedPlatforms] = useState<SocialPlatform[]>([]);
+  const [isLoadingPlatformsState, setIsLoadingPlatformsState] = useState(false);
+
+  // Load platforms on mount
   useEffect(() => {
     const loadPlatformsFromSupabase = async () => {
       try {
         setIsLoadingPlatformsState(true);
-        const loadedPlatforms = await supabaseAPI.loadPlatforms();
-        setPlatforms(loadedPlatforms);
+        const supabasePlatforms = await supabaseAPI.loadPlatforms();
+        console.log('Loaded platforms from Supabase:', supabasePlatforms);
+        setLoadedPlatforms(supabasePlatforms);
       } catch (error) {
-        console.error('Error loading platforms:', error);
-        // Fallback to props platforms if Supabase fails
-        setPlatforms(platforms || []);
+        console.error('Error loading platforms from Supabase:', error);
+        // Use prop platforms as fallback only if Supabase fails
+        setLoadedPlatforms(platforms || []);
       } finally {
         setIsLoadingPlatformsState(false);
       }
     };
 
     loadPlatformsFromSupabase();
-  }, [platforms]);
+  }, []); // Remove dependency on platforms to avoid loops
+
+  // Use loaded platforms, fallback to props if nothing loaded
+  const activePlatforms = loadedPlatforms.length > 0 
+    ? loadedPlatforms.filter(p => p?.isActive) 
+    : (platforms?.filter(p => p?.isActive) || []);
   
   // Form state matching template builder structure
   const [selections, setSelections] = useState({
