@@ -1870,11 +1870,10 @@ const SavedPostsList: React.FC<{
           color: isDarkMode ? '#94a3b8' : '#6b7280'
         }}>
           Fetching posts from Supabase database
-        )}
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  }
   
   const getStatusBadge = (status: string) => {
     const badgeStyles = {
