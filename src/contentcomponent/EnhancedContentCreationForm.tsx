@@ -525,10 +525,6 @@ const EnhancedContentCreationForm = ({
     setFieldConfig(null);
   };
 
-  const activePlatforms = loadedPlatforms.length > 0 
-    ? loadedPlatforms.filter(p => p?.isActive) 
-    : (platforms?.filter(p => p?.isActive) || []);
-
   const canSave = selections.characterProfile && selections.theme && selections.audience && selections.mediaType && selections.templateType && selections.voiceStyle && content.description;
 
   const getFileIcon = (type: string) => {
@@ -1874,10 +1870,12 @@ const SavedPostsList = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoa
           color: isDarkMode ? '#94a3b8' : '#6b7280'
         }}>
           Fetching posts from Supabase database
+          </div>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+};
   
   const getStatusBadge = (status: string) => {
     const badgeStyles = {
