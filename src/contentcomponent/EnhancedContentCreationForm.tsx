@@ -1577,7 +1577,7 @@ const EnhancedContentCreationForm = ({
               </button>
             </div>
             
-{/* Hashtag Display */}
+            {/* Hashtag Display */}
             <div style={{
               display: 'flex',
               flexWrap: 'wrap',
@@ -1725,6 +1725,7 @@ const EnhancedContentCreationForm = ({
         }}>
           Platform Selection
         </label>
+      </div>
           Select Publishing Platforms
           {isLoadingProfiles && (
             <span style={{ 
