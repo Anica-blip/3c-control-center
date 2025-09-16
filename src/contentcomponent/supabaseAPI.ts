@@ -1,5 +1,32 @@
-import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 import { ContentPost, MediaFile } from './types';
+
+// Initialize Supabase client - SINGLE INSTANCE
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+let supabase = null;
+
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  });
+  console.log('Supabase client created successfully (centralized instance)');
+} else {
+  console.error('Missing Supabase environment variables:', {
+    url: !!supabaseUrl,
+    key: !!supabaseKey,
+    urlValue: supabaseUrl ? 'set' : 'missing',
+    keyValue: supabaseKey ? 'set' : 'missing'
+  });
+}
+
+// Helper function to check if Supabase is configured
+export const isSupabaseConfigured = () => Boolean(supabase && supabaseUrl && supabaseKey);
 
 export const supabaseAPI = {
   // Upload media file to content-media bucket
