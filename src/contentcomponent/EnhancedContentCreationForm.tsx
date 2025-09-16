@@ -103,7 +103,7 @@ const EnhancedContentCreationForm = ({
 }) => {
   const { isDarkMode } = useTheme();
 
-  // Load platforms on mount
+// Load platforms on mount
   useEffect(() => {
     const loadPlatformsFromSupabase = async () => {
       try {
@@ -113,14 +113,14 @@ const EnhancedContentCreationForm = ({
       } catch (error) {
         console.error('Error loading platforms:', error);
         // Fallback to props platforms if Supabase fails
-        setPlatforms(propsPlatforms || []);
+        setPlatforms(platforms || []);
       } finally {
         setIsLoadingPlatformsState(false);
       }
     };
 
     loadPlatformsFromSupabase();
-  }, [propsPlatforms]);
+  }, [platforms]);
   
   // Form state matching template builder structure
   const [selections, setSelections] = useState({
