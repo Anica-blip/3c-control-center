@@ -183,6 +183,5 @@ export const SupabaseConnection: React.FC = () => {
   );
 };
 
-// Export only the component and the API import (API functions are in separate file)
 export { supabaseAPI };
 export default SupabaseConnection;
