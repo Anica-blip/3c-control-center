@@ -1,11 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { ContentPost, MediaFile } from './types';
 
-// Initialize Supabase client - SINGLE INSTANCE
+// Initialize Supabase client - SINGLE INSTANCE with proper typing
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-let supabase = null;
+let supabase: SupabaseClient | null = null;
 
 if (supabaseUrl && supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey, {
@@ -26,7 +26,15 @@ if (supabaseUrl && supabaseKey) {
 }
 
 // Helper function to check if Supabase is configured
-export const isSupabaseConfigured = () => Boolean(supabase && supabaseUrl && supabaseKey);
+export const isSupabaseConfigured = (): boolean => Boolean(supabase && supabaseUrl && supabaseKey);
+
+// Type-safe helper to get supabase client
+const getSupabaseClient = (): SupabaseClient => {
+  if (!supabase) {
+    throw new Error('Supabase client not initialized');
+  }
+  return supabase;
+};
 
 export const supabaseAPI = {
   // Upload media file to content-media bucket
@@ -34,10 +42,11 @@ export const supabaseAPI = {
     if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
     
     try {
+      const client = getSupabaseClient();
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}/${contentId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-      const { data, error } = await supabase!.storage
+      const { data, error } = await client.storage
         .from('content-media')
         .upload(fileName, file, {
           cacheControl: '3600',
@@ -46,7 +55,7 @@ export const supabaseAPI = {
 
       if (error) throw error;
 
-      const { data: { publicUrl } } = supabase!.storage
+      const { data: { publicUrl } } = client.storage
         .from('content-media')
         .getPublicUrl(fileName);
 
@@ -64,7 +73,8 @@ export const supabaseAPI = {
     }
     
     try {
-      const { data: { user } } = await supabase!.auth.getUser();
+      const client = getSupabaseClient();
+      const { data: { user } } = await client.auth.getUser();
       const userId = user?.id || null;
 
       // Upload media files first
@@ -118,7 +128,7 @@ export const supabaseAPI = {
         is_active: true
       };
 
-      const { data, error } = await supabase!
+      const { data, error } = await client
         .from('content_posts')
         .insert(insertData)
         .select()
@@ -166,7 +176,8 @@ export const supabaseAPI = {
     }
     
     try {
-      const { data, error } = await supabase!
+      const client = getSupabaseClient();
+      const { data, error } = await client
         .from('content_posts')
         .select('*')
         .eq('is_active', true)
@@ -212,7 +223,8 @@ export const supabaseAPI = {
     if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
     
     try {
-      const { data: { user } } = await supabase!.auth.getUser();
+      const client = getSupabaseClient();
+      const { data: { user } } = await client.auth.getUser();
       const userId = user?.id || null;
       
       // Handle media file updates if needed
@@ -245,7 +257,7 @@ export const supabaseAPI = {
       }
 
       // Prepare update data
-      const updateData: any = {};
+      const updateData: Record<string, any> = {};
       if (updates.characterProfile) updateData.character_profile = updates.characterProfile;
       if (updates.theme) updateData.theme = updates.theme;
       if (updates.audience) updateData.audience = updates.audience;
@@ -264,7 +276,7 @@ export const supabaseAPI = {
       
       updateData.updated_at = new Date().toISOString();
 
-      const { data, error } = await supabase!
+      const { data, error } = await client
         .from('content_posts')
         .update(updateData)
         .eq('id', parseInt(postId))
@@ -311,7 +323,8 @@ export const supabaseAPI = {
     if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
     
     try {
-      const { error } = await supabase!
+      const client = getSupabaseClient();
+      const { error } = await client
         .from('content_posts')
         .update({ is_active: false, updated_at: new Date().toISOString() })
         .eq('id', parseInt(postId));
@@ -330,7 +343,8 @@ export const supabaseAPI = {
     }
 
     try {
-      const { data, error } = await supabase!
+      const client = getSupabaseClient();
+      const { data, error } = await client
         .from('character_profiles')
         .select('*')
         .eq('is_active', true)
@@ -351,7 +365,8 @@ export const supabaseAPI = {
     }
 
     try {
-      const { data, error } = await supabase!
+      const client = getSupabaseClient();
+      const { data, error } = await client
         .from('social_platforms')
         .select('*')
         .eq('is_active', true)
@@ -382,7 +397,8 @@ export const supabaseAPI = {
     }
 
     try {
-      const { data, error } = await supabase!
+      const client = getSupabaseClient();
+      const { data, error } = await client
         .from('telegram_configurations')
         .select('*')
         .eq('is_active', true)
@@ -397,4 +413,5 @@ export const supabaseAPI = {
   }
 };
 
+// Export the client safely - only export if properly initialized
 export { supabase };
