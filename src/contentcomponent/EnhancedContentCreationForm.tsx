@@ -1735,6 +1735,8 @@ const EnhancedContentCreationForm = ({
             </span>
           )}
         </label>
+      </div>
+
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
