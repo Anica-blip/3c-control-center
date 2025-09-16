@@ -1433,6 +1433,63 @@ const EnhancedContentCreationForm = ({
               UK English | Formatting: **bold** *italic* __underline__ [link](url)
             </div>
           </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const url = prompt('Enter URL:');
+                const linkText = prompt('Enter link text (or leave empty to use URL):');
+                if (url) {
+                  const displayText = linkText || url;
+                  const linkMarkdown = `[${displayText}](${url})`;
+                  setContent(prev => ({ ...prev, description: prev.description + linkMarkdown }));
+                }
+              }}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+              title="Add Link"
+            >
+              🔗
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => {
+                const commonEmojis = ['😀', '😊', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙌', '💡', '📈', '📊'];
+                const emoji = prompt(`Choose an emoji:\n${commonEmojis.join(' ')}\n\nOr enter any emoji:`);
+                if (emoji) {
+                  setContent(prev => ({ ...prev, description: prev.description + emoji }));
+                }
+              }}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isDarkMode ? '#334155' : 'white',
+                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                color: isDarkMode ? '#f8fafc' : '#111827'
+              }}
+              title="Add Emoji"
+            >
+              😊
+            </button>
+            
+            <div style={{
+              fontSize: '12px',
+              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              marginLeft: 'auto'
+            }}>
+              UK English | Formatting: **bold** *italic* __underline__ [link](url)
+            </div>
+          </div>
           
           <textarea
             value={content.description}
