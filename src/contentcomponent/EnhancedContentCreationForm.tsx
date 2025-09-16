@@ -103,10 +103,6 @@ const EnhancedContentCreationForm = ({
 }) => {
   const { isDarkMode } = useTheme();
 
-  // Load platforms from Supabase (mirror settings functionality)
-  const [platforms, setPlatforms] = useState<SocialPlatform[]>([]);
-  const [isLoadingPlatformsState, setIsLoadingPlatformsState] = useState(true);
-
   // Load platforms on mount
   useEffect(() => {
     const loadPlatformsFromSupabase = async () => {
