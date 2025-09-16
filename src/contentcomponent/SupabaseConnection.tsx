@@ -1,7 +1,6 @@
 import React, { useContext } from 'react';
 import { Database, ExternalLink, CheckCircle, AlertCircle } from 'lucide-react';
-import { isSupabaseConfigured } from './supabaseClient';
-import { supabaseAPI } from './supabaseAPI';
+import { isSupabaseConfigured, supabaseAPI } from './supabaseAPI';
 
 // Theme Context
 const ThemeContext = React.createContext({
