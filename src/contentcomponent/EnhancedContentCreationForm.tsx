@@ -1714,7 +1714,7 @@ const EnhancedContentCreationForm = ({
         </div>
       </div>
 
-     {/* Platform Selection for Publishing */}
+      {/* Platform Selection for Publishing */}
       <div style={{ marginBottom: '24px', width: '85%' }}>
         <label style={{
           display: 'block',
@@ -1723,9 +1723,6 @@ const EnhancedContentCreationForm = ({
           color: isDarkMode ? '#f8fafc' : '#111827',
           marginBottom: '12px'
         }}>
-          Platform Selection
-        </label>
-      </div>
           Select Publishing Platforms
           {isLoadingProfiles && (
             <span style={{ 
