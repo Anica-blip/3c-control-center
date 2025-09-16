@@ -1714,7 +1714,7 @@ const EnhancedContentCreationForm = ({
         </div>
       </div>
 
-      {/* Platform Selection for Publishing */}
+     {/* Platform Selection for Publishing */}
       <div style={{ marginBottom: '24px', width: '85%' }}>
         <label style={{
           display: 'block',
