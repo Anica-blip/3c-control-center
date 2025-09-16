@@ -20,67 +20,6 @@ const ThemeContext = React.createContext({
 
 const useTheme = () => useContext(ThemeContext);
 
-// Types
-interface ContentPost {
-  id: string;
-  contentId: string; // CP-YYYY-### format
-  characterProfile: string;
-  theme: string;
-  audience: string;
-  mediaType: string;
-  templateType: string;
-  platform: string;
-  title: string;
-  description: string;
-  hashtags: string[];
-  keywords: string;
-  cta: string;
-  mediaFiles: MediaFile[];
-  selectedPlatforms: string[];
-  status: 'pending' | 'scheduled' | 'published';
-  createdDate: Date;
-  scheduledDate?: Date;
-  isFromTemplate?: boolean;
-  sourceTemplateId?: string;
-  supabaseId?: string; // Supabase record ID
-  voiceStyle?: string;
-}
-
-interface MediaFile {
-  id: string;
-  name: string;
-  type: 'image' | 'video' | 'pdf' | 'gif' | 'interactive' | 'other';
-  size: number;
-  url: string;
-  supabaseUrl?: string; // URL after upload to Supabase
-  urlPreview?: {
-    title?: string;
-    description?: string;
-    image?: string;
-  };
-}
-
-interface SocialPlatform {
-  id: string;
-  name: string;
-  url: string;
-  isActive: boolean;
-  isDefault: boolean;
-  displayName?: string;
-  display_name?: string;
-}
-
-interface CharacterProfile {
-  id: string;
-  name: string;
-  username: string;
-  role: string;
-  description: string;
-  avatar_id: string | null;
-  is_active: boolean;
-  created_at: string;
-}
-
 // Enhanced Content Creation Form
 const EnhancedContentCreationForm = ({ 
   onSave, 
@@ -1699,16 +1638,6 @@ const EnhancedContentCreationForm = ({
           marginBottom: '12px'
         }}>
           Select Publishing Platforms
-          {isLoadingProfiles && (
-            <span style={{ 
-              fontSize: '12px', 
-              color: isDarkMode ? '#94a3b8' : '#6b7280',
-              marginLeft: '8px',
-              fontStyle: 'italic'
-            }}>
-              (Loading platforms...)
-            </span>
-          )}
         </label>
         <div style={{
           display: 'grid',
@@ -1730,7 +1659,7 @@ const EnhancedContentCreationForm = ({
                 cursor: 'pointer',
                 backgroundColor: selectedPlatforms.includes(platform.id) 
                   ? (isDarkMode ? '#1e3a8a30' : '#dbeafe') 
-                  : (isDarkMode ? '#334155' : 'white'),
+                  : '#334155',
                 transition: 'all 0.2s ease'
               }}
             >
@@ -1751,7 +1680,7 @@ const EnhancedContentCreationForm = ({
                   color: isDarkMode ? '#f8fafc' : '#111827',
                   marginBottom: '2px'
                 }}>
-                  {platform.displayName || platform.display_name || platform.name}
+                  {platform.name}
                 </div>
                 {platform.isDefault && (
                   <span style={{
@@ -1770,6 +1699,7 @@ const EnhancedContentCreationForm = ({
             </label>
           ))}
         </div>
+      </div>
 
       {/* Action Buttons */}
       <div style={{
@@ -1834,344 +1764,335 @@ const EnhancedContentCreationForm = ({
           {isSaving ? 'Saving...' : 'Schedule Post'}
         </button>
       </div>
-    </div>
-  );
-};
 
-const SavedPostsList: React.FC<{
-  posts: ContentPost[];
-  onEditPost: (postId: string) => void;
-  onSchedulePost: (postId: string) => void;
-  onDeletePost: (postId: string) => void;
-  isLoading?: boolean;
-}> = ({ posts, onEditPost, onSchedulePost, onDeletePost, isLoading }) => {
-  const { isDarkMode } = useTheme();
-  
-  if (isLoading) {
-    return (
-      <div style={{
-        backgroundColor: isDarkMode ? '#1e293b' : 'white',
-        boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
-        borderRadius: '8px',
-        padding: '48px',
-        textAlign: 'center',
-        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      }}>
+      {/* Live Preview Section - Platform Responsive */}
+      {(selections.characterProfile || content.title || content.description || mediaFiles.length > 0) && (
         <div style={{
-          fontSize: '18px',
-          color: isDarkMode ? '#60a5fa' : '#3b82f6',
-          marginBottom: '12px'
+          marginTop: '32px',
+          padding: '24px',
+          backgroundColor: isDarkMode ? '#1e293b' : '#f8fafc',
+          borderRadius: '12px',
+          border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
         }}>
-          Loading your saved content...
-        </div>
-        <div style={{
-          fontSize: '14px',
-          color: isDarkMode ? '#94a3b8' : '#6b7280'
-        }}>
-          Fetching posts from Supabase database
-        </div>
-      </div>
-    );
-  }
-  
-  const getStatusBadge = (status: string) => {
-    const badgeStyles = {
-      pending: { backgroundColor: isDarkMode ? '#92400e' : '#fef3c7', color: isDarkMode ? '#fef3c7' : '#92400e', text: 'Pending' },
-      scheduled: { backgroundColor: isDarkMode ? '#1e40af' : '#dbeafe', color: isDarkMode ? '#dbeafe' : '#1e40af', text: 'Scheduled' },
-      published: { backgroundColor: isDarkMode ? '#065f46' : '#d1fae5', color: isDarkMode ? '#d1fae5' : '#065f46', text: 'Published' }
-    };
-    
-    const style = badgeStyles[status as keyof typeof badgeStyles];
-    
-    return (
-      <span style={{
-        padding: '6px 12px',
-        fontSize: '12px',
-        fontWeight: '600',
-        borderRadius: '20px',
-        ...style
-      }}>
-        {style.text}
-      </span>
-    );
-  };
-
-  if (posts.length === 0) {
-    return (
-      <div style={{
-        backgroundColor: isDarkMode ? '#1e293b' : 'white',
-        boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
-        borderRadius: '8px',
-        padding: '48px',
-        textAlign: 'center',
-        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      }}>
-        <div style={{
-          width: '64px',
-          height: '64px',
-          backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 16px auto'
-        }}>
-          <FileText style={{ height: '32px', width: '32px', color: isDarkMode ? '#64748b' : '#9ca3af' }} />
-        </div>
-        <h3 style={{
-          fontSize: '18px',
-          fontWeight: '600',
-          color: isDarkMode ? '#f8fafc' : '#111827',
-          margin: '0 0 8px 0'
-        }}>
-          No content created yet
-        </h3>
-        <p style={{
-          color: isDarkMode ? '#94a3b8' : '#6b7280',
-          fontSize: '14px',
-          margin: '0'
-        }}>
-          Start creating amazing content using the form above
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{
-      backgroundColor: isDarkMode ? '#1e293b' : 'white',
-      boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-      border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
-      borderRadius: '8px',
-      overflow: 'hidden',
-      fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    }}>
-      <div style={{
-        padding: '16px',
-        background: isDarkMode 
-          ? 'linear-gradient(135deg, #334155 0%, #475569 100%)' 
-          : 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-        borderBottom: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <h3 style={{
-            fontSize: '18px',
-            fontWeight: '600',
-            color: isDarkMode ? '#60a5fa' : '#3b82f6',
-            margin: '0'
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '20px'
           }}>
-            Pending Content
-          </h3>
-          <span style={{
-            padding: '6px 12px',
-            background: isDarkMode 
-              ? 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)' 
-              : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-            color: 'white',
-            fontSize: '14px',
-            fontWeight: '600',
-            borderRadius: '16px'
-          }}>
-            {posts.length} {posts.length === 1 ? 'post' : 'posts'}
-          </span>
-        </div>
-      </div>
-      
-      <div>
-        {posts.map((post) => (
-          <div key={post.id} style={{
-            padding: '16px',
-            borderBottom: `1px solid ${isDarkMode ? '#334155' : '#f3f4f6'}`,
-            transition: 'background-color 0.2s ease'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'space-between'
+            <Eye style={{ height: '24px', width: '24px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: isDarkMode ? '#60a5fa' : '#3b82f6',
+              margin: '0'
             }}>
-              <div style={{ flex: 1, marginRight: '16px' }}>
+              Live Preview - Final Post Format
+            </h3>
+            <div style={{
+              fontSize: '12px',
+              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              fontStyle: 'italic',
+              marginLeft: 'auto'
+            }}>
+              This is the exact format when the post is published
+            </div>
+          </div>
+          
+          <div style={{
+            backgroundColor: isDarkMode ? '#334155' : 'white',
+            borderRadius: '8px',
+            border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+            overflow: 'hidden'
+          }}>
+            {/* Media Files Preview - Platform Responsive */}
+            {mediaFiles.length > 0 && (
+              <div style={{
+                padding: '16px',
+                backgroundColor: isDarkMode ? '#1e293b' : '#f9fafb',
+                borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+              }}>
+                {/* Platform Preview Info */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  marginBottom: '12px'
+                  gap: '8px',
+                  marginBottom: '12px',
+                  padding: '8px 12px',
+                  backgroundColor: isDarkMode ? '#334155' : '#e5e7eb',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#94a3b8' : '#6b7280'
                 }}>
-                  {getStatusBadge(post.status)}
-                  <span style={{
-                    fontSize: '12px',
-                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                    fontWeight: '600',
-                    fontFamily: 'monospace'
-                  }}>
-                    ID: {post.contentId}
-                  </span>
-                  <span style={{
-                    fontSize: '12px',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    fontWeight: '600'
-                  }}>
-                    Created {post.createdDate.toLocaleDateString()}
-                  </span>
-                  {post.isFromTemplate && (
-                    <span style={{
-                      fontSize: '12px',
-                      color: isDarkMode ? '#34d399' : '#059669',
-                      fontWeight: '600',
-                      backgroundColor: isDarkMode ? '#065f4630' : '#d1fae5',
-                      padding: '4px 8px',
-                      borderRadius: '6px'
-                    }}>
-                      From Template
-                    </span>
+                  <Eye style={{ height: '14px', width: '14px' }} />
+                  {selections.platform ? (
+                    <span>Showing preview optimized for: {selections.platform.toUpperCase()}</span>
+                  ) : (
+                    <span>Generic preview (no platform optimization selected)</span>
                   )}
                 </div>
-                
-                {post.title && (
-                  <h4 style={{
-                    color: isDarkMode ? '#f8fafc' : '#111827',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    margin: '0 0 8px 0'
-                  }}>
-                    {post.title}
-                  </h4>
-                )}
-                
-                <p style={{
-                  color: isDarkMode ? '#94a3b8' : '#374151',
-                  fontSize: '14px',
-                  lineHeight: '1.6',
-                  margin: '0 0 12px 0'
-                }}>
-                  {post.description}
-                </p>
-                
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '16px',
-                  flexWrap: 'wrap'
-                }}>
-                  {post.mediaFiles.length > 0 && (
+
+                {(() => {
+                  const platformStyle = getPlatformPreviewStyle(selections.platform);
+                  
+                  return (
                     <div style={{
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '12px',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280',
-                      backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
-                      padding: '6px 8px',
-                      borderRadius: '6px'
+                      gap: '12px'
                     }}>
-                      <Image style={{ height: '14px', width: '14px' }} />
-                      <span style={{ fontWeight: '600' }}>
-                        {post.mediaFiles.length} file{post.mediaFiles.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {post.hashtags.length > 0 && (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '12px',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280',
-                      backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
-                      padding: '6px 8px',
-                      borderRadius: '6px'
-                    }}>
-                      <span style={{ fontWeight: '600' }}>
-                        #{post.hashtags.length} hashtags
-                      </span>
-                    </div>
-                  )}
-                  
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '12px',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
-                    padding: '6px 8px',
-                    borderRadius: '6px'
-                  }}>
-                    <Settings style={{ height: '14px', width: '14px' }} />
-                    <span style={{ fontWeight: '600' }}>
-                      {post.selectedPlatforms.length} platform{post.selectedPlatforms.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
+                      {/* Platform Label */}
+                      <div style={{
+                        fontSize: '11px',
+                        color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                        fontWeight: '600',
+                        textAlign: 'center'
+                      }}>
+                        {platformStyle.label}
+                      </div>
+
+                      {/* Media Grid with Platform-Specific Sizing */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: mediaFiles.length === 1 
+                          ? '1fr' 
+                          : selections.platform === 'tiktok' || selections.platform === 'pinterest'
+                            ? 'repeat(auto-fit, minmax(150px, 200px))'
+                            : 'repeat(auto-fit, minmax(200px, 300px))',
+                        gap: '12px',
+                        justifyContent: 'center',
+                        width: '100%',
+                        maxWidth: '800px'
+                      }}>
+                        {mediaFiles.slice(0, 4).map((file, index) => (
+                          <div key={file.id} style={{
+                            position: 'relative',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                            border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+                            aspectRatio: platformStyle.aspectRatio, // Platform-specific sizing
+                            maxWidth: platformStyle.maxWidth, // Platform-specific sizing
+                            margin: '0 auto'
+                          }}>
+                            {file.type === 'image' || file.type === 'gif' ? (
+                              <img
+                                src={file.url}
+                                alt={file.name}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: selections.platform && selections.platform !== 'telegram' ? 'cover' : 'contain', // Generic for Telegram
+                                  backgroundColor: isDarkMode ? '#1e293b' : 'white'
+                                }}
+                              />
+                            ) : file.type === 'video' ? (
+                              <video
+                                src={file.url}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: selections.platform && selections.platform !== 'telegram' ? 'cover' : 'contain', // Generic for Telegram
+                                  backgroundColor: isDarkMode ? '#1e293b' : 'white'
+                                }}
+                                controls
+                                muted
+                              />
+                            ) : file.type === 'interactive' && file.urlPreview ? (
+                              <div style={{
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                                border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+                                borderRadius: '8px',
+                                overflow: 'hidden'
+                              }}>
+                                {file.urlPreview.image && (
+                                  <div style={{
+                                    height: '60%',
+                                    backgroundImage: `url(${file.urlPreview.image})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    backgroundRepeat: 'no-repeat'
+                                  }} />
+                                )}
+                                
+                                <div style={{
+                                  padding: '12px',
+                                  backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
+                                  height: file.urlPreview.image ? '40%' : '100%',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'center'
+                                }}>
+                                  <div style={{
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    color: isDarkMode ? '#f8fafc' : '#111827',
+                                    marginBottom: '4px',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {file.urlPreview.title || file.name}
+                                  </div>
+                                  <div style={{
+                                    fontSize: '11px',
+                                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                                    marginBottom: '6px',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {file.urlPreview.description || 'Click to visit'}
+                                  </div>
+                                  <div style={{
+                                    fontSize: '10px',
+                                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                                    fontWeight: '500',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    textDecoration: 'underline'
+                                  }}>
+                                    {file.url}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                padding: '16px'
+                              }}>
+                                {getFileIcon(file.type)}
+                                <span style={{
+                                  fontSize: '12px',
+                                  color: isDarkMode ? '#94a3b8' : '#6b7280',
+                                  textAlign: 'center',
+                                  fontWeight: '500'
+                                }}>
+                                  {file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name}
+                                </span>
+                                <span style={{
+                                  fontSize: '10px',
+                                  color: isDarkMode ? '#64748b' : '#9ca3af',
+                                  textAlign: 'center'
+                                }}>
+                                  {file.type.toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                            
+                            {mediaFiles.length > 4 && index === 3 && (
+                              <div style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontSize: '16px',
+                                fontWeight: '700'
+                              }}>
+                                +{mediaFiles.length - 3} more
+                              </div>
+                            )}
+
+                            <div style={{
+                              position: 'absolute',
+                              top: '8px',
+                              right: '8px',
+                              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: '12px',
+                              fontSize: '10px',
+                              fontWeight: '600',
+                              textTransform: 'uppercase'
+                            }}>
+                              {file.type}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+          {/* Platform Distribution */}
+          {selectedPlatforms.length > 0 && (
+            <div style={{
+              marginTop: '20px',
+              padding: '16px',
+              backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
+              borderRadius: '8px',
+              border: `1px dashed ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
+            }}>
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '8px',
+                marginBottom: '12px'
               }}>
-                <button
-                  onClick={() => onEditPost(post.id)}
-                  title="Edit Content"
-                  style={{
-                    padding: '8px',
-                    backgroundColor: 'transparent',
-                    border: '1px solid transparent',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <Edit3 style={{ height: '16px', width: '16px' }} />
-                </button>
-                
-                {post.status === 'pending' && (
-                  <button
-                    onClick={() => onSchedulePost(post.id)}
-                    title="Add to Schedule"
-                    style={{
-                      padding: '8px',
-                      backgroundColor: 'transparent',
-                      border: '1px solid transparent',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <Calendar style={{ height: '16px', width: '16px' }} />
-                  </button>
-                )}
-                
-                <button
-                  onClick={() => onDeletePost(post.id)}
-                  title="Delete Content"
-                  style={{
-                    padding: '8px',
-                    backgroundColor: 'transparent',
-                    border: '1px solid transparent',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <Trash2 style={{ height: '16px', width: '16px' }} />
-                </button>
+                <Settings style={{ height: '16px', width: '16px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
+                <span style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#60a5fa' : '#3b82f6'
+                }}>
+                  Distribution Settings (Internal Dashboard Only)
+                </span>
+              </div>
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px'
+              }}>
+                {selectedPlatforms.map(platformId => {
+                  const platform = platforms.find(p => p.id === platformId);
+                  if (!platform) return null;
+                  
+                  return (
+                    <div key={platformId} style={{
+                      padding: '6px 12px',
+                      backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                      border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                      borderRadius: '16px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      color: isDarkMode ? '#94a3b8' : '#6b7280'
+                    }}>
+                      {platform.name}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{
+                fontSize: '11px',
+                color: isDarkMode ? '#64748b' : '#9ca3af',
+                fontStyle: 'italic',
+                marginTop: '8px'
+              }}>
+                * Platform links are for internal dashboard tracking only and will not appear in the public post
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
+
 
 export { EnhancedContentCreationForm, SavedPostsList };
