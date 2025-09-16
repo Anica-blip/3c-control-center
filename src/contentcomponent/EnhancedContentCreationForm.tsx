@@ -1771,25 +1771,6 @@ const EnhancedContentCreationForm = ({
             </label>
           ))}
         </div>
-        
-        {activePlatforms.length === 0 && !isLoadingProfiles && (
-          <div style={{
-            padding: '32px',
-            textAlign: 'center',
-            backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
-            border: `2px dashed ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
-            borderRadius: '8px',
-            color: isDarkMode ? '#94a3b8' : '#6b7280'
-          }}>
-            <p style={{ margin: '0 0 8px 0', fontSize: '16px' }}>
-              No active platforms found
-            </p>
-            <p style={{ margin: '0', fontSize: '14px' }}>
-              Go to Settings &gt; Social Platforms to add your publishing destinations
-            </p>
-          </div>
-        )}
-      </div>
 
       {/* Action Buttons */}
       <div style={{
