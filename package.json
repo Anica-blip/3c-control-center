@@ -5,7 +5,7 @@
     "build": "vite build",
     "dev": "vite",
     "dev:full": "concurrently \"npm run dev\" \"npm run screenshot-server\"",
-    "screenshot-server": "node server/screenshot-server.js"
+    "screenshot-server": "node screenshot-service/server.js"
   },
   "dependencies": {
     "react": "^18.3.1",
