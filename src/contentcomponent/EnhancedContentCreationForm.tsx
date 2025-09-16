@@ -51,15 +51,38 @@ const EnhancedContentCreationForm = ({
     const loadPlatformsFromSupabase = async () => {
       try {
         setIsLoadingPlatformsState(true);
-        const supabasePlatforms = await supabaseAPI.loadPlatforms();
-        console.log('Loaded platforms from Supabase:', supabasePlatforms);
-        setLoadedPlatforms(supabasePlatforms);
-      } catch (error) {
-        console.error('Error loading platforms from Supabase:', error);
-        // Use prop platforms as fallback only if Supabase fails
-        setLoadedPlatforms(platforms || []);
-      } finally {
-        setIsLoadingPlatformsState(false);
+    
+    // Load both platforms and Telegram channels concurrently
+    const [supabasePlatforms, telegramChannels] = await Promise.all([
+      supabaseAPI.loadPlatforms(),
+      supabaseAPI.loadTelegramChannels()
+    ]);
+    
+    console.log('Loaded platforms from Supabase:', supabasePlatforms);
+    console.log('Loaded Telegram channels from Supabase:', telegramChannels);
+    
+    // Transform Telegram channels to platform format
+    const telegramPlatforms = telegramChannels
+      .filter(t => t && t.id && t.name) // Ensure valid data
+      .map(t => ({
+        id: t.id.toString(),
+        name: `${t.name} (Telegram)`,
+        url: t.channel_group_id ? `https://t.me/${t.channel_group_id}` : '',
+        isActive: true,
+        isDefault: false
+      }));
+    
+    // Merge platforms and Telegram channels
+    const allPlatforms = [...supabasePlatforms, ...telegramPlatforms];
+    
+    console.log('Combined platforms and Telegram channels:', allPlatforms);
+    setLoadedPlatforms(allPlatforms);
+  } catch (error) {
+    console.error('Error loading platforms and Telegram channels from Supabase:', error);
+    // Use prop platforms as fallback only if Supabase fails
+    setLoadedPlatforms(platforms || []);
+  } finally {
+    setIsLoadingPlatformsState(false);
       }
     };
 
