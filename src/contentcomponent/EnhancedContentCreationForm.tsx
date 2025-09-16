@@ -525,7 +525,10 @@ const EnhancedContentCreationForm = ({
     setFieldConfig(null);
   };
 
-  const activePlatforms = platforms?.filter(p => p?.isActive) || [];
+  const activePlatforms = loadedPlatforms.length > 0 
+    ? loadedPlatforms.filter(p => p?.isActive) 
+    : (platforms?.filter(p => p?.isActive) || []);
+
   const canSave = selections.characterProfile && selections.theme && selections.audience && selections.mediaType && selections.templateType && selections.voiceStyle && content.description;
 
   const getFileIcon = (type: string) => {
