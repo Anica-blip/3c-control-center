@@ -1,6 +1,9 @@
 import express from 'express';
-import captureWebsite from 'capture-website';
 import cors from 'cors';
+import { spawn } from 'child_process';
+import { writeFileSync, readFileSync, unlinkSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 const app = express();
 const PORT = 3001;
@@ -25,29 +28,69 @@ app.get('/api/capture', async (req, res) => {
 
     console.log(`Capturing screenshot: ${url} (${width}x${height})`);
 
-    const screenshot = await captureWebsite.buffer(url, {
-      width: parseInt(width),
-      height: parseInt(height),
-      fullPage: false,
-      timeout: 10000,
-      launchOptions: {
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu'
-        ]
+    // Use Puppeteer directly for better Codespaces compatibility
+    const puppeteerScript = `
+      const puppeteer = require('puppeteer');
+      
+      (async () => {
+        const browser = await puppeteer.launch({
+          headless: 'new',
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu'
+          ]
+        });
+        
+        const page = await browser.newPage();
+        await page.setViewport({
+          width: ${parseInt(width)},
+          height: ${parseInt(height)}
+        });
+        
+        await page.goto('${url}', { waitUntil: 'networkidle2', timeout: 10000 });
+        const screenshot = await page.screenshot({ type: 'png' });
+        await browser.close();
+        
+        process.stdout.write(screenshot);
+      })();
+    `;
+
+    const tempScript = join(tmpdir(), `screenshot-${Date.now()}.js`);
+    writeFileSync(tempScript, puppeteerScript);
+
+    const child = spawn('node', [tempScript], {
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+
+    let buffer = Buffer.alloc(0);
+    
+    child.stdout.on('data', (data) => {
+      buffer = Buffer.concat([buffer, data]);
+    });
+
+    child.stderr.on('data', (data) => {
+      console.error('Screenshot error:', data.toString());
+    });
+
+    child.on('close', (code) => {
+      unlinkSync(tempScript);
+      
+      if (code === 0 && buffer.length > 0) {
+        res.set({
+          'Content-Type': 'image/png',
+          'Content-Length': buffer.length,
+          'Cache-Control': 'public, max-age=3600'
+        });
+        res.send(buffer);
+      } else {
+        res.status(500).json({ 
+          error: 'Failed to capture screenshot',
+          details: `Process exited with code ${code}`
+        });
       }
     });
-
-    res.set({
-      'Content-Type': 'image/png',
-      'Content-Length': screenshot.length,
-      'Cache-Control': 'public, max-age=3600'
-    });
-
-    res.send(screenshot);
 
   } catch (error) {
     console.error('Screenshot capture error:', error);
