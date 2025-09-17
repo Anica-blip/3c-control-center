@@ -1,64 +1,42 @@
-import express from 'express';
-import captureWebsite from 'capture-website';
-import cors from 'cors';
-
-const app = express();
-const PORT = 3001;
-
-app.use(cors({
-  origin: 'http://localhost:5173',
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type']
-}));
-
-app.get('/health', (req, res) => {
-  res.json({ status: 'Screenshot service running', port: PORT });
-});
-
-app.get('/api/capture', async (req, res) => {
-  try {
-    const { url, width = 1200, height = 630 } = req.query;
-    
-    if (!url) {
-      return res.status(400).json({ error: 'URL parameter is required' });
-    }
-
-    console.log(`Capturing screenshot: ${url} (${width}x${height})`);
-
-    const screenshot = await captureWebsite.buffer(url, {
-      width: parseInt(width),
-      height: parseInt(height),
-      fullPage: false,
-      timeout: 10000,
-      launchOptions: {
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu'
-        ]
-      }
-    });
-
-    res.set({
-      'Content-Type': 'image/png',
-      'Content-Length': screenshot.length,
-      'Cache-Control': 'public, max-age=3600'
-    });
-
-    res.send(screenshot);
-
-  } catch (error) {
-    console.error('Screenshot capture error:', error);
-    res.status(500).json({ 
-      error: 'Failed to capture screenshot',
-      details: error.message 
-    });
+{
+  "name": "3c-control-center",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "dev:full": "concurrently \"npm run dev\" \"npm run screenshot-server\"",
+    "screenshot-server": "node screenshot-service/server.js",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
+    "@tanstack/react-query": "^5.56.2",
+    "@supabase/supabase-js": "^2.50.3",
+    "lucide-react": "^0.462.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.2",
+    "sonner": "^1.5.0",
+    "html2canvas": "^1.4.1",
+    "express": "^4.18.2",
+    "playwright": "^1.40.0",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react-swc": "^3.7.1",
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.45.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.3",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "concurrently": "^8.2.2"
   }
-});
-
-app.listen(PORT, () => {
-  console.log(`Screenshot service running on http://localhost:${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-});
+}
