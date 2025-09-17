@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Image, Settings, Edit3, Calendar, Trash2, FileText } from 'lucide-react';
-import { ContentPost } from './types';
+import { ContentPost } from '../components/types';
 
 // Theme Context
 const ThemeContext = React.createContext({
@@ -216,7 +216,7 @@ export const SavedPostsList: React.FC<SavedPostsListProps> = ({
                   <h4 style={{
                     color: isDarkMode ? '#f8fafc' : '#111827',
                     fontSize: '16px',
-                    fontWeight: '700', // Made bolder
+                    fontWeight: '700',
                     margin: '0 0 8px 0'
                   }}>
                     {post.title}
