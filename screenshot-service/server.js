@@ -1,97 +1,48 @@
-const express = require('express');
-const captureWebsite = require('capture-website');
-const cors = require('cors');
-const helmet = require('helmet');
-require('dotenv').config();
+import express from 'express';
+import captureWebsite from 'capture-website';
+import cors from 'cors';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = 3001;
 
-// Security middleware
-app.use(helmet());
-
-// CORS configuration
+// Allow your React app to access this server
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: 'http://localhost:5173' // Vite's default port
 }));
 
-// Health check endpoint
+// Simple health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({ status: 'Screenshot server running!' });
 });
 
-// Screenshot capture endpoint
+// Screenshot endpoint
 app.get('/api/capture', async (req, res) => {
   try {
-    const { 
-      url, 
-      width = 1200, 
-      height = 630, 
-      scaleFactor = 1,
-      defaultBackground = true,
-      disableAnimations = true,
-      timeout = 10000,
-      fullPage = false
-    } = req.query;
+    const { url, width = 1200, height = 630 } = req.query;
 
     if (!url) {
-      return res.status(400).json({ 
-        error: 'URL parameter is required',
-        example: '/api/capture?url=https://example.com'
-      });
+      return res.status(400).json({ error: 'URL required' });
     }
 
-    try {
-      new URL(url);
-    } catch (urlError) {
-      return res.status(400).json({ 
-        error: 'Invalid URL format',
-        provided: url
-      });
-    }
+    console.log(`📸 Taking screenshot of: ${url}`);
 
-    console.log(`Capturing screenshot for: ${url}`);
-
-    const options = {
+    const buffer = await captureWebsite.buffer(url, {
       width: parseInt(width),
       height: parseInt(height),
-      scaleFactor: parseFloat(scaleFactor),
-      defaultBackground: defaultBackground === 'true',
-      disableAnimations: disableAnimations === 'true',
-      timeout: parseInt(timeout),
-      fullPage: fullPage === 'true',
       launchOptions: {
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu'
-        ]
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
       }
-    };
-
-    const buffer = await captureWebsite.buffer(url, options);
-
-    res.set({
-      'Content-Type': 'image/png',
-      'Content-Length': buffer.length,
-      'Cache-Control': 'public, max-age=3600'
     });
 
+    res.set('Content-Type', 'image/png');
     res.send(buffer);
 
   } catch (error) {
-    console.error('Screenshot capture failed:', error);
-    res.status(500).json({ 
-      error: 'Failed to capture screenshot',
-      message: error.message
-    });
+    console.error('Screenshot failed:', error.message);
+    res.status(500).json({ error: 'Screenshot failed' });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Screenshot service running on port ${PORT}`);
-  console.log(`Example: http://localhost:${PORT}/api/capture?url=https://example.com`);
+  console.log(`🚀 Screenshot server running on http://localhost:${PORT}`);
 });
