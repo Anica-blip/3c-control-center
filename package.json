@@ -1,42 +1,42 @@
 {
-  "name": "3c-control-center",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "build": "vite build",
-    "dev": "vite",
-    "dev:full": "concurrently \"npm run dev\" \"npm run screenshot-server\"",
-    "screenshot-server": "node screenshot-service/server.js",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2",
-    "@tanstack/react-query": "^5.56.2",
-    "@supabase/supabase-js": "^2.50.3",
-    "lucide-react": "^0.462.0",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.2",
-    "sonner": "^1.5.0",
-    "html2canvas": "^1.4.1",
-    "express": "^4.18.2",
-    "capture-website": "^3.1.0",
-    "cors": "^2.8.5"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react-swc": "^3.7.1",
-    "@types/react": "^18.2.15",
-    "@types/react-dom": "^18.2.7",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "eslint": "^8.45.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.3",
-    "typescript": "^5.6.3",
-    "vite": "^5.4.10",
-    "concurrently": "^8.2.2"
-  }
+"name": "3c-control-center",
+"private": true,
+"version": "0.0.0",
+"type": "module",
+"scripts": {
+"build": "vite build",
+"dev": "vite",
+"dev:full": "concurrently \"npm run dev\" \"npm run screenshot-server\"",
+"screenshot-server": "node screenshot-service/server.js",
+"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+"preview": "vite preview"
+},
+"dependencies": {
+"react": "^18.3.1",
+"react-dom": "^18.3.1",
+"react-router-dom": "^6.26.2",
+"@tanstack/react-query": "^5.56.2",
+"@supabase/supabase-js": "^2.50.3",
+"lucide-react": "^0.462.0",
+"clsx": "^2.1.1",
+"tailwind-merge": "^2.5.2",
+"sonner": "^1.5.0",
+"html2canvas": "^1.4.1",
+"express": "^4.18.2",
+"capture-website": "^3.1.0",
+"cors": "^2.8.5"
+},
+"devDependencies": {
+"@vitejs/plugin-react-swc": "^3.7.1",
+"@types/react": "^18.2.15",
+"@types/react-dom": "^18.2.7",
+"@typescript-eslint/eslint-plugin": "^6.0.0",
+"@typescript-eslint/parser": "^6.0.0",
+"eslint": "^8.45.0",
+"eslint-plugin-react-hooks": "^4.6.0",
+"eslint-plugin-react-refresh": "^0.4.3",
+"typescript": "^5.6.3",
+"vite": "^5.4.10",
+"concurrently": "^8.2.2"
+}
 }
