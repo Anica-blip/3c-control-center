@@ -5,44 +5,67 @@ import cors from 'cors';
 const app = express();
 const PORT = 3001;
 
-// Allow your React app to access this server
+// Enable CORS for the Vite dev server
 app.use(cors({
-  origin: 'http://localhost:5173' // Vite's default port
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
 }));
 
-// Simple health check
+// Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'Screenshot server running!' });
+  res.json({ status: 'Screenshot service running', port: PORT });
 });
 
-// Screenshot endpoint
+// Screenshot capture endpoint
 app.get('/api/capture', async (req, res) => {
   try {
     const { url, width = 1200, height = 630 } = req.query;
-
+    
     if (!url) {
-      return res.status(400).json({ error: 'URL required' });
+      return res.status(400).json({ error: 'URL parameter is required' });
     }
 
-    console.log(`📸 Taking screenshot of: ${url}`);
+    console.log(`Capturing screenshot: ${url} (${width}x${height})`);
 
-    const buffer = await captureWebsite.buffer(url, {
+    // Capture website screenshot
+    const screenshot = await captureWebsite.buffer(url, {
       width: parseInt(width),
       height: parseInt(height),
+      fullPage: false,
+      timeout: 10000,
+      overwrite: true,
       launchOptions: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--disable-gpu'
+        ]
       }
     });
 
-    res.set('Content-Type', 'image/png');
-    res.send(buffer);
+    // Set proper headers
+    res.set({
+      'Content-Type': 'image/png',
+      'Content-Length': screenshot.length,
+      'Cache-Control': 'public, max-age=3600'
+    });
+
+    res.send(screenshot);
 
   } catch (error) {
-    console.error('Screenshot failed:', error.message);
-    res.status(500).json({ error: 'Screenshot failed' });
+    console.error('Screenshot capture error:', error);
+    res.status(500).json({ 
+      error: 'Failed to capture screenshot',
+      details: error.message 
+    });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Screenshot server running on http://localhost:${PORT}`);
+  console.log(`Screenshot service running on http://localhost:${PORT}`);
+  console.log(`Health check: http://localhost:${PORT}/health`);
 });
