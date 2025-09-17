@@ -5,19 +5,16 @@ import cors from 'cors';
 const app = express();
 const PORT = 3001;
 
-// Enable CORS for the Vite dev server
 app.use(cors({
   origin: 'http://localhost:5173',
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
 
-// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'Screenshot service running', port: PORT });
 });
 
-// Screenshot capture endpoint
 app.get('/api/capture', async (req, res) => {
   try {
     const { url, width = 1200, height = 630 } = req.query;
@@ -28,26 +25,22 @@ app.get('/api/capture', async (req, res) => {
 
     console.log(`Capturing screenshot: ${url} (${width}x${height})`);
 
-    // Capture website screenshot
     const screenshot = await captureWebsite.buffer(url, {
       width: parseInt(width),
       height: parseInt(height),
       fullPage: false,
       timeout: 10000,
-      overwrite: true,
       launchOptions: {
         headless: true,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
           '--disable-gpu'
         ]
       }
     });
 
-    // Set proper headers
     res.set({
       'Content-Type': 'image/png',
       'Content-Length': screenshot.length,
