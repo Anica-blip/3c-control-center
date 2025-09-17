@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Upload, X, Image, Video, FileText, Settings, ExternalLink, Plus, User, Eye, Edit3, Calendar, Trash2 } from 'lucide-react';
 import { ContentPost, MediaFile, SocialPlatform, CharacterProfile } from './types';
-import { SavedPostsList } from '../contentcomponent/SavedPostsList';
+import SavedPostsList from '../contentcomponent/SavedPostsList';
 import { supabaseAPI } from './supabaseAPI';
 import { 
   fetchUrlPreview, 
