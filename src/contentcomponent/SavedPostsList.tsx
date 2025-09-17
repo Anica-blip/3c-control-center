@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Image, Settings, Edit3, Calendar, Trash2, FileText } from 'lucide-react';
-import { ContentPost } from '../components/types';
+import { ContentPost } from './types';
 
 // Theme Context
 const ThemeContext = React.createContext({
