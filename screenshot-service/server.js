@@ -1,4 +1,5 @@
 import express from 'express';
+import captureWebsite from 'capture-website';
 import cors from 'cors';
 
 const app = express();
@@ -24,23 +25,21 @@ app.get('/api/capture', async (req, res) => {
 
     console.log(`Capturing screenshot: ${url} (${width}x${height})`);
 
-    // Use dynamic import to avoid ES module issues
-    const { chromium } = await import('playwright');
-    
-    const browser = await chromium.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    const screenshot = await captureWebsite.buffer(url, {
+      width: parseInt(width),
+      height: parseInt(height),
+      fullPage: false,
+      timeout: 10000,
+      launchOptions: {
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu'
+        ]
+      }
     });
-    
-    const page = await browser.newPage();
-    await page.setViewportSize({ 
-      width: parseInt(width), 
-      height: parseInt(height) 
-    });
-    
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 10000 });
-    const screenshot = await page.screenshot({ type: 'png' });
-    await browser.close();
 
     res.set({
       'Content-Type': 'image/png',
