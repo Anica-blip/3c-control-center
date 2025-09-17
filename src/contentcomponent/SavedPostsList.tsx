@@ -379,3 +379,6 @@ export const SavedPostsList: React.FC<SavedPostsListProps> = ({
     </div>
   );
 };
+
+// Add default export to ensure compatibility
+export default SavedPostsList;
