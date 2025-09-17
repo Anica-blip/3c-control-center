@@ -2284,4 +2284,4 @@ const EnhancedContentCreationForm = ({
   );
 };
 
-export { EnhancedContentCreationForm, SavedPostsList };
+export { EnhancedContentCreationForm };
