@@ -1953,9 +1953,10 @@ const EnhancedContentCreationForm = ({
         <div style={{
           marginTop: '32px',
           padding: '24px',
-          backgroundColor: isDarkMode ? '#1e293b' : '#f8fafc',
+          backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
           borderRadius: '12px',
-          border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
+          border: `2px solid ${isDarkMode ? '#3b82f6' : '#3b82f6'}`,
+          boxShadow: isDarkMode ? '0 8px 32px rgba(59, 130, 246, 0.15)' : '0 8px 32px rgba(59, 130, 246, 0.1)'
         }}>
           <div style={{
             display: 'flex',
@@ -1963,18 +1964,18 @@ const EnhancedContentCreationForm = ({
             gap: '12px',
             marginBottom: '20px'
           }}>
-            <Eye style={{ height: '24px', width: '24px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
+            <Eye style={{ height: '24px', width: '24px', color: '#3b82f6' }} />
             <h3 style={{
               fontSize: '18px',
               fontWeight: '600',
-              color: isDarkMode ? '#60a5fa' : '#3b82f6',
+              color: '#3b82f6',
               margin: '0'
             }}>
               Live Preview - Final Post Format
             </h3>
             <div style={{
               fontSize: '12px',
-              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              color: isDarkMode ? '#e2e8f0' : '#6b7280',
               fontStyle: 'italic',
               marginLeft: 'auto'
             }}>
@@ -1983,17 +1984,18 @@ const EnhancedContentCreationForm = ({
           </div>
           
           <div style={{
-            backgroundColor: isDarkMode ? '#334155' : 'white',
+            backgroundColor: isDarkMode ? '#1e293b' : 'white',
             borderRadius: '8px',
-            border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
-            overflow: 'hidden'
+            border: `1px solid ${isDarkMode ? '#3b82f6' : '#e5e7eb'}`,
+            overflow: 'hidden',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
           }}>
             {/* 1. Media Files Preview - Platform Responsive with URL Preview Support */}
             {mediaFiles.length > 0 && (
               <div style={{
                 padding: '16px',
-                backgroundColor: isDarkMode ? '#1e293b' : '#f9fafb',
-                borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+                backgroundColor: isDarkMode ? '#f8fafc' : '#f9fafb',
+                borderBottom: `1px solid ${isDarkMode ? '#e5e7eb' : '#e5e7eb'}`
               }}>
                 {/* Platform Preview Info */}
                 <div style={{
@@ -2002,15 +2004,15 @@ const EnhancedContentCreationForm = ({
                   gap: '8px',
                   marginBottom: '12px',
                   padding: '8px 12px',
-                  backgroundColor: isDarkMode ? '#334155' : '#e5e7eb',
+                  backgroundColor: isDarkMode ? '#3b82f6' : '#e5e7eb',
                   borderRadius: '6px',
                   fontSize: '12px',
                   fontWeight: '600',
-                  color: isDarkMode ? '#94a3b8' : '#6b7280'
+                  color: isDarkMode ? 'white' : '#374151'
                 }}>
                   <Eye style={{ height: '14px', width: '14px' }} />
                   {selections.platform ? (
-                    <span>Showing preview optimized for: {selections.platform.toUpperCase()}</span>
+                    <span>Platform Preview: {selections.platform.toUpperCase()} - Optimized Size</span>
                   ) : (
                     <span>Generic preview (no platform optimization selected)</span>
                   )}
@@ -2029,14 +2031,17 @@ const EnhancedContentCreationForm = ({
                       {/* Platform Label */}
                       <div style={{
                         fontSize: '11px',
-                        color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                        color: '#3b82f6',
                         fontWeight: '600',
-                        textAlign: 'center'
+                        textAlign: 'center',
+                        padding: '4px 12px',
+                        backgroundColor: isDarkMode ? 'white' : '#dbeafe',
+                        borderRadius: '12px'
                       }}>
                         {platformStyle.label}
                       </div>
 
-                      {/* Media Grid */}
+                      {/* Media Grid with Platform-Specific Sizing */}
                       <div style={{
                         display: 'grid',
                         gridTemplateColumns: mediaFiles.length === 1 
@@ -2047,18 +2052,20 @@ const EnhancedContentCreationForm = ({
                         gap: '12px',
                         justifyContent: 'center',
                         width: '100%',
-                        maxWidth: '800px'
+                        maxWidth: selections.platform ? platformStyle.maxWidth : '100%'
                       }}>
                         {mediaFiles.slice(0, 4).map((file, index) => (
                           <div key={file.id} style={{
                             position: 'relative',
                             borderRadius: '8px',
                             overflow: 'hidden',
-                            backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
-                            border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
-                            aspectRatio: platformStyle.aspectRatio,
-                            maxWidth: platformStyle.maxWidth,
-                            margin: '0 auto'
+                            backgroundColor: 'white',
+                            border: `2px solid #3b82f6`,
+                            aspectRatio: selections.platform ? platformStyle.aspectRatio : 'auto',
+                            width: selections.platform ? '100%' : 'auto',
+                            maxWidth: selections.platform ? platformStyle.maxWidth : '300px',
+                            margin: '0 auto',
+                            minHeight: selections.platform ? '200px' : 'auto'
                           }}>
                             {file.type === 'image' || file.type === 'gif' ? (
                               <img
@@ -2068,7 +2075,7 @@ const EnhancedContentCreationForm = ({
                                   width: '100%',
                                   height: '100%',
                                   objectFit: selections.platform ? 'cover' : 'contain',
-                                  backgroundColor: isDarkMode ? '#1e293b' : 'white'
+                                  backgroundColor: 'white'
                                 }}
                               />
                             ) : file.type === 'video' ? (
@@ -2078,7 +2085,7 @@ const EnhancedContentCreationForm = ({
                                   width: '100%',
                                   height: '100%',
                                   objectFit: selections.platform ? 'cover' : 'contain',
-                                  backgroundColor: isDarkMode ? '#1e293b' : 'white'
+                                  backgroundColor: 'white'
                                 }}
                                 controls
                                 muted
@@ -2090,7 +2097,7 @@ const EnhancedContentCreationForm = ({
                                 height: '100%',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                backgroundColor: isDarkMode ? '#1e293b' : 'white'
+                                backgroundColor: 'white'
                               }}>
                                 {/* URL Preview Image */}
                                 {file.urlPreview?.image && (
@@ -2107,13 +2114,13 @@ const EnhancedContentCreationForm = ({
                                 {/* URL Preview Info */}
                                 <div style={{
                                   padding: '12px',
-                                  backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
-                                  borderTop: file.urlPreview?.image ? `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}` : 'none'
+                                  backgroundColor: '#f9fafb',
+                                  borderTop: file.urlPreview?.image ? `1px solid #e5e7eb` : 'none'
                                 }}>
                                   <div style={{
                                     fontSize: '13px',
                                     fontWeight: '600',
-                                    color: isDarkMode ? '#f8fafc' : '#111827',
+                                    color: '#111827',
                                     marginBottom: '4px',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
@@ -2123,7 +2130,7 @@ const EnhancedContentCreationForm = ({
                                   </div>
                                   <div style={{
                                     fontSize: '11px',
-                                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                                    color: '#6b7280',
                                     marginBottom: '4px',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
@@ -2133,7 +2140,7 @@ const EnhancedContentCreationForm = ({
                                   </div>
                                   <div style={{
                                     fontSize: '10px',
-                                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                                    color: '#3b82f6',
                                     fontWeight: '500',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
@@ -2159,12 +2166,13 @@ const EnhancedContentCreationForm = ({
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: '8px',
-                                padding: '16px'
+                                padding: '16px',
+                                backgroundColor: 'white'
                               }}>
                                 {getFileIcon(file.type)}
                                 <span style={{
                                   fontSize: '12px',
-                                  color: isDarkMode ? '#94a3b8' : '#6b7280',
+                                  color: '#374151',
                                   textAlign: 'center',
                                   fontWeight: '500'
                                 }}>
@@ -2172,7 +2180,7 @@ const EnhancedContentCreationForm = ({
                                 </span>
                                 <span style={{
                                   fontSize: '10px',
-                                  color: isDarkMode ? '#64748b' : '#9ca3af',
+                                  color: '#6b7280',
                                   textAlign: 'center'
                                 }}>
                                   {file.type.toUpperCase()}
@@ -2205,7 +2213,7 @@ const EnhancedContentCreationForm = ({
                               position: 'absolute',
                               top: '8px',
                               right: '8px',
-                              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                              backgroundColor: 'rgba(59, 130, 246, 0.9)',
                               color: 'white',
                               padding: '4px 8px',
                               borderRadius: '12px',
@@ -2223,11 +2231,14 @@ const EnhancedContentCreationForm = ({
                       {selections.platform && (
                         <div style={{
                           fontSize: '11px',
-                          color: isDarkMode ? '#64748b' : '#9ca3af',
+                          color: '#6b7280',
                           textAlign: 'center',
                           fontStyle: 'italic',
                           maxWidth: '500px',
-                          lineHeight: '1.4'
+                          lineHeight: '1.4',
+                          padding: '8px 16px',
+                          backgroundColor: isDarkMode ? 'white' : '#f3f4f6',
+                          borderRadius: '6px'
                         }}>
                           {selections.platform === 'instagram' && 'Instagram will crop images to square format for feed posts. Stories use 9:16 ratio.'}
                           {selections.platform === 'tiktok' && 'TikTok optimizes for vertical 9:16 video format for maximum engagement.'}
@@ -2246,7 +2257,7 @@ const EnhancedContentCreationForm = ({
             )}
 
             {/* 2. Post Content */}
-            <div style={{ padding: '20px' }}>
+            <div style={{ padding: '20px', backgroundColor: 'white' }}>
               {/* a) Character Profile Header */}
               {selections.characterProfile && (
                 <div style={{
@@ -2255,7 +2266,7 @@ const EnhancedContentCreationForm = ({
                   gap: '12px',
                   marginBottom: '16px',
                   paddingBottom: '12px',
-                  borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+                  borderBottom: `1px solid #e5e7eb`
                 }}>
                   {(() => {
                     const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
@@ -2267,14 +2278,14 @@ const EnhancedContentCreationForm = ({
                           width: '48px',
                           height: '48px',
                           borderRadius: '50%',
-                          backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                          backgroundColor: '#f3f4f6',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontSize: '20px',
-                          color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                          color: '#3b82f6',
                           fontWeight: 'bold',
-                          border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+                          border: `2px solid #3b82f6`,
                           flexShrink: 0,
                           overflow: 'hidden'
                         }}>
@@ -2296,21 +2307,21 @@ const EnhancedContentCreationForm = ({
                           <div style={{
                             fontSize: '16px',
                             fontWeight: '600',
-                            color: isDarkMode ? '#f8fafc' : '#111827',
+                            color: '#111827',
                             marginBottom: '2px'
                           }}>
                             {selectedProfile.name}
                           </div>
                           <div style={{
                             fontSize: '13px',
-                            color: isDarkMode ? '#94a3b8' : '#6b7280',
+                            color: '#6b7280',
                             marginBottom: '2px'
                           }}>
                             {selectedProfile.username}
                           </div>
                           <div style={{
                             fontSize: '12px',
-                            color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                            color: '#3b82f6',
                             fontWeight: '500'
                           }}>
                             {selectedProfile.role}
@@ -2327,7 +2338,7 @@ const EnhancedContentCreationForm = ({
                 <h4 style={{
                   fontSize: '18px',
                   fontWeight: '700',
-                  color: isDarkMode ? '#f8fafc' : '#111827',
+                  color: '#111827',
                   margin: '0 0 12px 0',
                   lineHeight: '1.3'
                 }}>
@@ -2339,7 +2350,7 @@ const EnhancedContentCreationForm = ({
               {content.description && (
                 <div style={{
                   fontSize: '15px',
-                  color: isDarkMode ? '#e2e8f0' : '#374151',
+                  color: '#374151',
                   lineHeight: '1.6',
                   marginBottom: '16px',
                   whiteSpace: 'pre-wrap'
@@ -2359,7 +2370,7 @@ const EnhancedContentCreationForm = ({
                   {content.hashtags.map((tag) => (
                     <span key={tag} style={{
                       fontSize: '14px',
-                      color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                      color: '#3b82f6',
                       fontWeight: '500'
                     }}>
                       #{tag}
@@ -2372,7 +2383,7 @@ const EnhancedContentCreationForm = ({
               {content.cta && (
                 <div style={{
                   padding: '12px 16px',
-                  backgroundColor: isDarkMode ? '#1e40af' : '#3b82f6',
+                  backgroundColor: '#3b82f6',
                   color: 'white',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -2391,9 +2402,9 @@ const EnhancedContentCreationForm = ({
             <div style={{
               marginTop: '20px',
               padding: '16px',
-              backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
+              backgroundColor: '#f3f4f6',
               borderRadius: '8px',
-              border: `1px dashed ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
+              border: `1px dashed #3b82f6`
             }}>
               <div style={{
                 display: 'flex',
@@ -2401,11 +2412,11 @@ const EnhancedContentCreationForm = ({
                 gap: '8px',
                 marginBottom: '12px'
               }}>
-                <Settings style={{ height: '16px', width: '16px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
+                <Settings style={{ height: '16px', width: '16px', color: '#3b82f6' }} />
                 <span style={{
                   fontSize: '14px',
                   fontWeight: '600',
-                  color: isDarkMode ? '#60a5fa' : '#3b82f6'
+                  color: '#3b82f6'
                 }}>
                   Distribution Settings (Internal Dashboard Only)
                 </span>
@@ -2422,12 +2433,12 @@ const EnhancedContentCreationForm = ({
                   return (
                     <div key={platformId} style={{
                       padding: '6px 12px',
-                      backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                      border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                      backgroundColor: 'white',
+                      border: `1px solid #d1d5db`,
                       borderRadius: '16px',
                       fontSize: '12px',
                       fontWeight: '500',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280'
+                      color: '#6b7280'
                     }}>
                       {platform.name}
                     </div>
@@ -2436,7 +2447,7 @@ const EnhancedContentCreationForm = ({
               </div>
               <div style={{
                 fontSize: '11px',
-                color: isDarkMode ? '#64748b' : '#9ca3af',
+                color: '#9ca3af',
                 fontStyle: 'italic',
                 marginTop: '8px'
               }}>
