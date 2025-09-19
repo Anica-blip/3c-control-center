@@ -459,7 +459,7 @@ const EnhancedContentCreationForm = ({
     const newUrlFile: MediaFile = {
       id: Date.now().toString() + Math.random(),
       name: urlTitle || 'URL Link',
-      type: 'interactive',
+      type: 'interactive', // ❌ ALWAYS interactive
       size: 0, // URLs don't have file size
       url: urlInput.trim(),
       urlPreview: urlPreview
@@ -468,6 +468,129 @@ const EnhancedContentCreationForm = ({
     setMediaFiles(prev => [...prev, newUrlFile]);
     setUrlInput('');
     setUrlTitle('');
+  };
+
+// FIXED: Smart URL type detection and proper preview handling
+  const handleAddUrl = async () => {
+    if (!urlInput.trim()) return;
+    
+    console.log('Adding URL:', urlInput.trim());
+    
+    // Detect URL type based on content
+    const url = urlInput.trim();
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    
+    let urlType = 'url_link'; // Default type
+    let displayName = urlTitle || 'URL Link';
+    
+    // Classify URL type based on domain and content
+    if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
+      urlType = 'video';
+      displayName = urlTitle || 'YouTube Video';
+    } else if (hostname.includes('github.com')) {
+      urlType = 'url_link';
+      displayName = urlTitle || 'GitHub Repository';
+    } else if (url.includes('anica-blip.github.io/3c-smpost-generator')) {
+      urlType = 'interactive';
+      displayName = urlTitle || 'Interactive Content';
+    } else if (hostname.includes('codepen.io') || hostname.includes('jsfiddle.net') || 
+               hostname.includes('repl.it') || hostname.includes('glitch.com')) {
+      urlType = 'interactive';
+      displayName = urlTitle || 'Interactive Demo';
+    } else if (url.toLowerCase().includes('.pdf')) {
+      urlType = 'pdf';
+      displayName = urlTitle || 'PDF Document';
+    } else {
+      // Regular website
+      urlType = 'url_link';
+      displayName = urlTitle || 'Website Link';
+    }
+    
+    console.log('Detected URL type:', urlType, 'for', hostname);
+    
+    // Fetch URL preview with error handling
+    let urlPreview = null;
+    try {
+      console.log('Fetching URL preview...');
+      urlPreview = await fetchUrlPreview(url);
+      console.log('URL preview result:', urlPreview);
+      
+      // Update display name if we got a better title from preview
+      if (urlPreview?.title && !urlTitle) {
+        displayName = urlPreview.title;
+      }
+      
+    } catch (error) {
+      console.error('URL preview failed:', error);
+      // Continue without preview
+    }
+    
+    const newUrlFile: MediaFile = {
+      id: Date.now().toString() + Math.random(),
+      name: displayName,
+      type: urlType, // FIXED: Use detected type instead of always 'interactive'
+      size: 0, // URLs don't have file size
+      url: url,
+      urlPreview: urlPreview
+    };
+    
+    console.log('Adding URL file:', newUrlFile);
+    
+    setMediaFiles(prev => [...prev, newUrlFile]);
+    setUrlInput('');
+    setUrlTitle('');
+  };
+
+  // FIXED: Proper reset function that clears ALL state
+  const resetForm = () => {
+    console.log('Resetting form...');
+    
+    // Clear all selections
+    setSelections({
+      characterProfile: '',
+      theme: '',
+      audience: '',
+      mediaType: '',
+      templateType: '',
+      platform: '',
+      voiceStyle: ''
+    });
+    
+    // Clear all content
+    setContent({
+      title: '',
+      description: '',
+      hashtags: [],
+      keywords: '',
+      cta: ''
+    });
+    
+    // FIXED: Clear media files and revoke object URLs to prevent memory leaks
+    mediaFiles.forEach(file => {
+      if (file.url.startsWith('blob:')) {
+        URL.revokeObjectURL(file.url);
+      }
+    });
+    setMediaFiles([]);
+    
+    // Clear platform selections
+    setSelectedPlatforms([]);
+    
+    // Reset states
+    setIsEditingPost(false);
+    setIsEditingTemplate(false);
+    setFieldConfig(null);
+    
+    // Clear URL inputs
+    setUrlInput('');
+    setUrlTitle('');
+    setHashtagInput('');
+    
+    // Generate new content ID
+    setContentId(generateContentId());
+    
+    console.log('Form reset complete');
   };
 
   // UPDATED SAVE HANDLER WITH TEMPLATE INTEGRATION:
