@@ -261,9 +261,9 @@ const EnhancedContentCreationForm = ({
         label: 'TikTok Video (9:16)'
       },
       telegram: {
-        aspectRatio: '16 / 9', // Changed from 'auto' to specific ratio
-        maxWidth: '500px', // Changed from '100%' to specific width
-        label: 'Telegram Post (16:9)'
+        aspectRatio: 'auto', // Use original media dimensions
+        maxWidth: '100%', // Allow full width flexibility
+        label: 'Telegram Post (Original Size)'
       },
       pinterest: {
         aspectRatio: '2 / 3', // Pinterest vertical
