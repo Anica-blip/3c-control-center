@@ -2091,36 +2091,58 @@ const EnhancedContentCreationForm = ({
                                 muted
                               />
                             ) : file.size === 0 && file.url ? (
-                              // URL PREVIEW FOR ALL URL TYPES - FIXED IMPLEMENTATION
+                              // URL PREVIEW WITH PROPER PLATFORM SIZING - FIXED
                               <div style={{
                                 width: '100%',
                                 height: '100%',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                backgroundColor: 'white'
+                                backgroundColor: 'white',
+                                position: 'relative',
+                                overflow: 'hidden'
                               }}>
-                                {/* URL Preview Image */}
-                                {file.urlPreview?.image && (
+                                {/* URL Preview Image - Full size with platform aspect ratio */}
+                                {file.urlPreview?.image ? (
                                   <div style={{
                                     flex: 1,
                                     backgroundImage: `url(${file.urlPreview.image})`,
                                     backgroundSize: 'cover',
                                     backgroundPosition: 'center',
                                     backgroundRepeat: 'no-repeat',
-                                    minHeight: '120px'
+                                    width: '100%',
+                                    height: '100%',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0
                                   }} />
+                                ) : (
+                                  // Fallback when no image preview available
+                                  <div style={{
+                                    flex: 1,
+                                    backgroundColor: '#f3f4f6',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '48px',
+                                    color: '#3b82f6'
+                                  }}>
+                                    🔗
+                                  </div>
                                 )}
                                 
-                                {/* URL Preview Info */}
+                                {/* URL Info Overlay - Bottom positioned, not covering image */}
                                 <div style={{
+                                  position: 'absolute',
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
                                   padding: '12px',
-                                  backgroundColor: '#f9fafb',
-                                  borderTop: file.urlPreview?.image ? `1px solid #e5e7eb` : 'none'
+                                  color: 'white'
                                 }}>
                                   <div style={{
                                     fontSize: '13px',
                                     fontWeight: '600',
-                                    color: '#111827',
                                     marginBottom: '4px',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
@@ -2130,18 +2152,7 @@ const EnhancedContentCreationForm = ({
                                   </div>
                                   <div style={{
                                     fontSize: '11px',
-                                    color: '#6b7280',
-                                    marginBottom: '4px',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap'
-                                  }}>
-                                    {file.urlPreview?.description || 'Click to visit'}
-                                  </div>
-                                  <div style={{
-                                    fontSize: '10px',
-                                    color: '#3b82f6',
-                                    fontWeight: '500',
+                                    opacity: 0.9,
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap'
