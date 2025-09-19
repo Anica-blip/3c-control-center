@@ -456,70 +456,90 @@ const EnhancedContentCreationForm = ({
     
     console.log('Adding URL:', urlInput.trim());
     
-    // Detect URL type based on content
-    const url = urlInput.trim();
-    const urlObj = new URL(url);
-    const hostname = urlObj.hostname;
-    
-    let urlType = 'url_link'; // Default type
-    let displayName = urlTitle || 'URL Link';
-    
-    // Classify URL type based on domain and content
-    if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
-      urlType = 'video';
-      displayName = urlTitle || 'YouTube Video';
-    } else if (hostname.includes('github.com')) {
-      urlType = 'url_link';
-      displayName = urlTitle || 'GitHub Repository';
-    } else if (url.includes('anica-blip.github.io/3c-smpost-generator')) {
-      urlType = 'interactive';
-      displayName = urlTitle || 'Interactive Content';
-    } else if (hostname.includes('codepen.io') || hostname.includes('jsfiddle.net') || 
-               hostname.includes('repl.it') || hostname.includes('glitch.com')) {
-      urlType = 'interactive';
-      displayName = urlTitle || 'Interactive Demo';
-    } else if (url.toLowerCase().includes('.pdf')) {
-      urlType = 'pdf';
-      displayName = urlTitle || 'PDF Document';
-    } else {
-      // Regular website
-      urlType = 'url_link';
-      displayName = urlTitle || 'Website Link';
-    }
-    
-    console.log('Detected URL type:', urlType, 'for', hostname);
-    
-    // Fetch URL preview with error handling
-    let urlPreview = null;
     try {
-      console.log('Fetching URL preview...');
-      urlPreview = await fetchUrlPreview(url);
-      console.log('URL preview result:', urlPreview);
+      // Validate and clean URL
+      let url = urlInput.trim();
       
-      // Update display name if we got a better title from preview
-      if (urlPreview?.title && !urlTitle) {
-        displayName = urlPreview.title;
+      // Add protocol if missing
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
       }
       
+      // Validate URL format
+      let urlObj;
+      try {
+        urlObj = new URL(url);
+      } catch (urlError) {
+        console.error('Invalid URL format:', url);
+        alert('Please enter a valid URL (e.g., https://example.com)');
+        return;
+      }
+      
+      const hostname = urlObj.hostname;
+      let urlType = 'url_link'; // Default type
+      let displayName = urlTitle || 'URL Link';
+      
+      // Classify URL type based on domain and content
+      if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
+        urlType = 'video';
+        displayName = urlTitle || 'YouTube Video';
+      } else if (hostname.includes('github.com')) {
+        urlType = 'url_link';
+        displayName = urlTitle || 'GitHub Repository';
+      } else if (url.includes('anica-blip.github.io/3c-smpost-generator')) {
+        urlType = 'interactive';
+        displayName = urlTitle || 'Interactive Content';
+      } else if (hostname.includes('codepen.io') || hostname.includes('jsfiddle.net') || 
+                 hostname.includes('repl.it') || hostname.includes('glitch.com')) {
+        urlType = 'interactive';
+        displayName = urlTitle || 'Interactive Demo';
+      } else if (url.toLowerCase().includes('.pdf')) {
+        urlType = 'pdf';
+        displayName = urlTitle || 'PDF Document';
+      } else {
+        // Regular website
+        urlType = 'url_link';
+        displayName = urlTitle || 'Website Link';
+      }
+      
+      console.log('Detected URL type:', urlType, 'for', hostname);
+      
+      // Fetch URL preview with error handling
+      let urlPreview = null;
+      try {
+        console.log('Fetching URL preview...');
+        urlPreview = await fetchUrlPreview(url);
+        console.log('URL preview result:', urlPreview);
+        
+        // Update display name if we got a better title from preview
+        if (urlPreview?.title && !urlTitle) {
+          displayName = urlPreview.title;
+        }
+        
+      } catch (error) {
+        console.error('URL preview failed:', error);
+        // Continue without preview - this is not a critical error
+      }
+      
+      const newUrlFile: MediaFile = {
+        id: Date.now().toString() + Math.random(),
+        name: displayName,
+        type: urlType,
+        size: 0, // URLs don't have file size
+        url: url,
+        urlPreview: urlPreview
+      };
+      
+      console.log('Adding URL file:', newUrlFile);
+      
+      setMediaFiles(prev => [...prev, newUrlFile]);
+      setUrlInput('');
+      setUrlTitle('');
+      
     } catch (error) {
-      console.error('URL preview failed:', error);
-      // Continue without preview
+      console.error('Error adding URL:', error);
+      alert('Failed to add URL. Please check the URL format and try again.');
     }
-    
-    const newUrlFile: MediaFile = {
-      id: Date.now().toString() + Math.random(),
-      name: displayName,
-      type: urlType, // FIXED: Use detected type instead of always 'interactive'
-      size: 0, // URLs don't have file size
-      url: url,
-      urlPreview: urlPreview
-    };
-    
-    console.log('Adding URL file:', newUrlFile);
-    
-    setMediaFiles(prev => [...prev, newUrlFile]);
-    setUrlInput('');
-    setUrlTitle('');
   };
 
   // FIXED: Proper reset function that clears ALL state
