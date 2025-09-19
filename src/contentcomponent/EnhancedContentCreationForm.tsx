@@ -227,7 +227,7 @@ const EnhancedContentCreationForm = ({
     };
   };
 
-  // Platform-specific preview sizing with TELEGRAM as GENERIC
+  // Platform-specific preview sizing - FIXED ALL PLATFORMS
   const getPlatformPreviewStyle = (platform: string) => {
     const styles = {
       instagram: {
@@ -237,7 +237,7 @@ const EnhancedContentCreationForm = ({
       },
       facebook: {
         aspectRatio: '1.91 / 1', // Facebook recommended
-        maxWidth: '500px',
+        maxWidth: '500px', 
         label: 'Facebook Post (1.91:1)'
       },
       twitter: {
@@ -261,9 +261,9 @@ const EnhancedContentCreationForm = ({
         label: 'TikTok Video (9:16)'
       },
       telegram: {
-        aspectRatio: 'auto', // GENERIC SIZE as requested
-        maxWidth: '100%', // GENERIC SIZE as requested
-        label: 'Telegram (Original Size)' // Updated label
+        aspectRatio: '16 / 9', // Changed from 'auto' to specific ratio
+        maxWidth: '500px', // Changed from '100%' to specific width
+        label: 'Telegram Post (16:9)'
       },
       pinterest: {
         aspectRatio: '2 / 3', // Pinterest vertical
@@ -278,9 +278,9 @@ const EnhancedContentCreationForm = ({
     };
     
     return styles[platform as keyof typeof styles] || {
-      aspectRatio: 'auto',
-      maxWidth: '100%',
-      label: 'Original Size (No Platform Selected)'
+      aspectRatio: '16 / 9', // Changed from 'auto' to 16:9 default
+      maxWidth: '600px', // Changed from '100%' to larger default
+      label: 'Standard Format (16:9)'
     };
   };
 
