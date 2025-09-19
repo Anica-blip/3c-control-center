@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
-import { PendingLibraryTemplate } from './TemplateLibrary';
 import { Upload, X, Image, Video, FileText, Settings, ExternalLink, Plus, User, Eye, Edit3, Calendar, Trash2 } from 'lucide-react';
 import { ContentPost, MediaFile, SocialPlatform, CharacterProfile } from './types';
 import { SavedPostsList } from './SavedPostsList';
@@ -13,6 +12,8 @@ import {
   getCharacterCode, 
   getVoiceStyleCode 
 } from './utils';
+// ADD NEW IMPORT FOR TEMPLATE LIBRARY INTEGRATION
+import { PendingLibraryTemplate } from './TemplateLibrary';
 
 // Theme Context (assuming this comes from your App.tsx)
 const ThemeContext = React.createContext({
@@ -22,6 +23,7 @@ const ThemeContext = React.createContext({
 
 const useTheme = () => useContext(ThemeContext);
 
+// Enhanced Content Creation Form - UPDATED WITH TEMPLATE LIBRARY INTEGRATION
 const EnhancedContentCreationForm = ({ 
   onSave, 
   onAddToSchedule, 
@@ -31,6 +33,7 @@ const EnhancedContentCreationForm = ({
   isLoadingProfiles,
   editingPost,
   onEditComplete,
+  // ADD THESE NEW PROPS FOR TEMPLATE LIBRARY INTEGRATION:
   loadedTemplate,
   onTemplateLoaded
 }: {
@@ -42,6 +45,7 @@ const EnhancedContentCreationForm = ({
   isLoadingProfiles?: boolean;
   editingPost?: ContentPost | null;
   onEditComplete?: () => void;
+  // ADD THESE NEW PROPS FOR TEMPLATE LIBRARY INTEGRATION:
   loadedTemplate?: PendingLibraryTemplate | null;
   onTemplateLoaded?: () => void;
 }) => {
@@ -122,6 +126,8 @@ const EnhancedContentCreationForm = ({
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [contentId, setContentId] = useState('');
   const [isEditingPost, setIsEditingPost] = useState(false);
+  // ADD NEW STATE FOR TEMPLATE HANDLING:
+  const [isEditingTemplate, setIsEditingTemplate] = useState(false);
   const [hashtagInput, setHashtagInput] = useState('');
   const [fieldConfig, setFieldConfig] = useState<any>(null);
   const [urlInput, setUrlInput] = useState('');
@@ -336,6 +342,46 @@ const EnhancedContentCreationForm = ({
     }
   }, [editingPost]);
 
+  // ADD NEW USEEFFECT FOR TEMPLATE LOADING:
+  useEffect(() => {
+    if (loadedTemplate && !editingPost) { // Don't load template if editing a post
+      setSelections({
+        characterProfile: loadedTemplate.character_profile || '',
+        theme: loadedTemplate.theme || '',
+        audience: loadedTemplate.audience || '',
+        mediaType: loadedTemplate.media_type || '',
+        templateType: loadedTemplate.template_type || '',
+        platform: loadedTemplate.platform || '',
+        voiceStyle: loadedTemplate.voiceStyle || ''
+      });
+      
+      setContent({
+        title: loadedTemplate.title || '',
+        description: loadedTemplate.description || '',
+        hashtags: loadedTemplate.hashtags || [],
+        keywords: loadedTemplate.keywords || '',
+        cta: loadedTemplate.cta || ''
+      });
+      
+      if (loadedTemplate.media_files) {
+        setMediaFiles(loadedTemplate.media_files);
+      }
+      
+      if (loadedTemplate.selected_platforms) {
+        setSelectedPlatforms(loadedTemplate.selected_platforms);
+      }
+      
+      setIsEditingTemplate(true);
+      setupPlatformFields(loadedTemplate.platform);
+      
+      if (onTemplateLoaded) {
+        onTemplateLoaded();
+      }
+      
+      console.log('Template loaded into form:', loadedTemplate.template_id);
+    }
+  }, [loadedTemplate, editingPost, onTemplateLoaded]);
+
   const setupPlatformFields = (platform: string) => {
     if (platform) {
       const config = getPlatformConfig(platform);
@@ -424,6 +470,7 @@ const EnhancedContentCreationForm = ({
     setUrlTitle('');
   };
 
+  // UPDATED SAVE HANDLER WITH TEMPLATE INTEGRATION:
   const handleSave = async () => {
     const postData = {
       contentId,
@@ -432,7 +479,8 @@ const EnhancedContentCreationForm = ({
       mediaFiles,
       selectedPlatforms,
       status: 'pending' as const,
-      isFromTemplate: false
+      isFromTemplate: isEditingTemplate, // CHANGED: Use template status
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
     };
 
     try {
@@ -448,6 +496,7 @@ const EnhancedContentCreationForm = ({
     }
   };
 
+  // UPDATED ADD TO SCHEDULE HANDLER WITH TEMPLATE INTEGRATION:
   const handleAddToSchedule = async () => {
     const postData = {
       contentId,
@@ -456,7 +505,8 @@ const EnhancedContentCreationForm = ({
       mediaFiles,
       selectedPlatforms,
       status: 'scheduled' as const,
-      isFromTemplate: false
+      isFromTemplate: isEditingTemplate, // CHANGED: Use template status
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
     };
 
     try {
@@ -468,6 +518,7 @@ const EnhancedContentCreationForm = ({
     }
   };
 
+  // UPDATED RESET FORM WITH TEMPLATE STATE CLEARING:
   const resetForm = () => {
     setSelections({
       characterProfile: '',
@@ -489,6 +540,7 @@ const EnhancedContentCreationForm = ({
     setSelectedPlatforms([]);
     setContentId(generateContentId());
     setIsEditingPost(false);
+    setIsEditingTemplate(false); // ADDED: Clear template editing state
     setFieldConfig(null);
   };
 
@@ -528,7 +580,7 @@ const EnhancedContentCreationForm = ({
       marginBottom: '24px',
       fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
-      {/* Header */}
+      {/* UPDATED HEADER SECTION WITH TEMPLATE STATUS */}
       <div style={{
         borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
         paddingBottom: '16px',
@@ -542,7 +594,8 @@ const EnhancedContentCreationForm = ({
               color: isDarkMode ? '#60a5fa' : '#3b82f6',
               margin: '0 0 8px 0'
             }}>
-              {isEditingPost ? 'Editing Content' : 'Create New Content'}
+              {isEditingPost ? 'Editing Content' : 
+               isEditingTemplate ? 'Editing Template Content' : 'Create New Content'}
             </h2>
             <p style={{
               color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -550,6 +603,7 @@ const EnhancedContentCreationForm = ({
               margin: '0'
             }}>
               {isEditingPost ? `Editing post: ${contentId}` :
+               isEditingTemplate ? `Working from template: ${loadedTemplate?.template_id}` :
                'Design and prepare your social media content for publishing (UK English)'
               }
             </p>
@@ -1400,7 +1454,7 @@ const EnhancedContentCreationForm = ({
             <button
               type="button"
               onClick={() => {
-                const commonEmojis = ['😀', '😊', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '👏', '🙌', '💡', '📈', '📊'];
+                const commonEmojis = ['😀', '😊', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '💡', '🙌', '💡', '📈', '📊'];
                 const emoji = prompt(`Choose an emoji:\n${commonEmojis.join(' ')}\n\nOr enter any emoji:`);
                 if (emoji) {
                   setContent(prev => ({ ...prev, description: prev.description + emoji }));
@@ -1729,7 +1783,7 @@ const EnhancedContentCreationForm = ({
         </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* UPDATED ACTION BUTTONS WITH TEMPLATE INTEGRATION */}
       <div style={{
         display: 'flex',
         justifyContent: 'flex-end',
@@ -1770,7 +1824,9 @@ const EnhancedContentCreationForm = ({
             opacity: isSaving ? 0.7 : 1
           }}
         >
-          {isSaving ? 'Saving...' : (isEditingPost ? 'Update Draft' : 'Save as Draft')}
+          {isSaving ? 'Saving...' : 
+           isEditingPost ? 'Update Draft' : 
+           isEditingTemplate ? 'Save Template as Post' : 'Save as Draft'}
         </button>
         
         <button
@@ -2255,7 +2311,7 @@ const EnhancedContentCreationForm = ({
                 gap: '8px'
               }}>
                 {selectedPlatforms.map(platformId => {
-                  const platform = platforms.find(p => p.id === platformId);
+                  const platform = activePlatforms.find(p => p.id === platformId);
                   if (!platform) return null;
                   
                   return (
