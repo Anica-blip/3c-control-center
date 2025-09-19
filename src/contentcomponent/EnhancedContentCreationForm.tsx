@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
+import { PendingLibraryTemplate } from './TemplateLibrary';
 import { Upload, X, Image, Video, FileText, Settings, ExternalLink, Plus, User, Eye, Edit3, Calendar, Trash2 } from 'lucide-react';
 import { ContentPost, MediaFile, SocialPlatform, CharacterProfile } from './types';
 import { SavedPostsList } from './SavedPostsList';
@@ -21,7 +22,6 @@ const ThemeContext = React.createContext({
 
 const useTheme = () => useContext(ThemeContext);
 
-// Enhanced Content Creation Form
 const EnhancedContentCreationForm = ({ 
   onSave, 
   onAddToSchedule, 
@@ -30,7 +30,9 @@ const EnhancedContentCreationForm = ({
   isSaving,
   isLoadingProfiles,
   editingPost,
-  onEditComplete
+  onEditComplete,
+  loadedTemplate,
+  onTemplateLoaded
 }: {
   onSave: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
   onAddToSchedule: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
@@ -40,6 +42,8 @@ const EnhancedContentCreationForm = ({
   isLoadingProfiles?: boolean;
   editingPost?: ContentPost | null;
   onEditComplete?: () => void;
+  loadedTemplate?: PendingLibraryTemplate | null;
+  onTemplateLoaded?: () => void;
 }) => {
   const { isDarkMode } = useTheme();
 
