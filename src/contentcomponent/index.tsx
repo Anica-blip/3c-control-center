@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Edit3, Database } from 'lucide-react';
+import { Edit3, Database, Library } from 'lucide-react'; // ADD Library icon
 import { ContentPost, SocialPlatform, CharacterProfile } from './types';
 import { supabaseAPI, supabase } from './supabaseAPI';
 import { EnhancedContentCreationForm } from './EnhancedContentCreationForm';
 import { SavedPostsList } from './SavedPostsList';
 import { SupabaseConnection } from './SupabaseConnection';
+import { TemplateLibrary, useTemplateLibrary } from './TemplateLibrary'; // ADD Template Library imports
 
 // Theme Context (assuming this comes from your App.tsx)
 const ThemeContext = React.createContext({
@@ -21,6 +22,9 @@ export default function ContentComponent() {
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [editingPost, setEditingPost] = useState<ContentPost | null>(null);
+
+  // ADD TEMPLATE LIBRARY HOOK:
+  const { loadedTemplate, handleLoadTemplate, handleTemplateLoaded, clearLoadedTemplate } = useTemplateLibrary();
 
   // Supabase data states
   const [characterProfiles, setCharacterProfiles] = useState<CharacterProfile[]>([]);
@@ -160,6 +164,9 @@ export default function ContentComponent() {
       // Update local state
       setSavedPosts(prev => [savedPost, ...prev]);
       
+      // Clear template after saving:
+      clearLoadedTemplate();
+      
       alert('Content saved successfully to Supabase database!');
       
     } catch (error) {
@@ -180,6 +187,9 @@ export default function ContentComponent() {
       const savedPost = await supabaseAPI.saveContentPost(scheduledData);
       
       setSavedPosts(prev => [savedPost, ...prev]);
+      
+      // Clear template after scheduling:
+      clearLoadedTemplate();
       
       // Format post for Schedule Manager (convert ContentPost to PendingPost format)
       const pendingPost = {
@@ -274,8 +284,16 @@ export default function ContentComponent() {
     }
   };
 
+  // UPDATED TEMPLATE LOAD HANDLER:
+  const handleTemplateLoad = (template: any) => {
+    handleLoadTemplate(template);
+    setActiveTab('create'); // Switch to create tab when template is loaded
+  };
+
+  // UPDATED TABS ARRAY - NOW INCLUDES TEMPLATE LIBRARY:
   const tabs = [
     { id: 'create', label: 'Create New Content', icon: Edit3 },
+    { id: 'templates', label: 'Template Library', icon: Library }, // ADDED THIS LINE
     { id: 'supabase', label: 'Supabase Database', icon: Database },
   ];
 
@@ -360,6 +378,9 @@ export default function ContentComponent() {
                 isLoadingProfiles={isLoadingProfiles}
                 editingPost={editingPost}
                 onEditComplete={handleEditComplete}
+                // ADD TEMPLATE INTEGRATION PROPS:
+                loadedTemplate={loadedTemplate}
+                onTemplateLoaded={handleTemplateLoaded}
               />
               
               <SavedPostsList
@@ -372,10 +393,16 @@ export default function ContentComponent() {
             </div>
           )}
 
+          {/* ADD TEMPLATE LIBRARY TAB CASE: */}
+          {activeTab === 'templates' && (
+            <TemplateLibrary
+              onLoadTemplate={handleTemplateLoad}
+            />
+          )}
+
           {activeTab === 'supabase' && <SupabaseConnection />}
         </div>
       </div>
     </div>
   );
 }
-
