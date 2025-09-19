@@ -2083,8 +2083,8 @@ const EnhancedContentCreationForm = ({
                                 controls
                                 muted
                               />
-                            ) : file.type === 'interactive' && file.urlPreview ? (
-                              // URL PREVIEW WITH IMAGE - FIXED IMPLEMENTATION
+                            ) : file.size === 0 && file.url ? (
+                              // URL PREVIEW FOR ALL URL TYPES - FIXED IMPLEMENTATION
                               <div style={{
                                 width: '100%',
                                 height: '100%',
@@ -2093,7 +2093,7 @@ const EnhancedContentCreationForm = ({
                                 backgroundColor: isDarkMode ? '#1e293b' : 'white'
                               }}>
                                 {/* URL Preview Image */}
-                                {file.urlPreview.image && (
+                                {file.urlPreview?.image && (
                                   <div style={{
                                     flex: 1,
                                     backgroundImage: `url(${file.urlPreview.image})`,
@@ -2108,7 +2108,7 @@ const EnhancedContentCreationForm = ({
                                 <div style={{
                                   padding: '12px',
                                   backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
-                                  borderTop: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+                                  borderTop: file.urlPreview?.image ? `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}` : 'none'
                                 }}>
                                   <div style={{
                                     fontSize: '13px',
@@ -2119,7 +2119,7 @@ const EnhancedContentCreationForm = ({
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap'
                                   }}>
-                                    {file.urlPreview.title || file.name}
+                                    {file.urlPreview?.title || file.name}
                                   </div>
                                   <div style={{
                                     fontSize: '11px',
@@ -2129,7 +2129,7 @@ const EnhancedContentCreationForm = ({
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap'
                                   }}>
-                                    {file.urlPreview.description || 'Click to visit'}
+                                    {file.urlPreview?.description || 'Click to visit'}
                                   </div>
                                   <div style={{
                                     fontSize: '10px',
@@ -2139,7 +2139,13 @@ const EnhancedContentCreationForm = ({
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap'
                                   }}>
-                                    {file.urlPreview.siteName || new URL(file.url).hostname}
+                                    {(() => {
+                                      try {
+                                        return file.urlPreview?.siteName || new URL(file.url).hostname;
+                                      } catch {
+                                        return file.url;
+                                      }
+                                    })()}
                                   </div>
                                 </div>
                               </div>
