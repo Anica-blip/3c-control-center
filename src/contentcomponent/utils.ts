@@ -1,344 +1,259 @@
-import { MediaFile } from './types';
+// Enhanced URL preview with screenshot service integration
 
-// Generate a simple text-based preview image using canvas
-export const generateTextPreviewImage = (title: string, description: string): string => {
+// Try multiple ports for the screenshot service
+const SCREENSHOT_PORTS = [3001, 3002, 3003, 3004, 3005];
+let SCREENSHOT_SERVICE_URL = null;
+
+// Test which port the screenshot service is running on
+async function findScreenshotService() {
+  if (SCREENSHOT_SERVICE_URL) return SCREENSHOT_SERVICE_URL;
+  
+  for (const port of SCREENSHOT_PORTS) {
+    try {
+      const response = await fetch(`http://localhost:${port}/health`, {
+        method: 'GET',
+        timeout: 2000
+      });
+      if (response.ok) {
+        SCREENSHOT_SERVICE_URL = `http://localhost:${port}`;
+        console.log(`Found screenshot service on port ${port}`);
+        return SCREENSHOT_SERVICE_URL;
+      }
+    } catch (error) {
+      // Port not available, try next one
+      continue;
+    }
+  }
+  
+  console.log('Screenshot service not found on any port');
+  return null;
+}
+
+// Generate screenshot using the service
+async function generateUrlScreenshot(url, width = 1200, height = 630) {
+  try {
+    const serviceUrl = await findScreenshotService();
+    if (!serviceUrl) {
+      throw new Error('Screenshot service not available');
+    }
+
+    const screenshotUrl = `${serviceUrl}/api/capture?url=${encodeURIComponent(url)}&width=${width}&height=${height}`;
+    console.log(`Requesting screenshot: ${screenshotUrl}`);
+    
+    const response = await fetch(screenshotUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Screenshot service error: ${response.status}`);
+    }
+    
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+    
+  } catch (error) {
+    console.error('Screenshot generation failed:', error);
+    return null;
+  }
+}
+
+// Get platform-specific screenshot dimensions
+function getPlatformScreenshotDimensions(platform) {
+  const dimensions = {
+    instagram: { width: 1080, height: 1080 },
+    facebook: { width: 1200, height: 628 },
+    twitter: { width: 1200, height: 675 },
+    linkedin: { width: 1200, height: 628 },
+    youtube: { width: 1280, height: 720 },
+    tiktok: { width: 540, height: 960 },
+    telegram: { width: 1200, height: 630 },
+    pinterest: { width: 735, height: 1102 },
+    whatsapp: { width: 1200, height: 628 }
+  };
+  
+  return dimensions[platform] || { width: 1200, height: 630 };
+}
+
+// Enhanced fetchUrlPreview with screenshot integration
+export async function fetchUrlPreview(url, platform = null) {
+  try {
+    console.log('Fetching URL preview for:', url);
+    
+    // Get platform-specific dimensions for screenshot
+    const dimensions = getPlatformScreenshotDimensions(platform);
+    
+    // Try to generate screenshot first
+    const screenshot = await generateUrlScreenshot(url, dimensions.width, dimensions.height);
+    
+    // Fetch metadata using AllOrigins API (fallback method)
+    let metadata = null;
+    try {
+      const metadataResponse = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+      if (metadataResponse.ok) {
+        const html = await metadataResponse.text();
+        metadata = extractMetadataFromHtml(html, url);
+      }
+    } catch (metadataError) {
+      console.error('Metadata fetch failed:', metadataError);
+    }
+    
+    // Combine screenshot with metadata
+    const preview = {
+      title: metadata?.title || extractTitleFromUrl(url),
+      description: metadata?.description || 'Click to visit this link',
+      siteName: metadata?.siteName || extractSiteNameFromUrl(url),
+      image: screenshot || metadata?.image || null,
+      url: url,
+      favicon: metadata?.favicon || null
+    };
+    
+    console.log('URL preview generated:', preview);
+    return preview;
+    
+  } catch (error) {
+    console.error('URL preview failed:', error);
+    
+    // Return basic fallback
+    return {
+      title: extractTitleFromUrl(url),
+      description: 'Click to visit this link',
+      siteName: extractSiteNameFromUrl(url),
+      image: null,
+      url: url,
+      favicon: null
+    };
+  }
+}
+
+// Extract metadata from HTML
+function extractMetadataFromHtml(html, url) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    // Helper function to get meta content
+    const getMeta = (property) => {
+      const meta = doc.querySelector(`meta[property="${property}"]`) || 
+                   doc.querySelector(`meta[name="${property}"]`);
+      return meta ? meta.getAttribute('content') : null;
+    };
+    
+    const title = getMeta('og:title') || 
+                  getMeta('twitter:title') || 
+                  doc.querySelector('title')?.textContent || 
+                  extractTitleFromUrl(url);
+    
+    const description = getMeta('og:description') || 
+                       getMeta('twitter:description') || 
+                       getMeta('description') || 
+                       'Click to visit this link';
+    
+    const siteName = getMeta('og:site_name') || 
+                     extractSiteNameFromUrl(url);
+    
+    const image = getMeta('og:image') || 
+                  getMeta('twitter:image') || 
+                  null;
+    
+    const favicon = doc.querySelector('link[rel="icon"]')?.href || 
+                    doc.querySelector('link[rel="shortcut icon"]')?.href || 
+                    null;
+    
+    return {
+      title: title?.trim(),
+      description: description?.trim(),
+      siteName: siteName?.trim(),
+      image,
+      favicon
+    };
+    
+  } catch (error) {
+    console.error('HTML parsing failed:', error);
+    return null;
+  }
+}
+
+// Extract title from URL
+function extractTitleFromUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.replace('www.', '');
+    const path = urlObj.pathname;
+    
+    if (path && path !== '/') {
+      return path.split('/').filter(Boolean).pop()?.replace(/[-_]/g, ' ') || hostname;
+    }
+    
+    return hostname;
+  } catch {
+    return 'Website Link';
+  }
+}
+
+// Extract site name from URL
+function extractSiteNameFromUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname.replace('www.', '');
+  } catch {
+    return 'Website';
+  }
+}
+
+// Your existing utility functions (keep these unchanged)
+export const generateTextPreviewImage = (title, description) => {
   try {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
-    if (!ctx) return '';
-    
-    canvas.width = 400;
-    canvas.height = 200;
+    canvas.width = 1200;
+    canvas.height = 630;
     
     // Background
-    ctx.fillStyle = '#1e40af';
+    ctx.fillStyle = '#1e293b';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Title text
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 18px Arial, sans-serif';
+    // Title
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px Arial';
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.fillText(title || 'Preview', canvas.width / 2, 250);
     
-    const maxWidth = canvas.width - 40;
-    const words = title.split(' ');
+    // Description
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '32px Arial';
+    const words = (description || 'No description available').split(' ');
     let line = '';
-    let y = canvas.height * 0.4;
+    let y = 350;
     
     for (let n = 0; n < words.length; n++) {
       const testLine = line + words[n] + ' ';
       const metrics = ctx.measureText(testLine);
       const testWidth = metrics.width;
       
-      if (testWidth > maxWidth && n > 0) {
+      if (testWidth > 1000 && n > 0) {
         ctx.fillText(line, canvas.width / 2, y);
         line = words[n] + ' ';
-        y += 25;
+        y += 40;
+        if (y > 500) break; // Limit to 4 lines
       } else {
         line = testLine;
       }
     }
     ctx.fillText(line, canvas.width / 2, y);
     
-    // Description
-    ctx.font = '14px Arial, sans-serif';
-    ctx.fillStyle = '#94a3b8';
-    
-    const descWords = description.split(' ').slice(0, 8).join(' ');
-    ctx.fillText(descWords, canvas.width / 2, canvas.height * 0.75);
-    
-    return canvas.toDataURL('image/png');
-    
+    return canvas.toDataURL();
   } catch (error) {
-    console.error('Error generating preview image:', error);
-    return '';
-  }
-};
-
-// NEW: Screenshot Service Integration
-const captureScreenshot = async (url: string): Promise<string | null> => {
-  try {
-    const screenshotServiceUrl = window.location.hostname === 'localhost' 
-      ? 'http://localhost:3001' 
-      : window.location.origin; // Adjust for production
-    
-    const response = await fetch(
-      `${screenshotServiceUrl}/api/capture?url=${encodeURIComponent(url)}&width=400&height=200`
-    );
-    
-    if (!response.ok) {
-      throw new Error(`Screenshot service failed: ${response.status}`);
-    }
-    
-    // Convert response to blob and create object URL
-    const blob = await response.blob();
-    const imageUrl = URL.createObjectURL(blob);
-    
-    console.log('Screenshot captured successfully for:', url);
-    return imageUrl;
-    
-  } catch (error) {
-    console.error('Screenshot service error:', error);
+    console.error('Text preview generation failed:', error);
     return null;
   }
 };
 
-// Validate if image URL is accessible
-const validateImageUrl = (url: string): Promise<boolean> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve(true);
-    img.onerror = () => resolve(false);
-    img.src = url;
-    
-    // Timeout after 5 seconds
-    setTimeout(() => resolve(false), 5000);
-  });
-};
-
-// Enhanced URL Preview System with Screenshot Service Integration
-export const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> => {
-  try {
-    // Validate URL first
-    const urlObj = new URL(url);
-    const hostname = urlObj.hostname;
-    
-    // Default preview object
-    const preview: MediaFile['urlPreview'] = {
-      title: 'External Link',
-      description: 'Click to visit',
-      image: null,
-      siteName: hostname
-    };
-
-    console.log('Fetching URL preview for:', url);
-
-    // Domain-specific previews FIRST with enhanced image handling
-    if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
-      preview.title = 'YouTube Video';
-      preview.description = 'Video content from YouTube';
-      preview.siteName = 'YouTube';
-      const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
-      if (videoIdMatch) {
-        const videoId = videoIdMatch[1];
-        // Try multiple YouTube thumbnail qualities
-        const thumbnailUrls = [
-          `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-          `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
-          `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
-          `https://img.youtube.com/vi/${videoId}/default.jpg`
-        ];
-        
-        // Test each thumbnail URL until we find one that works
-        for (const thumbUrl of thumbnailUrls) {
-          const isValid = await validateImageUrl(thumbUrl);
-          if (isValid) {
-            preview.image = thumbUrl;
-            break;
-          }
-        }
-      }
-      return preview;
-    }
-    
-    if (hostname.includes('github.com')) {
-      preview.title = 'GitHub Repository';
-      preview.description = 'Source code repository';
-      preview.siteName = 'GitHub';
-      preview.image = 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
-      return preview;
-    }
-    
-    if (hostname.includes('twitter.com') || hostname.includes('x.com')) {
-      preview.title = 'Twitter/X Post';
-      preview.description = 'Social media post';
-      preview.siteName = 'Twitter/X';
-      preview.image = 'https://abs.twimg.com/icons/apple-touch-icon-192x192.png';
-      return preview;
-    }
-    
-    if (hostname.includes('linkedin.com')) {
-      preview.title = 'LinkedIn Post';
-      preview.description = 'Professional social media content';
-      preview.siteName = 'LinkedIn';
-      preview.image = 'https://static.licdn.com/sc/h/al2o9zrvru7aqj8e1x2rzsrca';
-      return preview;
-    }
-
-    if (hostname.includes('instagram.com')) {
-      preview.title = 'Instagram Post';
-      preview.description = 'Photo and video sharing';
-      preview.siteName = 'Instagram';
-      preview.image = 'https://static.cdninstagram.com/rsrc.php/v3/yt/r/30PrGfR3xhI.png';
-      return preview;
-    }
-
-    if (hostname.includes('facebook.com')) {
-      preview.title = 'Facebook Post';
-      preview.description = 'Social media content';
-      preview.siteName = 'Facebook';
-      preview.image = 'https://static.xx.fbcdn.net/rsrc.php/v3/yt/r/iRmz9lCMBD2.ico';
-      return preview;
-    }
-
-    // Your custom SM generator URLs
-    if (url.includes('anica-blip.github.io/3c-smpost-generator') && url.includes('?')) {
-      const urlParams = new URLSearchParams(url.split('?')[1] || '');
-      preview.title = decodeURIComponent(urlParams.get('title') || 'Interactive Content');
-      preview.description = decodeURIComponent(urlParams.get('desc') || 'Engage with this interactive content');
-      preview.siteName = '3C Thread To Success';
-      preview.image = generateTextPreviewImage(preview.title, preview.description);
-      return preview;
-    }
-
-    // ENHANCED: For all other websites - try screenshot service FIRST, then AllOrigins
-    try {
-      console.log('Attempting screenshot capture for:', hostname);
-      
-      // Try screenshot service first for better visual preview
-      const screenshotUrl = await captureScreenshot(url);
-      
-      if (screenshotUrl) {
-        // Screenshot successful, now get meta data with AllOrigins
-        try {
-          const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-          const data = await response.json();
-          
-          if (data.contents) {
-            const doc = new DOMParser().parseFromString(data.contents, 'text/html');
-            
-            // Extract Open Graph and meta tags with fallbacks
-            const ogTitle = doc.querySelector("meta[property='og:title']")?.getAttribute('content');
-            const pageTitle = doc.querySelector("title")?.textContent;
-            const title = ogTitle || pageTitle || 'External Link';
-            
-            const ogDescription = doc.querySelector("meta[property='og:description']")?.getAttribute('content');
-            const metaDescription = doc.querySelector("meta[name='description']")?.getAttribute('content');
-            const description = ogDescription || metaDescription || 'Click to visit';
-            
-            const ogSiteName = doc.querySelector("meta[property='og:site_name']")?.getAttribute('content');
-            const siteName = ogSiteName || hostname;
-
-            // Use screenshot image with extracted metadata
-            preview.title = title.trim().substring(0, 100);
-            preview.description = description.trim().substring(0, 200);
-            preview.siteName = siteName;
-            preview.image = screenshotUrl; // USE SCREENSHOT IMAGE
-            
-            console.log('Screenshot + metadata successful for:', hostname);
-            return preview;
-          }
-        } catch (metaError) {
-          console.warn('Metadata extraction failed, using screenshot only:', metaError);
-          // Use screenshot with basic info
-          preview.title = `${hostname.charAt(0).toUpperCase() + hostname.slice(1)} Website`;
-          preview.description = 'Website content preview';
-          preview.image = screenshotUrl;
-          return preview;
-        }
-      } else {
-        // Screenshot failed, try AllOrigins for metadata and fallback image
-        console.log('Screenshot failed, trying AllOrigins for:', hostname);
-        
-        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-        
-        if (!response.ok) {
-          throw new Error(`AllOrigins request failed: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data.contents) {
-          const doc = new DOMParser().parseFromString(data.contents, 'text/html');
-          
-          // Extract Open Graph and meta tags with fallbacks
-          const ogTitle = doc.querySelector("meta[property='og:title']")?.getAttribute('content');
-          const pageTitle = doc.querySelector("title")?.textContent;
-          const title = ogTitle || pageTitle || 'External Link';
-          
-          const ogDescription = doc.querySelector("meta[property='og:description']")?.getAttribute('content');
-          const metaDescription = doc.querySelector("meta[name='description']")?.getAttribute('content');
-          const description = ogDescription || metaDescription || 'Click to visit';
-          
-          const ogImage = doc.querySelector("meta[property='og:image']")?.getAttribute('content');
-          const twitterImage = doc.querySelector("meta[name='twitter:image']")?.getAttribute('content');
-          const linkImage = doc.querySelector("link[rel='image_src']")?.getAttribute('href');
-          
-          const ogSiteName = doc.querySelector("meta[property='og:site_name']")?.getAttribute('content');
-          const siteName = ogSiteName || hostname;
-
-          // Update preview with extracted data
-          preview.title = title.trim().substring(0, 100);
-          preview.description = description.trim().substring(0, 200);
-          preview.siteName = siteName;
-          
-          // Handle image URL with validation
-          let imageUrl = ogImage || twitterImage || linkImage;
-          
-          if (imageUrl) {
-            // Convert relative URLs to absolute
-            if (!imageUrl.startsWith('http')) {
-              try {
-                imageUrl = new URL(imageUrl, url).href;
-              } catch (urlError) {
-                console.warn('Failed to convert relative image URL:', imageUrl);
-                imageUrl = null;
-              }
-            }
-            
-            // Validate that the image URL is accessible
-            if (imageUrl) {
-              const isImageValid = await validateImageUrl(imageUrl);
-              if (isImageValid) {
-                preview.image = imageUrl;
-              } else {
-                console.warn('Image URL validation failed, generating text preview:', imageUrl);
-                // Generate fallback text-based image
-                preview.image = generateTextPreviewImage(preview.title, preview.description);
-              }
-            }
-          } else {
-            // No image found, generate text-based preview
-            console.log('No image found, generating text preview for:', hostname);
-            preview.image = generateTextPreviewImage(preview.title, preview.description);
-          }
-          
-          console.log('AllOrigins extraction successful for:', hostname);
-        } else {
-          console.warn('No content returned from AllOrigins for:', hostname);
-          // Generate fallback preview
-          preview.image = generateTextPreviewImage(preview.title, preview.description);
-        }
-      }
-    } catch (fetchError) {
-      console.warn('Both screenshot and AllOrigins failed for:', hostname, fetchError);
-      // Generate fallback preview for failed fetches
-      preview.title = `${hostname.charAt(0).toUpperCase() + hostname.slice(1)} Link`;
-      preview.description = 'External website content';
-      preview.image = generateTextPreviewImage(preview.title, preview.description);
-    }
-
-    return preview;
-    
-  } catch (error) {
-    console.error('Error creating URL preview:', error);
-    // Return safe fallback with generated image
-    const fallbackTitle = 'External Link';
-    const fallbackDescription = 'Click to visit';
-    
-    return {
-      title: fallbackTitle,
-      description: fallbackDescription,
-      image: generateTextPreviewImage(fallbackTitle, fallbackDescription),
-      siteName: 'External Site'
-    };
-  }
-};
-
-// Content ID generation functions
-export const getThemeCode = (value: string) => {
-  const codes: Record<string, string> = {
+// Keep all your existing code mapping functions unchanged
+export const getThemeCode = (value) => {
+  const codes = {
     'news_alert': 'NA', 'promotion': 'PR', 'standard_post': 'SP',
     'cta_quiz': 'QZ', 'cta_game': 'GA', 'cta_puzzle': 'PZ',
     'cta_challenge': 'CH', 'news': 'NS', 'blog': 'BP',
@@ -347,8 +262,8 @@ export const getThemeCode = (value: string) => {
   return codes[value] || 'XX';
 };
 
-export const getAudienceCode = (value: string) => {
-  const codes: Record<string, string> = {
+export const getAudienceCode = (value) => {
+  const codes = {
     'existing_members': 'EM', 'new_members': 'NM', 'persona_falcon': 'FL',
     'persona_panther': 'PA', 'persona_wolf': 'WF', 'persona_lion': 'LI',
     'general_public': 'GP'
@@ -356,16 +271,16 @@ export const getAudienceCode = (value: string) => {
   return codes[value] || 'XX';
 };
 
-export const getMediaCode = (value: string) => {
-  const codes: Record<string, string> = {
+export const getMediaCode = (value) => {
+  const codes = {
     'image': 'IM', 'video': 'VD', 'gifs': 'GF', 'pdf': 'PF',
     'interactive_media': 'IM', 'url_link': 'UL'
   };
   return codes[value] || 'XX';
 };
 
-export const getTemplateTypeCode = (value: string) => {
-  const codes: Record<string, string> = {
+export const getTemplateTypeCode = (value) => {
+  const codes = {
     'social_media': 'SM', 'presentation': 'PR', 'video_message': 'VM',
     'anica_chat': 'AC', 'blog_posts': 'BP', 'news_article': 'NA',
     'newsletter': 'NL', 'email_templates': 'ET', 'custom_templates': 'CT'
@@ -373,8 +288,8 @@ export const getTemplateTypeCode = (value: string) => {
   return codes[value] || 'XX';
 };
 
-export const getCharacterCode = (name: string) => {
-  const codes: Record<string, string> = {
+export const getCharacterCode = (name) => {
+  const codes = {
     'anica': 'AN',
     'caelum': 'CA', 
     'aurion': 'AU'
@@ -382,8 +297,8 @@ export const getCharacterCode = (name: string) => {
   return codes[name.toLowerCase()] || 'XX';
 };
 
-export const getVoiceStyleCode = (value: string) => {
-  const codes: Record<string, string> = {
+export const getVoiceStyleCode = (value) => {
+  const codes = {
     'casual': 'CS',
     'friendly': 'FR',
     'professional': 'PR',
