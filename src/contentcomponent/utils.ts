@@ -56,6 +56,34 @@ export const generateTextPreviewImage = (title: string, description: string): st
   }
 };
 
+// NEW: Screenshot Service Integration
+const captureScreenshot = async (url: string): Promise<string | null> => {
+  try {
+    const screenshotServiceUrl = window.location.hostname === 'localhost' 
+      ? 'http://localhost:3001' 
+      : window.location.origin; // Adjust for production
+    
+    const response = await fetch(
+      `${screenshotServiceUrl}/api/capture?url=${encodeURIComponent(url)}&width=400&height=200`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Screenshot service failed: ${response.status}`);
+    }
+    
+    // Convert response to blob and create object URL
+    const blob = await response.blob();
+    const imageUrl = URL.createObjectURL(blob);
+    
+    console.log('Screenshot captured successfully for:', url);
+    return imageUrl;
+    
+  } catch (error) {
+    console.error('Screenshot service error:', error);
+    return null;
+  }
+};
+
 // Validate if image URL is accessible
 const validateImageUrl = (url: string): Promise<boolean> => {
   return new Promise((resolve) => {
@@ -69,7 +97,7 @@ const validateImageUrl = (url: string): Promise<boolean> => {
   });
 };
 
-// Enhanced URL Preview System with AllOrigins (CORS-free)
+// Enhanced URL Preview System with Screenshot Service Integration
 export const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPreview']> => {
   try {
     // Validate URL first
@@ -83,6 +111,8 @@ export const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPrevie
       image: null,
       siteName: hostname
     };
+
+    console.log('Fetching URL preview for:', url);
 
     // Domain-specific previews FIRST with enhanced image handling
     if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
@@ -148,7 +178,7 @@ export const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPrevie
       preview.title = 'Facebook Post';
       preview.description = 'Social media content';
       preview.siteName = 'Facebook';
-      preview.image = 'https://static.xx.fbcdn.net/rsrc.php/yo/r/iRmz9lCMBD2.ico';
+      preview.image = 'https://static.xx.fbcdn.net/rsrc.php/v3/yt/r/iRmz9lCMBD2.ico';
       return preview;
     }
 
@@ -162,80 +192,127 @@ export const fetchUrlPreview = async (url: string): Promise<MediaFile['urlPrevie
       return preview;
     }
 
-    // For all other websites - use AllOrigins to bypass CORS with enhanced error handling
+    // ENHANCED: For all other websites - try screenshot service FIRST, then AllOrigins
     try {
-      console.log('Fetching URL preview for:', hostname);
+      console.log('Attempting screenshot capture for:', hostname);
       
-      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+      // Try screenshot service first for better visual preview
+      const screenshotUrl = await captureScreenshot(url);
       
-      if (!response.ok) {
-        throw new Error(`AllOrigins request failed: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.contents) {
-        const doc = new DOMParser().parseFromString(data.contents, 'text/html');
-        
-        // Extract Open Graph and meta tags with fallbacks
-        const ogTitle = doc.querySelector("meta[property='og:title']")?.getAttribute('content');
-        const pageTitle = doc.querySelector("title")?.textContent;
-        const title = ogTitle || pageTitle || 'External Link';
-        
-        const ogDescription = doc.querySelector("meta[property='og:description']")?.getAttribute('content');
-        const metaDescription = doc.querySelector("meta[name='description']")?.getAttribute('content');
-        const description = ogDescription || metaDescription || 'Click to visit';
-        
-        const ogImage = doc.querySelector("meta[property='og:image']")?.getAttribute('content');
-        const twitterImage = doc.querySelector("meta[name='twitter:image']")?.getAttribute('content');
-        const linkImage = doc.querySelector("link[rel='image_src']")?.getAttribute('href');
-        
-        const ogSiteName = doc.querySelector("meta[property='og:site_name']")?.getAttribute('content');
-        const siteName = ogSiteName || hostname;
-
-        // Update preview with extracted data
-        preview.title = title.trim().substring(0, 100); // Limit title length
-        preview.description = description.trim().substring(0, 200); // Limit description length
-        preview.siteName = siteName;
-        
-        // Handle image URL with validation
-        let imageUrl = ogImage || twitterImage || linkImage;
-        
-        if (imageUrl) {
-          // Convert relative URLs to absolute
-          if (!imageUrl.startsWith('http')) {
-            try {
-              imageUrl = new URL(imageUrl, url).href;
-            } catch (urlError) {
-              console.warn('Failed to convert relative image URL:', imageUrl);
-              imageUrl = null;
-            }
-          }
+      if (screenshotUrl) {
+        // Screenshot successful, now get meta data with AllOrigins
+        try {
+          const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+          const data = await response.json();
           
-          // Validate that the image URL is accessible
-          if (imageUrl) {
-            const isImageValid = await validateImageUrl(imageUrl);
-            if (isImageValid) {
-              preview.image = imageUrl;
-            } else {
-              console.warn('Image URL validation failed:', imageUrl);
-              // Generate fallback text-based image
-              preview.image = generateTextPreviewImage(preview.title, preview.description);
-            }
+          if (data.contents) {
+            const doc = new DOMParser().parseFromString(data.contents, 'text/html');
+            
+            // Extract Open Graph and meta tags with fallbacks
+            const ogTitle = doc.querySelector("meta[property='og:title']")?.getAttribute('content');
+            const pageTitle = doc.querySelector("title")?.textContent;
+            const title = ogTitle || pageTitle || 'External Link';
+            
+            const ogDescription = doc.querySelector("meta[property='og:description']")?.getAttribute('content');
+            const metaDescription = doc.querySelector("meta[name='description']")?.getAttribute('content');
+            const description = ogDescription || metaDescription || 'Click to visit';
+            
+            const ogSiteName = doc.querySelector("meta[property='og:site_name']")?.getAttribute('content');
+            const siteName = ogSiteName || hostname;
+
+            // Use screenshot image with extracted metadata
+            preview.title = title.trim().substring(0, 100);
+            preview.description = description.trim().substring(0, 200);
+            preview.siteName = siteName;
+            preview.image = screenshotUrl; // USE SCREENSHOT IMAGE
+            
+            console.log('Screenshot + metadata successful for:', hostname);
+            return preview;
           }
-        } else {
-          // No image found, generate text-based preview
-          preview.image = generateTextPreviewImage(preview.title, preview.description);
+        } catch (metaError) {
+          console.warn('Metadata extraction failed, using screenshot only:', metaError);
+          // Use screenshot with basic info
+          preview.title = `${hostname.charAt(0).toUpperCase() + hostname.slice(1)} Website`;
+          preview.description = 'Website content preview';
+          preview.image = screenshotUrl;
+          return preview;
+        }
+      } else {
+        // Screenshot failed, try AllOrigins for metadata and fallback image
+        console.log('Screenshot failed, trying AllOrigins for:', hostname);
+        
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+        
+        if (!response.ok) {
+          throw new Error(`AllOrigins request failed: ${response.status}`);
         }
         
-        console.log('Successfully extracted preview:', preview);
-      } else {
-        console.warn('No content returned from AllOrigins for:', hostname);
-        // Generate fallback preview
-        preview.image = generateTextPreviewImage(preview.title, preview.description);
+        const data = await response.json();
+        
+        if (data.contents) {
+          const doc = new DOMParser().parseFromString(data.contents, 'text/html');
+          
+          // Extract Open Graph and meta tags with fallbacks
+          const ogTitle = doc.querySelector("meta[property='og:title']")?.getAttribute('content');
+          const pageTitle = doc.querySelector("title")?.textContent;
+          const title = ogTitle || pageTitle || 'External Link';
+          
+          const ogDescription = doc.querySelector("meta[property='og:description']")?.getAttribute('content');
+          const metaDescription = doc.querySelector("meta[name='description']")?.getAttribute('content');
+          const description = ogDescription || metaDescription || 'Click to visit';
+          
+          const ogImage = doc.querySelector("meta[property='og:image']")?.getAttribute('content');
+          const twitterImage = doc.querySelector("meta[name='twitter:image']")?.getAttribute('content');
+          const linkImage = doc.querySelector("link[rel='image_src']")?.getAttribute('href');
+          
+          const ogSiteName = doc.querySelector("meta[property='og:site_name']")?.getAttribute('content');
+          const siteName = ogSiteName || hostname;
+
+          // Update preview with extracted data
+          preview.title = title.trim().substring(0, 100);
+          preview.description = description.trim().substring(0, 200);
+          preview.siteName = siteName;
+          
+          // Handle image URL with validation
+          let imageUrl = ogImage || twitterImage || linkImage;
+          
+          if (imageUrl) {
+            // Convert relative URLs to absolute
+            if (!imageUrl.startsWith('http')) {
+              try {
+                imageUrl = new URL(imageUrl, url).href;
+              } catch (urlError) {
+                console.warn('Failed to convert relative image URL:', imageUrl);
+                imageUrl = null;
+              }
+            }
+            
+            // Validate that the image URL is accessible
+            if (imageUrl) {
+              const isImageValid = await validateImageUrl(imageUrl);
+              if (isImageValid) {
+                preview.image = imageUrl;
+              } else {
+                console.warn('Image URL validation failed, generating text preview:', imageUrl);
+                // Generate fallback text-based image
+                preview.image = generateTextPreviewImage(preview.title, preview.description);
+              }
+            }
+          } else {
+            // No image found, generate text-based preview
+            console.log('No image found, generating text preview for:', hostname);
+            preview.image = generateTextPreviewImage(preview.title, preview.description);
+          }
+          
+          console.log('AllOrigins extraction successful for:', hostname);
+        } else {
+          console.warn('No content returned from AllOrigins for:', hostname);
+          // Generate fallback preview
+          preview.image = generateTextPreviewImage(preview.title, preview.description);
+        }
       }
     } catch (fetchError) {
-      console.warn('AllOrigins fetch failed for:', hostname, fetchError);
+      console.warn('Both screenshot and AllOrigins failed for:', hostname, fetchError);
       // Generate fallback preview for failed fetches
       preview.title = `${hostname.charAt(0).toUpperCase() + hostname.slice(1)} Link`;
       preview.description = 'External website content';
