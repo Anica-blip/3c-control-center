@@ -1,417 +1,722 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { ContentPost, MediaFile } from './types';
+// src/contentcomponent/TemplateLibrary.tsx
+import React, { useState, useEffect, useContext } from 'react';
+import { Library, CheckCircle, X, Send, Trash2, Settings, User, Palette } from 'lucide-react';
+import { supabase } from './supabaseAPI'; // FIXED: Import supabase directly
 
-// Initialize Supabase client - SINGLE INSTANCE with proper typing
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Theme Context (matches EnhancedContentCreationForm pattern)
+const ThemeContext = React.createContext({
+  isDarkMode: false,
+  toggleDarkMode: () => {}
+});
 
-let supabase: SupabaseClient | null = null;
+const useTheme = () => useContext(ThemeContext);
 
-if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
-    }
-  });
-  console.log('Supabase client created successfully (centralized instance)');
-} else {
-  console.error('Missing Supabase environment variables:', {
-    url: !!supabaseUrl,
-    key: !!supabaseKey,
-    urlValue: supabaseUrl ? 'set' : 'missing',
-    keyValue: supabaseKey ? 'set' : 'missing'
-  });
+// ============================================================================
+// TYPES AND INTERFACES
+// ============================================================================
+
+export interface PendingLibraryTemplate {
+  id: string;
+  template_id: string;
+  content_title: string;
+  content_id?: string;
+  character_profile?: string;
+  theme?: string;
+  audience?: string;
+  media_type?: string;
+  template_type?: string;
+  platform?: string;
+  title?: string;
+  description?: string;
+  hashtags?: string[];
+  keywords?: string;
+  cta?: string;
+  media_files?: any[]; // MediaFile[] from types
+  selected_platforms?: string[];
+  status: 'pending' | 'active' | 'draft' | 'scheduled';
+  is_from_template: boolean;
+  source_template_id?: string;
+  user_id?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+  voiceStyle?: string; // Added to match EnhancedContentCreationForm
 }
 
-// Helper function to check if Supabase is configured
-export const isSupabaseConfigured = (): boolean => Boolean(supabase && supabaseUrl && supabaseKey);
+// ============================================================================
+// TEMPLATE LIBRARY API FUNCTIONS
+// ============================================================================
 
-// Type-safe helper to get supabase client
-const getSupabaseClient = (): SupabaseClient => {
-  if (!supabase) {
-    throw new Error('Supabase client not initialized');
-  }
-  return supabase;
-};
+const templateLibraryAPI = {
+  // Fetch pending templates from Supabase
+  async fetchPendingTemplates(): Promise<PendingLibraryTemplate[]> {
+    if (!supabase) {
+      throw new Error('Supabase client not configured');
+    }
 
-export const supabaseAPI = {
-  // Upload media file to content-media bucket
-  async uploadMediaFile(file: File, contentId: string, userId: string): Promise<string> {
-    if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
-    
     try {
-      const client = getSupabaseClient();
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}/${contentId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-      const { data, error } = await client.storage
-        .from('content-media')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (error) throw error;
-
-      const { data: { publicUrl } } = client.storage
-        .from('content-media')
-        .getPublicUrl(fileName);
-
-      return publicUrl;
-    } catch (error) {
-      console.error('Error uploading media file:', error);
-      throw error;
-    }
-  }, 
-
-  // Save content post to content_posts table
-  async saveContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase not configured - cannot save to database');
-    }
-    
-    try {
-      const client = getSupabaseClient();
-      const { data: { user } } = await client.auth.getUser();
-      const userId = user?.id || null;
-
-      // Upload media files first
-      const uploadedMediaFiles = await Promise.all(
-        (postData.mediaFiles || []).map(async (mediaFile) => {
-          if (mediaFile.url.startsWith('blob:')) {
-            // Convert blob URL to file and upload
-            try {
-              const response = await fetch(mediaFile.url);
-              const blob = await response.blob();
-              const file = new File([blob], mediaFile.name, { type: blob.type });
-              
-              const supabaseUrl = await this.uploadMediaFile(file, postData.contentId, userId || 'anonymous');
-              
-              return {
-                ...mediaFile,
-                supabaseUrl: supabaseUrl,
-                url: supabaseUrl // Update URL to Supabase URL
-              };
-            } catch (uploadError) {
-              console.error('Error uploading media file:', uploadError);
-              return mediaFile; // Keep original if upload fails
-            }
-          }
-          return mediaFile;
-        })
-      );
-
-      // Prepare data for database insert
-      const insertData = {
-        content_id: postData.contentId,
-        character_profile: postData.characterProfile,
-        theme: postData.theme,
-        audience: postData.audience,
-        media_type: postData.mediaType,
-        template_type: postData.templateType,
-        platform: postData.platform || '',
-        voice_style: postData.voiceStyle || '',
-        title: postData.title || '',
-        description: postData.description || '',
-        hashtags: postData.hashtags || [],
-        keywords: postData.keywords || '',
-        cta: postData.cta || '',
-        media_files: uploadedMediaFiles,
-        selected_platforms: postData.selectedPlatforms || [],
-        status: postData.status || 'pending',
-        is_from_template: postData.isFromTemplate || false,
-        source_template_id: postData.sourceTemplateId || null,
-        user_id: userId, // REQUIRED for RLS
-        created_by: userId, // REQUIRED for tracking
-        is_active: true
-      };
-
-      const { data, error } = await client
-        .from('content_posts')
-        .insert(insertData)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Convert back to ContentPost format
-      const contentPost: ContentPost = {
-        id: data.id.toString(),
-        contentId: data.content_id,
-        characterProfile: data.character_profile,
-        theme: data.theme,
-        audience: data.audience,
-        mediaType: data.media_type,
-        templateType: data.template_type,
-        platform: data.platform || '',
-        voiceStyle: data.voice_style || '',
-        title: data.title || '',
-        description: data.description || '',
-        hashtags: data.hashtags || [],
-        keywords: data.keywords || '',
-        cta: data.cta || '',
-        mediaFiles: uploadedMediaFiles,
-        selectedPlatforms: data.selected_platforms || [],
-        status: data.status || 'pending',
-        createdDate: new Date(data.created_at),
-        scheduledDate: data.scheduled_date ? new Date(data.scheduled_date) : undefined,
-        isFromTemplate: data.is_from_template || false,
-        sourceTemplateId: data.source_template_id,
-        supabaseId: data.id.toString()
-      };
-
-      return contentPost;
-    } catch (error) {
-      console.error('Error saving content post:', error);
-      throw error;
-    }
-  },
-
-  // Load content posts from content_posts table
-  async loadContentPosts(): Promise<ContentPost[]> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase not configured - cannot load from database');
-    }
-    
-    try {
-      const client = getSupabaseClient();
-      const { data, error } = await client
-        .from('content_posts')
+      console.log('Fetching pending templates from pending_content_library table...');
+      
+      const { data, error } = await supabase
+        .from('pending_content_library')
         .select('*')
         .eq('is_active', true)
+        .eq('status', 'pending')
         .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Convert to ContentPost format
-      const contentPosts: ContentPost[] = (data || []).map(record => ({
-        id: record.id.toString(),
-        contentId: record.content_id || '',
-        characterProfile: record.character_profile || '',
-        theme: record.theme || '',
-        audience: record.audience || '',
-        mediaType: record.media_type || '',
-        templateType: record.template_type || '',
-        platform: record.platform || '',
-        voiceStyle: record.voice_style || '',
-        title: record.title || '',
-        description: record.description || '',
-        hashtags: Array.isArray(record.hashtags) ? record.hashtags : [],
-        keywords: record.keywords || '',
-        cta: record.cta || '',
-        mediaFiles: Array.isArray(record.media_files) ? record.media_files : [],
-        selectedPlatforms: Array.isArray(record.selected_platforms) ? record.selected_platforms : [],
-        status: record.status || 'pending',
-        createdDate: new Date(record.created_at),
-        scheduledDate: record.scheduled_date ? new Date(record.scheduled_date) : undefined,
-        isFromTemplate: record.is_from_template || false,
-        sourceTemplateId: record.source_template_id || undefined,
-        supabaseId: record.id.toString()
-      }));
-
-      return contentPosts;
-    } catch (error) {
-      console.error('Error loading content posts:', error);
-      return [];
-    }
-  },
-
-  // Update content post
-  async updateContentPost(postId: string, updates: Partial<ContentPost>): Promise<ContentPost> {
-    if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
-    
-    try {
-      const client = getSupabaseClient();
-      const { data: { user } } = await client.auth.getUser();
-      const userId = user?.id || null;
       
-      // Handle media file updates if needed
-      let updatedMediaFiles = updates.mediaFiles;
-      if (updates.mediaFiles) {
-        updatedMediaFiles = await Promise.all(
-          updates.mediaFiles.map(async (mediaFile) => {
-            if (mediaFile.url.startsWith('blob:')) {
-              // Upload new media file
-              try {
-                const response = await fetch(mediaFile.url);
-                const blob = await response.blob();
-                const file = new File([blob], mediaFile.name, { type: blob.type });
-                
-                const supabaseUrl = await this.uploadMediaFile(file, updates.contentId || 'updated', userId || 'anonymous');
-                
-                return {
-                  ...mediaFile,
-                  supabaseUrl: supabaseUrl,
-                  url: supabaseUrl
-                };
-              } catch (uploadError) {
-                console.error('Error uploading new media file:', uploadError);
-                return mediaFile;
-              }
-            }
-            return mediaFile;
-          })
-        );
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
       }
-
-      // Prepare update data
-      const updateData: Record<string, any> = {};
-      if (updates.characterProfile) updateData.character_profile = updates.characterProfile;
-      if (updates.theme) updateData.theme = updates.theme;
-      if (updates.audience) updateData.audience = updates.audience;
-      if (updates.mediaType) updateData.media_type = updates.mediaType;
-      if (updates.templateType) updateData.template_type = updates.templateType;
-      if (updates.platform !== undefined) updateData.platform = updates.platform;
-      if (updates.voiceStyle !== undefined) updateData.voice_style = updates.voiceStyle;
-      if (updates.title !== undefined) updateData.title = updates.title;
-      if (updates.description !== undefined) updateData.description = updates.description;
-      if (updates.hashtags !== undefined) updateData.hashtags = updates.hashtags;
-      if (updates.keywords !== undefined) updateData.keywords = updates.keywords;
-      if (updates.cta !== undefined) updateData.cta = updates.cta;
-      if (updatedMediaFiles !== undefined) updateData.media_files = updatedMediaFiles;
-      if (updates.selectedPlatforms !== undefined) updateData.selected_platforms = updates.selectedPlatforms;
-      if (updates.status) updateData.status = updates.status;
       
-      updateData.updated_at = new Date().toISOString();
+      console.log(`Found ${data?.length || 0} pending templates:`, data);
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching pending templates:', error);
+      throw error;
+    }
+  },
 
-      const { data, error } = await client
-        .from('content_posts')
-        .update(updateData)
-        .eq('id', parseInt(postId))
+  // Update template status (send to active/create)
+  async updatePendingTemplate(id: string, updateData: Partial<PendingLibraryTemplate>) {
+    if (!supabase) {
+      throw new Error('Supabase client not configured');
+    }
+
+    try {
+      console.log('Updating pending template:', id, updateData);
+      
+      const { data, error } = await supabase
+        .from('pending_content_library')
+        .update({
+          ...updateData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
         .select()
         .single();
-
-      if (error) throw error;
-
-      // Convert back to ContentPost format
-      const contentPost: ContentPost = {
-        id: data.id.toString(),
-        contentId: data.content_id,
-        characterProfile: data.character_profile,
-        theme: data.theme,
-        audience: data.audience,
-        mediaType: data.media_type,
-        templateType: data.template_type,
-        platform: data.platform || '',
-        voiceStyle: data.voice_style || '',
-        title: data.title || '',
-        description: data.description || '',
-        hashtags: data.hashtags || [],
-        keywords: data.keywords || '',
-        cta: data.cta || '',
-        mediaFiles: data.media_files || [],
-        selectedPlatforms: data.selected_platforms || [],
-        status: data.status || 'pending',
-        createdDate: new Date(data.created_at),
-        scheduledDate: data.scheduled_date ? new Date(data.scheduled_date) : undefined,
-        isFromTemplate: data.is_from_template || false,
-        sourceTemplateId: data.source_template_id,
-        supabaseId: data.id.toString()
-      };
-
-      return contentPost;
+      
+      if (error) {
+        console.error('Supabase update error:', error);
+        throw error;
+      }
+      
+      console.log('Template updated successfully:', data);
+      return data;
     } catch (error) {
-      console.error('Error updating content post:', error);
+      console.error('Error updating pending template:', error);
       throw error;
     }
   },
 
-  // Soft delete content post
-  async deleteContentPost(postId: string): Promise<void> {
-    if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
-    
-    try {
-      const client = getSupabaseClient();
-      const { error } = await client
-        .from('content_posts')
-        .update({ is_active: false, updated_at: new Date().toISOString() })
-        .eq('id', parseInt(postId));
+  // Soft delete template (set is_active to false)
+  async deletePendingTemplate(id: string) {
+    if (!supabase) {
+      throw new Error('Supabase client not configured');
+    }
 
-      if (error) throw error;
+    try {
+      console.log('Deleting pending template:', id);
+      
+      const { error } = await supabase
+        .from('pending_content_library')
+        .update({ 
+          is_active: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Supabase delete error:', error);
+        throw error;
+      }
+      
+      console.log('Template deleted successfully');
+      return true;
     } catch (error) {
-      console.error('Error deleting content post:', error);
+      console.error('Error deleting pending template:', error);
       throw error;
-    }
-  },
-
-  // Load character profiles
-  async loadCharacterProfiles(): Promise<any[]> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase not configured - cannot load character profiles');
-    }
-
-    try {
-      const client = getSupabaseClient();
-      const { data, error } = await client
-        .from('character_profiles')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error loading character profiles:', error);
-      return [];
-    }
-  },
-
-  // Load platforms from social_platforms table
-  async loadPlatforms(): Promise<any[]> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase not configured - cannot load platforms');
-    }
-
-    try {
-      const client = getSupabaseClient();
-      const { data, error } = await client
-        .from('social_platforms')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      // Transform data to ensure compatibility with existing components
-      const transformedData = (data || []).map(platform => ({
-        ...platform,
-        // Ensure both naming conventions are available for compatibility
-        isActive: platform.is_active,
-        isDefault: false, // FIXED: Remove default flag completely
-        displayName: platform.display_name || platform.name
-      }));
-      
-      return transformedData;
-    } catch (error) {
-      console.error('Error loading platforms from social_platforms table:', error);
-      return [];
-    }
-  },
-
-  // Load Telegram configurations
-  async loadTelegramChannels(): Promise<any[]> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase not configured - cannot load Telegram channels');
-    }
-
-    try {
-      const client = getSupabaseClient();
-      const { data, error } = await client
-        .from('telegram_configurations')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error loading Telegram channels:', error);
-      return [];
     }
   }
 };
 
-// Export the client safely - only export if properly initialized
-export { supabase };
+// ============================================================================
+// TEMPLATE LIBRARY SECTION COMPONENT
+// ============================================================================
+
+interface TemplateLibraryProps {
+  onLoadTemplate: (template: PendingLibraryTemplate) => void;
+}
+
+export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ 
+  onLoadTemplate 
+}) => {
+  const { isDarkMode } = useTheme();
+  const [pendingTemplates, setPendingTemplates] = useState<PendingLibraryTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  // Load pending templates on component mount
+  useEffect(() => {
+    loadPendingTemplates();
+  }, []);
+
+  const loadPendingTemplates = async () => {
+    try {
+      setIsLoading(true);
+      setConnectionError(null);
+      
+      // FIXED: Test Supabase connection first
+      if (!supabase) {
+        throw new Error('Supabase client not initialized - check environment variables');
+      }
+      
+      const templates = await templateLibraryAPI.fetchPendingTemplates();
+      setPendingTemplates(templates);
+      setIsConnected(true);
+      
+      if (templates.length === 0) {
+        console.log('No pending templates found. Make sure templates are forwarded from Content Template Engine.');
+      }
+      
+    } catch (error: any) {
+      console.error('Error loading pending templates:', error);
+      setIsConnected(false);
+      setConnectionError(error.message || 'Failed to load templates');
+      
+      // Don't show mock data - let user know the real issue
+      setPendingTemplates([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendToCreate = async (template: PendingLibraryTemplate) => {
+    try {
+      console.log('Sending template to Create New Content:', template.template_id);
+      
+      // Update status to active in database
+      await templateLibraryAPI.updatePendingTemplate(template.id, { status: 'active' });
+      
+      // Remove from pending list
+      setPendingTemplates(prev => prev.filter(t => t.id !== template.id));
+      
+      // Load into Create New Content form
+      onLoadTemplate(template);
+      
+      alert(`Template "${template.content_title}" sent to Create New Content and removed from Template Library.`);
+    } catch (error) {
+      console.error('Error sending template to create:', error);
+      alert('Failed to send template. Please try again.');
+    }
+  };
+
+  const handleDeleteTemplate = async (template: PendingLibraryTemplate) => {
+    if (!confirm(`Are you sure you want to delete the template "${template.content_title}"?\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      console.log('Deleting template:', template.template_id);
+      
+      await templateLibraryAPI.deletePendingTemplate(template.id);
+      setPendingTemplates(prev => prev.filter(t => t.id !== template.id));
+      alert('Template deleted successfully.');
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      alert('Failed to delete template. Please try again.');
+    }
+  };
+
+  const formatTheme = (theme: string) => {
+    return theme?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown';
+  };
+
+  const getThemeIcon = (theme: string) => {
+    const icons: Record<string, string> = {
+      news_alert: '📢',
+      promotion: '🎯',
+      standard_post: '📝',
+      cta_quiz: '❓',
+      tutorial_guide: '📚',
+      blog: '✍️',
+      assessment: '✅'
+    };
+    return icons[theme] || '📄';
+  };
+
+  return (
+    <div style={{
+      display: 'grid',
+      gap: '24px'
+    }}>
+      {/* Template Library Header */}
+      <div style={{
+        backgroundColor: isDarkMode ? '#1e293b' : 'white',
+        boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        borderRadius: '8px',
+        border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+        padding: '24px',
+        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '16px'
+        }}>
+          <div>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: isDarkMode ? '#f8fafc' : '#111827',
+              margin: '0 0 4px 0'
+            }}>
+              Template Library
+            </h3>
+            <p style={{
+              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              margin: '0',
+              fontSize: '14px'
+            }}>
+              Templates forwarded from Content Template Engine (Table: pending_content_library)
+            </p>
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: isConnected 
+              ? (isDarkMode ? '#065f4630' : '#d1fae5')
+              : (isDarkMode ? '#7f1d1d30' : '#fee2e2'),
+            padding: '8px 12px',
+            borderRadius: '8px',
+            border: `1px solid ${isConnected ? '#10b981' : '#ef4444'}`
+          }}>
+            {isConnected ? (
+              <CheckCircle style={{ height: '18px', width: '18px', color: '#10b981' }} />
+            ) : (
+              <X style={{ height: '18px', width: '18px', color: '#ef4444' }} />
+            )}
+            <span style={{
+              fontSize: '12px',
+              fontWeight: '600',
+              color: isConnected 
+                ? (isDarkMode ? '#34d399' : '#065f46')
+                : (isDarkMode ? '#fca5a5' : '#7f1d1d')
+            }}>
+              {isConnected ? 'Connected' : 'Not Connected'}
+            </span>
+          </div>
+        </div>
+        
+        {/* Connection Error Display */}
+        {connectionError && (
+          <div style={{
+            background: isDarkMode ? '#7f1d1d30' : '#fee2e2',
+            borderRadius: '8px',
+            padding: '16px',
+            border: '1px solid #ef4444',
+            marginBottom: '16px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '8px'
+            }}>
+              <X style={{ height: '16px', width: '16px', color: '#ef4444' }} />
+              <span style={{
+                fontSize: '14px',
+                fontWeight: '600',
+                color: isDarkMode ? '#fca5a5' : '#7f1d1d'
+              }}>
+                Supabase Connection Error
+              </span>
+            </div>
+            <p style={{
+              color: isDarkMode ? '#fca5a5' : '#7f1d1d',
+              fontSize: '14px',
+              lineHeight: '1.6',
+              margin: '0 0 8px 0'
+            }}>
+              {connectionError}
+            </p>
+            <p style={{
+              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              fontSize: '12px',
+              margin: '0'
+            }}>
+              Check your Supabase environment variables (VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY)
+            </p>
+          </div>
+        )}
+        
+        <div style={{
+          background: isConnected 
+            ? (isDarkMode ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)')
+            : (isDarkMode ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)' : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)'),
+          borderRadius: '8px',
+          padding: '16px',
+          border: `1px solid ${isConnected ? (isDarkMode ? '#1e40af' : '#3b82f6') : '#ef4444'}`,
+          marginBottom: '16px'
+        }}>
+          <p style={{
+            color: isConnected 
+              ? (isDarkMode ? '#bfdbfe' : '#1e40af')
+              : (isDarkMode ? '#fca5a5' : '#7f1d1d'),
+            fontSize: '14px',
+            lineHeight: '1.6',
+            margin: '0'
+          }}>
+            {isConnected 
+              ? 'Templates are forwarded from your Content Template Engine and stored in Supabase pending_content_library table.'
+              : 'Supabase connection required to receive forwarded templates from Content Template Engine.'}
+          </p>
+        </div>
+        
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={loadPendingTemplates}
+            disabled={isLoading}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 16px',
+              backgroundColor: isDarkMode ? '#60a5fa' : '#3b82f6',
+              color: 'white',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              fontFamily: 'inherit',
+              opacity: isLoading ? 0.7 : 1
+            }}
+          >
+            <Library style={{ height: '16px', width: '16px' }} />
+            <span>{isLoading ? 'Refreshing...' : 'Refresh Templates'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Templates List */}
+      <div style={{
+        backgroundColor: isDarkMode ? '#1e293b' : 'white',
+        boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        borderRadius: '8px',
+        border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+        overflow: 'hidden',
+        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      }}>
+        <div style={{
+          padding: '16px',
+          background: isDarkMode 
+            ? 'linear-gradient(135deg, #334155 0%, #475569 100%)' 
+            : 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
+          borderBottom: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: isDarkMode ? '#60a5fa' : '#3b82f6',
+              margin: '0'
+            }}>
+              Pending Templates
+            </h3>
+            <span style={{
+              padding: '6px 12px',
+              background: isDarkMode 
+                ? 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)' 
+                : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+              color: 'white',
+              fontSize: '14px',
+              fontWeight: '600',
+              borderRadius: '16px'
+            }}>
+              {pendingTemplates.length} templates
+            </span>
+          </div>
+        </div>
+        
+        <div>
+          {isLoading ? (
+            <div style={{
+              padding: '48px',
+              textAlign: 'center',
+              color: isDarkMode ? '#94a3b8' : '#6b7280'
+            }}>
+              <Library style={{ height: '32px', width: '32px', margin: '0 auto 12px auto', display: 'block' }} />
+              <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
+                Loading templates...
+              </div>
+              <div style={{ fontSize: '14px' }}>
+                Fetching from pending_content_library
+              </div>
+            </div>
+          ) : pendingTemplates.length === 0 ? (
+            <div style={{
+              padding: '48px',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px auto'
+              }}>
+                <Library style={{ height: '32px', width: '32px', color: isDarkMode ? '#64748b' : '#9ca3af' }} />
+              </div>
+              <h3 style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                color: isDarkMode ? '#f8fafc' : '#111827',
+                margin: '0 0 8px 0'
+              }}>
+                No pending templates
+              </h3>
+              <p style={{
+                color: isDarkMode ? '#94a3b8' : '#6b7280',
+                fontSize: '14px',
+                margin: '0 0 8px 0'
+              }}>
+                Templates forwarded from Content Template Engine will appear here
+              </p>
+              <p style={{
+                color: isDarkMode ? '#64748b' : '#9ca3af',
+                fontSize: '12px',
+                margin: '0'
+              }}>
+                Use the "Forward to Dashboard" button in Content Template Engine to send templates here
+              </p>
+            </div>
+          ) : (
+            pendingTemplates.map((template) => (
+              <div key={template.id} style={{
+                padding: '20px',
+                borderBottom: `1px solid ${isDarkMode ? '#334155' : '#f3f4f6'}`,
+                transition: 'background-color 0.2s ease'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  gap: '16px'
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      marginBottom: '12px'
+                    }}>
+                      <span style={{ fontSize: '24px' }}>
+                        {getThemeIcon(template.theme || '')}
+                      </span>
+                      <div>
+                        <h4 style={{
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          color: isDarkMode ? '#f8fafc' : '#111827',
+                          margin: '0 0 4px 0'
+                        }}>
+                          {template.template_id} - {template.content_title}
+                        </h4>
+                        <div style={{
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          fontFamily: 'monospace',
+                          color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                          backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          display: 'inline-block'
+                        }}>
+                          ID: {template.template_id}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {template.description && (
+                      <p style={{
+                        color: isDarkMode ? '#94a3b8' : '#374151',
+                        fontSize: '14px',
+                        lineHeight: '1.6',
+                        margin: '0 0 16px 0'
+                      }}>
+                        {template.description.length > 150 
+                          ? template.description.substring(0, 150) + '...'
+                          : template.description
+                        }
+                      </p>
+                    )}
+                    
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '16px',
+                      flexWrap: 'wrap'
+                    }}>
+                      {template.theme && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '12px',
+                          color: isDarkMode ? '#94a3b8' : '#6b7280',
+                          backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
+                          padding: '6px 10px',
+                          borderRadius: '6px'
+                        }}>
+                          <Palette style={{ height: '14px', width: '14px' }} />
+                          <span style={{ fontWeight: '600' }}>
+                            {formatTheme(template.theme)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {template.audience && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '12px',
+                          color: isDarkMode ? '#94a3b8' : '#6b7280',
+                          backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
+                          padding: '6px 10px',
+                          borderRadius: '6px'
+                        }}>
+                          <User style={{ height: '14px', width: '14px' }} />
+                          <span style={{ fontWeight: '600' }}>
+                            {formatTheme(template.audience)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {template.platform && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '12px',
+                          color: isDarkMode ? '#94a3b8' : '#6b7280',
+                          backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
+                          padding: '6px 10px',
+                          borderRadius: '6px'
+                        }}>
+                          <Settings style={{ height: '14px', width: '14px' }} />
+                          <span style={{ fontWeight: '600' }}>
+                            {formatTheme(template.platform)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div style={{
+                        fontSize: '12px',
+                        color: isDarkMode ? '#64748b' : '#9ca3af',
+                        fontWeight: '600'
+                      }}>
+                        Received {new Date(template.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}>
+                    <button
+                      onClick={() => handleSendToCreate(template)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 16px',
+                        backgroundColor: isDarkMode ? '#10b981' : '#059669',
+                        color: 'white',
+                        borderRadius: '8px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        fontFamily: 'inherit',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <Send style={{ height: '16px', width: '16px' }} />
+                      <span>Send to Create</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => handleDeleteTemplate(template)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 12px',
+                        backgroundColor: '#dc2626',
+                        color: 'white',
+                        borderRadius: '6px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        fontFamily: 'inherit',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <Trash2 style={{ height: '14px', width: '14px' }} />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// TEMPLATE LIBRARY INTEGRATION HOOK
+// ============================================================================
+
+export const useTemplateLibrary = () => {
+  const [loadedTemplate, setLoadedTemplate] = useState<PendingLibraryTemplate | null>(null);
+
+  const handleLoadTemplate = (template: PendingLibraryTemplate) => {
+    setLoadedTemplate(template);
+  };
+
+  const handleTemplateLoaded = () => {
+    console.log('Template loaded into form');
+  };
+
+  const clearLoadedTemplate = () => {
+    setLoadedTemplate(null);
+  };
+
+  return {
+    loadedTemplate,
+    handleLoadTemplate,
+    handleTemplateLoaded,
+    clearLoadedTemplate
+  };
+};
+
+export default TemplateLibrary;
