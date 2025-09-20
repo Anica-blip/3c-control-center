@@ -36,6 +36,7 @@ const getSupabaseClient = (): SupabaseClient => {
   return supabase;
 };
 
+// FIXED: Export supabaseAPI as named export for other components
 export const supabaseAPI = {
   // Upload media file to content-media bucket
   async uploadMediaFile(file: File, contentId: string, userId: string): Promise<string> {
@@ -413,5 +414,5 @@ export const supabaseAPI = {
   }
 };
 
-// Export the client safely - only export if properly initialized
+// FIXED: Export the client safely for TemplateLibrary.tsx
 export { supabase };
