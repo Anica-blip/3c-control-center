@@ -277,21 +277,36 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
 
   const handleSendToCreate = async (template: PendingLibraryTemplate) => {
     try {
-      console.log('Sending template to Create New Content:', template.template_id);
+      console.log('=== SEND TO CREATE DEBUG ===');
+      console.log('1. Template data:', template);
+      console.log('2. Template ID:', template.template_id);
+      console.log('3. onLoadTemplate function exists:', typeof onLoadTemplate);
       
-      // Update status to active in database
-      await templateLibraryAPI.updatePendingTemplate(template.id, { status: 'active' });
-      
-      // Remove from pending list
-      setPendingTemplates(prev => prev.filter(t => t.id !== template.id));
-      
-      // Load into Create New Content form - pass template as-is
+      // FIRST: Call onLoadTemplate to send data to Create New Content form
+      console.log('4. Calling onLoadTemplate...');
       onLoadTemplate(template);
+      console.log('5. onLoadTemplate called successfully');
       
-      alert(`Template "${template.content_title}" sent to Create New Content and removed from Template Library.`);
+      // SECOND: Update status in database
+      console.log('6. Updating database status...');
+      await templateLibraryAPI.updatePendingTemplate(template.id, { status: 'active' });
+      console.log('7. Database updated successfully');
+      
+      // THIRD: Remove from pending list
+      console.log('8. Removing from local list...');
+      setPendingTemplates(prev => {
+        const newList = prev.filter(t => t.id !== template.id);
+        console.log('9. Templates before filter:', prev.length);
+        console.log('10. Templates after filter:', newList.length);
+        return newList;
+      });
+      
+      console.log('11. SUCCESS: Template sent and removed');
+      alert(`SUCCESS: Template "${template.content_title}" sent to Create New Content and removed from Template Library.`);
     } catch (error) {
-      console.error('Error sending template to create:', error);
-      alert('Failed to send template. Please try again.');
+      console.error('=== SEND TO CREATE ERROR ===');
+      console.error('Error details:', error);
+      alert(`FAILED: Could not send template. Error: ${error.message || 'Unknown error'}`);
     }
   };
 
