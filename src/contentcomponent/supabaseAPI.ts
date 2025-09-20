@@ -49,7 +49,7 @@ export interface PendingLibraryTemplate {
 // ============================================================================
 
 const templateLibraryAPI = {
-  // Fetch pending templates from Supabase
+  // Fetch pending templates from Supabase - FIXED to match exact table schema
   async fetchPendingTemplates(): Promise<PendingLibraryTemplate[]> {
     if (!supabase) {
       throw new Error('Supabase client not configured');
@@ -60,18 +60,74 @@ const templateLibraryAPI = {
       
       const { data, error } = await supabase
         .from('pending_content_library')
-        .select('*')
+        .select(`
+          id,
+          template_id,
+          content_title,
+          content_id,
+          character_profile,
+          theme,
+          audience,
+          media_type,
+          template_type,
+          platform,
+          title,
+          description,
+          hashtags,
+          keywords,
+          cta,
+          media_files,
+          selected_platforms,
+          status,
+          is_from_template,
+          source_template_id,
+          user_id,
+          created_by,
+          created_at,
+          updated_at,
+          is_active
+        `)
         .eq('is_active', true)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('Supabase error:', error);
-        throw error;
+        console.error('Supabase query error:', error);
+        throw new Error(`Database query failed: ${error.message}`);
       }
       
-      console.log(`Found ${data?.length || 0} pending templates:`, data);
-      return data || [];
+      console.log(`Successfully fetched ${data?.length || 0} pending templates from pending_content_library:`, data);
+      
+      // Transform data to match interface
+      const transformedData = (data || []).map(item => ({
+        id: item.id?.toString() || '',
+        template_id: item.template_id || '',
+        content_title: item.content_title || 'Untitled Template',
+        content_id: item.content_id || '',
+        character_profile: item.character_profile || '',
+        theme: item.theme || '',
+        audience: item.audience || '',
+        media_type: item.media_type || '',
+        template_type: item.template_type || '',
+        platform: item.platform || '',
+        title: item.title || '',
+        description: item.description || '',
+        hashtags: Array.isArray(item.hashtags) ? item.hashtags : [],
+        keywords: item.keywords || '',
+        cta: item.cta || '',
+        media_files: Array.isArray(item.media_files) ? item.media_files : [],
+        selected_platforms: Array.isArray(item.selected_platforms) ? item.selected_platforms : [],
+        status: item.status || 'pending',
+        is_from_template: Boolean(item.is_from_template),
+        source_template_id: item.source_template_id || '',
+        user_id: item.user_id || '',
+        created_by: item.created_by || '',
+        created_at: item.created_at || new Date().toISOString(),
+        updated_at: item.updated_at || new Date().toISOString(),
+        is_active: Boolean(item.is_active)
+      }));
+      
+      return transformedData;
     } catch (error) {
       console.error('Error fetching pending templates:', error);
       throw error;
@@ -158,9 +214,33 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Load pending templates on component mount
+  // Load pending templates on component mount and when tab becomes active
   useEffect(() => {
     loadPendingTemplates();
+  }, []);
+
+  // Refresh when Template Library section becomes visible/focused
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('Template Library section focused - refreshing templates...');
+      loadPendingTemplates();
+    };
+
+    // Add event listeners for when this component/section becomes active
+    window.addEventListener('focus', handleFocus);
+    
+    // Also refresh when user clicks anywhere in this component
+    const componentElement = document.querySelector('[data-component="template-library"]');
+    if (componentElement) {
+      componentElement.addEventListener('click', handleFocus);
+    }
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      if (componentElement) {
+        componentElement.removeEventListener('click', handleFocus);
+      }
+    };
   }, []);
 
   const loadPendingTemplates = async () => {
@@ -248,10 +328,13 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
   };
 
   return (
-    <div style={{
-      display: 'grid',
-      gap: '24px'
-    }}>
+    <div 
+      data-component="template-library"
+      style={{
+        display: 'grid',
+        gap: '24px'
+      }}
+    >
       {/* Template Library Header */}
       <div style={{
         backgroundColor: isDarkMode ? '#1e293b' : 'white',
