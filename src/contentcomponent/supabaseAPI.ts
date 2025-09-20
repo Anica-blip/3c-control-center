@@ -158,9 +158,33 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Load pending templates on component mount
+  // Load pending templates on component mount and when tab becomes active
   useEffect(() => {
     loadPendingTemplates();
+  }, []);
+
+  // Refresh when Template Library section becomes visible/focused
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('Template Library section focused - refreshing templates...');
+      loadPendingTemplates();
+    };
+
+    // Add event listeners for when this component/section becomes active
+    window.addEventListener('focus', handleFocus);
+    
+    // Also refresh when user clicks anywhere in this component
+    const componentElement = document.querySelector('[data-component="template-library"]');
+    if (componentElement) {
+      componentElement.addEventListener('click', handleFocus);
+    }
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      if (componentElement) {
+        componentElement.removeEventListener('click', handleFocus);
+      }
+    };
   }, []);
 
   const loadPendingTemplates = async () => {
@@ -248,10 +272,13 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
   };
 
   return (
-    <div style={{
-      display: 'grid',
-      gap: '24px'
-    }}>
+    <div 
+      data-component="template-library"
+      style={{
+        display: 'grid',
+        gap: '24px'
+      }}
+    >
       {/* Template Library Header */}
       <div style={{
         backgroundColor: isDarkMode ? '#1e293b' : 'white',
