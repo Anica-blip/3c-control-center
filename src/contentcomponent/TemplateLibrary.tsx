@@ -58,7 +58,7 @@ const templateLibraryAPI = {
     try {
       console.log('Fetching pending templates from pending_content_library table...');
       
-      const { data, error } = await supabase
+              const { data, error } = await supabase
         .from('pending_content_library')
         .select(`
           id,
@@ -126,7 +126,7 @@ const templateLibraryAPI = {
         created_at: item.created_at || new Date().toISOString(),
         updated_at: item.updated_at || new Date().toISOString(),
         is_active: Boolean(item.is_active),
-        voiceStyle: item.voice_style || ''
+        voiceStyle: '' // Default empty since database doesn't have this field
       }));
       
       return transformedData;
