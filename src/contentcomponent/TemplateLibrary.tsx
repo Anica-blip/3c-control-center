@@ -85,7 +85,8 @@ const templateLibraryAPI = {
           created_by,
           created_at,
           updated_at,
-          is_active
+          is_active,
+          voice_style
         `)
         .eq('is_active', true)
         .eq('status', 'pending')
@@ -124,7 +125,8 @@ const templateLibraryAPI = {
         created_by: item.created_by || '',
         created_at: item.created_at || new Date().toISOString(),
         updated_at: item.updated_at || new Date().toISOString(),
-        is_active: Boolean(item.is_active)
+        is_active: Boolean(item.is_active),
+        voiceStyle: item.voice_style || ''
       }));
       
       return transformedData;
@@ -283,7 +285,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
       // Remove from pending list
       setPendingTemplates(prev => prev.filter(t => t.id !== template.id));
       
-      // Load into Create New Content form
+      // Load into Create New Content form - pass template as-is
       onLoadTemplate(template);
       
       alert(`Template "${template.content_title}" sent to Create New Content and removed from Template Library.`);
