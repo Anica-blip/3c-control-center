@@ -13,7 +13,7 @@ import {
   getVoiceStyleCode 
 } from './utils';
 // ADD NEW IMPORT FOR TEMPLATE LIBRARY INTEGRATION
-import { PendingLibraryTemplate } from './TemplateLibrary';
+import { PendingLibraryTemplate, templateEventEmitter } from './TemplateLibrary';
 
 // Theme Context (assuming this comes from your App.tsx)
 const ThemeContext = React.createContext({
@@ -311,6 +311,44 @@ const EnhancedContentCreationForm = ({
     setContentId(newId);
   }, [selections.theme, selections.audience, selections.mediaType, selections.templateType, selections.characterProfile, selections.voiceStyle, characterProfiles]);
 
+  // FIXED: Listen for templates sent from Template Library (DIRECT EVENT COMMUNICATION)
+  useEffect(() => {
+    const unsubscribe = templateEventEmitter.listen((template) => {
+      console.log('=== TEMPLATE RECEIVED FROM TEMPLATE LIBRARY ===');
+      console.log('Template data:', template);
+      
+      // Set form data from template
+      setSelections({
+        characterProfile: template.character_profile || '',
+        theme: template.theme || '',
+        audience: template.audience || '',
+        mediaType: template.media_type || '',
+        templateType: template.template_type || '',
+        platform: template.platform || '',
+        voiceStyle: template.voiceStyle || ''
+      });
+      
+      setContent({
+        title: template.title || '',
+        description: template.description || '',
+        hashtags: template.hashtags || [],
+        keywords: template.keywords || '',
+        cta: template.cta || ''
+      });
+      
+      if (template.selected_platforms) {
+        setSelectedPlatforms(template.selected_platforms);
+      }
+      
+      setIsEditingTemplate(true);
+      setupPlatformFields(template.platform);
+      
+      console.log('Template loaded into form successfully!');
+    });
+
+    return unsubscribe; // Cleanup event listener
+  }, []);
+
   // Load editing post data when provided
   useEffect(() => {
     if (editingPost) {
@@ -342,7 +380,7 @@ const EnhancedContentCreationForm = ({
     }
   }, [editingPost]);
 
-  // ADD NEW USEEFFECT FOR TEMPLATE LOADING:
+  // ADD NEW USEEFFECT FOR TEMPLATE LOADING (LEGACY PROP SUPPORT):
   useEffect(() => {
     if (loadedTemplate && !editingPost) { // Don't load template if editing a post
       setSelections({
@@ -700,7 +738,7 @@ const EnhancedContentCreationForm = ({
               margin: '0'
             }}>
               {isEditingPost ? `Editing post: ${contentId}` :
-               isEditingTemplate ? `Working from template: ${loadedTemplate?.template_id}` :
+               isEditingTemplate ? `Working from template` :
                'Design and prepare your social media content for publishing (UK English)'
               }
             </p>
