@@ -1,7 +1,7 @@
 // src/contentcomponent/TemplateLibrary.tsx
 import React, { useState, useEffect, useContext } from 'react';
 import { Library, CheckCircle, X, Send, Trash2, Settings, User, Palette } from 'lucide-react';
-import { supabase } from './supabaseAPI'; // FIXED: Import supabase directly
+import { supabase } from './supabaseAPI'; // Import supabase client directly
 
 // Theme Context (matches EnhancedContentCreationForm pattern)
 const ThemeContext = React.createContext({
@@ -49,7 +49,7 @@ export interface PendingLibraryTemplate {
 // ============================================================================
 
 const templateLibraryAPI = {
-  // Fetch pending templates from Supabase - FIXED to match exact table schema
+  // Fetch pending templates from Supabase
   async fetchPendingTemplates(): Promise<PendingLibraryTemplate[]> {
     if (!supabase) {
       throw new Error('Supabase client not configured');
@@ -134,7 +134,7 @@ const templateLibraryAPI = {
     }
   },
 
-  // Update template status (send to active/create)
+  // Update template status
   async updatePendingTemplate(id: string, updateData: Partial<PendingLibraryTemplate>) {
     if (!supabase) {
       throw new Error('Supabase client not configured');
@@ -166,7 +166,7 @@ const templateLibraryAPI = {
     }
   },
 
-  // Soft delete template (set is_active to false)
+  // Soft delete template
   async deletePendingTemplate(id: string) {
     if (!supabase) {
       throw new Error('Supabase client not configured');
