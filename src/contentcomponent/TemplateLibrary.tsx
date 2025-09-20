@@ -12,7 +12,32 @@ const ThemeContext = React.createContext({
 const useTheme = () => useContext(ThemeContext);
 
 // ============================================================================
-// TYPES AND INTERFACES
+// SHARED STATE FOR TEMPLATE LOADING (Global Communication)
+// ============================================================================
+
+// Create a global event system for template loading
+const TEMPLATE_LOAD_EVENT = 'LOAD_TEMPLATE_TO_FORM';
+
+const templateEventEmitter = {
+  emit: (template: PendingLibraryTemplate) => {
+    const event = new CustomEvent(TEMPLATE_LOAD_EVENT, { 
+      detail: template 
+    });
+    window.dispatchEvent(event);
+  },
+  
+  listen: (callback: (template: PendingLibraryTemplate) => void) => {
+    const handler = (event: CustomEvent) => {
+      callback(event.detail);
+    };
+    window.addEventListener(TEMPLATE_LOAD_EVENT, handler as EventListener);
+    
+    return () => {
+      window.removeEventListener(TEMPLATE_LOAD_EVENT, handler as EventListener);
+    };
+  }
+};
+
 // ============================================================================
 
 export interface PendingLibraryTemplate {
@@ -205,6 +230,7 @@ const templateLibraryAPI = {
 
 interface TemplateLibraryProps {
   onLoadTemplate: (template: PendingLibraryTemplate) => void;
+  createFormRef?: React.RefObject<any>; // Reference to EnhancedContentCreationForm
 }
 
 export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ 
@@ -280,28 +306,27 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
       console.log('=== SEND TO CREATE DEBUG ===');
       console.log('1. Template data:', template);
       console.log('2. Template ID:', template.template_id);
-      console.log('3. onLoadTemplate function exists:', typeof onLoadTemplate);
       
-      // FIRST: Call onLoadTemplate to send data to Create New Content form
-      console.log('4. Calling onLoadTemplate...');
-      onLoadTemplate(template);
-      console.log('5. onLoadTemplate called successfully');
+      // FIRST: Send template directly to EnhancedContentCreationForm using event system
+      console.log('3. Emitting template load event...');
+      templateEventEmitter.emit(template);
+      console.log('4. Template load event emitted successfully');
       
       // SECOND: Update status in database
-      console.log('6. Updating database status...');
+      console.log('5. Updating database status...');
       await templateLibraryAPI.updatePendingTemplate(template.id, { status: 'active' });
-      console.log('7. Database updated successfully');
+      console.log('6. Database updated successfully');
       
       // THIRD: Remove from pending list
-      console.log('8. Removing from local list...');
+      console.log('7. Removing from local list...');
       setPendingTemplates(prev => {
         const newList = prev.filter(t => t.id !== template.id);
-        console.log('9. Templates before filter:', prev.length);
-        console.log('10. Templates after filter:', newList.length);
+        console.log('8. Templates before filter:', prev.length);
+        console.log('9. Templates after filter:', newList.length);
         return newList;
       });
       
-      console.log('11. SUCCESS: Template sent and removed');
+      console.log('10. SUCCESS: Template sent and removed');
       alert(`SUCCESS: Template "${template.content_title}" sent to Create New Content and removed from Template Library.`);
     } catch (error) {
       console.error('=== SEND TO CREATE ERROR ===');
@@ -818,5 +843,8 @@ export const useTemplateLibrary = () => {
     clearLoadedTemplate
   };
 };
+
+// Export the event emitter for direct communication between components
+export { templateEventEmitter };
 
 export default TemplateLibrary;
