@@ -126,7 +126,7 @@ const templateLibraryAPI = {
         created_at: item.created_at || new Date().toISOString(),
         updated_at: item.updated_at || new Date().toISOString(),
         is_active: Boolean(item.is_active),
-        voiceStyle: '' // Default empty since database doesn't have this field
+        voiceStyle: item.voice_style || ''
       }));
       
       return transformedData;
