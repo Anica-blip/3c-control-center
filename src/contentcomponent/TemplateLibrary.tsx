@@ -306,27 +306,28 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
       console.log('=== SEND TO CREATE DEBUG ===');
       console.log('1. Template data:', template);
       console.log('2. Template ID:', template.template_id);
+      console.log('3. onLoadTemplate function exists:', typeof onLoadTemplate);
       
-      // FIRST: Send template directly to EnhancedContentCreationForm using event system
-      console.log('3. Emitting template load event...');
-      templateEventEmitter.emit(template);
-      console.log('4. Template load event emitted successfully');
+      // FIRST: Call onLoadTemplate prop to send data to Dashboard
+      console.log('4. Calling onLoadTemplate prop...');
+      onLoadTemplate(template);
+      console.log('5. onLoadTemplate called successfully - Dashboard should handle tab switch');
       
       // SECOND: Update status in database
-      console.log('5. Updating database status...');
+      console.log('6. Updating database status...');
       await templateLibraryAPI.updatePendingTemplate(template.id, { status: 'active' });
-      console.log('6. Database updated successfully');
+      console.log('7. Database updated successfully');
       
       // THIRD: Remove from pending list
-      console.log('7. Removing from local list...');
+      console.log('8. Removing from local list...');
       setPendingTemplates(prev => {
         const newList = prev.filter(t => t.id !== template.id);
-        console.log('8. Templates before filter:', prev.length);
-        console.log('9. Templates after filter:', newList.length);
+        console.log('9. Templates before filter:', prev.length);
+        console.log('10. Templates after filter:', newList.length);
         return newList;
       });
       
-      console.log('10. SUCCESS: Template sent and removed');
+      console.log('11. SUCCESS: Template sent to Dashboard and removed from list');
       alert(`SUCCESS: Template "${template.content_title}" sent to Create New Content and removed from Template Library.`);
     } catch (error) {
       console.error('=== SEND TO CREATE ERROR ===');
