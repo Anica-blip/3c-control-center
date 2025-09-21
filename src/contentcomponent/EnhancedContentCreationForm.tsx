@@ -35,7 +35,11 @@ const EnhancedContentCreationForm = ({
   onEditComplete,
   // ADD THESE NEW PROPS FOR TEMPLATE LIBRARY INTEGRATION:
   loadedTemplate,
-  onTemplateLoaded
+  onTemplateLoaded,
+  // ADD USER CONTEXT FOR SUPABASE INTEGRATION:
+  user,
+  contentAPI,
+  scheduleAPI
 }: {
   onSave: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
   onAddToSchedule: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
@@ -48,6 +52,10 @@ const EnhancedContentCreationForm = ({
   // ADD THESE NEW PROPS FOR TEMPLATE LIBRARY INTEGRATION:
   loadedTemplate?: PendingLibraryTemplate | null;
   onTemplateLoaded?: () => void;
+  // ADD USER AND API PROPS FOR SUPABASE INTEGRATION:
+  user?: { id: string; [key: string]: any };
+  contentAPI?: any;
+  scheduleAPI?: any;
 }) => {
   const { isDarkMode } = useTheme();
 
@@ -689,7 +697,10 @@ const EnhancedContentCreationForm = ({
       selectedPlatforms,
       status: 'pending' as const,
       isFromTemplate: isEditingTemplate, // CHANGED: Use template status
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id, // ADDED
+      // ADD USER TRACKING FOR SUPABASE:
+      user_id: user?.id,
+      created_by: user?.id
     };
 
     try {
@@ -705,7 +716,7 @@ const EnhancedContentCreationForm = ({
     }
   };
 
-  // UPDATED ADD TO SCHEDULE HANDLER WITH TEMPLATE INTEGRATION:
+  // UPDATED ADD TO SCHEDULE HANDLER WITH SUPABASE INTEGRATION:
   const handleAddToSchedule = async () => {
     const postData = {
       contentId,
@@ -715,12 +726,31 @@ const EnhancedContentCreationForm = ({
       selectedPlatforms,
       status: 'scheduled' as const,
       isFromTemplate: isEditingTemplate, // CHANGED: Use template status
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id, // ADDED
+      // ADD USER TRACKING FOR SUPABASE:
+      user_id: user?.id,
+      created_by: user?.id
     };
 
     try {
-      await onAddToSchedule(postData);
-      resetForm();
+      // Check if we have the required APIs for Supabase integration
+      if (contentAPI && scheduleAPI && user?.id) {
+        // Save to content_posts first
+        const savedPost = await contentAPI.savePost(postData);
+        
+        // Create pending schedule entry
+        await scheduleAPI.createPendingPost({
+          ...postData,
+          original_post_id: savedPost.id,
+          status: 'pending_schedule'
+        });
+        
+        resetForm();
+      } else {
+        // Fallback to original method if APIs not available
+        await onAddToSchedule(postData);
+        resetForm();
+      }
     } catch (error) {
       console.error('Schedule failed:', error);
       alert('Failed to schedule post. Your content is preserved.');
