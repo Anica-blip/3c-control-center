@@ -303,34 +303,35 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
 
   const handleSendToCreate = async (template: PendingLibraryTemplate) => {
     try {
-      console.log('=== SEND TO CREATE DEBUG ===');
-      console.log('1. Template data:', template);
+      console.log('=== SEND TO CREATE DEBUG START ===');
+      console.log('1. Button clicked - Template data:', template);
       console.log('2. Template ID:', template.template_id);
       console.log('3. onLoadTemplate function exists:', typeof onLoadTemplate);
+      console.log('4. onLoadTemplate function:', onLoadTemplate);
       
       // FIRST: Call onLoadTemplate prop to send data to Dashboard
-      console.log('4. Calling onLoadTemplate prop...');
+      console.log('5. Calling onLoadTemplate prop...');
       onLoadTemplate(template);
-      console.log('5. onLoadTemplate called successfully - Dashboard should handle tab switch');
+      console.log('6. onLoadTemplate called successfully - Dashboard should handle tab switch');
       
       // SECOND: Update status in database
-      console.log('6. Updating database status...');
+      console.log('7. Updating database status...');
       await templateLibraryAPI.updatePendingTemplate(template.id, { status: 'active' });
-      console.log('7. Database updated successfully');
+      console.log('8. Database updated successfully');
       
       // THIRD: Remove from pending list
-      console.log('8. Removing from local list...');
+      console.log('9. Removing from local list...');
       setPendingTemplates(prev => {
         const newList = prev.filter(t => t.id !== template.id);
-        console.log('9. Templates before filter:', prev.length);
-        console.log('10. Templates after filter:', newList.length);
+        console.log('10. Templates before filter:', prev.length);
+        console.log('11. Templates after filter:', newList.length);
         return newList;
       });
       
-      console.log('11. SUCCESS: Template sent to Dashboard and removed from list');
+      console.log('=== SEND TO CREATE DEBUG SUCCESS ===');
       alert(`SUCCESS: Template "${template.content_title}" sent to Create New Content and removed from Template Library.`);
     } catch (error) {
-      console.error('=== SEND TO CREATE ERROR ===');
+      console.error('=== SEND TO CREATE DEBUG ERROR ===');
       console.error('Error details:', error);
       alert(`FAILED: Could not send template. Error: ${error.message || 'Unknown error'}`);
     }
