@@ -380,9 +380,13 @@ const EnhancedContentCreationForm = ({
     }
   }, [editingPost]);
 
-  // ADD NEW USEEFFECT FOR TEMPLATE LOADING (LEGACY PROP SUPPORT):
+  // UPDATED USEEFFECT FOR TEMPLATE LOADING - TEXT ONLY, NO MEDIA FILES
   useEffect(() => {
     if (loadedTemplate && !editingPost) { // Don't load template if editing a post
+      console.log('=== LOADING TEMPLATE INTO FORM ===');
+      console.log('Template data:', loadedTemplate);
+      
+      // POPULATE SELECTIONS (dropdown fields)
       setSelections({
         characterProfile: loadedTemplate.character_profile || '',
         theme: loadedTemplate.theme || '',
@@ -393,30 +397,42 @@ const EnhancedContentCreationForm = ({
         voiceStyle: loadedTemplate.voiceStyle || ''
       });
       
+      // POPULATE CONTENT (text fields only)
       setContent({
         title: loadedTemplate.title || '',
         description: loadedTemplate.description || '',
-        hashtags: loadedTemplate.hashtags || [],
+        hashtags: Array.isArray(loadedTemplate.hashtags) ? loadedTemplate.hashtags : [],
         keywords: loadedTemplate.keywords || '',
         cta: loadedTemplate.cta || ''
       });
       
-      if (loadedTemplate.media_files) {
-        setMediaFiles(loadedTemplate.media_files);
-      }
-      
-      if (loadedTemplate.selected_platforms) {
+      // POPULATE SELECTED PLATFORMS
+      if (loadedTemplate.selected_platforms && Array.isArray(loadedTemplate.selected_platforms)) {
         setSelectedPlatforms(loadedTemplate.selected_platforms);
       }
       
+      // DO NOT LOAD MEDIA FILES - USER SPECIFIED TEXT ONLY
+      // setMediaFiles remains empty - user will add media manually if needed
+      
+      // SET TEMPLATE EDITING STATE
       setIsEditingTemplate(true);
       setupPlatformFields(loadedTemplate.platform);
       
+      // CLEAR THE LOADED TEMPLATE STATE
       if (onTemplateLoaded) {
         onTemplateLoaded();
       }
       
-      console.log('Template loaded into form:', loadedTemplate.template_id);
+      console.log('✅ Template loaded successfully into form (text only)');
+      console.log('Selections populated:', {
+        characterProfile: loadedTemplate.character_profile,
+        theme: loadedTemplate.theme,
+        audience: loadedTemplate.audience,
+        mediaType: loadedTemplate.media_type,
+        templateType: loadedTemplate.template_type,
+        platform: loadedTemplate.platform,
+        voiceStyle: loadedTemplate.voiceStyle
+      });
     }
   }, [loadedTemplate, editingPost, onTemplateLoaded]);
 
