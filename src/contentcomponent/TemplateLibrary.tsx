@@ -244,6 +244,8 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
   // ADD PERSISTENT ERROR STATE FOR TEMPLATE OPERATIONS
   const [operationError, setOperationError] = useState<string | null>(null);
   const [operationSuccess, setOperationSuccess] = useState<string | null>(null);
+  // ADD BUTTON CLICK COUNTER FOR DEBUGGING
+  const [buttonClickCount, setButtonClickCount] = useState(0);
 
   // Load pending templates on component mount and when tab becomes active
   useEffect(() => {
@@ -310,6 +312,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
       setOperationError(null);
       setOperationSuccess(null);
       
+      alert('BUTTON CLICKED! Function started executing.');
       console.log('=== SEND TO CREATE DEBUG START ===');
       console.log('1. Button clicked - Template data:', template);
       console.log('2. Template ID:', template.template_id);
@@ -318,13 +321,17 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
       
       // Validate onLoadTemplate exists
       if (typeof onLoadTemplate !== 'function') {
-        throw new Error('onLoadTemplate prop is not a function. Check ContentDashboard.tsx connection.');
+        const errorMsg = 'onLoadTemplate prop is not a function. Check ContentDashboard.tsx connection.';
+        alert(`ERROR: ${errorMsg}`);
+        throw new Error(errorMsg);
       }
       
       // FIRST: Call onLoadTemplate prop to send data to Dashboard
       console.log('5. Calling onLoadTemplate prop...');
+      alert('About to call onLoadTemplate...');
       onLoadTemplate(template);
       console.log('6. onLoadTemplate called successfully - Dashboard should handle tab switch');
+      alert('onLoadTemplate called successfully!');
       
       // SECOND: Update status in database
       console.log('7. Updating database status...');
@@ -344,13 +351,16 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
       
       // Show success message
       setOperationSuccess(`Template "${template.content_title}" sent to Create New Content successfully!`);
+      alert('SUCCESS: Template sent successfully!');
       
     } catch (error: any) {
       console.error('=== SEND TO CREATE DEBUG ERROR ===');
       console.error('Error details:', error);
       
       // Show persistent error message
-      setOperationError(`Failed to send template "${template.content_title}": ${error.message || 'Unknown error'}`);
+      const errorMsg = `Failed to send template "${template.content_title}": ${error.message || 'Unknown error'}`;
+      setOperationError(errorMsg);
+      alert(`ERROR: ${errorMsg}`);
     }
   };
 
@@ -901,9 +911,15 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                   }}>
                     <button
                       onClick={() => {
-                        console.log('=== BUTTON CLICK TEST ===');
-                        console.log('Button clicked! handleSendToCreate will be called...');
+                        alert('BUTTON CLICK EVENT FIRED!');
+                        setButtonClickCount(prev => prev + 1);
                         handleSendToCreate(template);
+                      }}
+                      onMouseDown={() => {
+                        console.log('MOUSE DOWN on Send to Create button');
+                      }}
+                      onMouseUp={() => {
+                        console.log('MOUSE UP on Send to Create button');
                       }}
                       style={{
                         display: 'flex',
@@ -913,16 +929,39 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                         backgroundColor: isDarkMode ? '#10b981' : '#059669',
                         color: 'white',
                         borderRadius: '8px',
-                        border: 'none',
+                        border: '2px solid #10b981',
                         cursor: 'pointer',
                         fontSize: '14px',
                         fontWeight: '600',
                         fontFamily: 'inherit',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        position: 'relative',
+                        zIndex: 999
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#059669';
+                        e.currentTarget.style.transform = 'scale(1.02)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = isDarkMode ? '#10b981' : '#059669';
+                        e.currentTarget.style.transform = 'scale(1)';
                       }}
                     >
                       <Send style={{ height: '16px', width: '16px' }} />
                       <span>Send to Create</span>
+                      {buttonClickCount > 0 && (
+                        <span style={{
+                          marginLeft: '8px',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          padding: '2px 6px',
+                          borderRadius: '10px',
+                          fontSize: '10px',
+                          fontWeight: 'bold'
+                        }}>
+                          {buttonClickCount}
+                        </span>
+                      )}
                     </button>
                     
                     <button
