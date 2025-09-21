@@ -910,16 +910,15 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                     gap: '8px'
                   }}>
                     <button
-                      onClick={() => {
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         alert('BUTTON CLICK EVENT FIRED!');
                         setButtonClickCount(prev => prev + 1);
                         handleSendToCreate(template);
                       }}
-                      onMouseDown={() => {
-                        console.log('MOUSE DOWN on Send to Create button');
-                      }}
-                      onMouseUp={() => {
-                        console.log('MOUSE UP on Send to Create button');
+                      onClick={() => {
+                        console.log('onClick also fired as backup');
                       }}
                       style={{
                         display: 'flex',
