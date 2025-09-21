@@ -900,7 +900,11 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                     gap: '8px'
                   }}>
                     <button
-                      onClick={() => handleSendToCreate(template)}
+                      onClick={() => {
+                        console.log('=== BUTTON CLICK TEST ===');
+                        console.log('Button clicked! handleSendToCreate will be called...');
+                        handleSendToCreate(template);
+                      }}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
