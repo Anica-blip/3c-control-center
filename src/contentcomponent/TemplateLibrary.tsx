@@ -241,6 +241,9 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  // ADD PERSISTENT ERROR STATE FOR TEMPLATE OPERATIONS
+  const [operationError, setOperationError] = useState<string | null>(null);
+  const [operationSuccess, setOperationSuccess] = useState<string | null>(null);
 
   // Load pending templates on component mount and when tab becomes active
   useEffect(() => {
@@ -303,11 +306,20 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
 
   const handleSendToCreate = async (template: PendingLibraryTemplate) => {
     try {
+      // Clear previous errors
+      setOperationError(null);
+      setOperationSuccess(null);
+      
       console.log('=== SEND TO CREATE DEBUG START ===');
       console.log('1. Button clicked - Template data:', template);
       console.log('2. Template ID:', template.template_id);
       console.log('3. onLoadTemplate function exists:', typeof onLoadTemplate);
       console.log('4. onLoadTemplate function:', onLoadTemplate);
+      
+      // Validate onLoadTemplate exists
+      if (typeof onLoadTemplate !== 'function') {
+        throw new Error('onLoadTemplate prop is not a function. Check ContentDashboard.tsx connection.');
+      }
       
       // FIRST: Call onLoadTemplate prop to send data to Dashboard
       console.log('5. Calling onLoadTemplate prop...');
@@ -329,11 +341,16 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
       });
       
       console.log('=== SEND TO CREATE DEBUG SUCCESS ===');
-      alert(`SUCCESS: Template "${template.content_title}" sent to Create New Content and removed from Template Library.`);
-    } catch (error) {
+      
+      // Show success message
+      setOperationSuccess(`Template "${template.content_title}" sent to Create New Content successfully!`);
+      
+    } catch (error: any) {
       console.error('=== SEND TO CREATE DEBUG ERROR ===');
       console.error('Error details:', error);
-      alert(`FAILED: Could not send template. Error: ${error.message || 'Unknown error'}`);
+      
+      // Show persistent error message
+      setOperationError(`Failed to send template "${template.content_title}": ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -529,6 +546,123 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
           </button>
         </div>
       </div>
+
+      {/* PERSISTENT ERROR/SUCCESS NOTIFICATIONS */}
+      {operationError && (
+        <div style={{
+          backgroundColor: isDarkMode ? '#7f1d1d30' : '#fee2e2',
+          border: '1px solid #ef4444',
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '24px'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '12px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              flex: 1
+            }}>
+              <X style={{ height: '20px', width: '20px', color: '#ef4444', flexShrink: 0 }} />
+              <div>
+                <div style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#fca5a5' : '#7f1d1d',
+                  marginBottom: '4px'
+                }}>
+                  Template Operation Failed
+                </div>
+                <div style={{
+                  fontSize: '14px',
+                  color: isDarkMode ? '#fca5a5' : '#7f1d1d',
+                  lineHeight: '1.4'
+                }}>
+                  {operationError}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setOperationError(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '4px',
+                cursor: 'pointer',
+                color: '#ef4444',
+                borderRadius: '4px',
+                flexShrink: 0
+              }}
+              title="Dismiss error"
+            >
+              <X style={{ height: '16px', width: '16px' }} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {operationSuccess && (
+        <div style={{
+          backgroundColor: isDarkMode ? '#065f4630' : '#d1fae5',
+          border: '1px solid #10b981',
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '24px'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '12px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              flex: 1
+            }}>
+              <CheckCircle style={{ height: '20px', width: '20px', color: '#10b981', flexShrink: 0 }} />
+              <div>
+                <div style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#34d399' : '#065f46',
+                  marginBottom: '4px'
+                }}>
+                  Template Sent Successfully
+                </div>
+                <div style={{
+                  fontSize: '14px',
+                  color: isDarkMode ? '#34d399' : '#065f46',
+                  lineHeight: '1.4'
+                }}>
+                  {operationSuccess}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setOperationSuccess(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '4px',
+                cursor: 'pointer',
+                color: '#10b981',
+                borderRadius: '4px',
+                flexShrink: 0
+              }}
+              title="Dismiss notification"
+            >
+              <X style={{ height: '16px', width: '16px' }} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Templates List */}
       <div style={{
