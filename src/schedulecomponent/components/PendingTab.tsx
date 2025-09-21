@@ -1,16 +1,31 @@
+// /src/schedulecomponent/components/PendingTab.tsx
 import React from 'react';
-import { Clock, Edit3, Trash2, Eye } from 'lucide-react';
-import { PendingPost } from '../types';
-import { getPlatformIcon } from '../utils/platformUtils';
-import { truncateDescription } from '../utils/statusUtils';
+import { Clock, Calendar, Edit, Trash2, Play } from 'lucide-react';
+import { formatDate, getRelativeTime } from '../utils/dateUtils';
+import { getPlatformIcon, formatPlatformList } from '../utils/platformUtils';
+import { getStatusColor, getStatusIcon } from '../utils/statusUtils';
+
+interface PendingPost {
+  id: string;
+  contentId: string;
+  title: string;
+  description: string;
+  characterProfile: string;
+  selectedPlatforms: string[];
+  status: 'pending_schedule' | 'scheduled' | 'published' | 'failed';
+  created_date: string;
+  scheduled_date?: string;
+  mediaFiles?: any[];
+  hashtags: string[];
+}
 
 interface PendingTabProps {
   posts: PendingPost[];
   loading: boolean;
-  error: string | null;
+  error?: string | null;
   onSchedule: (post: PendingPost) => void;
   onEdit: (post: PendingPost) => void;
-  onDelete: (id: string) => void;
+  onDelete: (postId: string) => void;
 }
 
 export default function PendingTab({ 
@@ -23,321 +38,352 @@ export default function PendingTab({
 }: PendingTabProps) {
   const isDarkMode = localStorage.getItem('darkMode') === 'true';
 
+  const containerStyle = {
+    backgroundColor: isDarkMode ? '#1e293b' : 'white',
+    color: isDarkMode ? '#f8fafc' : '#111827',
+    borderRadius: '8px',
+    padding: '24px',
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+  };
+
+  const headerStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '24px',
+    paddingBottom: '16px',
+    borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
+  };
+
+  const cardStyle = {
+    backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
+    border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+    borderRadius: '8px',
+    padding: '20px',
+    marginBottom: '16px',
+    transition: 'all 0.2s ease'
+  };
+
+  const buttonStyle = (variant: 'primary' | 'secondary' | 'danger') => {
+    const styles = {
+      primary: {
+        backgroundColor: isDarkMode ? '#3b82f6' : '#2563eb',
+        color: 'white',
+        border: 'none'
+      },
+      secondary: {
+        backgroundColor: 'transparent',
+        color: isDarkMode ? '#94a3b8' : '#6b7280',
+        border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
+      },
+      danger: {
+        backgroundColor: 'transparent',
+        color: '#ef4444',
+        border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
+      }
+    };
+
+    return {
+      ...styles[variant],
+      padding: '8px 16px',
+      borderRadius: '6px',
+      fontSize: '14px',
+      fontWeight: '500',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px',
+      transition: 'all 0.2s ease'
+    };
+  };
+
   if (loading) {
     return (
-      <div style={{
-        textAlign: 'center',
-        padding: '48px',
-        color: isDarkMode ? '#94a3b8' : '#6b7280'
-      }}>
-        Loading pending posts...
+      <div style={containerStyle}>
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <div style={{ 
+            width: '32px', 
+            height: '32px', 
+            border: `3px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+            borderTop: `3px solid ${isDarkMode ? '#3b82f6' : '#2563eb'}`,
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }} />
+          <p style={{ color: isDarkMode ? '#94a3b8' : '#6b7280' }}>Loading pending posts...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{
-        padding: '16px',
-        backgroundColor: isDarkMode ? '#7f1d1d' : '#fee2e2',
-        border: `1px solid ${isDarkMode ? '#dc2626' : '#f87171'}`,
-        borderRadius: '8px',
-        color: isDarkMode ? '#fca5a5' : '#dc2626'
-      }}>
-        Error: {error}
-      </div>
-    );
-  }
-
-  if (posts.length === 0) {
-    return (
-      <div style={{
-        backgroundColor: isDarkMode ? '#1e3a8a' : '#dbeafe',
-        border: `1px solid ${isDarkMode ? '#1d4ed8' : '#93c5fd'}`,
-        borderRadius: '8px',
-        padding: '32px',
-        textAlign: 'center'
-      }}>
-        <Clock style={{
-          height: '48px',
-          width: '48px',
-          color: '#3b82f6',
-          margin: '0 auto 16px auto'
-        }} />
-        <h3 style={{
-          fontSize: '16px',
-          fontWeight: 'bold',
-          color: isDarkMode ? '#93c5fd' : '#1e3a8a',
-          margin: '0 0 8px 0'
+      <div style={containerStyle}>
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '40px',
+          color: '#ef4444'
         }}>
-          Ready for Scheduling
-        </h3>
-        <p style={{
-          color: isDarkMode ? '#93c5fd' : '#1e40af',
-          fontSize: '12px',
-          fontWeight: 'bold',
-          margin: '0'
-        }}>
-          Posts from Content Manager will appear here for scheduling
-        </p>
+          <p>Error loading posts: {error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={buttonStyle('primary')}
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      backgroundColor: isDarkMode ? '#1e293b' : 'white',
-      border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
-      borderRadius: '8px'
-    }}>
-      <div style={{
-        padding: '16px',
-        backgroundColor: isDarkMode ? '#1e3a8a' : '#dbeafe',
-        borderBottom: `1px solid ${isDarkMode ? '#1d4ed8' : '#93c5fd'}`,
-        borderRadius: '8px 8px 0 0'
-      }}>
+    <div style={containerStyle}>
+      {/* Header */}
+      <div style={headerStyle}>
+        <div>
+          <h2 style={{
+            fontSize: '20px',
+            fontWeight: '600',
+            margin: '0 0 8px 0',
+            color: isDarkMode ? '#60a5fa' : '#2563eb'
+          }}>
+            Pending Scheduling
+          </h2>
+          <p style={{
+            fontSize: '14px',
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            margin: '0'
+          }}>
+            {posts.length} posts awaiting schedule assignment
+          </p>
+        </div>
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px'
+          gap: '8px',
+          backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
+          color: isDarkMode ? '#60a5fa' : '#1e40af',
+          padding: '8px 12px',
+          borderRadius: '6px',
+          fontSize: '14px',
+          fontWeight: '600'
         }}>
-          <Clock style={{
-            height: '20px',
-            width: '20px',
-            color: '#2563eb'
-          }} />
-          <h2 style={{
-            fontSize: '16px',
-            fontWeight: 'bold',
-            color: isDarkMode ? '#93c5fd' : '#1e3a8a',
-            margin: '0'
-          }}>
-            Pending Scheduling ({posts.length})
-          </h2>
+          <Clock size={16} />
+          {posts.length} Pending
         </div>
-        <p style={{
-          fontSize: '12px',
-          color: isDarkMode ? '#93c5fd' : '#1e40af',
-          marginTop: '4px',
-          fontWeight: 'bold',
-          margin: '4px 0 0 0'
-        }}>
-          Click "Schedule" to set date and time for these posts
-        </p>
       </div>
-      
-      <div>
-        {posts.map((post, index) => (
-          <div 
-            key={post.id} 
-            style={{
-              padding: '20px',
-              borderBottom: index < posts.length - 1 ? `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}` : 'none',
-              cursor: 'pointer'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = isDarkMode ? '#334155' : '#f9fafb';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-          >
-            <div style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'space-between'
-            }}>
+
+      {/* Posts List */}
+      {posts.length === 0 ? (
+        <div style={{
+          textAlign: 'center',
+          padding: '60px 20px',
+          color: isDarkMode ? '#94a3b8' : '#6b7280'
+        }}>
+          <Clock size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+          <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0' }}>
+            No Pending Posts
+          </h3>
+          <p style={{ fontSize: '14px', margin: '0' }}>
+            All your posts have been scheduled or published.
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: '16px' }}>
+          {posts.map((post) => (
+            <div key={post.id} style={cardStyle}>
+              {/* Post Header */}
               <div style={{
-                flex: 1,
-                minWidth: 0
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                marginBottom: '16px'
               }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  marginBottom: '12px'
-                }}>
-                  <span style={{
-                    padding: '4px 12px',
-                    fontSize: '11px',
-                    backgroundColor: isDarkMode ? '#f59e0b' : '#fed7aa',
-                    color: isDarkMode ? '#000000' : '#9a3412',
-                    borderRadius: '12px',
-                    fontWeight: 'bold'
+                <div style={{ flex: 1 }}>
+                  <h3 style={{
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    color: isDarkMode ? '#f8fafc' : '#111827',
+                    margin: '0 0 8px 0',
+                    lineHeight: '1.4'
                   }}>
-                    Ready to Schedule
-                  </span>
-                  <span style={{
-                    fontSize: '12px',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    fontWeight: 'bold'
-                  }}>
-                    Created {post.created_date.toLocaleDateString()}
-                  </span>
-                  <span style={{
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    color: '#2563eb'
-                  }}>
-                    {post.character_profile}
-                  </span>
-                  {post.content_id && (
-                    <span style={{
-                      fontSize: '11px',
-                      color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                      fontFamily: 'monospace',
-                      backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      fontWeight: 'bold'
-                    }}>
-                      ID: {post.content_id}
-                    </span>
-                  )}
-                </div>
-                
-                <div style={{ marginBottom: '16px' }}>
-                  <p style={{
-                    color: isDarkMode ? '#e2e8f0' : '#111827',
-                    fontSize: '14px',
-                    lineHeight: '1.5',
-                    fontWeight: 'bold',
-                    margin: '0'
-                  }}>
-                    {truncateDescription(post.description)}
-                  </p>
-                </div>
-                
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '24px',
-                  fontSize: '12px',
-                  color: isDarkMode ? '#94a3b8' : '#6b7280'
-                }}>
-                  {post.media_files.length > 0 && (
-                    <span style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontWeight: 'bold'
-                    }}>
-                      <Eye style={{ height: '14px', width: '14px' }} />
-                      <span>{post.media_files.length} file(s)</span>
-                    </span>
-                  )}
-                  
+                    {post.title || 'Untitled Post'}
+                  </h3>
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px'
+                    gap: '12px',
+                    fontSize: '12px',
+                    color: isDarkMode ? '#94a3b8' : '#6b7280'
                   }}>
-                    <span style={{ fontWeight: 'bold' }}>Platforms:</span>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      {post.selected_platforms.map((platformId, idx) => {
-                        const platformInfo = getPlatformIcon(platformId);
-                        return (
-                          <span
-                            key={idx}
-                            style={{
-                              padding: '4px 6px',
-                              borderRadius: '4px',
-                              color: 'white',
-                              fontSize: '10px',
-                              fontWeight: 'bold',
-                              backgroundColor: platformInfo.color
-                            }}
-                            title={platformInfo.name}
-                          >
-                            {platformInfo.icon}
-                          </span>
-                        );
-                      })}
+                    <span>ID: {post.contentId}</span>
+                    <span>Created: {getRelativeTime(post.created_date)}</span>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '2px 6px',
+                      backgroundColor: getStatusColor(post.status, isDarkMode).bg,
+                      color: getStatusColor(post.status, isDarkMode).text,
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      fontWeight: '600'
+                    }}>
+                      {getStatusIcon(post.status)}
+                      {post.status.replace('_', ' ').toUpperCase()}
                     </div>
                   </div>
                 </div>
               </div>
-              
+
+              {/* Post Content Preview */}
+              <div style={{ marginBottom: '16px' }}>
+                <p style={{
+                  fontSize: '14px',
+                  color: isDarkMode ? '#e2e8f0' : '#4b5563',
+                  lineHeight: '1.5',
+                  margin: '0 0 12px 0',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden'
+                }}>
+                  {post.description}
+                </p>
+
+                {/* Hashtags */}
+                {post.hashtags && post.hashtags.length > 0 && (
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '6px',
+                    marginBottom: '12px'
+                  }}>
+                    {post.hashtags.slice(0, 5).map((tag, index) => (
+                      <span key={index} style={{
+                        fontSize: '12px',
+                        color: isDarkMode ? '#60a5fa' : '#2563eb',
+                        backgroundColor: isDarkMode ? '#1e3a8a20' : '#dbeafe',
+                        padding: '2px 6px',
+                        borderRadius: '4px'
+                      }}>
+                        #{tag}
+                      </span>
+                    ))}
+                    {post.hashtags.length > 5 && (
+                      <span style={{
+                        fontSize: '12px',
+                        color: isDarkMode ? '#94a3b8' : '#6b7280'
+                      }}>
+                        +{post.hashtags.length - 5} more
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Platforms */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '12px',
+                  color: isDarkMode ? '#94a3b8' : '#6b7280'
+                }}>
+                  <span>Platforms:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {post.selectedPlatforms.slice(0, 3).map((platform, index) => (
+                      <div key={index} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                        padding: '4px 8px',
+                        borderRadius: '4px'
+                      }}>
+                        {getPlatformIcon(platform)}
+                        <span>{platform}</span>
+                      </div>
+                    ))}
+                    {post.selectedPlatforms.length > 3 && (
+                      <span>+{post.selectedPlatforms.length - 3} more</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
-                marginLeft: '24px'
+                justifyContent: 'space-between',
+                paddingTop: '16px',
+                borderTop: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
               }}>
-                <button
-                  onClick={() => onEdit(post)}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: isDarkMode ? '#475569' : '#4b5563',
-                    color: 'white',
-                    fontSize: '12px',
-                    borderRadius: '6px',
-                    fontWeight: 'bold',
-                    border: 'none',
-                    cursor: 'pointer'
-                  }}
-                  title="Edit Post Content"
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = isDarkMode ? '#334155' : '#374151';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#4b5563';
-                  }}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => onSchedule(post)}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    borderRadius: '6px',
-                    fontWeight: 'bold',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#2563eb';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#3b82f6';
-                  }}
-                >
-                  Schedule
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm('Are you sure you want to delete this post?')) {
-                      onDelete(post.id);
-                    }
-                  }}
-                  style={{
-                    padding: '8px',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
-                  }}
-                  title="Delete"
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.color = '#ef4444';
-                    e.currentTarget.style.backgroundColor = isDarkMode ? '#451a1a' : '#fee2e2';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.color = isDarkMode ? '#94a3b8' : '#6b7280';
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
-                >
-                  <Trash2 style={{ height: '16px', width: '16px' }} />
-                </button>
+                <div style={{
+                  fontSize: '12px',
+                  color: isDarkMode ? '#94a3b8' : '#6b7280'
+                }}>
+                  Character: {post.characterProfile || 'Not set'}
+                </div>
+                
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => onEdit(post)}
+                    style={buttonStyle('secondary')}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#f3f4f6';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <Edit size={14} />
+                    Edit
+                  </button>
+                  
+                  <button
+                    onClick={() => onDelete(post.id)}
+                    style={buttonStyle('danger')}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#fef2f2';
+                      e.currentTarget.style.borderColor = '#ef4444';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.borderColor = isDarkMode ? '#475569' : '#d1d5db';
+                    }}
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                  
+                  <button
+                    onClick={() => onSchedule(post)}
+                    style={buttonStyle('primary')}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = isDarkMode ? '#2563eb' : '#1d4ed8';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = isDarkMode ? '#3b82f6' : '#2563eb';
+                    }}
+                  >
+                    <Play size={14} />
+                    Schedule Now
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* CSS for loading animation */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
