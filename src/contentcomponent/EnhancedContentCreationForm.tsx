@@ -385,10 +385,42 @@ const EnhancedContentCreationForm = ({
     if (loadedTemplate && !editingPost) { // Don't load template if editing a post
       console.log('=== LOADING TEMPLATE INTO FORM ===');
       console.log('Template data:', loadedTemplate);
+      console.log('Available character profiles:', characterProfiles);
+      
+      // FIND MATCHING CHARACTER PROFILE BY NAME OR ID
+      let matchedCharacterProfileId = '';
+      if (loadedTemplate.character_profile) {
+        console.log('Looking for character profile:', loadedTemplate.character_profile);
+        
+        // Try to find by ID first
+        let matchedProfile = characterProfiles.find(p => p.id === loadedTemplate.character_profile);
+        
+        // If not found by ID, try to find by name (case insensitive)
+        if (!matchedProfile) {
+          matchedProfile = characterProfiles.find(p => 
+            p.name.toLowerCase() === loadedTemplate.character_profile?.toLowerCase()
+          );
+        }
+        
+        // If still not found, try to find by username
+        if (!matchedProfile) {
+          matchedProfile = characterProfiles.find(p => 
+            p.username.toLowerCase() === loadedTemplate.character_profile?.toLowerCase()
+          );
+        }
+        
+        if (matchedProfile) {
+          matchedCharacterProfileId = matchedProfile.id;
+          console.log('✅ Found matching character profile:', matchedProfile.name, 'ID:', matchedProfile.id);
+        } else {
+          console.log('❌ Could not find matching character profile for:', loadedTemplate.character_profile);
+          console.log('Available profiles:', characterProfiles.map(p => `${p.name} (${p.id})`));
+        }
+      }
       
       // POPULATE SELECTIONS (dropdown fields)
       setSelections({
-        characterProfile: loadedTemplate.character_profile || '',
+        characterProfile: matchedCharacterProfileId, // Use the matched ID
         theme: loadedTemplate.theme || '',
         audience: loadedTemplate.audience || '',
         mediaType: loadedTemplate.media_type || '',
@@ -425,7 +457,7 @@ const EnhancedContentCreationForm = ({
       
       console.log('✅ Template loaded successfully into form (text only)');
       console.log('Selections populated:', {
-        characterProfile: loadedTemplate.character_profile,
+        characterProfile: matchedCharacterProfileId,
         theme: loadedTemplate.theme,
         audience: loadedTemplate.audience,
         mediaType: loadedTemplate.media_type,
@@ -434,7 +466,7 @@ const EnhancedContentCreationForm = ({
         voiceStyle: loadedTemplate.voiceStyle
       });
     }
-  }, [loadedTemplate, editingPost, onTemplateLoaded]);
+  }, [loadedTemplate, editingPost, onTemplateLoaded, characterProfiles]);
 
   const setupPlatformFields = (platform: string) => {
     if (platform) {
