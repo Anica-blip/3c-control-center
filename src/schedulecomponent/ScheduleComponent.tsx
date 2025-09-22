@@ -1,7 +1,6 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - SYNC FIXES for hooks and workflow
+// /src/schedulecomponent/ScheduleComponent.tsx
 import React, { useState, useEffect } from 'react';
-import { Clock, Calendar, CheckCircle, Save, Edit3 } from 'lucide-react';
-// FIXED: Import correct hooks that actually exist in useScheduleData.ts
+import { Clock, Calendar, CheckCircle, Save } from 'lucide-react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import PendingTab from './components/PendingTab';
 import CalendarView from './components/CalendarView';
@@ -10,6 +9,8 @@ import TemplateManager from './components/TemplateManager';
 import ScheduleModal from './components/ScheduleModal';
 import EditModal from './components/EditModal';
 import { scheduleAPI } from './api/scheduleAPI';
+import { contentAPI } from './api/contentAPI';
+import { supabaseAPI } from './supabaseAPI';
 
 interface ScheduleComponentProps {
   user?: { id: string } | null;
@@ -17,7 +18,7 @@ interface ScheduleComponentProps {
 }
 
 export default function ScheduleComponent({ user, onClose }: ScheduleComponentProps) {
-  // FIXED: Use correct hooks that actually exist and destructure properly
+  // Use hooks for data management
   const {
     posts: scheduledPosts,
     loading: postsLoading,
@@ -45,49 +46,82 @@ export default function ScheduleComponent({ user, onClose }: ScheduleComponentPr
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
   const [editingPost, setEditingPost] = useState(null);
+  const [pendingPosts, setPendingPosts] = useState([]);
+  const [loadingPending, setLoadingPending] = useState(false);
 
-  // FIXED: Get theme from localStorage like other components
+  // Get theme
   const isDarkMode = localStorage.getItem('darkMode') === 'true';
 
-  // FIXED: Load pending posts on component mount
+  // Load pending posts from content_posts table
   useEffect(() => {
     const loadPendingPosts = async () => {
+      if (!user?.id) return;
+      
       try {
-        await refreshPosts();
-        await refreshTemplates();
+        setLoadingPending(true);
+        // Get posts that need scheduling from content_posts
+        const posts = await contentAPI.getPostsByStatus(user.id, 'pending');
+        setPendingPosts(posts);
       } catch (error) {
-        console.error('Error loading schedule data:', error);
+        console.error('Error loading pending posts:', error);
+      } finally {
+        setLoadingPending(false);
       }
     };
 
     loadPendingPosts();
-  }, [refreshPosts, refreshTemplates]);
+    refreshPosts();
+    refreshTemplates();
+  }, [user?.id, refreshPosts, refreshTemplates]);
 
-  // FIXED: Add missing handleEditPost function
+  // Event handlers
   const handleEditPost = (post) => {
     setEditingPost(post);
     setIsEditModalOpen(true);
   };
 
-  // FIXED: Sync with workflow - handle schedule confirmation
   const handleSchedulePost = (post) => {
     setSelectedPost(post);
     setIsScheduleModalOpen(true);
   };
 
-  // FIXED: Proper integration with scheduleAPI
   const handleConfirmSchedule = async (scheduleData) => {
-    if (!selectedPost) return;
+    if (!selectedPost || !user?.id) return;
 
     try {
-      // Create scheduled post using the API
-      await createPost({
-        ...selectedPost,
+      // Create scheduled post using scheduleAPI
+      await scheduleAPI.createScheduledPost({
+        content_id: selectedPost.contentId || selectedPost.content_id,
+        character_profile: selectedPost.characterProfile || selectedPost.character_profile,
+        theme: selectedPost.theme,
+        audience: selectedPost.audience,
+        media_type: selectedPost.mediaType || selectedPost.media_type,
+        template_type: selectedPost.templateType || selectedPost.template_type,
+        platform: selectedPost.platform,
+        title: selectedPost.title,
+        description: selectedPost.description,
+        hashtags: selectedPost.hashtags || [],
+        keywords: selectedPost.keywords || '',
+        cta: selectedPost.cta || '',
+        media_files: selectedPost.mediaFiles || selectedPost.media_files || [],
+        selected_platforms: selectedPost.selectedPlatforms || selectedPost.selected_platforms || [],
         scheduled_date: new Date(scheduleData.scheduledDate),
         status: 'scheduled',
-        user_id: user?.id,
-        created_by: user?.id
+        user_id: user.id,
+        created_by: user.id,
+        is_from_template: selectedPost.isFromTemplate || selectedPost.is_from_template,
+        source_template_id: selectedPost.sourceTemplateId || selectedPost.source_template_id
       });
+      
+      // Update the original post status
+      if (selectedPost.id) {
+        await contentAPI.updatePost(selectedPost.id, { status: 'scheduled' });
+      }
+      
+      // Refresh data
+      await refreshPosts();
+      const posts = await contentAPI.getPostsByStatus(user.id, 'pending');
+      setPendingPosts(posts);
       
       setIsScheduleModalOpen(false);
       setSelectedPost(null);
@@ -96,7 +130,6 @@ export default function ScheduleComponent({ user, onClose }: ScheduleComponentPr
     }
   };
 
-  // FIXED: Add missing handlers for workflow sync
   const handleUpdatePostStatus = async (postId, updates) => {
     try {
       await updatePost(postId, updates);
@@ -108,41 +141,36 @@ export default function ScheduleComponent({ user, onClose }: ScheduleComponentPr
   const handleDeletePost = async (postId) => {
     try {
       await deletePost(postId);
+      // Also refresh pending posts if needed
+      if (user?.id) {
+        const posts = await contentAPI.getPostsByStatus(user.id, 'pending');
+        setPendingPosts(posts);
+      }
     } catch (error) {
       console.error('Failed to delete post:', error);
     }
   };
 
   const handleEditComplete = async (updatedPost) => {
+    if (!editingPost?.id) return;
+    
     try {
-      await updatePost(editingPost.id, updatedPost);
+      await contentAPI.updatePost(editingPost.id, updatedPost);
       setIsEditModalOpen(false);
       setEditingPost(null);
+      
+      // Refresh pending posts
+      if (user?.id) {
+        const posts = await contentAPI.getPostsByStatus(user.id, 'pending');
+        setPendingPosts(posts);
+      }
     } catch (error) {
       console.error('Failed to update post:', error);
     }
   };
 
-  // FIXED: Use inline styles like other components instead of className
-  const containerStyle = {
-    backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-    minHeight: '100vh',
-    padding: '24px',
-    fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-  };
-
-  const tabsContainerStyle = {
-    backgroundColor: isDarkMode ? '#1e293b' : 'white',
-    borderRadius: '12px',
-    padding: '8px',
-    marginBottom: '24px',
-    boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
-    display: 'flex',
-    gap: '4px'
-  };
-
-  const getTabStyle = (tabId, isActive) => ({
+  // Style functions
+  const getTabStyle = (tabId, activeTab, isDarkMode) => ({
     flex: 1,
     padding: '12px 16px',
     borderRadius: '8px',
@@ -155,33 +183,50 @@ export default function ScheduleComponent({ user, onClose }: ScheduleComponentPr
     fontSize: '14px',
     fontWeight: '600',
     transition: 'all 0.2s ease',
-    backgroundColor: isActive 
+    backgroundColor: activeTab === tabId 
       ? (isDarkMode ? '#3b82f6' : '#2563eb')
       : 'transparent',
-    color: isActive 
+    color: activeTab === tabId 
       ? 'white' 
       : (isDarkMode ? '#94a3b8' : '#6b7280'),
     fontFamily: 'inherit'
   });
 
-  const contentStyle = {
-    backgroundColor: isDarkMode ? '#1e293b' : 'white',
-    borderRadius: '12px',
-    boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
-    overflow: 'hidden'
-  };
-
-  // FIXED: Define tabs with proper data
+  // Tab configuration
   const tabs = [
-    { id: 'pending', label: 'Pending Scheduling', icon: Clock, count: scheduledPosts.filter(p => p.status === 'pending_schedule').length },
-    { id: 'calendar', label: 'Calendar View', icon: Calendar, count: scheduledPosts.filter(p => p.status === 'scheduled').length },
-    { id: 'status', label: 'Status Management', icon: CheckCircle, count: scheduledPosts.length },
-    { id: 'saved', label: 'Saved Templates', icon: Save, count: savedTemplates.length }
+    { 
+      id: 'pending', 
+      label: 'Pending Scheduling', 
+      icon: Clock, 
+      count: pendingPosts.length 
+    },
+    { 
+      id: 'calendar', 
+      label: 'Calendar View', 
+      icon: Calendar, 
+      count: scheduledPosts.filter(p => p.status === 'scheduled').length 
+    },
+    { 
+      id: 'status', 
+      label: 'Status Management', 
+      icon: CheckCircle, 
+      count: scheduledPosts.length 
+    },
+    { 
+      id: 'saved', 
+      label: 'Saved Templates', 
+      icon: Save, 
+      count: savedTemplates.length 
+    }
   ];
 
   return (
-    <div style={containerStyle}>
+    <div style={{
+      backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+      minHeight: '100vh',
+      padding: '24px',
+      fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    }}>
       {/* Header */}
       <div style={{
         display: 'flex',
@@ -226,14 +271,23 @@ export default function ScheduleComponent({ user, onClose }: ScheduleComponentPr
       </div>
 
       {/* Tabs */}
-      <div style={tabsContainerStyle}>
+      <div style={{
+        backgroundColor: isDarkMode ? '#1e293b' : 'white',
+        borderRadius: '12px',
+        padding: '8px',
+        marginBottom: '24px',
+        boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+        display: 'flex',
+        gap: '4px'
+      }}>
         {tabs.map(tab => {
           const IconComponent = tab.icon;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              style={getTabStyle(tab.id, activeTab === tab.id)}
+              style={getTabStyle(tab.id, activeTab, isDarkMode)}
               onMouseOver={(e) => {
                 if (activeTab !== tab.id) {
                   e.currentTarget.style.backgroundColor = isDarkMode ? '#334155' : '#f3f4f6';
@@ -252,9 +306,7 @@ export default function ScheduleComponent({ user, onClose }: ScheduleComponentPr
                   backgroundColor: activeTab === tab.id 
                     ? 'rgba(255, 255, 255, 0.2)' 
                     : (isDarkMode ? '#60a5fa' : '#2563eb'),
-                  color: activeTab === tab.id 
-                    ? 'white' 
-                    : 'white',
+                  color: 'white',
                   padding: '2px 8px',
                   borderRadius: '12px',
                   fontSize: '12px',
@@ -271,11 +323,17 @@ export default function ScheduleComponent({ user, onClose }: ScheduleComponentPr
       </div>
 
       {/* Tab Content */}
-      <div style={contentStyle}>
+      <div style={{
+        backgroundColor: isDarkMode ? '#1e293b' : 'white',
+        borderRadius: '12px',
+        boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+        overflow: 'hidden'
+      }}>
         {activeTab === 'pending' && (
           <PendingTab
-            posts={scheduledPosts.filter(p => p.status === 'pending_schedule')}
-            loading={postsLoading}
+            posts={pendingPosts}
+            loading={loadingPending}
             error={postsError}
             onSchedule={handleSchedulePost}
             onEdit={handleEditPost}
@@ -314,7 +372,7 @@ export default function ScheduleComponent({ user, onClose }: ScheduleComponentPr
         )}
       </div>
 
-      {/* FIXED: Proper modal integration */}
+      {/* Modals */}
       {isScheduleModalOpen && selectedPost && (
         <ScheduleModal
           post={selectedPost}
