@@ -3,7 +3,7 @@ import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
 // Dynamic import for supabase to avoid import issues
 const getSupabase = async () => {
-  const { supabase } = await import('../../supabase/config');
+  const { supabase } = await import('../config');
   return supabase;
 };
 
