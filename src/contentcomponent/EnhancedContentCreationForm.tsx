@@ -1,3 +1,4 @@
+// FIXED: EnhancedContentCreationForm.tsx - Schedule Integration Fix
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Upload, X, Image, Video, FileText, Settings, ExternalLink, Plus, User, Eye, Edit3, Calendar, Trash2 } from 'lucide-react';
 import { ContentPost, MediaFile, SocialPlatform, CharacterProfile } from './types';
@@ -420,7 +421,7 @@ const EnhancedContentCreationForm = ({
           matchedCharacterProfileId = matchedProfile.id;
           console.log('✅ Found matching character profile:', matchedProfile.name, 'ID:', matchedProfile.id);
         } else {
-          console.log('❌ Could not find matching character profile for:', loadedTemplate.character_profile);
+          console.log('⚠ Could not find matching character profile for:', loadedTemplate.character_profile);
           console.log('Available profiles:', characterProfiles.map(p => `${p.name} (${p.id})`));
         }
       }
@@ -712,32 +713,74 @@ const EnhancedContentCreationForm = ({
     }
   };
 
-  // UPDATED ADD TO SCHEDULE HANDLER WITH SUPABASE INTEGRATION:
+  // FIXED: ADD TO SCHEDULE HANDLER WITH PROPER DATA MAPPING
   const handleAddToSchedule = async () => {
+    if (!user?.id) {
+      console.error('User not authenticated');
+      alert('Please log in to schedule posts.');
+      return;
+    }
+
     const postData = {
       contentId,
-      ...selections,
-      ...content,
+      characterProfile: selections.characterProfile,
+      theme: selections.theme,
+      audience: selections.audience,
+      mediaType: selections.mediaType,
+      templateType: selections.templateType,
+      platform: selections.platform,
+      voiceStyle: selections.voiceStyle,
+      title: content.title,
+      description: content.description,
+      hashtags: content.hashtags,
+      keywords: content.keywords,
+      cta: content.cta,
       mediaFiles,
       selectedPlatforms,
-      status: 'scheduled' as const,
+      status: 'pending' as const,
       isFromTemplate: isEditingTemplate,
       sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
-      // ADD USER TRACKING FOR SUPABASE:
-      user_id: user?.id,
-      created_by: user?.id
+      user_id: user.id,
+      created_by: user.id
     };
 
     try {
-      // Save to content_posts first
+      // Step 1: Save to content_posts first
+      console.log('Saving post to content_posts...');
       const savedPost = await contentAPI.savePost(postData);
-      
-      // Create pending schedule entry
-      await scheduleAPI.createPendingPost({
-        ...postData,
+      console.log('Post saved successfully:', savedPost);
+
+      // Step 2: Create pending schedule entry with proper field mapping
+      console.log('Creating pending schedule entry...');
+      const pendingData = {
         original_post_id: savedPost.id,
-        status: 'pending_schedule'
-      });
+        content_id: postData.contentId,
+        character_profile: postData.characterProfile,
+        theme: postData.theme,
+        audience: postData.audience,
+        media_type: postData.mediaType,
+        template_type: postData.templateType,
+        platform: postData.platform,
+        voice_style: postData.voiceStyle,
+        title: postData.title,
+        description: postData.description,
+        hashtags: postData.hashtags,
+        keywords: postData.keywords,
+        cta: postData.cta,
+        media_files: postData.mediaFiles,
+        selected_platforms: postData.selectedPlatforms,
+        status: 'pending_schedule' as const,
+        is_from_template: postData.isFromTemplate,
+        source_template_id: postData.sourceTemplateId,
+        user_id: postData.user_id,
+        created_by: postData.created_by
+      };
+
+      await scheduleAPI.createPendingPost(pendingData);
+      console.log('Pending schedule entry created successfully');
+      
+      // Call the parent handler to update UI
+      await onAddToSchedule(postData);
       
       resetForm();
     } catch (error) {
@@ -2195,7 +2238,7 @@ const EnhancedContentCreationForm = ({
                                 controls
                                 muted
                               />
-                            ) : file.size === 0 && file.url ? (
+ ) : file.size === 0 && file.url ? (
                               // URL PREVIEW WITH PROPER PLATFORM SIZING - FIXED
                               <div style={{
                                 width: '100%',
