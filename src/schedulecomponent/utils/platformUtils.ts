@@ -1,5 +1,6 @@
-// /src/schedulecomponent/utils/platformUtils.ts
+// /src/schedulecomponent/utils/platformUtils.ts - FIXED to match corrected types
 import React from 'react';
+import { SocialPlatform, DashboardPost, ScheduledPost } from '../types';
 
 /**
  * Platform utility functions for the Schedule Manager
@@ -22,7 +23,7 @@ export interface PlatformInfo {
 }
 
 /**
- * Platform configuration data
+ * Platform configuration data - matches EnhancedContentCreationForm patterns
  */
 export const PLATFORM_CONFIG: Record<string, PlatformInfo> = {
   instagram: {
@@ -58,7 +59,7 @@ export const PLATFORM_CONFIG: Record<string, PlatformInfo> = {
     name: 'twitter',
     displayName: 'Twitter/X',
     color: '#000000',
-    icon: '🐦',
+    icon: '🦅',
     maxLength: {
       description: 280,
       hashtags: 2
@@ -224,7 +225,7 @@ export const getPlatformLimits = (platformId: string) => {
 };
 
 /**
- * Format platform list for display
+ * Format platform list for display - matches Schedule Manager needs
  * @param platformIds - Array of platform IDs
  * @param maxDisplay - Maximum number to display before showing "and X more"
  * @returns Formatted platform list string
@@ -265,7 +266,7 @@ export const platformSupportsFeature = (
 };
 
 /**
- * Get optimal posting times for a platform
+ * Get optimal posting times for a platform (UK timezone)
  * @param platformId - Platform identifier
  * @returns Array of optimal posting times (hours in 24h format)
  */
@@ -282,7 +283,7 @@ export const getOptimalPostingTimes = (platformId: string): number[] => {
     whatsapp: [10, 12, 14, 19, 21] // 10am, 12pm, 2pm, 7pm, 9pm
   };
 
-  return optimalTimes[platformId.toLowerCase()] || [9, 12, 15, 18]; // Default times
+  return optimalTimes[platformId.toLowerCase()] || [9, 12, 15, 18]; // Default UK business hours
 };
 
 /**
@@ -360,19 +361,14 @@ export const getHashtagRecommendations = (platformId: string) => {
 };
 
 /**
- * Validate content for platform requirements
+ * Validate content for platform requirements - works with Schedule Manager types
  * @param platformId - Platform identifier
- * @param content - Content to validate
+ * @param post - DashboardPost or ScheduledPost to validate
  * @returns Validation result with errors/warnings
  */
 export const validateContentForPlatform = (
   platformId: string,
-  content: {
-    title?: string;
-    description: string;
-    hashtags?: string[];
-    mediaFiles?: any[];
-  }
+  post: DashboardPost | ScheduledPost
 ) => {
   const platform = PLATFORM_CONFIG[platformId.toLowerCase()];
   const errors: string[] = [];
@@ -386,30 +382,30 @@ export const validateContentForPlatform = (
   const limits = platform.maxLength;
 
   // Title validation
-  if (limits?.title && content.title && content.title.length > limits.title) {
+  if (limits?.title && post.title && post.title.length > limits.title) {
     errors.push(`Title exceeds ${limits.title} character limit for ${platform.displayName}`);
   }
 
   // Description validation
-  if (limits?.description && content.description.length > limits.description) {
+  if (limits?.description && post.description.length > limits.description) {
     errors.push(`Description exceeds ${limits.description} character limit for ${platform.displayName}`);
   }
 
   // Hashtag validation
-  if (limits?.hashtags && content.hashtags && content.hashtags.length > limits.hashtags) {
-    errors.push(`Too many hashtags for ${platform.displayName} (${content.hashtags.length}/${limits.hashtags})`);
+  if (limits?.hashtags && post.hashtags && post.hashtags.length > limits.hashtags) {
+    errors.push(`Too many hashtags for ${platform.displayName} (${post.hashtags.length}/${limits.hashtags})`);
   }
 
   // Platform-specific requirements
-  if (platformId === 'twitter' && !content.description.trim()) {
+  if (platformId === 'twitter' && !post.description.trim()) {
     errors.push('Twitter posts must have content');
   }
 
-  if (platformId === 'youtube' && !content.title) {
+  if (platformId === 'youtube' && !post.title) {
     warnings.push('YouTube videos should have titles');
   }
 
-  if (platformId === 'instagram' && (!content.mediaFiles || content.mediaFiles.length === 0)) {
+  if (platformId === 'instagram' && (!post.media_files || post.media_files.length === 0)) {
     warnings.push('Instagram posts typically include images or videos');
   }
 
@@ -454,7 +450,7 @@ export const getPlatformContentSuggestions = (platformId: string): string[] => {
     youtube: [
       'Create compelling thumbnails and titles',
       'Focus on video quality and audio clarity',
-      'Optimize descriptions with keywords',
+      'Optimise descriptions with keywords',
       'Engage with comments and build community'
     ],
     tiktok: [
@@ -467,7 +463,7 @@ export const getPlatformContentSuggestions = (platformId: string): string[] => {
 
   return suggestions[platformId.toLowerCase()] || [
     'Research platform-specific best practices',
-    'Analyze successful content in your niche',
+    'Analyse successful content in your niche',
     'Engage authentically with your audience',
     'Post consistently and track performance'
   ];
@@ -518,5 +514,75 @@ export const getEstimatedReach = (
   return {
     percentage: Math.round(platform.rate * 100),
     description: platform.description
+  };
+};
+
+/**
+ * Convert SocialPlatform array to platform IDs for Schedule Manager
+ * @param platforms - Array of SocialPlatform objects
+ * @returns Array of platform ID strings
+ */
+export const extractPlatformIds = (platforms: SocialPlatform[]): string[] => {
+  return platforms.filter(p => p.isActive).map(p => p.id);
+};
+
+/**
+ * Get platform preview configuration for Schedule Manager
+ * @param platformId - Platform identifier
+ * @returns Preview configuration object
+ */
+export const getPlatformPreviewConfig = (platformId: string) => {
+  const previewConfigs: Record<string, any> = {
+    instagram: {
+      aspectRatio: '1 / 1',
+      maxWidth: '400px',
+      label: 'Instagram Square Post (1:1)'
+    },
+    facebook: {
+      aspectRatio: '1.91 / 1',
+      maxWidth: '500px',
+      label: 'Facebook Post (1.91:1)'
+    },
+    twitter: {
+      aspectRatio: '16 / 9',
+      maxWidth: '500px',
+      label: 'Twitter/X Post (16:9)'
+    },
+    linkedin: {
+      aspectRatio: '1.91 / 1',
+      maxWidth: '500px',
+      label: 'LinkedIn Post (1.91:1)'
+    },
+    youtube: {
+      aspectRatio: '16 / 9',
+      maxWidth: '480px',
+      label: 'YouTube Thumbnail (16:9)'
+    },
+    tiktok: {
+      aspectRatio: '9 / 16',
+      maxWidth: '300px',
+      label: 'TikTok Video (9:16)'
+    },
+    telegram: {
+      aspectRatio: 'auto',
+      maxWidth: '100%',
+      label: 'Telegram Post (Original Size)'
+    },
+    pinterest: {
+      aspectRatio: '2 / 3',
+      maxWidth: '400px',
+      label: 'Pinterest Pin (2:3)'
+    },
+    whatsapp: {
+      aspectRatio: '16 / 9',
+      maxWidth: '500px',
+      label: 'WhatsApp Post (16:9)'
+    }
+  };
+  
+  return previewConfigs[platformId] || {
+    aspectRatio: '16 / 9',
+    maxWidth: '600px',
+    label: 'Standard Format (16:9)'
   };
 };
