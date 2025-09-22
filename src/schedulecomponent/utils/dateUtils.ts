@@ -1,4 +1,5 @@
 // /src/schedulecomponent/utils/dateUtils.ts
+import { ScheduledPost, DashboardPost } from '../types';
 
 /**
  * Date utility functions for the Schedule Manager
@@ -6,7 +7,7 @@
  */
 
 /**
- * Format a date to a readable string
+ * Format a date to a readable string (UK English format)
  * @param date - Date to format
  * @param options - Intl.DateTimeFormat options
  * @returns Formatted date string
@@ -32,7 +33,7 @@ export const formatDate = (
 };
 
 /**
- * Format time to a readable string
+ * Format time to a readable string (24-hour format for UK)
  * @param date - Date to extract time from
  * @param use24Hour - Whether to use 24-hour format (default: true)
  * @returns Formatted time string
@@ -55,7 +56,7 @@ export const formatTime = (
 };
 
 /**
- * Format date and time together
+ * Format date and time together (UK format)
  * @param date - Date to format
  * @param options - Custom format options
  * @returns Formatted date and time string
@@ -304,49 +305,6 @@ export const getTimeUntil = (scheduledDate: Date | string) => {
     seconds,
     totalMs: diffMs
   };
-};
-
-/**
- * Format a duration in milliseconds to human readable format
- * @param durationMs - Duration in milliseconds
- * @returns Human readable duration string
- */
-export const formatDuration = (durationMs: number): string => {
-  const absDuration = Math.abs(durationMs);
-  const days = Math.floor(absDuration / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((absDuration % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((absDuration % (1000 * 60 * 60)) / (1000 * 60));
-
-  const parts = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}m`);
-
-  if (parts.length === 0) return 'Less than 1 minute';
-  return parts.join(' ');
-};
-
-/**
- * Get the next occurrence of a specific time on a future date
- * @param hour - Hour (0-23)
- * @param minute - Minute (0-59)
- * @param fromDate - Starting date (default: now)
- * @returns Next occurrence of the specified time
- */
-export const getNextOccurrence = (
-  hour: number, 
-  minute: number = 0, 
-  fromDate: Date = new Date()
-): Date => {
-  const next = new Date(fromDate);
-  next.setHours(hour, minute, 0, 0);
-
-  // If the time has already passed today, move to tomorrow
-  if (next.getTime() <= fromDate.getTime()) {
-    next.setDate(next.getDate() + 1);
-  }
-
-  return next;
 };
 
 /**
