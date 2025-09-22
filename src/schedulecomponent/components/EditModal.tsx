@@ -1,0 +1,930 @@
+// /src/schedulecomponent/components/EditModal.tsx
+import React, { useState, useEffect } from 'react';
+import { Edit3, X, Save, Calendar, Clock, User, Hash, FileText, ExternalLink, Image, Video, Trash2, Plus } from 'lucide-react';
+import { formatDate, formatTime, isValidDate } from '../utils/dateUtils';
+import { getPlatformIcon, formatPlatformList } from '../utils/platformUtils';
+
+interface MediaFile {
+  id: string;
+  name: string;
+  type: 'image' | 'video' | 'pdf' | 'gif' | 'interactive' | 'url_link' | 'other';
+  size: number;
+  url: string;
+  urlPreview?: {
+    title?: string;
+    description?: string;
+    image?: string;
+    siteName?: string;
+  };
+}
+
+interface EditablePost {
+  id: string;
+  content_id: string;
+  title: string;
+  description: string;
+  character_profile: string;
+  theme: string;
+  audience: string;
+  media_type: string;
+  template_type: string;
+  platform: string;
+  voice_style?: string;
+  hashtags: string[];
+  keywords: string;
+  cta: string;
+  media_files: MediaFile[];
+  selected_platforms: string[];
+  scheduled_date?: Date;
+  status: string;
+}
+
+interface EditModalProps {
+  post: EditablePost | null;
+  onSave: (postId: string, updates: Partial<EditablePost>) => Promise<void>;
+  onCancel: () => void;
+  availablePlatforms?: Array<{ id: string; name: string; isActive: boolean }>;
+  characterProfiles?: Array<{ id: string; name: string; username: string; role: string }>;
+}
+
+export default function EditModal({ 
+  post, 
+  onSave, 
+  onCancel, 
+  availablePlatforms = [],
+  characterProfiles = []
+}: EditModalProps) {
+  const [formData, setFormData] = useState<Partial<EditablePost>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [hashtagInput, setHashtagInput] = useState('');
+  const [urlInput, setUrlInput] = useState('');
+  const [urlTitle, setUrlTitle] = useState('');
+
+  const isDarkMode = localStorage.getItem('darkMode') === 'true';
+
+  // Theme colors
+  const theme = isDarkMode ? {
+    bg: '#1e293b',
+    cardBg: '#334155',
+    border: '#475569',
+    text: '#f8fafc',
+    textSecondary: '#94a3b8',
+    primary: '#60a5fa',
+    primaryHover: '#3b82f6',
+    hoverBg: '#475569',
+    success: '#10b981',
+    danger: '#ef4444'
+  } : {
+    bg: 'white',
+    cardBg: '#f9fafb',
+    border: '#e5e7eb',
+    text: '#111827',
+    textSecondary: '#6b7280',
+    primary: '#3b82f6',
+    primaryHover: '#2563eb',
+    hoverBg: '#f3f4f6',
+    success: '#059669',
+    danger: '#dc2626'
+  };
+
+  // Initialize form data when post changes
+  useEffect(() => {
+    if (post) {
+      setFormData({
+        title: post.title,
+        description: post.description,
+        hashtags: [...post.hashtags],
+        keywords: post.keywords,
+        cta: post.cta,
+        media_files: [...post.media_files],
+        selected_platforms: [...post.selected_platforms],
+        character_profile: post.character_profile,
+        theme: post.theme,
+        audience: post.audience,
+        media_type: post.media_type,
+        template_type: post.template_type,
+        platform: post.platform,
+        voice_style: post.voice_style
+      });
+    }
+  }, [post]);
+
+  if (!post) return null;
+
+  const modalOverlayStyle = {
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    padding: '20px'
+  };
+
+  const modalStyle = {
+    backgroundColor: theme.bg,
+    borderRadius: '12px',
+    padding: '24px',
+    maxWidth: '800px',
+    width: '100%',
+    maxHeight: '90vh',
+    overflow: 'auto',
+    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '12px',
+    border: `1px solid ${theme.border}`,
+    borderRadius: '8px',
+    fontSize: '14px',
+    backgroundColor: theme.cardBg,
+    color: theme.text,
+    fontFamily: 'inherit'
+  };
+
+  const buttonStyle = (variant: 'primary' | 'secondary' | 'danger') => {
+    const variants = {
+      primary: {
+        backgroundColor: theme.primary,
+        color: 'white',
+        border: 'none'
+      },
+      secondary: {
+        backgroundColor: 'transparent',
+        color: theme.textSecondary,
+        border: `1px solid ${theme.border}`
+      },
+      danger: {
+        backgroundColor: theme.danger,
+        color: 'white',
+        border: 'none'
+      }
+    };
+
+    return {
+      ...variants[variant],
+      padding: '12px 20px',
+      borderRadius: '8px',
+      fontSize: '14px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      transition: 'all 0.2s ease'
+    };
+  };
+
+  // Handle form field changes
+  const handleFieldChange = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Handle hashtag management
+  const handleAddHashtag = () => {
+    const tag = hashtagInput.trim().replace(/^#/, '');
+    if (tag && !formData.hashtags?.includes(tag)) {
+      handleFieldChange('hashtags', [...(formData.hashtags || []), tag]);
+      setHashtagInput('');
+    }
+  };
+
+  const handleRemoveHashtag = (tagToRemove: string) => {
+    handleFieldChange('hashtags', formData.hashtags?.filter(tag => tag !== tagToRemove) || []);
+  };
+
+  // Handle URL addition
+  const handleAddUrl = () => {
+    if (!urlInput.trim()) return;
+    
+    let url = urlInput.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+
+    const newUrlFile: MediaFile = {
+      id: Date.now().toString() + Math.random(),
+      name: urlTitle || 'URL Link',
+      type: 'url_link',
+      size: 0,
+      url: url
+    };
+
+    handleFieldChange('media_files', [...(formData.media_files || []), newUrlFile]);
+    setUrlInput('');
+    setUrlTitle('');
+  };
+
+  // Handle file removal
+  const handleRemoveFile = (fileId: string) => {
+    handleFieldChange('media_files', formData.media_files?.filter(f => f.id !== fileId) || []);
+  };
+
+  // Handle platform toggle
+  const handlePlatformToggle = (platformId: string) => {
+    const currentPlatforms = formData.selected_platforms || [];
+    const updatedPlatforms = currentPlatforms.includes(platformId)
+      ? currentPlatforms.filter(id => id !== platformId)
+      : [...currentPlatforms, platformId];
+    
+    handleFieldChange('selected_platforms', updatedPlatforms);
+  };
+
+  // Handle form submission
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      setError('');
+      
+      // Validation
+      if (!formData.description?.trim()) {
+        setError('Description is required');
+        return;
+      }
+
+      await onSave(post.id, formData);
+    } catch (err) {
+      setError('Failed to update post. Please try again.');
+      console.error('Update failed:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getFileIcon = (type: string) => {
+    switch (type) {
+      case 'image': return <Image size={16} style={{ color: '#3b82f6' }} />;
+      case 'video': return <Video size={16} style={{ color: '#10b981' }} />;
+      case 'pdf': return <FileText size={16} style={{ color: '#ef4444' }} />;
+      case 'url_link': return <ExternalLink size={16} style={{ color: '#8b5cf6' }} />;
+      default: return <FileText size={16} style={{ color: theme.textSecondary }} />;
+    }
+  };
+
+  return (
+    <div style={modalOverlayStyle} onClick={onCancel}>
+      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '24px',
+          paddingBottom: '16px',
+          borderBottom: `1px solid ${theme.border}`
+        }}>
+          <h2 style={{
+            fontSize: '20px',
+            fontWeight: '600',
+            color: theme.primary,
+            margin: '0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <Edit3 size={24} />
+            Edit Post
+          </h2>
+          <button
+            onClick={onCancel}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: theme.textSecondary,
+              padding: '4px'
+            }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Post Info */}
+        <div style={{
+          backgroundColor: theme.cardBg,
+          border: `1px solid ${theme.border}`,
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '24px'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            fontSize: '12px',
+            color: theme.textSecondary
+          }}>
+            <span>ID: {post.content_id}</span>
+            <span>Status: {post.status}</span>
+            {post.scheduled_date && (
+              <span>Scheduled: {formatDate(post.scheduled_date)} {formatTime(post.scheduled_date)}</span>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gap: '20px' }}>
+          {/* Title */}
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: theme.text,
+              marginBottom: '8px'
+            }}>
+              Title/Headline
+            </label>
+            <input
+              type="text"
+              value={formData.title || ''}
+              onChange={(e) => handleFieldChange('title', e.target.value)}
+              placeholder="Enter post title..."
+              style={inputStyle}
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: theme.text,
+              marginBottom: '8px'
+            }}>
+              Description *
+            </label>
+            <textarea
+              value={formData.description || ''}
+              onChange={(e) => handleFieldChange('description', e.target.value)}
+              placeholder="Write your post content..."
+              rows={6}
+              style={{
+                ...inputStyle,
+                resize: 'vertical',
+                minHeight: '120px'
+              }}
+            />
+          </div>
+
+          {/* Hashtags */}
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: theme.text,
+              marginBottom: '8px'
+            }}>
+              Hashtags
+            </label>
+            <div style={{
+              backgroundColor: theme.cardBg,
+              border: `1px solid ${theme.border}`,
+              borderRadius: '8px',
+              padding: '16px'
+            }}>
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                marginBottom: '12px'
+              }}>
+                <input
+                  type="text"
+                  value={hashtagInput}
+                  onChange={(e) => setHashtagInput(e.target.value)}
+                  placeholder="Add hashtag"
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddHashtag())}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: theme.bg,
+                    color: theme.text,
+                    fontFamily: 'inherit'
+                  }}
+                />
+                <button
+                  onClick={handleAddHashtag}
+                  disabled={!hashtagInput.trim()}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: hashtagInput.trim() ? theme.primary : theme.border,
+                    color: hashtagInput.trim() ? 'white' : theme.textSecondary,
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: hashtagInput.trim() ? 'pointer' : 'not-allowed',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    fontFamily: 'inherit'
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+              
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+                minHeight: '40px',
+                padding: '8px',
+                backgroundColor: theme.bg,
+                borderRadius: '6px',
+                border: `1px dashed ${theme.border}`
+              }}>
+                {formData.hashtags?.map((tag) => (
+                  <div key={tag} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
+                    color: theme.primary,
+                    padding: '4px 8px',
+                    borderRadius: '16px',
+                    fontSize: '12px',
+                    fontWeight: '500'
+                  }}>
+                    <Hash size={10} />
+                    {tag}
+                    <button
+                      onClick={() => handleRemoveHashtag(tag)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'inherit',
+                        cursor: 'pointer',
+                        padding: '0',
+                        fontSize: '14px',
+                        lineHeight: 1
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Keywords and CTA */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '16px'
+          }}>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: theme.text,
+                marginBottom: '8px'
+              }}>
+                Keywords
+              </label>
+              <input
+                type="text"
+                value={formData.keywords || ''}
+                onChange={(e) => handleFieldChange('keywords', e.target.value)}
+                placeholder="SEO keywords..."
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: theme.text,
+                marginBottom: '8px'
+              }}>
+                Call to Action
+              </label>
+              <input
+                type="text"
+                value={formData.cta || ''}
+                onChange={(e) => handleFieldChange('cta', e.target.value)}
+                placeholder="What action should users take?"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
+          {/* Media Files */}
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: theme.text,
+              marginBottom: '8px'
+            }}>
+              Media & Links
+            </label>
+
+            {/* URL Input */}
+            <div style={{
+              backgroundColor: theme.cardBg,
+              border: `1px solid ${theme.border}`,
+              borderRadius: '8px',
+              padding: '16px',
+              marginBottom: '16px'
+            }}>
+              <h4 style={{
+                fontSize: '14px',
+                fontWeight: '600',
+                color: theme.text,
+                margin: '0 0 12px 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <ExternalLink size={16} />
+                Add URL Link
+              </h4>
+              
+              <div style={{ display: 'grid', gap: '12px' }}>
+                <input
+                  type="text"
+                  value={urlTitle}
+                  onChange={(e) => setUrlTitle(e.target.value)}
+                  placeholder="Link title (optional)"
+                  style={{
+                    padding: '10px 12px',
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: theme.bg,
+                    color: theme.text,
+                    fontFamily: 'inherit'
+                  }}
+                />
+                
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="url"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    placeholder="https://example.com"
+                    style={{
+                      flex: 1,
+                      padding: '10px 12px',
+                      border: `1px solid ${theme.border}`,
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      backgroundColor: theme.bg,
+                      color: theme.text,
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                  <button
+                    onClick={handleAddUrl}
+                    disabled={!urlInput.trim()}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: urlInput.trim() ? theme.primary : theme.border,
+                      color: urlInput.trim() ? 'white' : theme.textSecondary,
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: urlInput.trim() ? 'pointer' : 'not-allowed',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      fontFamily: 'inherit',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <Plus size={14} />
+                    Add URL
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Media Files List */}
+            {formData.media_files && formData.media_files.length > 0 && (
+              <div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '12px'
+                }}>
+                  <h4 style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: theme.text,
+                    margin: '0'
+                  }}>
+                    Added Media & Links
+                  </h4>
+                  <span style={{
+                    padding: '4px 8px',
+                    backgroundColor: theme.primary,
+                    color: 'white',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    borderRadius: '12px'
+                  }}>
+                    {formData.media_files.length} items
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  {formData.media_files.map((file) => (
+                    <div key={file.id} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px',
+                      backgroundColor: theme.cardBg,
+                      borderRadius: '6px',
+                      border: `1px solid ${theme.border}`
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                        <div style={{
+                          padding: '8px',
+                          backgroundColor: theme.bg,
+                          borderRadius: '6px',
+                          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                        }}>
+                          {getFileIcon(file.type)}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            color: theme.text,
+                            marginBottom: '2px'
+                          }}>
+                            {file.name}
+                          </div>
+                          <div style={{
+                            fontSize: '11px',
+                            color: theme.textSecondary
+                          }}>
+                            {file.type === 'url_link' ? (
+                              <span style={{ 
+                                wordBreak: 'break-all',
+                                display: 'block'
+                              }}>
+                                {file.url.length > 50 ? file.url.substring(0, 50) + '...' : file.url}
+                              </span>
+                            ) : (
+                              `${file.type.toUpperCase()} • ${Math.round(file.size / 1024)}KB`
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveFile(file.id)}
+                        style={{
+                          padding: '6px',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          color: theme.textSecondary,
+                          marginLeft: '8px',
+                          flexShrink: 0
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = theme.hoverBg;
+                          e.currentTarget.style.color = theme.danger;
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.color = theme.textSecondary;
+                        }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Character Profile & Selection Fields */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '16px'
+          }}>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: theme.text,
+                marginBottom: '8px'
+              }}>
+                Character Profile
+              </label>
+              <select
+                value={formData.character_profile || ''}
+                onChange={(e) => handleFieldChange('character_profile', e.target.value)}
+                style={inputStyle}
+              >
+                <option value="">Select character...</option>
+                {characterProfiles.map(profile => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name} ({profile.username}) - {profile.role}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: theme.text,
+                marginBottom: '8px'
+              }}>
+                Voice Style
+              </label>
+              <select
+                value={formData.voice_style || ''}
+                onChange={(e) => handleFieldChange('voice_style', e.target.value)}
+                style={inputStyle}
+              >
+                <option value="">Select voice style...</option>
+                <option value="casual">Casual</option>
+                <option value="friendly">Friendly</option>
+                <option value="professional">Professional</option>
+                <option value="creative">Creative</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Platform Selection */}
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: theme.text,
+              marginBottom: '12px'
+            }}>
+              Publishing Platforms
+            </label>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '12px'
+            }}>
+              {availablePlatforms.filter(p => p.isActive).map((platform) => (
+                <label
+                  key={platform.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px',
+                    border: formData.selected_platforms?.includes(platform.id)
+                      ? `1px solid ${theme.primary}`
+                      : `1px solid ${theme.border}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    backgroundColor: formData.selected_platforms?.includes(platform.id)
+                      ? (isDarkMode ? '#1e3a8a30' : '#dbeafe')
+                      : theme.cardBg,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.selected_platforms?.includes(platform.id) || false}
+                    onChange={() => handlePlatformToggle(platform.id)}
+                    style={{
+                      height: '16px',
+                      width: '16px',
+                      accentColor: theme.primary
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: theme.text,
+                      marginBottom: '2px'
+                    }}>
+                      {platform.name}
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div style={{
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            padding: '12px',
+            marginTop: '20px',
+            color: '#dc2626',
+            fontSize: '14px'
+          }}>
+            {error}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '12px',
+          marginTop: '24px',
+          paddingTop: '16px',
+          borderTop: `1px solid ${theme.border}`
+        }}>
+          <button
+            onClick={onCancel}
+            disabled={isSubmitting}
+            style={buttonStyle('secondary')}
+            onMouseOver={(e) => {
+              if (!isSubmitting) {
+                e.currentTarget.style.backgroundColor = theme.hoverBg;
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!isSubmitting) {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
+          >
+            Cancel
+          </button>
+          
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting || !formData.description?.trim()}
+            style={{
+              ...buttonStyle('primary'),
+              opacity: (isSubmitting || !formData.description?.trim()) ? 0.7 : 1,
+              cursor: (isSubmitting || !formData.description?.trim()) ? 'not-allowed' : 'pointer'
+            }}
+            onMouseOver={(e) => {
+              if (!isSubmitting && formData.description?.trim()) {
+                e.currentTarget.style.backgroundColor = theme.primaryHover;
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!isSubmitting && formData.description?.trim()) {
+                e.currentTarget.style.backgroundColor = theme.primary;
+              }
+            }}
+          >
+            {isSubmitting ? (
+              <>
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid transparent',
+                  borderTop: '2px solid white',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save size={16} />
+                Save Changes
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* CSS for loading animation */}
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    </div>
+  );
+}
