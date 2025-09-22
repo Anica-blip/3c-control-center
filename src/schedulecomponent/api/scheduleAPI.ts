@@ -1,5 +1,5 @@
 // /src/schedulecomponent/api/scheduleAPI.ts - FIXED to work with corrected types
-import { supabase } from '../../supabase/config';
+import { supabase } from '../../../supabase/config';
 import { DashboardPost, ScheduledPost, DashboardTemplate } from '../types';
 
 export const scheduleAPI = {
