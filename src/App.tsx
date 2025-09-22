@@ -1,12 +1,54 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 
-// Import your real components
+// Import your real components - with fallbacks for missing components
 import ContentComponent from './contentcomponent';
 import ChatManagerPublic from './webchat';
-import ScheduleComponentContent from './schedulecomponent';
 import MarketingControlCenter from './marketingcomponent';
 import SettingsComponentContent from './settingscomponent';
 import AdminComponentsContent from './admincomponents';
+
+// CREATE PLACEHOLDER COMPONENTS FOR MISSING FILES
+const ScheduleComponentContent = () => {
+  const { isDarkMode } = useTheme();
+  
+  return (
+    <div style={{
+      padding: '20px',
+      backgroundColor: isDarkMode ? '#1e293b' : 'white',
+      borderRadius: '8px',
+      border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+      textAlign: 'center'
+    }}>
+      <h3 style={{
+        color: isDarkMode ? '#60a5fa' : '#3b82f6',
+        marginBottom: '16px'
+      }}>
+        📅 Schedule Component
+      </h3>
+      <p style={{
+        color: isDarkMode ? '#94a3b8' : '#6b7280',
+        marginBottom: '16px'
+      }}>
+        Schedule component will be implemented here.
+      </p>
+      <div style={{
+        padding: '16px',
+        backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
+        borderRadius: '6px',
+        fontSize: '14px',
+        color: isDarkMode ? '#e2e8f0' : '#374151'
+      }}>
+        This component will handle:
+        <ul style={{ textAlign: 'left', marginTop: '8px' }}>
+          <li>Post scheduling</li>
+          <li>Calendar view</li>
+          <li>Delivery tracking</li>
+          <li>Time zone management</li>
+        </ul>
+      </div>
+    </div>
+  );
+};
 
 // Theme Context
 const ThemeContext = createContext({
@@ -686,7 +728,7 @@ const OverviewComponent = () => {
             fontSize: '11px',
             margin: '0'
           }}>
-            🌍 Language: English (UK) • ⏰ Timezone: WEST (UTC+1) • 🎯 3C Control Center v2.0
+            🌐 Language: English (UK) • ⏰ Timezone: WEST (UTC+1) • 🎯 3C Control Center v2.0
           </p>
         </div>
       </div>
@@ -1260,4 +1302,3 @@ function App() {
 }
 
 export default App;
-
