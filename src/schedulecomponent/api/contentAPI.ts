@@ -1,10 +1,41 @@
-// /src/schedulecomponent/api/contentAPI.ts - FIXED
+// /src/schedulecomponent/api/contentAPI.ts - FIXED IMPORTS
 import { ContentPost, MediaFile } from '../types';
 
-// Dynamic import for supabase to avoid import issues
+// Try multiple possible supabase import paths
 const getSupabase = async () => {
-  const { supabase } = await import('../../supabase/config');
-  return supabase;
+  try {
+    // Try the most common paths
+    const paths = [
+      '../../supabase/config',
+      '../../lib/supabase', 
+      '../../utils/supabase',
+      '../../../supabase/config',
+      '../../supabaseClient',
+      '../../config/supabase'
+    ];
+    
+    for (const path of paths) {
+      try {
+        const module = await import(path);
+        if (module.supabase) {
+          return module.supabase;
+        }
+        // Sometimes it's exported as default
+        if (module.default) {
+          return module.default;
+        }
+      } catch (pathError) {
+        // Continue to next path
+        continue;
+      }
+    }
+    
+    // If no path works, throw descriptive error
+    throw new Error(`Could not find supabase config. Tried paths: ${paths.join(', ')}`);
+  } catch (error) {
+    console.error('Supabase import error:', error);
+    throw new Error('Supabase client not available. Please check your supabase configuration.');
+  }
 };
 
 export const contentAPI = {
@@ -23,7 +54,7 @@ export const contentAPI = {
         
       if (error) throw error;
       
-      return (data || []).map(post => this.mapDatabaseToContentPost(post));
+      return (data || []).map((post: any) => this.mapDatabaseToContentPost(post));
     } catch (error) {
       console.error('Error fetching content posts:', error);
       throw error;
@@ -140,175 +171,4 @@ export const contentAPI = {
         
       if (fetchError) throw fetchError;
       
-      // Create a new post with the same data but new ID and timestamp
-      const duplicateData = {
-        ...originalPost,
-        id: undefined, // Let Supabase generate new ID
-        content_id: `${originalPost.content_id}-copy-${Date.now()}`,
-        created_at: undefined, // Let Supabase set current timestamp
-        updated_at: undefined
-      };
-      
-      const { data, error } = await supabase
-        .from('content_posts')
-        .insert(duplicateData)
-        .select()
-        .single();
-        
-      if (error) throw error;
-      return this.mapDatabaseToContentPost(data);
-    } catch (error) {
-      console.error('Error duplicating content post:', error);
-      throw error;
-    }
-  },
-
-  async searchPosts(userId: string, searchTerm: string): Promise<ContentPost[]> {
-    try {
-      const supabase = await getSupabase();
-      const { data, error } = await supabase
-        .from('content_posts')
-        .select(`
-          *,
-          character_profiles(name, username, role)
-        `)
-        .or(`user_id.eq.${userId},user_id.is.null`)
-        .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,keywords.ilike.%${searchTerm}%`)
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      
-      return (data || []).map(post => this.mapDatabaseToContentPost(post));
-    } catch (error) {
-      console.error('Error searching content posts:', error);
-      throw error;
-    }
-  },
-
-  async getPostsByStatus(userId: string, status: string): Promise<ContentPost[]> {
-    try {
-      const supabase = await getSupabase();
-      const { data, error } = await supabase
-        .from('content_posts')
-        .select(`
-          *,
-          character_profiles(name, username, role)
-        `)
-        .or(`user_id.eq.${userId},user_id.is.null`)
-        .eq('status', status)
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      
-      return (data || []).map(post => this.mapDatabaseToContentPost(post));
-    } catch (error) {
-      console.error('Error fetching posts by status:', error);
-      throw error;
-    }
-  },
-
-  async createPendingPost(postData: any): Promise<any> {
-    try {
-      const supabase = await getSupabase();
-      
-      // This method is called by scheduleAPI to create the pending schedule entry
-      const pendingRecord = {
-        original_post_id: postData.original_post_id,
-        content_id: postData.contentId,
-        character_profile_id: postData.characterProfile,
-        theme: postData.theme,
-        audience: postData.audience,
-        media_type: postData.mediaType,
-        template_type: postData.templateType,
-        platform: postData.platform,
-        voice_style: postData.voiceStyle,
-        title: postData.title,
-        description: postData.description,
-        hashtags: postData.hashtags,
-        keywords: postData.keywords,
-        cta: postData.cta,
-        media_files: postData.mediaFiles,
-        selected_platforms: postData.selectedPlatforms,
-        status: postData.status,
-        is_from_template: postData.isFromTemplate,
-        source_template_id: postData.sourceTemplateId,
-        user_id: postData.user_id,
-        created_by: postData.created_by
-      };
-      
-      const { data, error } = await supabase
-        .from('pending_schedule')
-        .insert(pendingRecord)
-        .select()
-        .single();
-        
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error creating pending post:', error);
-      throw error;
-    }
-  },
-
-  // Integration with Schedule Manager
-  async fetchPendingSchedulePosts(userId: string): Promise<any[]> {
-    try {
-      const supabase = await getSupabase();
-      const { data, error } = await supabase
-        .from('pending_schedule')
-        .select('*')
-        .or(`user_id.eq.${userId},user_id.is.null`)
-        .eq('status', 'pending_schedule')
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching pending schedule posts:', error);
-      throw error;
-    }
-  },
-
-  async updatePendingPostStatus(id: string, status: string): Promise<void> {
-    try {
-      const supabase = await getSupabase();
-      const { error } = await supabase
-        .from('pending_schedule')
-        .update({ status })
-        .eq('id', id);
-        
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error updating pending post status:', error);
-      throw error;
-    }
-  },
-
-  // Helper function to map database records to TypeScript interface
-  mapDatabaseToContentPost(data: any): ContentPost {
-    return {
-      id: data.id,
-      contentId: data.content_id,
-      characterProfile: data.character_profile_id || '',
-      theme: data.theme || '',
-      audience: data.audience || '',
-      mediaType: data.media_type || '',
-      templateType: data.template_type || '',
-      platform: data.platform || '',
-      voiceStyle: data.voice_style || '',
-      title: data.title || '',
-      description: data.description || '',
-      hashtags: Array.isArray(data.hashtags) ? data.hashtags : [],
-      keywords: data.keywords || '',
-      cta: data.cta || '',
-      mediaFiles: Array.isArray(data.media_files) ? data.media_files : [],
-      selectedPlatforms: Array.isArray(data.selected_platforms) ? data.selected_platforms : [],
-      status: data.status,
-      createdDate: new Date(data.created_at),
-      isFromTemplate: data.is_from_template || false,
-      sourceTemplateId: data.source_template_id,
-      user_id: data.user_id,
-      created_by: data.created_by
-    };
-  }
-};
+      // Create a new post with the same data but new ID an
