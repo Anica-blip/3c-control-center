@@ -1,9 +1,16 @@
+// /src/schedulecomponent/api/contentAPI.ts - FIXED to work with corrected workflow
 import { supabase } from '../../supabase/config';
-import { ContentPost, MediaFile } from '../types';
+import { ContentPost, DashboardPost } from '../types';
 
 export const contentAPI = {
-  // Content Posts Operations
-  async fetchPosts(userId: string): Promise<ContentPost[]> {
+  // ===== CONTENT POSTS (Draft posts in Content Creation) =====
+  
+  /**
+   * Fetch content posts (drafts in content creation)
+   * @param userId - User ID to filter posts
+   * @returns Array of content posts
+   */
+  async fetchContentPosts(userId: string): Promise<ContentPost[]> {
     try {
       const { data, error } = await supabase
         .from('content_posts')
@@ -16,54 +23,71 @@ export const contentAPI = {
         
       if (error) throw error;
       
-      return data.map(post => this.mapDatabaseToContentPost(post));
+      return data.map(post => ({
+        id: post.id,
+        contentId: post.content_id,
+        characterProfile: post.character_profile_id || '',
+        theme: post.theme || '',
+        audience: post.audience || '',
+        mediaType: post.media_type || '',
+        templateType: post.template_type || '',
+        platform: post.platform || '',
+        voiceStyle: post.voice_style || '',
+        title: post.title || '',
+        description: post.description || '',
+        hashtags: post.hashtags || [],
+        keywords: post.keywords || '',
+        cta: post.cta || '',
+        mediaFiles: post.media_files || [],
+        selectedPlatforms: post.selected_platforms || [],
+        status: post.status,
+        createdDate: new Date(post.created_at),
+        isFromTemplate: post.is_from_template || false,
+        sourceTemplateId: post.source_template_id,
+        user_id: post.user_id,
+        created_by: post.created_by
+      }));
     } catch (error) {
       console.error('Error fetching content posts:', error);
       throw error;
     }
   },
 
-  async savePost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
+  /**
+   * Save content post (draft in content creation)
+   * @param postData - Content post data
+   * @returns Created content post
+   */
+  async saveContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
     try {
-      console.log('Saving post to content_posts:', postData);
-      
-      const insertData = {
-        content_id: postData.contentId,
-        character_profile_id: postData.characterProfile,
-        theme: postData.theme,
-        audience: postData.audience,
-        media_type: postData.mediaType,
-        template_type: postData.templateType,
-        platform: postData.platform,
-        voice_style: postData.voiceStyle,
-        title: postData.title,
-        description: postData.description,
-        hashtags: postData.hashtags,
-        keywords: postData.keywords,
-        cta: postData.cta,
-        media_files: postData.mediaFiles,
-        selected_platforms: postData.selectedPlatforms,
-        status: postData.status,
-        is_from_template: postData.isFromTemplate || false,
-        source_template_id: postData.sourceTemplateId,
-        user_id: postData.user_id,
-        created_by: postData.created_by
-      };
-
-      console.log('Insert data for content_posts:', insertData);
-
       const { data, error } = await supabase
         .from('content_posts')
-        .insert(insertData)
+        .insert({
+          content_id: postData.contentId,
+          character_profile_id: postData.characterProfile,
+          theme: postData.theme,
+          audience: postData.audience,
+          media_type: postData.mediaType,
+          template_type: postData.templateType,
+          platform: postData.platform,
+          voice_style: postData.voiceStyle,
+          title: postData.title,
+          description: postData.description,
+          hashtags: postData.hashtags,
+          keywords: postData.keywords,
+          cta: postData.cta,
+          media_files: postData.mediaFiles,
+          selected_platforms: postData.selectedPlatforms,
+          status: postData.status,
+          is_from_template: postData.isFromTemplate,
+          source_template_id: postData.sourceTemplateId,
+          user_id: postData.user_id,
+          created_by: postData.created_by
+        })
         .select()
         .single();
         
-      if (error) {
-        console.error('Supabase error saving post:', error);
-        throw error;
-      }
-
-      console.log('Post saved successfully:', data);
+      if (error) throw error;
       return this.mapDatabaseToContentPost(data);
     } catch (error) {
       console.error('Error saving content post:', error);
@@ -71,7 +95,13 @@ export const contentAPI = {
     }
   },
 
-  async updatePost(id: string, updates: Partial<ContentPost>): Promise<ContentPost> {
+  /**
+   * Update content post
+   * @param id - Post ID
+   * @param updates - Partial updates
+   * @returns Updated content post
+   */
+  async updateContentPost(id: string, updates: Partial<ContentPost>): Promise<ContentPost> {
     try {
       const updateData: any = {};
       
@@ -110,7 +140,11 @@ export const contentAPI = {
     }
   },
 
-  async deletePost(id: string): Promise<void> {
+  /**
+   * Delete content post
+   * @param id - Post ID
+   */
+  async deleteContentPost(id: string): Promise<void> {
     try {
       const { error } = await supabase
         .from('content_posts')
@@ -124,7 +158,59 @@ export const contentAPI = {
     }
   },
 
-  async duplicatePost(id: string): Promise<ContentPost> {
+  /**
+   * Forward content post to Schedule Manager
+   * This creates a dashboard post from a content post
+   * @param contentPost - Content post to forward
+   * @returns Created dashboard post
+   */
+  async forwardToScheduleManager(contentPost: ContentPost): Promise<DashboardPost> {
+    try {
+      // Create dashboard post from content post
+      const dashboardPostData = {
+        original_content_id: contentPost.id,
+        content_id: contentPost.contentId,
+        character_profile: contentPost.characterProfile,
+        theme: contentPost.theme,
+        audience: contentPost.audience,
+        media_type: contentPost.mediaType,
+        template_type: contentPost.templateType,
+        platform: contentPost.platform,
+        voice_style: contentPost.voiceStyle,
+        title: contentPost.title,
+        description: contentPost.description,
+        hashtags: contentPost.hashtags,
+        keywords: contentPost.keywords,
+        cta: contentPost.cta,
+        media_files: contentPost.mediaFiles,
+        selected_platforms: contentPost.selectedPlatforms,
+        status: 'pending_schedule' as const // Always pending_schedule when forwarded
+      };
+
+      const { data, error } = await supabase
+        .from('dashboard_posts')
+        .insert(dashboardPostData)
+        .select()
+        .single();
+        
+      if (error) throw error;
+
+      // Update original content post status to 'pending'
+      await this.updateContentPost(contentPost.id, { status: 'pending' });
+
+      return this.mapDatabaseToDashboardPost(data);
+    } catch (error) {
+      console.error('Error forwarding to schedule manager:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Duplicate content post
+   * @param id - Post ID to duplicate
+   * @returns Duplicated content post
+   */
+  async duplicateContentPost(id: string): Promise<ContentPost> {
     try {
       // First, fetch the original post
       const { data: originalPost, error: fetchError } = await supabase
@@ -158,7 +244,13 @@ export const contentAPI = {
     }
   },
 
-  async searchPosts(userId: string, searchTerm: string): Promise<ContentPost[]> {
+  /**
+   * Search content posts
+   * @param userId - User ID to filter posts
+   * @param searchTerm - Search term
+   * @returns Filtered array of content posts
+   */
+  async searchContentPosts(userId: string, searchTerm: string): Promise<ContentPost[]> {
     try {
       const { data, error } = await supabase
         .from('content_posts')
@@ -179,7 +271,13 @@ export const contentAPI = {
     }
   },
 
-  async getPostsByStatus(userId: string, status: string): Promise<ContentPost[]> {
+  /**
+   * Get content posts by status
+   * @param userId - User ID to filter posts
+   * @param status - Status to filter by
+   * @returns Filtered array of content posts
+   */
+  async getContentPostsByStatus(userId: string, status: string): Promise<ContentPost[]> {
     try {
       const { data, error } = await supabase
         .from('content_posts')
@@ -200,212 +298,13 @@ export const contentAPI = {
     }
   },
 
-  // FIXED: Get posts by character profile for analytics
-  async getPostsByCharacter(userId: string, characterId: string): Promise<ContentPost[]> {
-    try {
-      const { data, error } = await supabase
-        .from('content_posts')
-        .select(`
-          *,
-          character_profiles(name, username, role)
-        `)
-        .or(`user_id.eq.${userId},user_id.is.null`)
-        .eq('character_profile_id', characterId)
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      
-      return data.map(post => this.mapDatabaseToContentPost(post));
-    } catch (error) {
-      console.error('Error fetching posts by character:', error);
-      throw error;
-    }
-  },
+  // ===== HELPER FUNCTIONS =====
 
-  // FIXED: Get posts by theme for analytics
-  async getPostsByTheme(userId: string, theme: string): Promise<ContentPost[]> {
-    try {
-      const { data, error } = await supabase
-        .from('content_posts')
-        .select(`
-          *,
-          character_profiles(name, username, role)
-        `)
-        .or(`user_id.eq.${userId},user_id.is.null`)
-        .eq('theme', theme)
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      
-      return data.map(post => this.mapDatabaseToContentPost(post));
-    } catch (error) {
-      console.error('Error fetching posts by theme:', error);
-      throw error;
-    }
-  },
-
-  // FIXED: Get posts created from templates
-  async getPostsFromTemplates(userId: string): Promise<ContentPost[]> {
-    try {
-      const { data, error } = await supabase
-        .from('content_posts')
-        .select(`
-          *,
-          character_profiles(name, username, role)
-        `)
-        .or(`user_id.eq.${userId},user_id.is.null`)
-        .eq('is_from_template', true)
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      
-      return data.map(post => this.mapDatabaseToContentPost(post));
-    } catch (error) {
-      console.error('Error fetching posts from templates:', error);
-      throw error;
-    }
-  },
-
-  // FIXED: Get analytics data for dashboard
-  async getAnalyticsData(userId: string): Promise<{
-    totalPosts: number;
-    postsThisWeek: number;
-    postsThisMonth: number;
-    statusBreakdown: Record<string, number>;
-    platformBreakdown: Record<string, number>;
-    themeBreakdown: Record<string, number>;
-    recentActivity: ContentPost[];
-  }> {
-    try {
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-      
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
-      // Get all posts for analysis
-      const posts = await this.fetchPosts(userId);
-      
-      // Calculate analytics
-      const totalPosts = posts.length;
-      
-      const postsThisWeek = posts.filter(post => 
-        new Date(post.createdDate) >= oneWeekAgo
-      ).length;
-      
-      const postsThisMonth = posts.filter(post => 
-        new Date(post.createdDate) >= oneMonthAgo
-      ).length;
-
-      // Status breakdown
-      const statusBreakdown = posts.reduce((acc, post) => {
-        acc[post.status] = (acc[post.status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-      // Platform breakdown (count all selected platforms)
-      const platformBreakdown = posts.reduce((acc, post) => {
-        post.selectedPlatforms.forEach(platform => {
-          acc[platform] = (acc[platform] || 0) + 1;
-        });
-        return acc;
-      }, {} as Record<string, number>);
-
-      // Theme breakdown
-      const themeBreakdown = posts.reduce((acc, post) => {
-        if (post.theme) {
-          acc[post.theme] = (acc[post.theme] || 0) + 1;
-        }
-        return acc;
-      }, {} as Record<string, number>);
-
-      // Recent activity (last 10 posts)
-      const recentActivity = posts.slice(0, 10);
-
-      return {
-        totalPosts,
-        postsThisWeek,
-        postsThisMonth,
-        statusBreakdown,
-        platformBreakdown,
-        themeBreakdown,
-        recentActivity
-      };
-    } catch (error) {
-      console.error('Error fetching analytics data:', error);
-      throw error;
-    }
-  },
-
-  // FIXED: Batch operations for efficiency
-  async batchUpdateStatus(postIds: string[], status: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('content_posts')
-        .update({ status })
-        .in('id', postIds);
-        
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error batch updating status:', error);
-      throw error;
-    }
-  },
-
-  async batchDeletePosts(postIds: string[]): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('content_posts')
-        .delete()
-        .in('id', postIds);
-        
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error batch deleting posts:', error);
-      throw error;
-    }
-  },
-
-  // FIXED: Export posts as JSON for backup
-  async exportPosts(userId: string, format: 'json' | 'csv' = 'json'): Promise<string> {
-    try {
-      const posts = await this.fetchPosts(userId);
-      
-      if (format === 'json') {
-        return JSON.stringify(posts, null, 2);
-      } else {
-        // Simple CSV export
-        const headers = [
-          'ID', 'Content ID', 'Title', 'Description', 'Theme', 'Audience', 
-          'Status', 'Created Date', 'Selected Platforms', 'Hashtags'
-        ];
-        
-        const rows = posts.map(post => [
-          post.id,
-          post.contentId,
-          post.title,
-          post.description?.substring(0, 100) + '...',
-          post.theme,
-          post.audience,
-          post.status,
-          post.createdDate.toISOString().split('T')[0],
-          post.selectedPlatforms.join('; '),
-          post.hashtags.join('; ')
-        ]);
-
-        const csvContent = [headers, ...rows]
-          .map(row => row.map(cell => `"${cell}"`).join(','))
-          .join('\n');
-          
-        return csvContent;
-      }
-    } catch (error) {
-      console.error('Error exporting posts:', error);
-      throw error;
-    }
-  },
-
-  // Helper function to map database records to TypeScript interface
+  /**
+   * Map database record to ContentPost interface
+   * @param data - Database record
+   * @returns ContentPost object
+   */
   mapDatabaseToContentPost(data: any): ContentPost {
     return {
       id: data.id,
@@ -430,6 +329,36 @@ export const contentAPI = {
       sourceTemplateId: data.source_template_id,
       user_id: data.user_id,
       created_by: data.created_by
+    };
+  },
+
+  /**
+   * Map database record to DashboardPost interface
+   * @param data - Database record
+   * @returns DashboardPost object
+   */
+  mapDatabaseToDashboardPost(data: any): DashboardPost {
+    return {
+      id: data.id,
+      original_content_id: data.original_content_id,
+      content_id: data.content_id,
+      character_profile: data.character_profile || '',
+      theme: data.theme || '',
+      audience: data.audience || '',
+      media_type: data.media_type || '',
+      template_type: data.template_type || '',
+      platform: data.platform || '',
+      voice_style: data.voice_style || '',
+      title: data.title || '',
+      description: data.description || '',
+      hashtags: data.hashtags || [],
+      keywords: data.keywords || '',
+      cta: data.cta || '',
+      media_files: data.media_files || [],
+      selected_platforms: data.selected_platforms || [],
+      status: data.status,
+      created_date: new Date(data.created_at),
+      updated_at: new Date(data.updated_at)
     };
   }
 };
