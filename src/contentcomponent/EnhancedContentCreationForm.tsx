@@ -3,6 +3,9 @@ import { Upload, X, Image, Video, FileText, Settings, ExternalLink, Plus, User, 
 import { ContentPost, MediaFile, SocialPlatform, CharacterProfile } from './types';
 import { SavedPostsList } from './SavedPostsList';
 import { supabaseAPI } from './supabaseAPI';
+// ADD NEW IMPORTS FOR SUPABASE INTEGRATION
+import { contentAPI } from './contentAPI';
+import { scheduleAPI } from './scheduleAPI';
 import { 
   fetchUrlPreview, 
   getThemeCode, 
@@ -36,10 +39,8 @@ const EnhancedContentCreationForm = ({
   // ADD THESE NEW PROPS FOR TEMPLATE LIBRARY INTEGRATION:
   loadedTemplate,
   onTemplateLoaded,
-  // ADD USER CONTEXT FOR SUPABASE INTEGRATION:
-  user,
-  contentAPI,
-  scheduleAPI
+  // ADD USER PROP FOR SUPABASE INTEGRATION:
+  user
 }: {
   onSave: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
   onAddToSchedule: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
@@ -52,10 +53,8 @@ const EnhancedContentCreationForm = ({
   // ADD THESE NEW PROPS FOR TEMPLATE LIBRARY INTEGRATION:
   loadedTemplate?: PendingLibraryTemplate | null;
   onTemplateLoaded?: () => void;
-  // ADD USER AND API PROPS FOR SUPABASE INTEGRATION:
-  user?: { id: string; [key: string]: any };
-  contentAPI?: any;
-  scheduleAPI?: any;
+  // ADD USER PROP FOR SUPABASE INTEGRATION:
+  user?: { id: string } | null;
 }) => {
   const { isDarkMode } = useTheme();
 
@@ -697,10 +696,7 @@ const EnhancedContentCreationForm = ({
       selectedPlatforms,
       status: 'pending' as const,
       isFromTemplate: isEditingTemplate, // CHANGED: Use template status
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id, // ADDED
-      // ADD USER TRACKING FOR SUPABASE:
-      user_id: user?.id,
-      created_by: user?.id
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
     };
 
     try {
@@ -725,32 +721,25 @@ const EnhancedContentCreationForm = ({
       mediaFiles,
       selectedPlatforms,
       status: 'scheduled' as const,
-      isFromTemplate: isEditingTemplate, // CHANGED: Use template status
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id, // ADDED
+      isFromTemplate: isEditingTemplate,
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
       // ADD USER TRACKING FOR SUPABASE:
       user_id: user?.id,
       created_by: user?.id
     };
 
     try {
-      // Check if we have the required APIs for Supabase integration
-      if (contentAPI && scheduleAPI && user?.id) {
-        // Save to content_posts first
-        const savedPost = await contentAPI.savePost(postData);
-        
-        // Create pending schedule entry
-        await scheduleAPI.createPendingPost({
-          ...postData,
-          original_post_id: savedPost.id,
-          status: 'pending_schedule'
-        });
-        
-        resetForm();
-      } else {
-        // Fallback to original method if APIs not available
-        await onAddToSchedule(postData);
-        resetForm();
-      }
+      // Save to content_posts first
+      const savedPost = await contentAPI.savePost(postData);
+      
+      // Create pending schedule entry
+      await scheduleAPI.createPendingPost({
+        ...postData,
+        original_post_id: savedPost.id,
+        status: 'pending_schedule'
+      });
+      
+      resetForm();
     } catch (error) {
       console.error('Schedule failed:', error);
       alert('Failed to schedule post. Your content is preserved.');
