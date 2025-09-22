@@ -1,4 +1,4 @@
-import { supabase } from '../../supabase/config';
+import { supabase } from '../config';
 import { ContentPost, MediaFile } from '../types';
 
 export const contentAPI = {
