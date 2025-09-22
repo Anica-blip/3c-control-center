@@ -152,6 +152,181 @@ export const scheduleAPI = {
     }
   },
 
+  // MISSING METHOD - CREATE PENDING POST FOR SCHEDULE QUEUE
+  async createPendingPost(postData: any): Promise<PendingPost> {
+    try {
+      const { data, error } = await supabase
+        .from('pending_schedule')
+        .insert({
+          original_post_id: postData.original_post_id,
+          content_id: postData.content_id,
+          character_profile: postData.character_profile,
+          theme: postData.theme,
+          audience: postData.audience,
+          media_type: postData.media_type,
+          template_type: postData.template_type,
+          platform: postData.platform,
+          voice_style: postData.voice_style,
+          title: postData.title,
+          description: postData.description,
+          hashtags: postData.hashtags,
+          keywords: postData.keywords,
+          cta: postData.cta,
+          media_files: postData.media_files,
+          selected_platforms: postData.selected_platforms,
+          status: postData.status || 'pending_schedule',
+          is_from_template: postData.is_from_template,
+          source_template_id: postData.source_template_id,
+          user_id: postData.user_id,
+          created_by: postData.created_by
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      // Map to PendingPost interface
+      return {
+        id: data.id,
+        content_id: data.content_id,
+        character_profile: data.character_profile,
+        theme: data.theme,
+        audience: data.audience,
+        media_type: data.media_type,
+        template_type: data.template_type,
+        platform: data.platform,
+        title: data.title,
+        description: data.description,
+        hashtags: data.hashtags || [],
+        keywords: data.keywords || '',
+        cta: data.cta || '',
+        media_files: data.media_files || [],
+        selected_platforms: data.selected_platforms || [],
+        status: 'pending_schedule',
+        created_date: new Date(data.created_at),
+        user_id: data.user_id,
+        created_by: data.created_by,
+        is_from_template: data.is_from_template,
+        source_template_id: data.source_template_id
+      };
+    } catch (error) {
+      console.error('Error creating pending post:', error);
+      throw error;
+    }
+  },
+
+  // FETCH PENDING POSTS FOR SCHEDULE MANAGER
+  async fetchPendingPosts(userId: string): Promise<PendingPost[]> {
+    try {
+      const { data, error } = await supabase
+        .from('pending_schedule')
+        .select(`
+          *,
+          character_profiles(name, username, role)
+        `)
+        .or(`user_id.eq.${userId},user_id.is.null`)
+        .eq('status', 'pending_schedule')
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      return data.map(post => ({
+        id: post.id,
+        content_id: post.content_id,
+        character_profile: post.character_profile,
+        theme: post.theme,
+        audience: post.audience,
+        media_type: post.media_type,
+        template_type: post.template_type,
+        platform: post.platform,
+        title: post.title,
+        description: post.description,
+        hashtags: post.hashtags || [],
+        keywords: post.keywords || '',
+        cta: post.cta || '',
+        media_files: post.media_files || [],
+        selected_platforms: post.selected_platforms || [],
+        status: 'pending_schedule',
+        created_date: new Date(post.created_at),
+        user_id: post.user_id,
+        created_by: post.created_by,
+        is_from_template: post.is_from_template,
+        source_template_id: post.source_template_id
+      }));
+    } catch (error) {
+      console.error('Error fetching pending posts:', error);
+      throw error;
+    }
+  },
+
+  // UPDATE PENDING POST (FOR EDITING BEFORE SCHEDULING)
+  async updatePendingPost(id: string, updates: Partial<PendingPost>): Promise<PendingPost> {
+    try {
+      const updateData: any = {};
+      
+      // Map fields
+      if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.hashtags !== undefined) updateData.hashtags = updates.hashtags;
+      if (updates.keywords !== undefined) updateData.keywords = updates.keywords;
+      if (updates.cta !== undefined) updateData.cta = updates.cta;
+      if (updates.media_files !== undefined) updateData.media_files = updates.media_files;
+      if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
+      if (updates.status !== undefined) updateData.status = updates.status;
+
+      const { data, error } = await supabase
+        .from('pending_schedule')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      return {
+        id: data.id,
+        content_id: data.content_id,
+        character_profile: data.character_profile,
+        theme: data.theme,
+        audience: data.audience,
+        media_type: data.media_type,
+        template_type: data.template_type,
+        platform: data.platform,
+        title: data.title,
+        description: data.description,
+        hashtags: data.hashtags || [],
+        keywords: data.keywords || '',
+        cta: data.cta || '',
+        media_files: data.media_files || [],
+        selected_platforms: data.selected_platforms || [],
+        status: data.status,
+        created_date: new Date(data.created_at),
+        user_id: data.user_id,
+        created_by: data.created_by,
+        is_from_template: data.is_from_template,
+        source_template_id: data.source_template_id
+      };
+    } catch (error) {
+      console.error('Error updating pending post:', error);
+      throw error;
+    }
+  },
+
+  // DELETE PENDING POST
+  async deletePendingPost(id: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('pending_schedule')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting pending post:', error);
+      throw error;
+    }
+  },
+
   // Template Operations
   async fetchTemplates(userId: string): Promise<SavedTemplate[]> {
     try {
