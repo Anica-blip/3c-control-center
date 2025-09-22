@@ -1,5 +1,5 @@
 // /src/schedulecomponent/api/contentAPI.ts - FIXED to work with corrected workflow
-import { supabase } from '../../supabase/config';
+import { supabase } from '../../../supabase/config';
 import { ContentPost, DashboardPost } from '../types';
 
 export const contentAPI = {
