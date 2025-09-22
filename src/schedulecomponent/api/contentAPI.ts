@@ -1,6 +1,34 @@
 import { supabase } from '../config';
 import { ContentPost, MediaFile } from '../types';
 
+// Helper function moved outside the object
+const mapDatabaseToContentPost = (data: any): ContentPost => {
+  return {
+    id: data.id,
+    contentId: data.content_id,
+    characterProfile: data.character_profile_id || '',
+    theme: data.theme || '',
+    audience: data.audience || '',
+    mediaType: data.media_type || '',
+    templateType: data.template_type || '',
+    platform: data.platform || '',
+    voiceStyle: data.voice_style || '',
+    title: data.title || '',
+    description: data.description || '',
+    hashtags: data.hashtags || [],
+    keywords: data.keywords || '',
+    cta: data.cta || '',
+    mediaFiles: data.media_files || [],
+    selectedPlatforms: data.selected_platforms || [],
+    status: data.status,
+    createdDate: new Date(data.created_at),
+    isFromTemplate: data.is_from_template || false,
+    sourceTemplateId: data.source_template_id,
+    user_id: data.user_id,
+    created_by: data.created_by
+  };
+};
+
 export const contentAPI = {
   // Content Posts Operations
   async fetchPosts(userId: string): Promise<ContentPost[]> {
@@ -16,28 +44,7 @@ export const contentAPI = {
         
       if (error) throw error;
       
-      return data.map(post => ({
-        id: post.id,
-        contentId: post.content_id,
-        characterProfile: post.character_profile_id || '',
-        theme: post.theme || '',
-        audience: post.audience || '',
-        mediaType: post.media_type || '',
-        templateType: post.template_type || '',
-        platform: post.platform || '',
-        voiceStyle: post.voice_style || '',
-        title: post.title || '',
-        description: post.description || '',
-        hashtags: post.hashtags || [],
-        keywords: post.keywords || '',
-        cta: post.cta || '',
-        mediaFiles: post.media_files || [],
-        selectedPlatforms: post.selected_platforms || [],
-        status: post.status,
-        createdDate: new Date(post.created_at),
-        isFromTemplate: post.is_from_template || false,
-        sourceTemplateId: post.source_template_id
-      }));
+      return data.map(post => mapDatabaseToContentPost(post));
     } catch (error) {
       console.error('Error fetching content posts:', error);
       throw error;
@@ -74,7 +81,7 @@ export const contentAPI = {
         .single();
         
       if (error) throw error;
-      return this.mapDatabaseToContentPost(data);
+      return mapDatabaseToContentPost(data);
     } catch (error) {
       console.error('Error saving content post:', error);
       throw error;
@@ -113,7 +120,7 @@ export const contentAPI = {
         .single();
         
       if (error) throw error;
-      return this.mapDatabaseToContentPost(data);
+      return mapDatabaseToContentPost(data);
     } catch (error) {
       console.error('Error updating content post:', error);
       throw error;
@@ -161,7 +168,7 @@ export const contentAPI = {
         .single();
         
       if (error) throw error;
-      return this.mapDatabaseToContentPost(data);
+      return mapDatabaseToContentPost(data);
     } catch (error) {
       console.error('Error duplicating content post:', error);
       throw error;
@@ -182,7 +189,7 @@ export const contentAPI = {
         
       if (error) throw error;
       
-      return data.map(post => this.mapDatabaseToContentPost(post));
+      return data.map(post => mapDatabaseToContentPost(post));
     } catch (error) {
       console.error('Error searching content posts:', error);
       throw error;
@@ -203,7 +210,7 @@ export const contentAPI = {
         
       if (error) throw error;
       
-      return data.map(post => this.mapDatabaseToContentPost(post));
+      return data.map(post => mapDatabaseToContentPost(post));
     } catch (error) {
       console.error('Error fetching posts by status:', error);
       throw error;
@@ -247,33 +254,5 @@ export const contentAPI = {
       console.error('Error creating pending post:', error);
       throw error;
     }
-  },
-
-  // Helper function to map database records to TypeScript interface
-  mapDatabaseToContentPost(data: any): ContentPost {
-    return {
-      id: data.id,
-      contentId: data.content_id,
-      characterProfile: data.character_profile_id || '',
-      theme: data.theme || '',
-      audience: data.audience || '',
-      mediaType: data.media_type || '',
-      templateType: data.template_type || '',
-      platform: data.platform || '',
-      voiceStyle: data.voice_style || '',
-      title: data.title || '',
-      description: data.description || '',
-      hashtags: data.hashtags || [],
-      keywords: data.keywords || '',
-      cta: data.cta || '',
-      mediaFiles: data.media_files || [],
-      selectedPlatforms: data.selected_platforms || [],
-      status: data.status,
-      createdDate: new Date(data.created_at),
-      isFromTemplate: data.is_from_template || false,
-      sourceTemplateId: data.source_template_id,
-      user_id: data.user_id,
-      created_by: data.created_by
-    };
   }
 };
