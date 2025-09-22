@@ -1,17 +1,17 @@
-// /src/schedulecomponent/api/contentAPI.ts - FIXED to work with corrected workflow
-import { supabase } from '../supabaseAPI';
-import { ContentPost, DashboardPost } from '../types';
+// /src/schedulecomponent/api/contentAPI.ts - FIXED
+import { ContentPost, MediaFile } from '../types';
+
+// Dynamic import for supabase to avoid import issues
+const getSupabase = async () => {
+  const { supabase } = await import('../../supabase/config');
+  return supabase;
+};
 
 export const contentAPI = {
-  // ===== CONTENT POSTS (Draft posts in Content Creation) =====
-  
-  /**
-   * Fetch content posts (drafts in content creation)
-   * @param userId - User ID to filter posts
-   * @returns Array of content posts
-   */
-  async fetchContentPosts(userId: string): Promise<ContentPost[]> {
+  // Content Posts Operations
+  async fetchPosts(userId: string): Promise<ContentPost[]> {
     try {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from('content_posts')
         .select(`
@@ -23,67 +23,44 @@ export const contentAPI = {
         
       if (error) throw error;
       
-      return data.map(post => ({
-        id: post.id,
-        contentId: post.content_id,
-        characterProfile: post.character_profile_id || '',
-        theme: post.theme || '',
-        audience: post.audience || '',
-        mediaType: post.media_type || '',
-        templateType: post.template_type || '',
-        platform: post.platform || '',
-        voiceStyle: post.voice_style || '',
-        title: post.title || '',
-        description: post.description || '',
-        hashtags: post.hashtags || [],
-        keywords: post.keywords || '',
-        cta: post.cta || '',
-        mediaFiles: post.media_files || [],
-        selectedPlatforms: post.selected_platforms || [],
-        status: post.status,
-        createdDate: new Date(post.created_at),
-        isFromTemplate: post.is_from_template || false,
-        sourceTemplateId: post.source_template_id,
-        user_id: post.user_id,
-        created_by: post.created_by
-      }));
+      return (data || []).map(post => this.mapDatabaseToContentPost(post));
     } catch (error) {
       console.error('Error fetching content posts:', error);
       throw error;
     }
   },
 
-  /**
-   * Save content post (draft in content creation)
-   * @param postData - Content post data
-   * @returns Created content post
-   */
-  async saveContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
+  async savePost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
     try {
+      const supabase = await getSupabase();
+      
+      // Prepare database record
+      const databaseRecord = {
+        content_id: postData.contentId,
+        character_profile_id: postData.characterProfile,
+        theme: postData.theme,
+        audience: postData.audience,
+        media_type: postData.mediaType,
+        template_type: postData.templateType,
+        platform: postData.platform,
+        voice_style: postData.voiceStyle,
+        title: postData.title,
+        description: postData.description,
+        hashtags: postData.hashtags,
+        keywords: postData.keywords,
+        cta: postData.cta,
+        media_files: postData.mediaFiles,
+        selected_platforms: postData.selectedPlatforms,
+        status: postData.status,
+        is_from_template: postData.isFromTemplate,
+        source_template_id: postData.sourceTemplateId,
+        user_id: postData.user_id,
+        created_by: postData.created_by
+      };
+      
       const { data, error } = await supabase
         .from('content_posts')
-        .insert({
-          content_id: postData.contentId,
-          character_profile_id: postData.characterProfile,
-          theme: postData.theme,
-          audience: postData.audience,
-          media_type: postData.mediaType,
-          template_type: postData.templateType,
-          platform: postData.platform,
-          voice_style: postData.voiceStyle,
-          title: postData.title,
-          description: postData.description,
-          hashtags: postData.hashtags,
-          keywords: postData.keywords,
-          cta: postData.cta,
-          media_files: postData.mediaFiles,
-          selected_platforms: postData.selectedPlatforms,
-          status: postData.status,
-          is_from_template: postData.isFromTemplate,
-          source_template_id: postData.sourceTemplateId,
-          user_id: postData.user_id,
-          created_by: postData.created_by
-        })
+        .insert(databaseRecord)
         .select()
         .single();
         
@@ -95,14 +72,9 @@ export const contentAPI = {
     }
   },
 
-  /**
-   * Update content post
-   * @param id - Post ID
-   * @param updates - Partial updates
-   * @returns Updated content post
-   */
-  async updateContentPost(id: string, updates: Partial<ContentPost>): Promise<ContentPost> {
+  async updatePost(id: string, updates: Partial<ContentPost>): Promise<ContentPost> {
     try {
+      const supabase = await getSupabase();
       const updateData: any = {};
       
       // Map content post fields to database fields
@@ -140,12 +112,9 @@ export const contentAPI = {
     }
   },
 
-  /**
-   * Delete content post
-   * @param id - Post ID
-   */
-  async deleteContentPost(id: string): Promise<void> {
+  async deletePost(id: string): Promise<void> {
     try {
+      const supabase = await getSupabase();
       const { error } = await supabase
         .from('content_posts')
         .delete()
@@ -158,60 +127,10 @@ export const contentAPI = {
     }
   },
 
-  /**
-   * Forward content post to Schedule Manager
-   * This creates a dashboard post from a content post
-   * @param contentPost - Content post to forward
-   * @returns Created dashboard post
-   */
-  async forwardToScheduleManager(contentPost: ContentPost): Promise<DashboardPost> {
+  async duplicatePost(id: string): Promise<ContentPost> {
     try {
-      // Create dashboard post from content post
-      const dashboardPostData = {
-        original_content_id: contentPost.id,
-        content_id: contentPost.contentId,
-        character_profile: contentPost.characterProfile,
-        theme: contentPost.theme,
-        audience: contentPost.audience,
-        media_type: contentPost.mediaType,
-        template_type: contentPost.templateType,
-        platform: contentPost.platform,
-        voice_style: contentPost.voiceStyle,
-        title: contentPost.title,
-        description: contentPost.description,
-        hashtags: contentPost.hashtags,
-        keywords: contentPost.keywords,
-        cta: contentPost.cta,
-        media_files: contentPost.mediaFiles,
-        selected_platforms: contentPost.selectedPlatforms,
-        status: 'pending_schedule' as const // Always pending_schedule when forwarded
-      };
-
-      const { data, error } = await supabase
-        .from('dashboard_posts')
-        .insert(dashboardPostData)
-        .select()
-        .single();
-        
-      if (error) throw error;
-
-      // Update original content post status to 'pending'
-      await this.updateContentPost(contentPost.id, { status: 'pending' });
-
-      return this.mapDatabaseToDashboardPost(data);
-    } catch (error) {
-      console.error('Error forwarding to schedule manager:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Duplicate content post
-   * @param id - Post ID to duplicate
-   * @returns Duplicated content post
-   */
-  async duplicateContentPost(id: string): Promise<ContentPost> {
-    try {
+      const supabase = await getSupabase();
+      
       // First, fetch the original post
       const { data: originalPost, error: fetchError } = await supabase
         .from('content_posts')
@@ -244,14 +163,9 @@ export const contentAPI = {
     }
   },
 
-  /**
-   * Search content posts
-   * @param userId - User ID to filter posts
-   * @param searchTerm - Search term
-   * @returns Filtered array of content posts
-   */
-  async searchContentPosts(userId: string, searchTerm: string): Promise<ContentPost[]> {
+  async searchPosts(userId: string, searchTerm: string): Promise<ContentPost[]> {
     try {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from('content_posts')
         .select(`
@@ -264,21 +178,16 @@ export const contentAPI = {
         
       if (error) throw error;
       
-      return data.map(post => this.mapDatabaseToContentPost(post));
+      return (data || []).map(post => this.mapDatabaseToContentPost(post));
     } catch (error) {
       console.error('Error searching content posts:', error);
       throw error;
     }
   },
 
-  /**
-   * Get content posts by status
-   * @param userId - User ID to filter posts
-   * @param status - Status to filter by
-   * @returns Filtered array of content posts
-   */
-  async getContentPostsByStatus(userId: string, status: string): Promise<ContentPost[]> {
+  async getPostsByStatus(userId: string, status: string): Promise<ContentPost[]> {
     try {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from('content_posts')
         .select(`
@@ -291,20 +200,91 @@ export const contentAPI = {
         
       if (error) throw error;
       
-      return data.map(post => this.mapDatabaseToContentPost(post));
+      return (data || []).map(post => this.mapDatabaseToContentPost(post));
     } catch (error) {
       console.error('Error fetching posts by status:', error);
       throw error;
     }
   },
 
-  // ===== HELPER FUNCTIONS =====
+  async createPendingPost(postData: any): Promise<any> {
+    try {
+      const supabase = await getSupabase();
+      
+      // This method is called by scheduleAPI to create the pending schedule entry
+      const pendingRecord = {
+        original_post_id: postData.original_post_id,
+        content_id: postData.contentId,
+        character_profile_id: postData.characterProfile,
+        theme: postData.theme,
+        audience: postData.audience,
+        media_type: postData.mediaType,
+        template_type: postData.templateType,
+        platform: postData.platform,
+        voice_style: postData.voiceStyle,
+        title: postData.title,
+        description: postData.description,
+        hashtags: postData.hashtags,
+        keywords: postData.keywords,
+        cta: postData.cta,
+        media_files: postData.mediaFiles,
+        selected_platforms: postData.selectedPlatforms,
+        status: postData.status,
+        is_from_template: postData.isFromTemplate,
+        source_template_id: postData.sourceTemplateId,
+        user_id: postData.user_id,
+        created_by: postData.created_by
+      };
+      
+      const { data, error } = await supabase
+        .from('pending_schedule')
+        .insert(pendingRecord)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating pending post:', error);
+      throw error;
+    }
+  },
 
-  /**
-   * Map database record to ContentPost interface
-   * @param data - Database record
-   * @returns ContentPost object
-   */
+  // Integration with Schedule Manager
+  async fetchPendingSchedulePosts(userId: string): Promise<any[]> {
+    try {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase
+        .from('pending_schedule')
+        .select('*')
+        .or(`user_id.eq.${userId},user_id.is.null`)
+        .eq('status', 'pending_schedule')
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching pending schedule posts:', error);
+      throw error;
+    }
+  },
+
+  async updatePendingPostStatus(id: string, status: string): Promise<void> {
+    try {
+      const supabase = await getSupabase();
+      const { error } = await supabase
+        .from('pending_schedule')
+        .update({ status })
+        .eq('id', id);
+        
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating pending post status:', error);
+      throw error;
+    }
+  },
+
+  // Helper function to map database records to TypeScript interface
   mapDatabaseToContentPost(data: any): ContentPost {
     return {
       id: data.id,
@@ -318,47 +298,17 @@ export const contentAPI = {
       voiceStyle: data.voice_style || '',
       title: data.title || '',
       description: data.description || '',
-      hashtags: data.hashtags || [],
+      hashtags: Array.isArray(data.hashtags) ? data.hashtags : [],
       keywords: data.keywords || '',
       cta: data.cta || '',
-      mediaFiles: data.media_files || [],
-      selectedPlatforms: data.selected_platforms || [],
+      mediaFiles: Array.isArray(data.media_files) ? data.media_files : [],
+      selectedPlatforms: Array.isArray(data.selected_platforms) ? data.selected_platforms : [],
       status: data.status,
       createdDate: new Date(data.created_at),
       isFromTemplate: data.is_from_template || false,
       sourceTemplateId: data.source_template_id,
       user_id: data.user_id,
       created_by: data.created_by
-    };
-  },
-
-  /**
-   * Map database record to DashboardPost interface
-   * @param data - Database record
-   * @returns DashboardPost object
-   */
-  mapDatabaseToDashboardPost(data: any): DashboardPost {
-    return {
-      id: data.id,
-      original_content_id: data.original_content_id,
-      content_id: data.content_id,
-      character_profile: data.character_profile || '',
-      theme: data.theme || '',
-      audience: data.audience || '',
-      media_type: data.media_type || '',
-      template_type: data.template_type || '',
-      platform: data.platform || '',
-      voice_style: data.voice_style || '',
-      title: data.title || '',
-      description: data.description || '',
-      hashtags: data.hashtags || [],
-      keywords: data.keywords || '',
-      cta: data.cta || '',
-      media_files: data.media_files || [],
-      selected_platforms: data.selected_platforms || [],
-      status: data.status,
-      created_date: new Date(data.created_at),
-      updated_at: new Date(data.updated_at)
     };
   }
 };
