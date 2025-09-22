@@ -1,30 +1,18 @@
-// /src/schedulecomponent/components/PendingTab.tsx
+// /src/schedulecomponent/components/PendingTab.tsx - FIXED to work with corrected types
 import React from 'react';
 import { Clock, Calendar, Edit, Trash2, Play } from 'lucide-react';
 import { formatDate, getRelativeTime } from '../utils/dateUtils';
 import { getPlatformIcon, formatPlatformList } from '../utils/platformUtils';
 import { getStatusColor, getStatusIcon } from '../utils/statusUtils';
-
-interface PendingPost {
-  id: string;
-  contentId: string;
-  title: string;
-  description: string;
-  characterProfile: string;
-  selectedPlatforms: string[];
-  status: 'pending_schedule' | 'scheduled' | 'published' | 'failed';
-  created_date: string;
-  scheduled_date?: string;
-  mediaFiles?: any[];
-  hashtags: string[];
-}
+import { getTheme, getCardStyle, getButtonStyle } from '../utils/styles';
+import { DashboardPost } from '../types';
 
 interface PendingTabProps {
-  posts: PendingPost[];
+  posts: DashboardPost[];
   loading: boolean;
   error?: string | null;
-  onSchedule: (post: PendingPost) => void;
-  onEdit: (post: PendingPost) => void;
+  onSchedule: (post: DashboardPost) => void;
+  onEdit: (post: DashboardPost) => void;
   onDelete: (postId: string) => void;
 }
 
@@ -36,11 +24,11 @@ export default function PendingTab({
   onEdit, 
   onDelete 
 }: PendingTabProps) {
-  const isDarkMode = localStorage.getItem('darkMode') === 'true';
+  const { isDarkMode, colors } = getTheme();
 
   const containerStyle = {
-    backgroundColor: isDarkMode ? '#1e293b' : 'white',
-    color: isDarkMode ? '#f8fafc' : '#111827',
+    backgroundColor: colors.background.primary,
+    color: colors.text.primary,
     borderRadius: '8px',
     padding: '24px',
     fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
@@ -52,50 +40,11 @@ export default function PendingTab({
     justifyContent: 'space-between',
     marginBottom: '24px',
     paddingBottom: '16px',
-    borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
+    borderBottom: `1px solid ${colors.border.primary}`
   };
 
-  const cardStyle = {
-    backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
-    border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
-    borderRadius: '8px',
-    padding: '20px',
-    marginBottom: '16px',
-    transition: 'all 0.2s ease'
-  };
-
-  const buttonStyle = (variant: 'primary' | 'secondary' | 'danger') => {
-    const styles = {
-      primary: {
-        backgroundColor: isDarkMode ? '#3b82f6' : '#2563eb',
-        color: 'white',
-        border: 'none'
-      },
-      secondary: {
-        backgroundColor: 'transparent',
-        color: isDarkMode ? '#94a3b8' : '#6b7280',
-        border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
-      },
-      danger: {
-        backgroundColor: 'transparent',
-        color: '#ef4444',
-        border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
-      }
-    };
-
-    return {
-      ...styles[variant],
-      padding: '8px 16px',
-      borderRadius: '6px',
-      fontSize: '14px',
-      fontWeight: '500',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      transition: 'all 0.2s ease'
-    };
-  };
+  // Filter posts to show only pending_schedule status
+  const pendingPosts = posts.filter(post => post.status === 'pending_schedule');
 
   if (loading) {
     return (
@@ -104,13 +53,13 @@ export default function PendingTab({
           <div style={{ 
             width: '32px', 
             height: '32px', 
-            border: `3px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
-            borderTop: `3px solid ${isDarkMode ? '#3b82f6' : '#2563eb'}`,
+            border: `3px solid ${colors.border.secondary}`,
+            borderTop: `3px solid ${colors.text.accent}`,
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 16px'
           }} />
-          <p style={{ color: isDarkMode ? '#94a3b8' : '#6b7280' }}>Loading pending posts...</p>
+          <p style={{ color: colors.text.tertiary }}>Loading pending posts...</p>
         </div>
       </div>
     );
@@ -122,12 +71,12 @@ export default function PendingTab({
         <div style={{ 
           textAlign: 'center', 
           padding: '40px',
-          color: '#ef4444'
+          color: colors.status.error
         }}>
           <p>Error loading posts: {error}</p>
           <button 
             onClick={() => window.location.reload()}
-            style={buttonStyle('primary')}
+            style={getButtonStyle('primary', isDarkMode)}
           >
             Retry
           </button>
@@ -145,40 +94,40 @@ export default function PendingTab({
             fontSize: '20px',
             fontWeight: '600',
             margin: '0 0 8px 0',
-            color: isDarkMode ? '#60a5fa' : '#2563eb'
+            color: colors.text.accent
           }}>
             Pending Scheduling
           </h2>
           <p style={{
             fontSize: '14px',
-            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            color: colors.text.tertiary,
             margin: '0'
           }}>
-            {posts.length} posts awaiting schedule assignment
+            {pendingPosts.length} posts awaiting schedule assignment
           </p>
         </div>
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
-          color: isDarkMode ? '#60a5fa' : '#1e40af',
+          backgroundColor: colors.background.accent,
+          color: colors.text.accent,
           padding: '8px 12px',
           borderRadius: '6px',
           fontSize: '14px',
           fontWeight: '600'
         }}>
           <Clock size={16} />
-          {posts.length} Pending
+          {pendingPosts.length} Pending
         </div>
       </div>
 
       {/* Posts List */}
-      {posts.length === 0 ? (
+      {pendingPosts.length === 0 ? (
         <div style={{
           textAlign: 'center',
           padding: '60px 20px',
-          color: isDarkMode ? '#94a3b8' : '#6b7280'
+          color: colors.text.tertiary
         }}>
           <Clock size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
           <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0' }}>
@@ -190,8 +139,8 @@ export default function PendingTab({
         </div>
       ) : (
         <div style={{ display: 'grid', gap: '16px' }}>
-          {posts.map((post) => (
-            <div key={post.id} style={cardStyle}>
+          {pendingPosts.map((post) => (
+            <div key={post.id} style={getCardStyle(isDarkMode)}>
               {/* Post Header */}
               <div style={{
                 display: 'flex',
@@ -203,7 +152,7 @@ export default function PendingTab({
                   <h3 style={{
                     fontSize: '16px',
                     fontWeight: '600',
-                    color: isDarkMode ? '#f8fafc' : '#111827',
+                    color: colors.text.primary,
                     margin: '0 0 8px 0',
                     lineHeight: '1.4'
                   }}>
@@ -214,9 +163,9 @@ export default function PendingTab({
                     alignItems: 'center',
                     gap: '12px',
                     fontSize: '12px',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280'
+                    color: colors.text.tertiary
                   }}>
-                    <span>ID: {post.contentId}</span>
+                    <span>ID: {post.content_id}</span>
                     <span>Created: {getRelativeTime(post.created_date)}</span>
                     <div style={{
                       display: 'flex',
@@ -240,7 +189,7 @@ export default function PendingTab({
               <div style={{ marginBottom: '16px' }}>
                 <p style={{
                   fontSize: '14px',
-                  color: isDarkMode ? '#e2e8f0' : '#4b5563',
+                  color: colors.text.secondary,
                   lineHeight: '1.5',
                   margin: '0 0 12px 0',
                   display: '-webkit-box',
@@ -262,8 +211,8 @@ export default function PendingTab({
                     {post.hashtags.slice(0, 5).map((tag, index) => (
                       <span key={index} style={{
                         fontSize: '12px',
-                        color: isDarkMode ? '#60a5fa' : '#2563eb',
-                        backgroundColor: isDarkMode ? '#1e3a8a20' : '#dbeafe',
+                        color: colors.text.accent,
+                        backgroundColor: colors.background.accent,
                         padding: '2px 6px',
                         borderRadius: '4px'
                       }}>
@@ -273,7 +222,7 @@ export default function PendingTab({
                     {post.hashtags.length > 5 && (
                       <span style={{
                         fontSize: '12px',
-                        color: isDarkMode ? '#94a3b8' : '#6b7280'
+                        color: colors.text.tertiary
                       }}>
                         +{post.hashtags.length - 5} more
                       </span>
@@ -287,16 +236,16 @@ export default function PendingTab({
                   alignItems: 'center',
                   gap: '8px',
                   fontSize: '12px',
-                  color: isDarkMode ? '#94a3b8' : '#6b7280'
+                  color: colors.text.tertiary
                 }}>
                   <span>Platforms:</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {post.selectedPlatforms.slice(0, 3).map((platform, index) => (
+                    {post.selected_platforms.slice(0, 3).map((platform, index) => (
                       <div key={index} style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
-                        backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                        backgroundColor: colors.background.tertiary,
                         padding: '4px 8px',
                         borderRadius: '4px'
                       }}>
@@ -304,12 +253,30 @@ export default function PendingTab({
                         <span>{platform}</span>
                       </div>
                     ))}
-                    {post.selectedPlatforms.length > 3 && (
-                      <span>+{post.selectedPlatforms.length - 3} more</span>
+                    {post.selected_platforms.length > 3 && (
+                      <span>+{post.selected_platforms.length - 3} more</span>
                     )}
                   </div>
                 </div>
               </div>
+
+              {/* Media Files Indicator */}
+              {post.media_files && post.media_files.length > 0 && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  backgroundColor: colors.background.accent,
+                  borderRadius: '6px',
+                  marginBottom: '16px',
+                  fontSize: '12px',
+                  color: colors.text.accent
+                }}>
+                  <span>📎</span>
+                  <span>{post.media_files.length} media file{post.media_files.length !== 1 ? 's' : ''} attached</span>
+                </div>
+              )}
 
               {/* Actions */}
               <div style={{
@@ -317,21 +284,21 @@ export default function PendingTab({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 paddingTop: '16px',
-                borderTop: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+                borderTop: `1px solid ${colors.border.secondary}`
               }}>
                 <div style={{
                   fontSize: '12px',
-                  color: isDarkMode ? '#94a3b8' : '#6b7280'
+                  color: colors.text.tertiary
                 }}>
-                  Character: {post.characterProfile || 'Not set'}
+                  Character: {post.character_profile || 'Not set'}
                 </div>
                 
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
                     onClick={() => onEdit(post)}
-                    style={buttonStyle('secondary')}
+                    style={getButtonStyle('secondary', isDarkMode)}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#f3f4f6';
+                      e.currentTarget.style.backgroundColor = colors.background.tertiary;
                     }}
                     onMouseOut={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
@@ -343,14 +310,14 @@ export default function PendingTab({
                   
                   <button
                     onClick={() => onDelete(post.id)}
-                    style={buttonStyle('danger')}
+                    style={getButtonStyle('danger', isDarkMode)}
                     onMouseOver={(e) => {
                       e.currentTarget.style.backgroundColor = '#fef2f2';
                       e.currentTarget.style.borderColor = '#ef4444';
                     }}
                     onMouseOut={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.borderColor = isDarkMode ? '#475569' : '#d1d5db';
+                      e.currentTarget.style.borderColor = colors.border.secondary;
                     }}
                   >
                     <Trash2 size={14} />
@@ -359,12 +326,12 @@ export default function PendingTab({
                   
                   <button
                     onClick={() => onSchedule(post)}
-                    style={buttonStyle('primary')}
+                    style={getButtonStyle('primary', isDarkMode)}
                     onMouseOver={(e) => {
                       e.currentTarget.style.backgroundColor = isDarkMode ? '#2563eb' : '#1d4ed8';
                     }}
                     onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? '#3b82f6' : '#2563eb';
+                      e.currentTarget.style.backgroundColor = colors.status.info;
                     }}
                   >
                     <Play size={14} />
