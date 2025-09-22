@@ -16,28 +16,7 @@ export const contentAPI = {
         
       if (error) throw error;
       
-      return data.map(post => ({
-        id: post.id,
-        contentId: post.content_id,
-        characterProfile: post.character_profile_id || '',
-        theme: post.theme || '',
-        audience: post.audience || '',
-        mediaType: post.media_type || '',
-        templateType: post.template_type || '',
-        platform: post.platform || '',
-        voiceStyle: post.voice_style || '',
-        title: post.title || '',
-        description: post.description || '',
-        hashtags: post.hashtags || [],
-        keywords: post.keywords || '',
-        cta: post.cta || '',
-        mediaFiles: post.media_files || [],
-        selectedPlatforms: post.selected_platforms || [],
-        status: post.status,
-        createdDate: new Date(post.created_at),
-        isFromTemplate: post.is_from_template || false,
-        sourceTemplateId: post.source_template_id
-      }));
+      return data.map(post => this.mapDatabaseToContentPost(post));
     } catch (error) {
       console.error('Error fetching content posts:', error);
       throw error;
@@ -46,34 +25,45 @@ export const contentAPI = {
 
   async savePost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
     try {
+      console.log('Saving post to content_posts:', postData);
+      
+      const insertData = {
+        content_id: postData.contentId,
+        character_profile_id: postData.characterProfile,
+        theme: postData.theme,
+        audience: postData.audience,
+        media_type: postData.mediaType,
+        template_type: postData.templateType,
+        platform: postData.platform,
+        voice_style: postData.voiceStyle,
+        title: postData.title,
+        description: postData.description,
+        hashtags: postData.hashtags,
+        keywords: postData.keywords,
+        cta: postData.cta,
+        media_files: postData.mediaFiles,
+        selected_platforms: postData.selectedPlatforms,
+        status: postData.status,
+        is_from_template: postData.isFromTemplate || false,
+        source_template_id: postData.sourceTemplateId,
+        user_id: postData.user_id,
+        created_by: postData.created_by
+      };
+
+      console.log('Insert data for content_posts:', insertData);
+
       const { data, error } = await supabase
         .from('content_posts')
-        .insert({
-          content_id: postData.contentId,
-          character_profile_id: postData.characterProfile,
-          theme: postData.theme,
-          audience: postData.audience,
-          media_type: postData.mediaType,
-          template_type: postData.templateType,
-          platform: postData.platform,
-          voice_style: postData.voiceStyle,
-          title: postData.title,
-          description: postData.description,
-          hashtags: postData.hashtags,
-          keywords: postData.keywords,
-          cta: postData.cta,
-          media_files: postData.mediaFiles,
-          selected_platforms: postData.selectedPlatforms,
-          status: postData.status,
-          is_from_template: postData.isFromTemplate,
-          source_template_id: postData.sourceTemplateId,
-          user_id: postData.user_id,
-          created_by: postData.created_by
-        })
+        .insert(insertData)
         .select()
         .single();
         
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error saving post:', error);
+        throw error;
+      }
+
+      console.log('Post saved successfully:', data);
       return this.mapDatabaseToContentPost(data);
     } catch (error) {
       console.error('Error saving content post:', error);
@@ -210,41 +200,207 @@ export const contentAPI = {
     }
   },
 
-  async createPendingPost(postData: any): Promise<any> {
+  // FIXED: Get posts by character profile for analytics
+  async getPostsByCharacter(userId: string, characterId: string): Promise<ContentPost[]> {
     try {
-      // This method is called by scheduleAPI to create the pending schedule entry
       const { data, error } = await supabase
-        .from('pending_schedule')
-        .insert({
-          original_post_id: postData.original_post_id,
-          content_id: postData.contentId,
-          character_profile_id: postData.characterProfile,
-          theme: postData.theme,
-          audience: postData.audience,
-          media_type: postData.mediaType,
-          template_type: postData.templateType,
-          platform: postData.platform,
-          voice_style: postData.voiceStyle,
-          title: postData.title,
-          description: postData.description,
-          hashtags: postData.hashtags,
-          keywords: postData.keywords,
-          cta: postData.cta,
-          media_files: postData.mediaFiles,
-          selected_platforms: postData.selectedPlatforms,
-          status: postData.status,
-          is_from_template: postData.isFromTemplate,
-          source_template_id: postData.sourceTemplateId,
-          user_id: postData.user_id,
-          created_by: postData.created_by
-        })
-        .select()
-        .single();
+        .from('content_posts')
+        .select(`
+          *,
+          character_profiles(name, username, role)
+        `)
+        .or(`user_id.eq.${userId},user_id.is.null`)
+        .eq('character_profile_id', characterId)
+        .order('created_at', { ascending: false });
         
       if (error) throw error;
-      return data;
+      
+      return data.map(post => this.mapDatabaseToContentPost(post));
     } catch (error) {
-      console.error('Error creating pending post:', error);
+      console.error('Error fetching posts by character:', error);
+      throw error;
+    }
+  },
+
+  // FIXED: Get posts by theme for analytics
+  async getPostsByTheme(userId: string, theme: string): Promise<ContentPost[]> {
+    try {
+      const { data, error } = await supabase
+        .from('content_posts')
+        .select(`
+          *,
+          character_profiles(name, username, role)
+        `)
+        .or(`user_id.eq.${userId},user_id.is.null`)
+        .eq('theme', theme)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      return data.map(post => this.mapDatabaseToContentPost(post));
+    } catch (error) {
+      console.error('Error fetching posts by theme:', error);
+      throw error;
+    }
+  },
+
+  // FIXED: Get posts created from templates
+  async getPostsFromTemplates(userId: string): Promise<ContentPost[]> {
+    try {
+      const { data, error } = await supabase
+        .from('content_posts')
+        .select(`
+          *,
+          character_profiles(name, username, role)
+        `)
+        .or(`user_id.eq.${userId},user_id.is.null`)
+        .eq('is_from_template', true)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      return data.map(post => this.mapDatabaseToContentPost(post));
+    } catch (error) {
+      console.error('Error fetching posts from templates:', error);
+      throw error;
+    }
+  },
+
+  // FIXED: Get analytics data for dashboard
+  async getAnalyticsData(userId: string): Promise<{
+    totalPosts: number;
+    postsThisWeek: number;
+    postsThisMonth: number;
+    statusBreakdown: Record<string, number>;
+    platformBreakdown: Record<string, number>;
+    themeBreakdown: Record<string, number>;
+    recentActivity: ContentPost[];
+  }> {
+    try {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+      // Get all posts for analysis
+      const posts = await this.fetchPosts(userId);
+      
+      // Calculate analytics
+      const totalPosts = posts.length;
+      
+      const postsThisWeek = posts.filter(post => 
+        new Date(post.createdDate) >= oneWeekAgo
+      ).length;
+      
+      const postsThisMonth = posts.filter(post => 
+        new Date(post.createdDate) >= oneMonthAgo
+      ).length;
+
+      // Status breakdown
+      const statusBreakdown = posts.reduce((acc, post) => {
+        acc[post.status] = (acc[post.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Platform breakdown (count all selected platforms)
+      const platformBreakdown = posts.reduce((acc, post) => {
+        post.selectedPlatforms.forEach(platform => {
+          acc[platform] = (acc[platform] || 0) + 1;
+        });
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Theme breakdown
+      const themeBreakdown = posts.reduce((acc, post) => {
+        if (post.theme) {
+          acc[post.theme] = (acc[post.theme] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Recent activity (last 10 posts)
+      const recentActivity = posts.slice(0, 10);
+
+      return {
+        totalPosts,
+        postsThisWeek,
+        postsThisMonth,
+        statusBreakdown,
+        platformBreakdown,
+        themeBreakdown,
+        recentActivity
+      };
+    } catch (error) {
+      console.error('Error fetching analytics data:', error);
+      throw error;
+    }
+  },
+
+  // FIXED: Batch operations for efficiency
+  async batchUpdateStatus(postIds: string[], status: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('content_posts')
+        .update({ status })
+        .in('id', postIds);
+        
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error batch updating status:', error);
+      throw error;
+    }
+  },
+
+  async batchDeletePosts(postIds: string[]): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('content_posts')
+        .delete()
+        .in('id', postIds);
+        
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error batch deleting posts:', error);
+      throw error;
+    }
+  },
+
+  // FIXED: Export posts as JSON for backup
+  async exportPosts(userId: string, format: 'json' | 'csv' = 'json'): Promise<string> {
+    try {
+      const posts = await this.fetchPosts(userId);
+      
+      if (format === 'json') {
+        return JSON.stringify(posts, null, 2);
+      } else {
+        // Simple CSV export
+        const headers = [
+          'ID', 'Content ID', 'Title', 'Description', 'Theme', 'Audience', 
+          'Status', 'Created Date', 'Selected Platforms', 'Hashtags'
+        ];
+        
+        const rows = posts.map(post => [
+          post.id,
+          post.contentId,
+          post.title,
+          post.description?.substring(0, 100) + '...',
+          post.theme,
+          post.audience,
+          post.status,
+          post.createdDate.toISOString().split('T')[0],
+          post.selectedPlatforms.join('; '),
+          post.hashtags.join('; ')
+        ]);
+
+        const csvContent = [headers, ...rows]
+          .map(row => row.map(cell => `"${cell}"`).join(','))
+          .join('\n');
+          
+        return csvContent;
+      }
+    } catch (error) {
+      console.error('Error exporting posts:', error);
       throw error;
     }
   },
