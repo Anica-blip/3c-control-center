@@ -1,5 +1,6 @@
-// /src/schedulecomponent/utils/statusUtils.ts
+// /src/schedulecomponent/utils/statusUtils.ts - FIXED to match corrected types
 import React from 'react';
+import { DashboardPost, ScheduledPost } from '../types';
 
 /**
  * Status utility functions for the Schedule Manager
@@ -42,7 +43,7 @@ export const STATUS_CONFIG: Record<PostStatus, StatusInfo> = {
   draft: {
     id: 'draft',
     label: 'Draft',
-    description: 'Post is saved as draft and not scheduled',
+    description: 'Post is saved as draft in content creation',
     color: { light: '#6b7280', dark: '#9ca3af' },
     bgColor: { light: '#f9fafb', dark: '#374151' },
     icon: '📝',
@@ -64,7 +65,7 @@ export const STATUS_CONFIG: Record<PostStatus, StatusInfo> = {
   pending_schedule: {
     id: 'pending_schedule',
     label: 'Pending Schedule',
-    description: 'Post is awaiting schedule assignment',
+    description: 'Post is in Schedule Manager awaiting schedule assignment',
     color: { light: '#2563eb', dark: '#60a5fa' },
     bgColor: { light: '#dbeafe', dark: '#1e3a8a' },
     icon: '🕐',
@@ -428,12 +429,12 @@ export const getStatusSummary = <T extends { status: PostStatus }>(
  */
 export const getSuggestedActions = (status: PostStatus): string[] => {
   const actionMap: Record<PostStatus, string[]> = {
-    draft: ['Schedule Post', 'Edit Content', 'Archive'],
+    draft: ['Send to Schedule Manager', 'Edit Content', 'Archive'],
     pending: ['Schedule Post', 'Edit Content', 'Cancel'],
     pending_schedule: ['Set Schedule', 'Edit Content', 'Cancel'],
     scheduled: ['Edit Schedule', 'Cancel Schedule', 'Edit Content'],
     publishing: [], // No actions during publishing
-    published: ['View Post', 'Archive', 'Create Similar'],
+    published: ['View Analytics', 'Archive', 'Create Similar'],
     failed: ['Retry Publishing', 'Edit Content', 'Reschedule'],
     cancelled: ['Reschedule', 'Edit Content', 'Archive'],
     archived: ['Restore', 'Delete Permanently']
@@ -455,13 +456,13 @@ export const getStatusWorkflow = () => {
     },
     {
       status: 'pending_schedule' as PostStatus,
-      title: 'Set Schedule',
-      description: 'Choose when to publish your content'
+      title: 'Schedule Manager',
+      description: 'Post forwarded to Schedule Manager'
     },
     {
       status: 'scheduled' as PostStatus,
-      title: 'Await Publishing',
-      description: 'Post is queued for automatic publishing'
+      title: 'Scheduled',
+      description: 'Post scheduled for publishing'
     },
     {
       status: 'publishing' as PostStatus,
