@@ -1,4 +1,5 @@
-// /src/schedulecomponent/types.ts - FIXED to match EnhancedContentCreationForm patterns
+// /src/schedulecomponent/types.ts - FIXED with all missing types
+
 export interface MediaFile {
   id: string;
   name: string;
@@ -13,6 +14,7 @@ export interface MediaFile {
   };
 }
 
+// ADDED: Missing SocialPlatform type
 export interface SocialPlatform {
   id: string;
   name: string;
@@ -21,6 +23,7 @@ export interface SocialPlatform {
   isDefault: boolean;
 }
 
+// ADDED: Missing CharacterProfile type  
 export interface CharacterProfile {
   id: string;
   name: string;
@@ -29,7 +32,7 @@ export interface CharacterProfile {
   avatar_id?: string;
 }
 
-// Content Post from EnhancedContentCreationForm (draft state)
+// ADDED: Missing ContentPost type (used by EnhancedContentCreationForm)
 export interface ContentPost {
   id: string;
   contentId: string;
@@ -47,7 +50,7 @@ export interface ContentPost {
   cta: string;
   mediaFiles: MediaFile[];
   selectedPlatforms: string[];
-  status: 'draft' | 'pending' | 'scheduled' | 'published';
+  status: 'draft' | 'pending' | 'pending_schedule' | 'scheduled' | 'published' | 'failed';
   createdDate: Date;
   isFromTemplate?: boolean;
   sourceTemplateId?: string;
@@ -55,34 +58,9 @@ export interface ContentPost {
   created_by?: string;
 }
 
-// Dashboard Post (in Schedule Manager - forwarded from ContentPost)
+// ADDED: DashboardPost type (used by utils)
 export interface DashboardPost {
   id: string;
-  original_content_id: string; // Reference to content_posts.id
-  content_id: string; // The contentId from content creation
-  character_profile: string;
-  theme: string;
-  audience: string;
-  media_type: string;
-  template_type: string;
-  platform: string;
-  voice_style: string;
-  title: string;
-  description: string;
-  hashtags: string[];
-  keywords: string;
-  cta: string;
-  media_files: MediaFile[];
-  selected_platforms: string[];
-  status: 'pending_schedule' | 'scheduled' | 'publishing' | 'published' | 'failed';
-  created_date: Date;
-  updated_at: Date;
-}
-
-// Scheduled Post (final scheduled state)
-export interface ScheduledPost {
-  id: string;
-  dashboard_post_id: string; // Reference to dashboard_posts.id
   content_id: string;
   character_profile: string;
   theme: string;
@@ -90,7 +68,7 @@ export interface ScheduledPost {
   media_type: string;
   template_type: string;
   platform: string;
-  voice_style: string;
+  voice_style?: string;
   title: string;
   description: string;
   hashtags: string[];
@@ -98,32 +76,61 @@ export interface ScheduledPost {
   cta: string;
   media_files: MediaFile[];
   selected_platforms: string[];
+  status: 'draft' | 'pending' | 'pending_schedule' | 'scheduled' | 'published' | 'failed';
+  created_date: Date;
+  is_from_template?: boolean;
+  source_template_id?: string;
+  user_id?: string;
+  created_by?: string;
+}
+
+export interface PlatformAssignment {
+  platformId: string;
+  platformName: string;
+  platformIcon: string;
+  status: 'pending' | 'sent' | 'failed';
+  sentAt?: Date;
+  errorMessage?: string;
+}
+
+export interface PendingPost {
+  id: string;
+  content_id: string;
+  character_profile: string;
+  theme: string;
+  audience: string;
+  media_type: string;
+  template_type: string;
+  platform: string;
+  title: string;
+  description: string;
+  hashtags: string[];
+  keywords: string;
+  cta: string;
+  media_files: MediaFile[];
+  selected_platforms: string[];
+  status: 'pending_schedule';
+  created_date: Date;
+  user_id: string;
+  created_by: string;
+  is_from_template?: boolean;
+  source_template_id?: string;
+}
+
+export interface ScheduledPost extends Omit<PendingPost, 'status'> {
   scheduled_date: Date;
-  status: 'scheduled' | 'publishing' | 'published' | 'failed' | 'cancelled';
+  status: 'pending' | 'processing' | 'complete' | 'failed' | 'resending';
   failure_reason?: string;
   last_attempt?: Date;
   retry_count?: number;
-  created_date: Date;
+  original_post_id?: string;
   priority_level?: 'low' | 'medium' | 'high' | 'urgent';
   persona_target?: string;
   audience_segment?: string;
   campaign_id?: string;
 }
 
-// Platform Assignment (for tracking which platforms posts go to)
-export interface PlatformAssignment {
-  id: string;
-  scheduled_post_id: string;
-  platform_id: string;
-  platform_name: string;
-  status: 'pending' | 'sent' | 'failed';
-  sent_at?: Date;
-  error_message?: string;
-  created_at: Date;
-}
-
-// Dashboard Template (saved templates in Schedule Manager)
-export interface DashboardTemplate {
+export interface SavedTemplate {
   id: string;
   template_name: string;
   character_profile: string;
@@ -132,7 +139,6 @@ export interface DashboardTemplate {
   media_type: string;
   template_type: string;
   platform: string;
-  voice_style: string;
   title: string;
   description: string;
   hashtags: string[];
@@ -145,11 +151,12 @@ export interface DashboardTemplate {
   persona_target?: string;
   audience_segment?: string;
   campaign_type?: string;
+  user_id: string;
+  created_by: string;
   created_at: Date;
   updated_at: Date;
 }
 
-// Platform Info
 export interface Platform {
   id: string;
   name: string;
