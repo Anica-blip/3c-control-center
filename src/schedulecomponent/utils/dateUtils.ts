@@ -1,16 +1,23 @@
-// /src/schedulecomponent/utils/dateUtils.ts
-import { ScheduledPost, DashboardPost } from '../types';
+// /src/schedulecomponent/utils/dateUtils.ts - FIXED for UK timezone and Schedule Manager
+import { ScheduledPost } from '../types';
 
 /**
  * Date utility functions for the Schedule Manager
- * Provides consistent date formatting, validation, and manipulation
+ * Provides consistent UK date formatting, validation, and manipulation
+ * All times are handled in UK timezone (UTC+1/UTC+0 depending on DST)
  */
 
 /**
- * Format a date to a readable string (UK English format)
+ * UK timezone configuration
+ */
+export const UK_TIMEZONE = 'Europe/London';
+export const UK_LOCALE = 'en-GB';
+
+/**
+ * Format a date to UK readable string (DD/MM/YYYY format)
  * @param date - Date to format
  * @param options - Intl.DateTimeFormat options
- * @returns Formatted date string
+ * @returns Formatted date string in UK format
  */
 export const formatDate = (
   date: Date | string, 
@@ -26,16 +33,17 @@ export const formatDate = (
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+    timeZone: UK_TIMEZONE,
     ...options
   };
 
-  return dateObj.toLocaleDateString('en-GB', defaultOptions);
+  return dateObj.toLocaleDateString(UK_LOCALE, defaultOptions);
 };
 
 /**
- * Format time to a readable string (24-hour format for UK)
+ * Format time to UK readable string (24-hour format)
  * @param date - Date to extract time from
- * @param use24Hour - Whether to use 24-hour format (default: true)
+ * @param use24Hour - Whether to use 24-hour format (default: true for UK)
  * @returns Formatted time string
  */
 export const formatTime = (
@@ -48,15 +56,16 @@ export const formatTime = (
     return 'Invalid Time';
   }
 
-  return dateObj.toLocaleTimeString('en-GB', {
+  return dateObj.toLocaleTimeString(UK_LOCALE, {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: !use24Hour
+    hour12: !use24Hour,
+    timeZone: UK_TIMEZONE
   });
 };
 
 /**
- * Format date and time together (UK format)
+ * Format date and time together (UK format with timezone)
  * @param date - Date to format
  * @param options - Custom format options
  * @returns Formatted date and time string
@@ -67,6 +76,7 @@ export const formatDateTime = (
     dateStyle?: 'full' | 'long' | 'medium' | 'short';
     timeStyle?: 'full' | 'long' | 'medium' | 'short';
     use24Hour?: boolean;
+    showTimezone?: boolean;
   }
 ): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
@@ -78,18 +88,23 @@ export const formatDateTime = (
   const dateStyle = options?.dateStyle || 'medium';
   const timeStyle = options?.timeStyle || 'short';
   const use24Hour = options?.use24Hour ?? true;
+  const showTimezone = options?.showTimezone ?? false;
 
-  return dateObj.toLocaleString('en-GB', {
+  const formatted = dateObj.toLocaleString(UK_LOCALE, {
     dateStyle,
     timeStyle,
-    hour12: !use24Hour
+    hour12: !use24Hour,
+    timeZone: UK_TIMEZONE,
+    timeZoneName: showTimezone ? 'short' : undefined
   });
+
+  return formatted;
 };
 
 /**
- * Get relative time (e.g., "2 hours ago", "in 3 days")
+ * Get relative time with UK English phrasing (e.g., "2 hours ago", "in 3 days")
  * @param date - Date to compare
- * @param relativeTo - Date to compare against (default: now)
+ * @param relativeTo - Date to compare against (default: now in UK timezone)
  * @returns Relative time string
  */
 export const getRelativeTime = (
@@ -112,7 +127,7 @@ export const getRelativeTime = (
   const diffMonths = Math.floor(diffDays / 30);
   const diffYears = Math.floor(diffDays / 365);
 
-  // Future dates
+  // Future dates (UK English phrasing)
   if (diffMs > 0) {
     if (diffSeconds < 60) return 'in a few seconds';
     if (diffMinutes === 1) return 'in 1 minute';
@@ -129,7 +144,7 @@ export const getRelativeTime = (
     return `in ${diffYears} years`;
   }
   
-  // Past dates
+  // Past dates (UK English phrasing)
   const absDiffSeconds = Math.abs(diffSeconds);
   const absDiffMinutes = Math.abs(diffMinutes);
   const absDiffHours = Math.abs(diffHours);
@@ -199,9 +214,9 @@ export const addDays = (date: Date, days: number): Date => {
 };
 
 /**
- * Get the start of the day for a given date
+ * Get the start of the day for a given date (UK timezone)
  * @param date - Input date
- * @returns Date at 00:00:00
+ * @returns Date at 00:00:00 UK time
  */
 export const startOfDay = (date: Date): Date => {
   const newDate = new Date(date);
@@ -210,9 +225,9 @@ export const startOfDay = (date: Date): Date => {
 };
 
 /**
- * Get the end of the day for a given date
+ * Get the end of the day for a given date (UK timezone)
  * @param date - Input date
- * @returns Date at 23:59:59.999
+ * @returns Date at 23:59:59.999 UK time
  */
 export const endOfDay = (date: Date): Date => {
   const newDate = new Date(date);
@@ -221,7 +236,7 @@ export const endOfDay = (date: Date): Date => {
 };
 
 /**
- * Check if two dates are on the same day
+ * Check if two dates are on the same day (UK timezone)
  * @param date1 - First date
  * @param date2 - Second date
  * @returns Whether dates are on the same day
@@ -235,7 +250,7 @@ export const isSameDay = (date1: Date, date2: Date): boolean => {
 };
 
 /**
- * Check if a date is today
+ * Check if a date is today (UK timezone)
  * @param date - Date to check
  * @returns Whether the date is today
  */
@@ -244,7 +259,7 @@ export const isToday = (date: Date): boolean => {
 };
 
 /**
- * Check if a date is tomorrow
+ * Check if a date is tomorrow (UK timezone)
  * @param date - Date to check
  * @returns Whether the date is tomorrow
  */
@@ -272,7 +287,7 @@ export const isFuture = (date: Date): boolean => {
 };
 
 /**
- * Get time until a scheduled date
+ * Get time until a scheduled date (UK timezone aware)
  * @param scheduledDate - The scheduled date
  * @returns Object with time components until the date
  */
@@ -308,16 +323,16 @@ export const getTimeUntil = (scheduledDate: Date | string) => {
 };
 
 /**
- * Convert a date to ISO string for input fields
+ * Convert a date to ISO string for HTML input fields
  * @param date - Date to convert
- * @returns ISO date string for HTML inputs
+ * @returns ISO date string for HTML inputs (YYYY-MM-DD)
  */
 export const toInputDate = (date: Date): string => {
   return date.toISOString().split('T')[0];
 };
 
 /**
- * Convert a date to time string for input fields
+ * Convert a date to time string for HTML input fields
  * @param date - Date to convert
  * @returns Time string in HH:MM format
  */
@@ -342,18 +357,21 @@ export const safeParseDate = (
 };
 
 /**
- * Get timezone offset in hours
+ * Get UK timezone offset in hours (accounts for BST/GMT)
  * @param date - Date to get offset for (default: now)
- * @returns Timezone offset in hours
+ * @returns UK timezone offset in hours
  */
-export const getTimezoneOffset = (date: Date = new Date()): number => {
-  return -date.getTimezoneOffset() / 60;
+export const getUKTimezoneOffset = (date: Date = new Date()): number => {
+  // Use Intl API to get accurate UK timezone offset including DST
+  const ukTime = new Date(date.toLocaleString('en-US', { timeZone: UK_TIMEZONE }));
+  const utcTime = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+  return (ukTime.getTime() - utcTime.getTime()) / (1000 * 60 * 60);
 };
 
 /**
  * Format timezone offset as string
  * @param offsetHours - Offset in hours
- * @returns Formatted timezone offset (e.g., "+01:00", "-05:00")
+ * @returns Formatted timezone offset (e.g., "+01:00", "+00:00")
  */
 export const formatTimezoneOffset = (offsetHours: number): string => {
   const sign = offsetHours >= 0 ? '+' : '-';
@@ -362,4 +380,243 @@ export const formatTimezoneOffset = (offsetHours: number): string => {
   const minutes = Math.round((absHours - hours) * 60);
   
   return `${sign}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+};
+
+/**
+ * Get current UK timezone name (GMT or BST)
+ * @param date - Date to check (default: now)
+ * @returns Timezone name string
+ */
+export const getUKTimezoneName = (date: Date = new Date()): string => {
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: UK_TIMEZONE,
+    timeZoneName: 'short'
+  });
+  
+  const parts = formatter.formatToParts(date);
+  const timeZonePart = parts.find(part => part.type === 'timeZoneName');
+  return timeZonePart?.value || 'GMT';
+};
+
+/**
+ * Schedule Manager specific date utilities
+ */
+
+/**
+ * Get quick schedule options for UK timezone
+ * @param baseTime - Base time to calculate from (default: now)
+ * @returns Array of quick schedule options
+ */
+export const getQuickScheduleOptions = (baseTime: Date = new Date()) => {
+  return [
+    {
+      label: 'In 1 hour',
+      value: addHours(baseTime, 1),
+      description: 'Schedule for 1 hour from now'
+    },
+    {
+      label: 'In 2 hours',
+      value: addHours(baseTime, 2),
+      description: 'Schedule for 2 hours from now'
+    },
+    {
+      label: 'Tomorrow 9 AM',
+      value: (() => {
+        const tomorrow = addDays(baseTime, 1);
+        tomorrow.setHours(9, 0, 0, 0);
+        return tomorrow;
+      })(),
+      description: 'Schedule for tomorrow morning'
+    },
+    {
+      label: 'Next Monday 9 AM',
+      value: (() => {
+        const nextMonday = new Date(baseTime);
+        const daysUntilMonday = (1 + 7 - baseTime.getDay()) % 7 || 7;
+        nextMonday.setDate(baseTime.getDate() + daysUntilMonday);
+        nextMonday.setHours(9, 0, 0, 0);
+        return nextMonday;
+      })(),
+      description: 'Schedule for next Monday morning'
+    }
+  ];
+};
+
+/**
+ * Validate scheduling time for UK business requirements
+ * @param scheduledDate - Proposed schedule date
+ * @param currentTime - Current time (default: now)
+ * @returns Validation result with any warnings
+ */
+export const validateScheduleTime = (
+  scheduledDate: Date,
+  currentTime: Date = new Date()
+) => {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // Must be in future
+  if (scheduledDate <= currentTime) {
+    errors.push('Scheduled time must be in the future');
+  }
+
+  // Check if more than 1 year in advance
+  const oneYearFromNow = addDays(currentTime, 365);
+  if (scheduledDate > oneYearFromNow) {
+    errors.push('Cannot schedule more than 1 year in advance');
+  }
+
+  // Check if scheduling outside reasonable hours (UK timezone)
+  const hour = scheduledDate.getHours();
+  if (hour < 6 || hour > 23) {
+    warnings.push('Scheduling outside typical engagement hours (06:00-23:00 UK time)');
+  }
+
+  // Check if weekend
+  const dayOfWeek = scheduledDate.getDay();
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    warnings.push('Scheduled for weekend - engagement may be lower');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings
+  };
+};
+
+/**
+ * Get UK working hours range
+ * @returns Object with start and end hours for UK working day
+ */
+export const getUKWorkingHours = () => {
+  return {
+    start: 9,  // 9 AM
+    end: 17,   // 5 PM
+    lunch: { start: 12, end: 13 } // 12-1 PM lunch break
+  };
+};
+
+/**
+ * Check if time is during UK working hours
+ * @param date - Date to check
+ * @returns Whether the time is during UK working hours
+ */
+export const isUKWorkingHours = (date: Date): boolean => {
+  const hour = date.getHours();
+  const dayOfWeek = date.getDay();
+  const workingHours = getUKWorkingHours();
+  
+  // Monday to Friday
+  if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+    return hour >= workingHours.start && hour < workingHours.end;
+  }
+  
+  return false;
+};
+
+/**
+ * Get next UK working day
+ * @param fromDate - Date to start from (default: now)
+ * @returns Next UK working day at 9 AM
+ */
+export const getNextUKWorkingDay = (fromDate: Date = new Date()): Date => {
+  let nextDay = addDays(fromDate, 1);
+  
+  // Skip weekends
+  while (nextDay.getDay() === 0 || nextDay.getDay() === 6) {
+    nextDay = addDays(nextDay, 1);
+  }
+  
+  // Set to 9 AM
+  nextDay.setHours(9, 0, 0, 0);
+  return nextDay;
+};
+
+/**
+ * Format schedule date for Schedule Manager display
+ * @param date - Date to format
+ * @param includeRelative - Whether to include relative time
+ * @returns Formatted string for Schedule Manager UI
+ */
+export const formatScheduleDate = (
+  date: Date,
+  includeRelative: boolean = true
+): string => {
+  const formatted = formatDateTime(date, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    use24Hour: true
+  });
+  
+  if (includeRelative) {
+    const relative = getRelativeTime(date);
+    return `${formatted} (${relative})`;
+  }
+  
+  return formatted;
+};
+
+/**
+ * Group scheduled posts by date for Calendar View
+ * @param posts - Array of scheduled posts
+ * @returns Object with dates as keys and posts as values
+ */
+export const groupPostsByDate = (posts: ScheduledPost[]): Record<string, ScheduledPost[]> => {
+  const grouped: Record<string, ScheduledPost[]> = {};
+  
+  posts.forEach(post => {
+    if (post.scheduled_date) {
+      const dateKey = toInputDate(post.scheduled_date);
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+      }
+      grouped[dateKey].push(post);
+    }
+  });
+  
+  // Sort posts within each date by time
+  Object.keys(grouped).forEach(dateKey => {
+    grouped[dateKey].sort((a, b) => 
+      new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime()
+    );
+  });
+  
+  return grouped;
+};
+
+/**
+ * Get calendar weeks for a given month (UK week starts Monday)
+ * @param year - Year
+ * @param month - Month (0-11)
+ * @returns Array of weeks, each containing 7 dates
+ */
+export const getCalendarWeeks = (year: number, month: number): Date[][] => {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  
+  // Adjust for UK week starting Monday (getDay() returns 0 for Sunday)
+  const startDate = new Date(firstDay);
+  const dayOfWeek = firstDay.getDay();
+  const daysBack = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Monday = 0, Sunday = 6
+  startDate.setDate(firstDay.getDate() - daysBack);
+  
+  const weeks: Date[][] = [];
+  const currentDate = new Date(startDate);
+  
+  while (currentDate <= lastDay || weeks.length === 0 || weeks[weeks.length - 1].length < 7) {
+    if (weeks.length === 0 || weeks[weeks.length - 1].length === 7) {
+      weeks.push([]);
+    }
+    
+    weeks[weeks.length - 1].push(new Date(currentDate));
+    currentDate.setDate(currentDate.getDate() + 1);
+    
+    // Stop after 6 weeks maximum
+    if (weeks.length >= 6 && weeks[weeks.length - 1].length === 7) {
+      break;
+    }
+  }
+  
+  return weeks;
 };
