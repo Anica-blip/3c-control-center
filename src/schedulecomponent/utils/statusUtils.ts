@@ -1,10 +1,10 @@
-// /src/schedulecomponent/utils/statusUtils.ts - FIXED to match corrected types
+// /src/schedulecomponent/utils/statusUtils.ts - FIXED for Schedule Manager integration
 import React from 'react';
-import { DashboardPost, ScheduledPost } from '../types';
+import { ScheduledPost } from '../types';
 
 /**
  * Status utility functions for the Schedule Manager
- * Handles status colors, icons, and status management logic
+ * Handles status colours, icons, and status management logic (UK English)
  */
 
 export type PostStatus = 
@@ -12,11 +12,12 @@ export type PostStatus =
   | 'pending'
   | 'pending_schedule'
   | 'scheduled'
+  | 'processing'
   | 'publishing'
   | 'published'
   | 'failed'
   | 'cancelled'
-  | 'archived';
+  | 'complete';
 
 export interface StatusInfo {
   id: PostStatus;
@@ -37,7 +38,7 @@ export interface StatusInfo {
 }
 
 /**
- * Complete status configuration
+ * Complete status configuration (UK English spelling)
  */
 export const STATUS_CONFIG: Record<PostStatus, StatusInfo> = {
   draft: {
@@ -49,7 +50,7 @@ export const STATUS_CONFIG: Record<PostStatus, StatusInfo> = {
     icon: '📝',
     priority: 1,
     isActionable: true,
-    nextStates: ['pending_schedule', 'scheduled', 'archived']
+    nextStates: ['pending_schedule', 'scheduled', 'cancelled']
   },
   pending: {
     id: 'pending',
@@ -82,7 +83,18 @@ export const STATUS_CONFIG: Record<PostStatus, StatusInfo> = {
     icon: '📅',
     priority: 4,
     isActionable: true,
-    nextStates: ['publishing', 'cancelled', 'pending_schedule']
+    nextStates: ['processing', 'cancelled', 'pending_schedule']
+  },
+  processing: {
+    id: 'processing',
+    label: 'Processing',
+    description: 'Post is being prepared for publishing',
+    color: { light: '#7c3aed', dark: '#a78bfa' },
+    bgColor: { light: '#ede9fe', dark: '#3c1d5b' },
+    icon: '⚙️',
+    priority: 5,
+    isActionable: false,
+    nextStates: ['publishing', 'failed']
   },
   publishing: {
     id: 'publishing',
@@ -93,7 +105,7 @@ export const STATUS_CONFIG: Record<PostStatus, StatusInfo> = {
     icon: '🚀',
     priority: 5,
     isActionable: false,
-    nextStates: ['published', 'failed']
+    nextStates: ['published', 'complete', 'failed']
   },
   published: {
     id: 'published',
@@ -104,7 +116,18 @@ export const STATUS_CONFIG: Record<PostStatus, StatusInfo> = {
     icon: '✅',
     priority: 6,
     isActionable: false,
-    nextStates: ['archived']
+    nextStates: ['complete']
+  },
+  complete: {
+    id: 'complete',
+    label: 'Complete',
+    description: 'Post workflow completed successfully',
+    color: { light: '#16a34a', dark: '#22c55e' },
+    bgColor: { light: '#dcfce7', dark: '#14532d' },
+    icon: '🎉',
+    priority: 7,
+    isActionable: false,
+    nextStates: []
   },
   failed: {
     id: 'failed',
@@ -113,7 +136,7 @@ export const STATUS_CONFIG: Record<PostStatus, StatusInfo> = {
     color: { light: '#dc2626', dark: '#ef4444' },
     bgColor: { light: '#fee2e2', dark: '#7f1d1d' },
     icon: '❌',
-    priority: 7,
+    priority: 8,
     isActionable: true,
     nextStates: ['scheduled', 'pending_schedule', 'cancelled']
   },
@@ -124,17 +147,6 @@ export const STATUS_CONFIG: Record<PostStatus, StatusInfo> = {
     color: { light: '#4b5563', dark: '#6b7280' },
     bgColor: { light: '#f3f4f6', dark: '#374151' },
     icon: '🚫',
-    priority: 8,
-    isActionable: true,
-    nextStates: ['draft', 'pending_schedule', 'archived']
-  },
-  archived: {
-    id: 'archived',
-    label: 'Archived',
-    description: 'Post is archived and hidden from active lists',
-    color: { light: '#6b7280', dark: '#9ca3af' },
-    bgColor: { light: '#f9fafb', dark: '#1f2937' },
-    icon: '📦',
     priority: 9,
     isActionable: true,
     nextStates: ['draft', 'pending_schedule']
@@ -142,10 +154,10 @@ export const STATUS_CONFIG: Record<PostStatus, StatusInfo> = {
 };
 
 /**
- * Get status color configuration
+ * Get status colour configuration (UK spelling)
  * @param status - Post status
  * @param isDarkMode - Whether dark mode is enabled
- * @returns Object with text and background colors
+ * @returns Object with text and background colours
  */
 export const getStatusColor = (
   status: PostStatus, 
@@ -276,7 +288,7 @@ export const groupPostsByStatus = <T extends { status: PostStatus }>(
 ): Record<PostStatus, T[]> => {
   const groups = {} as Record<PostStatus, T[]>;
   
-  // Initialize all status groups
+  // Initialise all status groups
   Object.keys(STATUS_CONFIG).forEach(status => {
     groups[status as PostStatus] = [];
   });
@@ -301,7 +313,7 @@ export const getStatusCounts = <T extends { status: PostStatus }>(
 ): Record<PostStatus, number> => {
   const counts = {} as Record<PostStatus, number>;
   
-  // Initialize all counts to 0
+  // Initialise all counts to 0
   Object.keys(STATUS_CONFIG).forEach(status => {
     counts[status as PostStatus] = 0;
   });
@@ -423,7 +435,7 @@ export const getStatusSummary = <T extends { status: PostStatus }>(
 };
 
 /**
- * Get suggested actions for a status
+ * Get suggested actions for a status (UK English)
  * @param status - Post status
  * @returns Array of suggested action labels
  */
@@ -433,18 +445,19 @@ export const getSuggestedActions = (status: PostStatus): string[] => {
     pending: ['Schedule Post', 'Edit Content', 'Cancel'],
     pending_schedule: ['Set Schedule', 'Edit Content', 'Cancel'],
     scheduled: ['Edit Schedule', 'Cancel Schedule', 'Edit Content'],
+    processing: ['View Progress'], // Limited actions during processing
     publishing: [], // No actions during publishing
-    published: ['View Analytics', 'Archive', 'Create Similar'],
+    published: ['View Analytics', 'Save as Template', 'Create Similar'],
+    complete: ['View Analytics', 'Save as Template', 'Archive'],
     failed: ['Retry Publishing', 'Edit Content', 'Reschedule'],
-    cancelled: ['Reschedule', 'Edit Content', 'Archive'],
-    archived: ['Restore', 'Delete Permanently']
+    cancelled: ['Reschedule', 'Edit Content', 'Archive']
   };
 
   return actionMap[status] || [];
 };
 
 /**
- * Get status workflow steps
+ * Get status workflow steps for Schedule Manager
  * @returns Array of status workflow information
  */
 export const getStatusWorkflow = () => {
@@ -457,12 +470,17 @@ export const getStatusWorkflow = () => {
     {
       status: 'pending_schedule' as PostStatus,
       title: 'Schedule Manager',
-      description: 'Post forwarded to Schedule Manager'
+      description: 'Post forwarded to Schedule Manager for scheduling'
     },
     {
       status: 'scheduled' as PostStatus,
       title: 'Scheduled',
-      description: 'Post scheduled for publishing'
+      description: 'Post scheduled for publishing at specific time'
+    },
+    {
+      status: 'processing' as PostStatus,
+      title: 'Processing',
+      description: 'Post being prepared for publishing'
     },
     {
       status: 'publishing' as PostStatus,
@@ -492,7 +510,7 @@ export const isErrorStatus = (status: PostStatus): boolean => {
  * @returns Whether the status indicates success
  */
 export const isSuccessStatus = (status: PostStatus): boolean => {
-  return status === 'published';
+  return ['published', 'complete'].includes(status);
 };
 
 /**
@@ -501,7 +519,7 @@ export const isSuccessStatus = (status: PostStatus): boolean => {
  * @returns Whether the status indicates ongoing work
  */
 export const isProgressStatus = (status: PostStatus): boolean => {
-  return ['pending', 'pending_schedule', 'scheduled', 'publishing'].includes(status);
+  return ['pending', 'pending_schedule', 'scheduled', 'processing', 'publishing'].includes(status);
 };
 
 /**
@@ -512,4 +530,55 @@ export const isProgressStatus = (status: PostStatus): boolean => {
 export const getStatusEmoji = (status: PostStatus): string => {
   const statusInfo = STATUS_CONFIG[status];
   return statusInfo?.icon || '❓';
+};
+
+/**
+ * Schedule Manager specific utilities
+ */
+
+/**
+ * Get posts ready for scheduling (pending_schedule status)
+ * @param posts - Array of posts
+ * @returns Posts that need scheduling
+ */
+export const getPendingSchedulePosts = <T extends { status: PostStatus }>(
+  posts: T[]
+): T[] => {
+  return posts.filter(post => post.status === 'pending_schedule');
+};
+
+/**
+ * Get scheduled posts for calendar view
+ * @param posts - Array of posts with scheduled_date
+ * @returns Posts that are scheduled for future publishing
+ */
+export const getScheduledPosts = <T extends { status: PostStatus; scheduled_date?: Date }>(
+  posts: T[]
+): T[] => {
+  return posts.filter(post => 
+    ['scheduled', 'processing', 'publishing', 'published', 'complete'].includes(post.status) &&
+    post.scheduled_date
+  );
+};
+
+/**
+ * Get posts available for template creation (published/complete)
+ * @param posts - Array of posts
+ * @returns Posts that can be saved as templates
+ */
+export const getTemplateEligiblePosts = <T extends { status: PostStatus }>(
+  posts: T[]
+): T[] => {
+  return posts.filter(post => ['published', 'complete'].includes(post.status));
+};
+
+/**
+ * Get posts requiring attention (failed status)
+ * @param posts - Array of posts
+ * @returns Posts that need user intervention
+ */
+export const getAttentionRequiredPosts = <T extends { status: PostStatus }>(
+  posts: T[]
+): T[] => {
+  return posts.filter(post => post.status === 'failed');
 };
