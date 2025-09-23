@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Save, Plus, Edit, Trash2, Copy, Play, Search, Filter, Eye, Star, TrendingUp, Calendar, User, Hash } from 'lucide-react';
 import { formatDate, getRelativeTime } from '../utils/dateUtils';
 import { getPlatformIcon, formatPlatformList } from '../utils/platformUtils';
+import { SavedTemplate } from '../types';  // Ensure this matches types.ts
 
 interface SavedTemplate {
   id: string;
