@@ -4,7 +4,9 @@ import { ChevronLeft, ChevronRight, Calendar, Clock, Edit, Eye, User } from 'luc
 import { formatDate, formatTime, addDays, startOfDay, isSameDay, isToday } from '../utils/dateUtils';
 import { getPlatformIcon, formatPlatformList } from '../utils/platformUtils';
 import { getStatusColor, getStatusIcon } from '../utils/statusUtils';
+import { ScheduledPost } from '../types';
 
+// REMOVE this local interface:
 interface ScheduledPost {
   id: string;
   content_id: string;
