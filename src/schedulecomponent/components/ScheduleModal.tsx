@@ -1,8 +1,34 @@
 // /src/schedulecomponent/components/ScheduleModal.tsx - FIXED
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, X, Check, AlertCircle } from 'lucide-react';
-import { formatDate, formatTime, addMinutes, isValidDate } from '../utils/dateUtils';
 import { ScheduledPost } from '../types';
+
+// Local utility functions to avoid import issues
+const formatDate = (date: Date): string => {
+  return date.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit', 
+    year: 'numeric'
+  });
+};
+
+const formatTime = (date: Date): string => {
+  return date.toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+};
+
+const addMinutes = (date: Date, minutes: number): Date => {
+  const newDate = new Date(date);
+  newDate.setMinutes(newDate.getMinutes() + minutes);
+  return newDate;
+};
+
+const isValidDate = (date: any): date is Date => {
+  return date instanceof Date && !isNaN(date.getTime());
+};
 
 interface ScheduleModalProps {
   post: ScheduledPost | null;
@@ -245,7 +271,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
             color: isDarkMode ? '#94a3b8' : '#6b7280'
           }}>
             <span>ID: {post.content_id}</span>
-            <span>Platforms: {post.selected_platforms.length}</span>
+            <span>Platforms: {post.selected_platforms?.length || 0}</span>
             <span>Character: {post.character_profile || 'Not set'}</span>
           </div>
         </div>
