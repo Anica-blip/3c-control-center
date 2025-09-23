@@ -254,98 +254,68 @@ export default function ScheduleComponent() {
         </p>
       </div>
 
-      {/* Status Summary */}
+      {/* Compact Status Summary */}
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '16px',
-        marginBottom: '32px',
-        padding: '20px',
+        display: 'flex',
+        gap: '12px',
+        marginBottom: '24px',
+        padding: '12px 16px',
         backgroundColor: theme.cardBg,
-        borderRadius: '12px',
-        border: `1px solid ${theme.border}`
+        borderRadius: '8px',
+        border: `1px solid ${theme.border}`,
+        alignItems: 'center'
       }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            fontSize: '32px',
-            fontWeight: '700',
-            color: theme.primary,
-            marginBottom: '4px'
-          }}>
-            {pendingPosts.length}
+        <span style={{ color: theme.textSecondary, fontSize: '14px', fontWeight: '500' }}>Quick Stats:</span>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              color: theme.primary
+            }}>
+              {pendingPosts.length}
+            </div>
+            <span style={{ fontSize: '13px', color: theme.textSecondary }}>Pending</span>
           </div>
-          <div style={{
-            fontSize: '14px',
-            color: theme.textSecondary,
-            fontWeight: '500'
-          }}>
-            Pending Schedule
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              color: theme.success
+            }}>
+              {scheduledPosts.filter(p => p.status === 'scheduled').length}
+            </div>
+            <span style={{ fontSize: '13px', color: theme.textSecondary }}>Scheduled</span>
           </div>
-        </div>
-        
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            fontSize: '32px',
-            fontWeight: '700',
-            color: theme.success,
-            marginBottom: '4px'
-          }}>
-            {scheduledPosts.filter(p => p.status === 'scheduled').length}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              color: theme.success
+            }}>
+              {publishedPosts.length}
+            </div>
+            <span style={{ fontSize: '13px', color: theme.textSecondary }}>Published</span>
           </div>
-          <div style={{
-            fontSize: '14px',
-            color: theme.textSecondary,
-            fontWeight: '500'
-          }}>
-            Scheduled
-          </div>
-        </div>
-        
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            fontSize: '32px',
-            fontWeight: '700',
-            color: theme.success,
-            marginBottom: '4px'
-          }}>
-            {publishedPosts.length}
-          </div>
-          <div style={{
-            fontSize: '14px',
-            color: theme.textSecondary,
-            fontWeight: '500'
-          }}>
-            Published
-          </div>
-        </div>
-        
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            fontSize: '32px',
-            fontWeight: '700',
-            color: theme.danger,
-            marginBottom: '4px'
-          }}>
-            {failedPosts.length}
-          </div>
-          <div style={{
-            fontSize: '14px',
-            color: theme.textSecondary,
-            fontWeight: '500'
-          }}>
-            Failed
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              color: theme.danger
+            }}>
+              {failedPosts.length}
+            </div>
+            <span style={{ fontSize: '13px', color: theme.textSecondary }}>Failed</span>
           </div>
         </div>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Tab Navigation - Light Blue Bar Style */}
       <div style={{
-        display: 'flex',
-        borderBottom: `1px solid ${theme.border}`,
-        marginBottom: '32px',
-        backgroundColor: theme.cardBg,
-        borderRadius: '12px 12px 0 0',
-        padding: '0 8px'
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 1fr 1fr',
+        gap: '8px',
+        marginBottom: '32px'
       }}>
         {tabs.map(tab => {
           const IconComponent = tab.icon;
@@ -353,15 +323,36 @@ export default function ScheduleComponent() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              style={getTabStyle(tab.id, activeTab, isDarkMode)}
+              style={{
+                padding: '20px 24px',
+                backgroundColor: '#4a90e2',
+                cursor: 'pointer',
+                borderRadius: '12px',
+                border: 'none',
+                transition: 'all 0.3s ease',
+                opacity: activeTab === tab.id ? 1 : 0.8,
+                transform: activeTab === tab.id ? 'scale(1.02)' : 'scale(1)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}
             >
-              <IconComponent size={18} />
-              <span>{tab.label}</span>
+              <IconComponent size={20} style={{ color: '#ffffff', flexShrink: 0 }} />
+              <div style={{ textAlign: 'left', flex: 1 }}>
+                <div style={{
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  color: '#ffffff',
+                  lineHeight: '1.2'
+                }}>
+                  {tab.label}
+                </div>
+              </div>
               {tab.count > 0 && (
                 <span style={{
-                  backgroundColor: activeTab === tab.id ? theme.primary : theme.textSecondary,
-                  color: activeTab === tab.id ? 'white' : theme.bg,
-                  padding: '2px 8px',
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  color: '#ffffff',
+                  padding: '4px 8px',
                   borderRadius: '12px',
                   fontSize: '12px',
                   fontWeight: '700',
@@ -379,9 +370,8 @@ export default function ScheduleComponent() {
       {/* Tab Content */}
       <div style={{
         backgroundColor: theme.cardBg,
-        borderRadius: '0 0 12px 12px',
+        borderRadius: '12px',
         border: `1px solid ${theme.border}`,
-        borderTop: 'none',
         minHeight: '600px'
       }}>
         {activeTab === 'pending' && (
