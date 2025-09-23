@@ -1,5 +1,5 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - FIXED with working tab navigation
-import React, { useState, useEffect } from 'react';
+// /src/schedulecomponent/ScheduleComponent.tsx - FIXED with proper imports and integration
+import React, { useState } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import PendingTab from './components/PendingTab';
 import CalendarView from './components/CalendarView';
@@ -7,6 +7,7 @@ import StatusManagement from './components/StatusManagement';
 import TemplateManager from './components/TemplateManager';
 import ScheduleModal from './components/ScheduleModal';
 import EditModal from './components/EditModal';
+import { getTabStyle, getTheme, getContainerStyle, getCSSAnimations } from './utils/styleUtils';
 import { Clock, Calendar, CheckCircle, Save } from 'lucide-react';
 import { ScheduledPost, SavedTemplate } from './types';
 
@@ -39,37 +40,8 @@ export default function ScheduleComponent() {
   const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
   const [editingPost, setEditingPost] = useState<ScheduledPost | null>(null);
 
-  // Theme detection
-  const isDarkMode = localStorage.getItem('darkMode') === 'true';
-
-  // Theme colors
-  const theme = isDarkMode ? {
-    bg: '#1e293b',
-    cardBg: '#334155',
-    border: '#475569',
-    text: '#f8fafc',
-    textSecondary: '#94a3b8',
-    primary: '#60a5fa',
-    primaryHover: '#3b82f6',
-    hoverBg: '#475569',
-    activeBg: '#1e3a8a',
-    success: '#10b981',
-    warning: '#f59e0b',
-    danger: '#ef4444'
-  } : {
-    bg: '#ffffff',
-    cardBg: '#f8fafc',
-    border: '#e5e7eb',
-    text: '#111827',
-    textSecondary: '#6b7280',
-    primary: '#3b82f6',
-    primaryHover: '#2563eb',
-    hoverBg: '#f3f4f6',
-    activeBg: '#dbeafe',
-    success: '#059669',
-    warning: '#d97706',
-    danger: '#dc2626'
-  };
+  // Get theme
+  const { isDarkMode, theme } = getTheme();
 
   // Filter posts by status for each tab
   const pendingPosts = scheduledPosts.filter(p => p.status === 'pending_schedule');
@@ -231,69 +203,36 @@ export default function ScheduleComponent() {
     }
   };
 
-  // Tab configuration with proper counts
+  // Tab configuration
   const tabs = [
     { 
       id: 'pending', 
       label: 'Pending Schedules', 
       icon: Clock,
-      count: pendingPosts.length,
-      description: 'Posts awaiting schedule assignment'
+      count: pendingPosts.length
     },
     { 
       id: 'calendar', 
       label: 'Calendar View', 
       icon: Calendar,
-      count: scheduledPostsFiltered.length,
-      description: 'Visual calendar of scheduled posts'
+      count: scheduledPostsFiltered.length
     },
     { 
       id: 'status', 
       label: 'Status Management', 
       icon: CheckCircle,
-      count: scheduledPostsFiltered.length,
-      description: 'Monitor and manage post status'
+      count: scheduledPostsFiltered.length
     },
     { 
       id: 'saved', 
       label: 'Saved Templates', 
       icon: Save,
-      count: savedTemplates.length,
-      description: 'Reusable content templates'
+      count: savedTemplates.length
     }
   ];
 
-  // Container styles
-  const containerStyle = {
-    backgroundColor: theme.bg,
-    color: theme.text,
-    minHeight: '100vh',
-    padding: '24px',
-    fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-  };
-
-  // Tab styles
-  const getTabStyle = (tabId: string) => {
-    const isActive = activeTab === tabId;
-    return {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      padding: '12px 20px',
-      border: 'none',
-      backgroundColor: 'transparent',
-      color: isActive ? theme.primary : theme.textSecondary,
-      cursor: 'pointer',
-      fontSize: '14px',
-      fontWeight: '600',
-      borderBottom: isActive ? `2px solid ${theme.primary}` : '2px solid transparent',
-      transition: 'all 0.2s ease',
-      fontFamily: 'inherit'
-    };
-  };
-
   return (
-    <div style={containerStyle}>
+    <div style={getContainerStyle(isDarkMode)}>
       {/* Header */}
       <div style={{
         marginBottom: '32px'
@@ -414,17 +353,7 @@ export default function ScheduleComponent() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              style={getTabStyle(tab.id)}
-              onMouseOver={(e) => {
-                if (activeTab !== tab.id) {
-                  e.currentTarget.style.backgroundColor = theme.hoverBg;
-                }
-              }}
-              onMouseOut={(e) => {
-                if (activeTab !== tab.id) {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }
-              }}
+              style={getTabStyle(tab.id, activeTab, isDarkMode)}
             >
               <IconComponent size={18} />
               <span>{tab.label}</span>
@@ -568,21 +497,7 @@ export default function ScheduleComponent() {
       )}
 
       {/* CSS Animations */}
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .schedule-tab-content {
-          animation: fadeIn 0.3s ease-out;
-        }
-      `}</style>
+      <style>{getCSSAnimations()}</style>
     </div>
   );
 }
