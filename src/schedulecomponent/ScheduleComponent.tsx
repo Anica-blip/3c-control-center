@@ -1,96 +1,344 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - Working with Dashboard Theme
-import React, { useState } from 'react';
-import { getTabStyle, getTheme, getContainerStyle, getCSSAnimations } from './utils/styleUtils';
+// /src/schedulecomponent/ScheduleComponent.tsx - FIXED with working tab navigation
+import React, { useState, useEffect } from 'react';
+import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
+import PendingTab from './components/PendingTab';
+import CalendarView from './components/CalendarView';
+import StatusManagement from './components/StatusManagement';
+import TemplateManager from './components/TemplateManager';
+import ScheduleModal from './components/ScheduleModal';
+import EditModal from './components/EditModal';
 import { Clock, Calendar, CheckCircle, Save } from 'lucide-react';
+import { ScheduledPost, SavedTemplate } from './types';
 
 export default function ScheduleComponent() {
-  const [activeTab, setActiveTab] = useState('pending');
-  const { isDarkMode } = getTheme();
+  // Use hooks for data management
+  const {
+    posts: scheduledPosts,
+    loading: postsLoading,
+    error: postsError,
+    createPost,
+    updatePost,
+    deletePost,
+    refreshPosts
+  } = useScheduledPosts();
 
+  const {
+    templates: savedTemplates,
+    loading: templatesLoading,
+    error: templatesError,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+    incrementUsage
+  } = useTemplates();
+
+  // UI state
+  const [activeTab, setActiveTab] = useState('pending');
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
+  const [editingPost, setEditingPost] = useState<ScheduledPost | null>(null);
+
+  // Theme detection
+  const isDarkMode = localStorage.getItem('darkMode') === 'true';
+
+  // Theme colors
+  const theme = isDarkMode ? {
+    bg: '#1e293b',
+    cardBg: '#334155',
+    border: '#475569',
+    text: '#f8fafc',
+    textSecondary: '#94a3b8',
+    primary: '#60a5fa',
+    primaryHover: '#3b82f6',
+    hoverBg: '#475569',
+    activeBg: '#1e3a8a',
+    success: '#10b981',
+    warning: '#f59e0b',
+    danger: '#ef4444'
+  } : {
+    bg: '#ffffff',
+    cardBg: '#f8fafc',
+    border: '#e5e7eb',
+    text: '#111827',
+    textSecondary: '#6b7280',
+    primary: '#3b82f6',
+    primaryHover: '#2563eb',
+    hoverBg: '#f3f4f6',
+    activeBg: '#dbeafe',
+    success: '#059669',
+    warning: '#d97706',
+    danger: '#dc2626'
+  };
+
+  // Filter posts by status for each tab
+  const pendingPosts = scheduledPosts.filter(p => p.status === 'pending_schedule');
+  const scheduledPostsFiltered = scheduledPosts.filter(p => 
+    ['scheduled', 'processing', 'publishing', 'published', 'failed'].includes(p.status)
+  );
+  const publishedPosts = scheduledPosts.filter(p => p.status === 'published');
+  const failedPosts = scheduledPosts.filter(p => p.status === 'failed');
+
+  // Event handlers
+  const handleSchedulePost = (post: ScheduledPost) => {
+    setSelectedPost(post);
+    setIsScheduleModalOpen(true);
+  };
+
+  const handleConfirmSchedule = async (scheduleData: {
+    scheduledDate: string;
+    timezone: string;
+    repeatOption?: string;
+  }) => {
+    try {
+      if (!selectedPost) return;
+      
+      const updatedPost = {
+        ...selectedPost,
+        scheduled_date: new Date(scheduleData.scheduledDate),
+        status: 'scheduled' as const
+      };
+
+      await updatePost(selectedPost.id, updatedPost);
+      
+      setIsScheduleModalOpen(false);
+      setSelectedPost(null);
+      await refreshPosts();
+    } catch (error) {
+      console.error('Failed to schedule post:', error);
+    }
+  };
+
+  const handleEditPost = (post: ScheduledPost) => {
+    setEditingPost(post);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (postId: string, updates: Partial<ScheduledPost>) => {
+    try {
+      await updatePost(postId, updates);
+      setIsEditModalOpen(false);
+      setEditingPost(null);
+      await refreshPosts();
+    } catch (error) {
+      console.error('Failed to update post:', error);
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (confirm('Are you sure you want to delete this post?')) {
+      try {
+        await deletePost(postId);
+        await refreshPosts();
+      } catch (error) {
+        console.error('Failed to delete post:', error);
+      }
+    }
+  };
+
+  const handleSaveAsTemplate = async (post: ScheduledPost) => {
+    try {
+      const templateData = {
+        template_name: post.title || 'Saved Template',
+        character_profile: post.character_profile,
+        theme: post.theme || '',
+        audience: post.audience || '',
+        media_type: post.media_type || '',
+        template_type: post.template_type || '',
+        platform: post.platform || '',
+        title: post.title || '',
+        description: post.description,
+        hashtags: post.hashtags || [],
+        keywords: post.keywords || '',
+        cta: post.cta || '',
+        selected_platforms: post.selected_platforms,
+        usage_count: 0,
+        is_active: true,
+        template_version: 1,
+        user_id: post.user_id || '',
+        created_by: post.created_by || ''
+      };
+
+      await createTemplate(templateData);
+      alert('Post saved as template successfully!');
+    } catch (error) {
+      console.error('Failed to save template:', error);
+      alert('Failed to save template. Please try again.');
+    }
+  };
+
+  const handleUseTemplate = async (template: SavedTemplate) => {
+    try {
+      // Create a new pending post from the template
+      const pendingPostData = {
+        content_id: `template-${template.id}-${Date.now()}`,
+        character_profile: template.character_profile,
+        theme: template.theme,
+        audience: template.audience,
+        media_type: template.media_type,
+        template_type: template.template_type,
+        platform: template.platform,
+        title: template.title,
+        description: template.description,
+        hashtags: template.hashtags,
+        keywords: template.keywords,
+        cta: template.cta,
+        media_files: [],
+        selected_platforms: template.selected_platforms,
+        status: 'pending_schedule' as const,
+        user_id: template.user_id,
+        created_by: template.created_by,
+        is_from_template: true,
+        source_template_id: template.id
+      };
+
+      await createPost(pendingPostData);
+      await incrementUsage(template.id);
+      
+      // Switch to pending tab to show the new post
+      setActiveTab('pending');
+      await refreshPosts();
+      
+      alert('Template added to Pending Schedules!');
+    } catch (error) {
+      console.error('Failed to use template:', error);
+      alert('Failed to use template. Please try again.');
+    }
+  };
+
+  const handleUpdateStatus = async (postId: string, newStatus: string) => {
+    try {
+      await updatePost(postId, { status: newStatus });
+      await refreshPosts();
+    } catch (error) {
+      console.error('Failed to update status:', error);
+    }
+  };
+
+  const handleRetryPost = async (postId: string) => {
+    try {
+      const post = scheduledPosts.find(p => p.id === postId);
+      if (post) {
+        await updatePost(postId, { 
+          status: 'scheduled',
+          retry_count: (post.retry_count || 0) + 1,
+          last_attempt: new Date()
+        });
+        await refreshPosts();
+      }
+    } catch (error) {
+      console.error('Failed to retry post:', error);
+    }
+  };
+
+  // Tab configuration with proper counts
   const tabs = [
     { 
       id: 'pending', 
       label: 'Pending Schedules', 
       icon: Clock,
-      count: 5,
-      description: 'Posts from Content Manager awaiting schedule assignment'
+      count: pendingPosts.length,
+      description: 'Posts awaiting schedule assignment'
     },
     { 
       id: 'calendar', 
       label: 'Calendar View', 
       icon: Calendar,
-      count: 12,
-      description: 'Visual calendar showing all scheduled posts'
+      count: scheduledPostsFiltered.length,
+      description: 'Visual calendar of scheduled posts'
     },
     { 
       id: 'status', 
-      label: 'Status Manager', 
+      label: 'Status Management', 
       icon: CheckCircle,
-      count: 8,
-      description: 'Monitor and manage post publishing status'
+      count: scheduledPostsFiltered.length,
+      description: 'Monitor and manage post status'
     },
     { 
       id: 'saved', 
       label: 'Saved Templates', 
       icon: Save,
-      count: 3,
-      description: 'Reusable templates from successful posts'
+      count: savedTemplates.length,
+      description: 'Reusable content templates'
     }
   ];
 
-  const currentTab = tabs.find(tab => tab.id === activeTab);
+  // Container styles
+  const containerStyle = {
+    backgroundColor: theme.bg,
+    color: theme.text,
+    minHeight: '100vh',
+    padding: '24px',
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+  };
+
+  // Tab styles
+  const getTabStyle = (tabId: string) => {
+    const isActive = activeTab === tabId;
+    return {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      padding: '12px 20px',
+      border: 'none',
+      backgroundColor: 'transparent',
+      color: isActive ? theme.primary : theme.textSecondary,
+      cursor: 'pointer',
+      fontSize: '14px',
+      fontWeight: '600',
+      borderBottom: isActive ? `2px solid ${theme.primary}` : '2px solid transparent',
+      transition: 'all 0.2s ease',
+      fontFamily: 'inherit'
+    };
+  };
 
   return (
-    <div style={getContainerStyle(isDarkMode)}>
+    <div style={containerStyle}>
       {/* Header */}
       <div style={{
-        marginBottom: '24px',
-        paddingBottom: '16px',
-        borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
+        marginBottom: '32px'
       }}>
         <h1 style={{
-          fontSize: '24px',
+          fontSize: '28px',
           fontWeight: '700',
-          margin: '0 0 8px 0',
-          color: isDarkMode ? '#60a5fa' : '#2563eb',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
+          color: theme.text,
+          margin: '0 0 8px 0'
         }}>
-          <Calendar size={28} />
           Schedule Manager
         </h1>
         <p style={{
-          fontSize: '14px',
-          color: isDarkMode ? '#94a3b8' : '#6b7280',
+          fontSize: '16px',
+          color: theme.textSecondary,
           margin: '0'
         }}>
-          Schedule posts and track their delivery status
+          Manage your social media content scheduling and templates
         </p>
       </div>
 
-      {/* Status Summary Cards */}
+      {/* Status Summary */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
         gap: '16px',
-        marginBottom: '24px',
+        marginBottom: '32px',
         padding: '20px',
-        backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
-        borderRadius: '8px',
-        border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+        backgroundColor: theme.cardBg,
+        borderRadius: '12px',
+        border: `1px solid ${theme.border}`
       }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{
-            fontSize: '24px',
-            fontWeight: '600',
-            color: isDarkMode ? '#60a5fa' : '#2563eb'
+            fontSize: '32px',
+            fontWeight: '700',
+            color: theme.primary,
+            marginBottom: '4px'
           }}>
-            5
+            {pendingPosts.length}
           </div>
           <div style={{
             fontSize: '14px',
-            color: isDarkMode ? '#94a3b8' : '#6b7280'
+            color: theme.textSecondary,
+            fontWeight: '500'
           }}>
             Pending Schedule
           </div>
@@ -98,15 +346,17 @@ export default function ScheduleComponent() {
         
         <div style={{ textAlign: 'center' }}>
           <div style={{
-            fontSize: '24px',
-            fontWeight: '600',
-            color: isDarkMode ? '#10b981' : '#059669'
+            fontSize: '32px',
+            fontWeight: '700',
+            color: theme.success,
+            marginBottom: '4px'
           }}>
-            12
+            {scheduledPosts.filter(p => p.status === 'scheduled').length}
           </div>
           <div style={{
             fontSize: '14px',
-            color: isDarkMode ? '#94a3b8' : '#6b7280'
+            color: theme.textSecondary,
+            fontWeight: '500'
           }}>
             Scheduled
           </div>
@@ -114,15 +364,17 @@ export default function ScheduleComponent() {
         
         <div style={{ textAlign: 'center' }}>
           <div style={{
-            fontSize: '24px',
-            fontWeight: '600',
-            color: isDarkMode ? '#22c55e' : '#16a34a'
+            fontSize: '32px',
+            fontWeight: '700',
+            color: theme.success,
+            marginBottom: '4px'
           }}>
-            15
+            {publishedPosts.length}
           </div>
           <div style={{
             fontSize: '14px',
-            color: isDarkMode ? '#94a3b8' : '#6b7280'
+            color: theme.textSecondary,
+            fontWeight: '500'
           }}>
             Published
           </div>
@@ -130,15 +382,17 @@ export default function ScheduleComponent() {
         
         <div style={{ textAlign: 'center' }}>
           <div style={{
-            fontSize: '24px',
-            fontWeight: '600',
-            color: isDarkMode ? '#ef4444' : '#dc2626'
+            fontSize: '32px',
+            fontWeight: '700',
+            color: theme.danger,
+            marginBottom: '4px'
           }}>
-            2
+            {failedPosts.length}
           </div>
           <div style={{
             fontSize: '14px',
-            color: isDarkMode ? '#94a3b8' : '#6b7280'
+            color: theme.textSecondary,
+            fontWeight: '500'
           }}>
             Failed
           </div>
@@ -148,8 +402,11 @@ export default function ScheduleComponent() {
       {/* Tab Navigation */}
       <div style={{
         display: 'flex',
-        borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
-        marginBottom: '24px'
+        borderBottom: `1px solid ${theme.border}`,
+        marginBottom: '32px',
+        backgroundColor: theme.cardBg,
+        borderRadius: '12px 12px 0 0',
+        padding: '0 8px'
       }}>
         {tabs.map(tab => {
           const IconComponent = tab.icon;
@@ -157,213 +414,175 @@ export default function ScheduleComponent() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              style={{
-                ...getTabStyle(tab.id, activeTab, isDarkMode),
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
+              style={getTabStyle(tab.id)}
+              onMouseOver={(e) => {
+                if (activeTab !== tab.id) {
+                  e.currentTarget.style.backgroundColor = theme.hoverBg;
+                }
+              }}
+              onMouseOut={(e) => {
+                if (activeTab !== tab.id) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
               }}
             >
-              <IconComponent size={16} />
-              {tab.label}
-              <span style={{
-                backgroundColor: isDarkMode ? '#1e3a8a' : '#dbeafe',
-                color: isDarkMode ? '#60a5fa' : '#1e40af',
-                padding: '2px 6px',
-                borderRadius: '12px',
-                fontSize: '11px',
-                fontWeight: '600'
-              }}>
-                {tab.count}
-              </span>
+              <IconComponent size={18} />
+              <span>{tab.label}</span>
+              {tab.count > 0 && (
+                <span style={{
+                  backgroundColor: activeTab === tab.id ? theme.primary : theme.textSecondary,
+                  color: activeTab === tab.id ? 'white' : theme.bg,
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  minWidth: '20px',
+                  textAlign: 'center'
+                }}>
+                  {tab.count}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* Active Tab Content */}
+      {/* Tab Content */}
       <div style={{
-        backgroundColor: isDarkMode ? '#1e293b' : '#f9fafb',
-        borderRadius: '8px',
-        padding: '32px',
-        minHeight: '400px',
-        border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
+        backgroundColor: theme.cardBg,
+        borderRadius: '0 0 12px 12px',
+        border: `1px solid ${theme.border}`,
+        borderTop: 'none',
+        minHeight: '600px'
       }}>
-        {currentTab && (
-          <div className="animate-fade-in">
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              marginBottom: '24px'
-            }}>
-              <currentTab.icon size={32} style={{
-                marginRight: '16px',
-                color: activeTab === 'pending' ? '#60a5fa' :
-                       activeTab === 'calendar' ? '#10b981' :
-                       activeTab === 'status' ? '#f59e0b' : '#a855f7'
-              }} />
-              <div>
-                <h2 style={{
-                  fontSize: '24px',
-                  fontWeight: '600',
-                  margin: '0 0 8px 0',
-                  color: isDarkMode ? '#f8fafc' : '#111827'
-                }}>
-                  {currentTab.label}
-                </h2>
-                <p style={{
-                  fontSize: '16px',
-                  color: isDarkMode ? '#94a3b8' : '#6b7280',
-                  margin: '0'
-                }}>
-                  {currentTab.description}
-                </p>
-              </div>
-            </div>
-
-            {/* Tab-specific content */}
-            <div style={{
-              backgroundColor: isDarkMode ? '#334155' : 'white',
-              borderRadius: '8px',
-              padding: '24px',
-              border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
-            }}>
-              {activeTab === 'pending' && (
-                <div>
-                  <h3 style={{
-                    fontSize: '18px',
-                    fontWeight: '600',
-                    color: isDarkMode ? '#f8fafc' : '#111827',
-                    margin: '0 0 16px 0'
-                  }}>
-                    📝 Pending Schedules Features:
-                  </h3>
-                  <ul style={{
-                    color: isDarkMode ? '#e2e8f0' : '#4b5563',
-                    fontSize: '14px',
-                    lineHeight: '1.6',
-                    paddingLeft: '20px'
-                  }}>
-                    <li>Receive posts from Content Manager with pending_schedule status</li>
-                    <li>Edit post content, hashtags, platforms, and metadata</li>
-                    <li>Set date/time for publishing (UK timezone UTC+1)</li>
-                    <li>Quick schedule options: 1 hour, 2 hours, tomorrow 9 AM, next Monday 9 AM</li>
-                    <li>Delete unwanted posts</li>
-                    <li><strong>Schedule Now</strong> button changes status to scheduled</li>
-                  </ul>
-                </div>
-              )}
-
-              {activeTab === 'calendar' && (
-                <div>
-                  <h3 style={{
-                    fontSize: '18px',
-                    fontWeight: '600',
-                    color: isDarkMode ? '#f8fafc' : '#111827',
-                    margin: '0 0 16px 0'
-                  }}>
-                    📅 Calendar View Features:
-                  </h3>
-                  <ul style={{
-                    color: isDarkMode ? '#e2e8f0' : '#4b5563',
-                    fontSize: '14px',
-                    lineHeight: '1.6',
-                    paddingLeft: '20px'
-                  }}>
-                    <li>Visual calendar with UK date format (DD/MM/YYYY)</li>
-                    <li>24-hour time format for UK standards</li>
-                    <li>Posts display with title & platform abbreviations (IG, FB, TW)</li>
-                    <li>Month/week navigation</li>
-                    <li>Click posts for details and editing</li>
-                    <li>Color-coded by status</li>
-                  </ul>
-                </div>
-              )}
-
-              {activeTab === 'status' && (
-                <div>
-                  <h3 style={{
-                    fontSize: '18px',
-                    fontWeight: '600',
-                    color: isDarkMode ? '#f8fafc' : '#111827',
-                    margin: '0 0 16px 0'
-                  }}>
-                    ⚡ Status Manager Features:
-                  </h3>
-                  <ul style={{
-                    color: isDarkMode ? '#e2e8f0' : '#4b5563',
-                    fontSize: '14px',
-                    lineHeight: '1.6',
-                    paddingLeft: '20px'
-                  }}>
-                    <li>Monitor posts: scheduled → processing → published/failed</li>
-                    <li>Filter by status: scheduled, processing, published, failed</li>
-                    <li>Retry failed posts with error tracking</li>
-                    <li><strong>Save as Template</strong> button (ONLY for published posts)</li>
-                    <li><strong>Delete</strong> button for cleanup and management</li>
-                    <li>Real-time status updates</li>
-                  </ul>
-                </div>
-              )}
-
-              {activeTab === 'saved' && (
-                <div>
-                  <h3 style={{
-                    fontSize: '18px',
-                    fontWeight: '600',
-                    color: isDarkMode ? '#f8fafc' : '#111827',
-                    margin: '0 0 16px 0'
-                  }}>
-                    💾 Saved Templates Features:
-                  </h3>
-                  <ul style={{
-                    color: isDarkMode ? '#e2e8f0' : '#4b5563',
-                    fontSize: '14px',
-                    lineHeight: '1.6',
-                    paddingLeft: '20px'
-                  }}>
-                    <li>Templates saved from Status Manager (Section 3)</li>
-                    <li><strong>Use Template</strong> button → copies to Pending Schedules</li>
-                    <li><strong>Delete Template</strong> button with confirmation</li>
-                    <li>Search and filter templates</li>
-                    <li>Usage tracking and popularity indicators</li>
-                    <li>Complete cycle: Templates → Pending → Schedule → Publish</li>
-                  </ul>
-                </div>
-              )}
-
-              {/* Coming Soon Notice */}
-              <div style={{
-                marginTop: '32px',
-                padding: '20px',
-                backgroundColor: isDarkMode ? '#1e293b' : '#f0f9ff',
-                borderRadius: '8px',
-                border: `1px solid ${isDarkMode ? '#475569' : '#bae6fd'}`,
-                textAlign: 'center'
-              }}>
-                <h4 style={{
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  color: isDarkMode ? '#60a5fa' : '#0ea5e9',
-                  margin: '0 0 8px 0'
-                }}>
-                  🚧 Full Functionality Coming Next
-                </h4>
-                <p style={{
-                  fontSize: '14px',
-                  color: isDarkMode ? '#94a3b8' : '#0369a1',
-                  margin: '0'
-                }}>
-                  This section will be populated with real data and functionality once the basic structure is confirmed working.
-                </p>
-              </div>
-            </div>
-          </div>
+        {activeTab === 'pending' && (
+          <PendingTab
+            posts={pendingPosts}
+            loading={postsLoading}
+            error={postsError}
+            onSchedule={handleSchedulePost}
+            onEdit={handleEditPost}
+            onDelete={handleDeletePost}
+          />
+        )}
+        
+        {activeTab === 'calendar' && (
+          <CalendarView
+            posts={scheduledPostsFiltered}
+            onEditPost={handleEditPost}
+            loading={postsLoading}
+            error={postsError}
+          />
+        )}
+        
+        {activeTab === 'status' && (
+          <StatusManagement
+            posts={scheduledPostsFiltered}
+            loading={postsLoading}
+            error={postsError}
+            onUpdateStatus={handleUpdateStatus}
+            onDelete={handleDeletePost}
+            onEdit={handleEditPost}
+            onRetry={handleRetryPost}
+          />
+        )}
+        
+        {activeTab === 'saved' && (
+          <TemplateManager
+            templates={savedTemplates}
+            loading={templatesLoading}
+            error={templatesError}
+            onCreate={createTemplate}
+            onUpdate={updateTemplate}
+            onDelete={deleteTemplate}
+            onUse={handleUseTemplate}
+            onLoadTemplate={handleUseTemplate}
+          />
         )}
       </div>
 
+      {/* Loading State Overlay */}
+      {(postsLoading || templatesLoading) && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: theme.bg,
+            padding: '24px',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            border: `1px solid ${theme.border}`,
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div style={{
+              width: '24px',
+              height: '24px',
+              border: `3px solid ${theme.border}`,
+              borderTop: `3px solid ${theme.primary}`,
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
+            }} />
+            <span style={{ 
+              color: theme.text,
+              fontSize: '16px',
+              fontWeight: '600'
+            }}>
+              Loading Schedule Manager...
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Modals */}
+      {isScheduleModalOpen && selectedPost && (
+        <ScheduleModal
+          post={selectedPost}
+          onConfirm={handleConfirmSchedule}
+          onCancel={() => {
+            setIsScheduleModalOpen(false);
+            setSelectedPost(null);
+          }}
+        />
+      )}
+
+      {isEditModalOpen && editingPost && (
+        <EditModal
+          post={editingPost}
+          onSave={handleSaveEdit}
+          onCancel={() => {
+            setIsEditModalOpen(false);
+            setEditingPost(null);
+          }}
+        />
+      )}
+
       {/* CSS Animations */}
-      <style>{getCSSAnimations()}</style>
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .schedule-tab-content {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
