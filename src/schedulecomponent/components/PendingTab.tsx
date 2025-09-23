@@ -7,7 +7,7 @@ import { getStatusColor, getStatusIcon } from '../utils/statusUtils';
 import { ScheduledPost } from '../types';
 
 interface PendingTabProps {
-  posts: ScheduledPost[];
+  posts: ScheduledPost[];  // Already correct, but ensure ScheduledPost is imported from '../types'
   loading: boolean;
   error?: string | null;
   onSchedule: (post: ScheduledPost) => void;
