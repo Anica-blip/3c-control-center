@@ -1,4 +1,4 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - FIXED with proper imports and integration
+// /src/schedulecomponent/ScheduleComponent.tsx - ORIGINAL WORKING VERSION with light blue styling
 import React, { useState } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import PendingTab from './components/PendingTab';
