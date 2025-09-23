@@ -3,6 +3,9 @@ import React, { useState } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import PendingTab from './components/PendingTab';
 import ScheduleModal from './components/ScheduleModal';
+import CalendarView from './components/CalendarView';
+import StatusManagement from './components/StatusManagement';
+import TemplateManager from './components/TemplateManager';
 import { getTabStyle, getTheme, getContainerStyle, getCSSAnimations } from './utils/styleUtils';
 import { Clock, Calendar, CheckCircle, Save } from 'lucide-react';
 
@@ -82,6 +85,24 @@ export default function ScheduleComponent() {
       } catch (error) {
         console.error('Failed to delete post:', error);
       }
+    }
+  };
+
+  const handleRetryPost = async (postId: string) => {
+    try {
+      await updatePost(postId, { status: 'pending', retry_count: 0 });
+      await refreshPosts();
+    } catch (error) {
+      console.error('Failed to retry post:', error);
+    }
+  };
+
+  const handleUpdateStatus = async (postId: string, newStatus: string) => {
+    try {
+      await updatePost(postId, { status: newStatus });
+      await refreshPosts();
+    } catch (error) {
+      console.error('Failed to update status:', error);
     }
   };
 
@@ -243,51 +264,64 @@ export default function ScheduleComponent() {
         )}
         
         {activeTab === 'calendar' && (
-          <div style={{
-            textAlign: 'center',
-            padding: '60px 20px',
-            color: isDarkMode ? '#94a3b8' : '#6b7280'
-          }}>
-            <Calendar size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-            <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0' }}>
-              Calendar View
-            </h3>
-            <p style={{ fontSize: '14px', margin: '0' }}>
-              Calendar view component coming soon...
-            </p>
-          </div>
+          <CalendarView
+            posts={scheduledPostsFiltered}
+            onEditPost={handleEditPost}
+            loading={postsLoading}
+            error={postsError}
+          />
         )}
         
         {activeTab === 'status' && (
-          <div style={{
-            textAlign: 'center',
-            padding: '60px 20px',
-            color: isDarkMode ? '#94a3b8' : '#6b7280'
-          }}>
-            <CheckCircle size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-            <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0' }}>
-              Status Management
-            </h3>
-            <p style={{ fontSize: '14px', margin: '0' }}>
-              Status management component coming soon...
-            </p>
-          </div>
+          <StatusManagement
+            posts={scheduledPosts}
+            loading={postsLoading}
+            error={postsError}
+            onUpdateStatus={handleUpdateStatus}
+            onDelete={handleDeletePost}
+            onEdit={handleEditPost}
+            onRetry={handleRetryPost}
+          />
         )}
         
         {activeTab === 'saved' && (
-          <div style={{
-            textAlign: 'center',
-            padding: '60px 20px',
-            color: isDarkMode ? '#94a3b8' : '#6b7280'
-          }}>
-            <Save size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-            <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0' }}>
-              Saved Templates
-            </h3>
-            <p style={{ fontSize: '14px', margin: '0' }}>
-              Template manager component coming soon...
-            </p>
-          </div>
+          <TemplateManager
+            templates={savedTemplates}
+            loading={templatesLoading}
+            error={null}
+            onCreate={createTemplate}
+            onUpdate={updateTemplate}
+            onDelete={deleteTemplate}
+            onUse={incrementUsage}
+            onLoadTemplate={(template) => {
+              // Convert template to pending post and switch to pending tab
+              const pendingPost = {
+                id: `pending-${Date.now()}`,
+                content_id: `template-${template.id}`,
+                title: template.template_name,
+                description: template.description,
+                character_profile: template.character_profile,
+                theme: template.theme,
+                audience: template.audience,
+                media_type: template.media_type,
+                template_type: template.template_type,
+                platform: template.platform,
+                hashtags: template.hashtags,
+                keywords: template.keywords,
+                cta: template.cta,
+                selected_platforms: template.selected_platforms,
+                status: 'pending_schedule',
+                created_date: new Date(),
+                is_from_template: true,
+                source_template_id: template.id,
+                user_id: template.user_id,
+                created_by: template.created_by
+              };
+              
+              createPost(pendingPost);
+              setActiveTab('pending');
+            }}
+          />
         )}
       </div>
 
