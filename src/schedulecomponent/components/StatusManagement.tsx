@@ -32,12 +32,12 @@ interface StatusPost {
 }
 
 interface StatusManagementProps {
-  posts: StatusPost[];
+  posts: ScheduledPost[];  // Changed from StatusPost[]
   loading: boolean;
   error?: string | null;
   onUpdateStatus: (postId: string, newStatus: PostStatus) => Promise<void>;
   onDelete: (postId: string) => Promise<void>;
-  onEdit: (post: StatusPost) => void;
+  onEdit: (post: ScheduledPost) => void;  // Changed from StatusPost
   onRetry?: (postId: string) => Promise<void>;
 }
 
