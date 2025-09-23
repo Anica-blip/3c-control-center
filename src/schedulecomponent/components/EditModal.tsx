@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Edit3, X, Save, Calendar, Clock, User, Hash, FileText, ExternalLink, Image, Video, Trash2, Plus } from 'lucide-react';
 import { formatDate, formatTime, isValidDate } from '../utils/dateUtils';
 import { getPlatformIcon, formatPlatformList } from '../utils/platformUtils';
+import { MediaFile, ScheduledPost } from '../types';
 
 interface MediaFile {
   id: string;
@@ -40,8 +41,7 @@ interface EditablePost {
 }
 
 interface EditModalProps {
-  post: EditablePost | null;
-  onSave: (postId: string, updates: Partial<EditablePost>) => Promise<void>;
+  post: ScheduledPost | null;
   onCancel: () => void;
   availablePlatforms?: Array<{ id: string; name: string; isActive: boolean }>;
   characterProfiles?: Array<{ id: string; name: string; username: string; role: string }>;
