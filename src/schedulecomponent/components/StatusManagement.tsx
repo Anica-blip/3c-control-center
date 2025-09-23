@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { CheckCircle, AlertCircle, Clock, PlayCircle, XCircle, RefreshCw, Edit, Trash2, Eye, Filter, Search, TrendingUp } from 'lucide-react';
 import { formatDate, formatTime, getRelativeTime } from '../utils/dateUtils';
 import { getPlatformIcon, formatPlatformList } from '../utils/platformUtils';
-import { 
+import { ScheduledPost } from '../types';
   getStatusColor, 
   getStatusIcon, 
   getStatusDisplayInfo,
