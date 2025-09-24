@@ -1,4 +1,3 @@
-// FIXED: EnhancedContentCreationForm.tsx - Schedule Integration Fix
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Upload, X, Image, Video, FileText, Settings, ExternalLink, Plus, User, Eye, Edit3, Calendar, Trash2 } from 'lucide-react';
 import { ContentPost, MediaFile, SocialPlatform, CharacterProfile } from './types';
@@ -14,7 +13,7 @@ import {
   getVoiceStyleCode 
 } from './utils';
 // ADD NEW IMPORT FOR TEMPLATE LIBRARY INTEGRATION
-import { PendingLibraryTemplate, templateEventEmitter } from './TemplateLibrary';
+import { PendingLibraryTemplate } from './TemplateLibrary';
 
 // Theme Context (assuming this comes from your App.tsx)
 const ThemeContext = React.createContext({
@@ -36,9 +35,7 @@ const EnhancedContentCreationForm = ({
   onEditComplete,
   // ADD THESE NEW PROPS FOR TEMPLATE LIBRARY INTEGRATION:
   loadedTemplate,
-  onTemplateLoaded,
-  // ADD USER PROP FOR SUPABASE INTEGRATION:
-  user
+  onTemplateLoaded
 }: {
   onSave: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
   onAddToSchedule: (post: Omit<ContentPost, 'id' | 'createdDate'>) => void;
@@ -51,8 +48,6 @@ const EnhancedContentCreationForm = ({
   // ADD THESE NEW PROPS FOR TEMPLATE LIBRARY INTEGRATION:
   loadedTemplate?: PendingLibraryTemplate | null;
   onTemplateLoaded?: () => void;
-  // ADD USER PROP FOR SUPABASE INTEGRATION:
-  user?: { id: string } | null;
 }) => {
   const { isDarkMode } = useTheme();
 
@@ -316,44 +311,6 @@ const EnhancedContentCreationForm = ({
     setContentId(newId);
   }, [selections.theme, selections.audience, selections.mediaType, selections.templateType, selections.characterProfile, selections.voiceStyle, characterProfiles]);
 
-  // FIXED: Listen for templates sent from Template Library (DIRECT EVENT COMMUNICATION)
-  useEffect(() => {
-    const unsubscribe = templateEventEmitter.listen((template) => {
-      console.log('=== TEMPLATE RECEIVED FROM TEMPLATE LIBRARY ===');
-      console.log('Template data:', template);
-      
-      // Set form data from template
-      setSelections({
-        characterProfile: template.character_profile || '',
-        theme: template.theme || '',
-        audience: template.audience || '',
-        mediaType: template.media_type || '',
-        templateType: template.template_type || '',
-        platform: template.platform || '',
-        voiceStyle: template.voiceStyle || ''
-      });
-      
-      setContent({
-        title: template.title || '',
-        description: template.description || '',
-        hashtags: template.hashtags || [],
-        keywords: template.keywords || '',
-        cta: template.cta || ''
-      });
-      
-      if (template.selected_platforms) {
-        setSelectedPlatforms(template.selected_platforms);
-      }
-      
-      setIsEditingTemplate(true);
-      setupPlatformFields(template.platform);
-      
-      console.log('Template loaded into form successfully!');
-    });
-
-    return unsubscribe; // Cleanup event listener
-  }, []);
-
   // Load editing post data when provided
   useEffect(() => {
     if (editingPost) {
@@ -385,47 +342,11 @@ const EnhancedContentCreationForm = ({
     }
   }, [editingPost]);
 
-  // UPDATED USEEFFECT FOR TEMPLATE LOADING - TEXT ONLY, NO MEDIA FILES
+  // ADD NEW USEEFFECT FOR TEMPLATE LOADING:
   useEffect(() => {
     if (loadedTemplate && !editingPost) { // Don't load template if editing a post
-      console.log('=== LOADING TEMPLATE INTO FORM ===');
-      console.log('Template data:', loadedTemplate);
-      console.log('Available character profiles:', characterProfiles);
-      
-      // FIND MATCHING CHARACTER PROFILE BY NAME OR ID
-      let matchedCharacterProfileId = '';
-      if (loadedTemplate.character_profile) {
-        console.log('Looking for character profile:', loadedTemplate.character_profile);
-        
-        // Try to find by ID first
-        let matchedProfile = characterProfiles.find(p => p.id === loadedTemplate.character_profile);
-        
-        // If not found by ID, try to find by name (case insensitive)
-        if (!matchedProfile) {
-          matchedProfile = characterProfiles.find(p => 
-            p.name.toLowerCase() === loadedTemplate.character_profile?.toLowerCase()
-          );
-        }
-        
-        // If still not found, try to find by username
-        if (!matchedProfile) {
-          matchedProfile = characterProfiles.find(p => 
-            p.username.toLowerCase() === loadedTemplate.character_profile?.toLowerCase()
-          );
-        }
-        
-        if (matchedProfile) {
-          matchedCharacterProfileId = matchedProfile.id;
-          console.log('✅ Found matching character profile:', matchedProfile.name, 'ID:', matchedProfile.id);
-        } else {
-          console.log('⚠ Could not find matching character profile for:', loadedTemplate.character_profile);
-          console.log('Available profiles:', characterProfiles.map(p => `${p.name} (${p.id})`));
-        }
-      }
-      
-      // POPULATE SELECTIONS (dropdown fields)
       setSelections({
-        characterProfile: matchedCharacterProfileId, // Use the matched ID
+        characterProfile: loadedTemplate.character_profile || '',
         theme: loadedTemplate.theme || '',
         audience: loadedTemplate.audience || '',
         mediaType: loadedTemplate.media_type || '',
@@ -434,44 +355,32 @@ const EnhancedContentCreationForm = ({
         voiceStyle: loadedTemplate.voiceStyle || ''
       });
       
-      // POPULATE CONTENT (text fields only)
       setContent({
         title: loadedTemplate.title || '',
         description: loadedTemplate.description || '',
-        hashtags: Array.isArray(loadedTemplate.hashtags) ? loadedTemplate.hashtags : [],
+        hashtags: loadedTemplate.hashtags || [],
         keywords: loadedTemplate.keywords || '',
         cta: loadedTemplate.cta || ''
       });
       
-      // POPULATE SELECTED PLATFORMS
-      if (loadedTemplate.selected_platforms && Array.isArray(loadedTemplate.selected_platforms)) {
+      if (loadedTemplate.media_files) {
+        setMediaFiles(loadedTemplate.media_files);
+      }
+      
+      if (loadedTemplate.selected_platforms) {
         setSelectedPlatforms(loadedTemplate.selected_platforms);
       }
       
-      // DO NOT LOAD MEDIA FILES - USER SPECIFIED TEXT ONLY
-      // setMediaFiles remains empty - user will add media manually if needed
-      
-      // SET TEMPLATE EDITING STATE
       setIsEditingTemplate(true);
       setupPlatformFields(loadedTemplate.platform);
       
-      // CLEAR THE LOADED TEMPLATE STATE
       if (onTemplateLoaded) {
         onTemplateLoaded();
       }
       
-      console.log('✅ Template loaded successfully into form (text only)');
-      console.log('Selections populated:', {
-        characterProfile: matchedCharacterProfileId,
-        theme: loadedTemplate.theme,
-        audience: loadedTemplate.audience,
-        mediaType: loadedTemplate.media_type,
-        templateType: loadedTemplate.template_type,
-        platform: loadedTemplate.platform,
-        voiceStyle: loadedTemplate.voiceStyle
-      });
+      console.log('Template loaded into form:', loadedTemplate.template_id);
     }
-  }, [loadedTemplate, editingPost, onTemplateLoaded, characterProfiles]);
+  }, [loadedTemplate, editingPost, onTemplateLoaded]);
 
   const setupPlatformFields = (platform: string) => {
     if (platform) {
@@ -710,75 +619,21 @@ const EnhancedContentCreationForm = ({
     }
   };
 
-  // FIXED: ADD TO SCHEDULE HANDLER WITH PROPER DATA MAPPING
+  // UPDATED ADD TO SCHEDULE HANDLER WITH TEMPLATE INTEGRATION:
   const handleAddToSchedule = async () => {
-    if (!user?.id) {
-      console.error('User not authenticated');
-      alert('Please log in to schedule posts.');
-      return;
-    }
-
     const postData = {
       contentId,
-      characterProfile: selections.characterProfile,
-      theme: selections.theme,
-      audience: selections.audience,
-      mediaType: selections.mediaType,
-      templateType: selections.templateType,
-      platform: selections.platform,
-      voiceStyle: selections.voiceStyle,
-      title: content.title,
-      description: content.description,
-      hashtags: content.hashtags,
-      keywords: content.keywords,
-      cta: content.cta,
+      ...selections,
+      ...content,
       mediaFiles,
       selectedPlatforms,
-      status: 'pending' as const,
-      isFromTemplate: isEditingTemplate,
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
-      user_id: user.id,
-      created_by: user.id
+      status: 'scheduled' as const,
+      isFromTemplate: isEditingTemplate, // CHANGED: Use template status
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
     };
 
     try {
-      // Step 1: Save to content_posts first
-      console.log('Saving post to content_posts...');
-      const savedPost = await contentAPI.savePost(postData);
-      console.log('Post saved successfully:', savedPost);
-
-      // Step 2: Create pending schedule entry with proper field mapping
-      console.log('Creating pending schedule entry...');
-      const pendingData = {
-        original_post_id: savedPost.id,
-        content_id: postData.contentId,
-        character_profile: postData.characterProfile,
-        theme: postData.theme,
-        audience: postData.audience,
-        media_type: postData.mediaType,
-        template_type: postData.templateType,
-        platform: postData.platform,
-        voice_style: postData.voiceStyle,
-        title: postData.title,
-        description: postData.description,
-        hashtags: postData.hashtags,
-        keywords: postData.keywords,
-        cta: postData.cta,
-        media_files: postData.mediaFiles,
-        selected_platforms: postData.selectedPlatforms,
-        status: 'pending_schedule' as const,
-        is_from_template: postData.isFromTemplate,
-        source_template_id: postData.sourceTemplateId,
-        user_id: postData.user_id,
-        created_by: postData.created_by
-      };
-
-      await scheduleAPI.createPendingPost(pendingData);
-      console.log('Pending schedule entry created successfully');
-      
-      // Call the parent handler to update UI
       await onAddToSchedule(postData);
-      
       resetForm();
     } catch (error) {
       console.error('Schedule failed:', error);
@@ -845,7 +700,7 @@ const EnhancedContentCreationForm = ({
               margin: '0'
             }}>
               {isEditingPost ? `Editing post: ${contentId}` :
-               isEditingTemplate ? `Working from template` :
+               isEditingTemplate ? `Working from template: ${loadedTemplate?.template_id}` :
                'Design and prepare your social media content for publishing (UK English)'
               }
             </p>
@@ -2235,7 +2090,7 @@ const EnhancedContentCreationForm = ({
                                 controls
                                 muted
                               />
- ) : file.size === 0 && file.url ? (
+                            ) : file.size === 0 && file.url ? (
                               // URL PREVIEW WITH PROPER PLATFORM SIZING - FIXED
                               <div style={{
                                 width: '100%',
