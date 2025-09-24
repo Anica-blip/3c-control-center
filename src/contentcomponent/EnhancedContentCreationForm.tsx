@@ -13,7 +13,7 @@ import {
   getVoiceStyleCode 
 } from './utils';
 // ADD NEW IMPORT FOR TEMPLATE LIBRARY INTEGRATION
-import { PendingLibraryTemplate } from './TemplateLibrary';
+import { PendingLibraryTemplate, templateEventEmitter } from './TemplateLibrary';
 
 // Theme Context (assuming this comes from your App.tsx)
 const ThemeContext = React.createContext({
@@ -311,6 +311,44 @@ const EnhancedContentCreationForm = ({
     setContentId(newId);
   }, [selections.theme, selections.audience, selections.mediaType, selections.templateType, selections.characterProfile, selections.voiceStyle, characterProfiles]);
 
+  // FIXED: Listen for templates sent from Template Library (DIRECT EVENT COMMUNICATION)
+  useEffect(() => {
+    const unsubscribe = templateEventEmitter.listen((template) => {
+      console.log('=== TEMPLATE RECEIVED FROM TEMPLATE LIBRARY ===');
+      console.log('Template data:', template);
+      
+      // Set form data from template
+      setSelections({
+        characterProfile: template.character_profile || '',
+        theme: template.theme || '',
+        audience: template.audience || '',
+        mediaType: template.media_type || '',
+        templateType: template.template_type || '',
+        platform: template.platform || '',
+        voiceStyle: template.voiceStyle || ''
+      });
+      
+      setContent({
+        title: template.title || '',
+        description: template.description || '',
+        hashtags: template.hashtags || [],
+        keywords: template.keywords || '',
+        cta: template.cta || ''
+      });
+      
+      if (template.selected_platforms) {
+        setSelectedPlatforms(template.selected_platforms);
+      }
+      
+      setIsEditingTemplate(true);
+      setupPlatformFields(template.platform);
+      
+      console.log('Template loaded into form successfully!');
+    });
+
+    return unsubscribe; // Cleanup event listener
+  }, []);
+
   // Load editing post data when provided
   useEffect(() => {
     if (editingPost) {
@@ -342,11 +380,47 @@ const EnhancedContentCreationForm = ({
     }
   }, [editingPost]);
 
-  // ADD NEW USEEFFECT FOR TEMPLATE LOADING:
+  // UPDATED USEEFFECT FOR TEMPLATE LOADING - TEXT ONLY, NO MEDIA FILES
   useEffect(() => {
     if (loadedTemplate && !editingPost) { // Don't load template if editing a post
+      console.log('=== LOADING TEMPLATE INTO FORM ===');
+      console.log('Template data:', loadedTemplate);
+      console.log('Available character profiles:', characterProfiles);
+      
+      // FIND MATCHING CHARACTER PROFILE BY NAME OR ID
+      let matchedCharacterProfileId = '';
+      if (loadedTemplate.character_profile) {
+        console.log('Looking for character profile:', loadedTemplate.character_profile);
+        
+        // Try to find by ID first
+        let matchedProfile = characterProfiles.find(p => p.id === loadedTemplate.character_profile);
+        
+        // If not found by ID, try to find by name (case insensitive)
+        if (!matchedProfile) {
+          matchedProfile = characterProfiles.find(p => 
+            p.name.toLowerCase() === loadedTemplate.character_profile?.toLowerCase()
+          );
+        }
+        
+        // If still not found, try to find by username
+        if (!matchedProfile) {
+          matchedProfile = characterProfiles.find(p => 
+            p.username.toLowerCase() === loadedTemplate.character_profile?.toLowerCase()
+          );
+        }
+        
+        if (matchedProfile) {
+          matchedCharacterProfileId = matchedProfile.id;
+          console.log('âœ… Found matching character profile:', matchedProfile.name, 'ID:', matchedProfile.id);
+        } else {
+          console.log('âŒ Could not find matching character profile for:', loadedTemplate.character_profile);
+          console.log('Available profiles:', characterProfiles.map(p => `${p.name} (${p.id})`));
+        }
+      }
+      
+      // POPULATE SELECTIONS (dropdown fields)
       setSelections({
-        characterProfile: loadedTemplate.character_profile || '',
+        characterProfile: matchedCharacterProfileId, // Use the matched ID
         theme: loadedTemplate.theme || '',
         audience: loadedTemplate.audience || '',
         mediaType: loadedTemplate.media_type || '',
@@ -355,32 +429,44 @@ const EnhancedContentCreationForm = ({
         voiceStyle: loadedTemplate.voiceStyle || ''
       });
       
+      // POPULATE CONTENT (text fields only)
       setContent({
         title: loadedTemplate.title || '',
         description: loadedTemplate.description || '',
-        hashtags: loadedTemplate.hashtags || [],
+        hashtags: Array.isArray(loadedTemplate.hashtags) ? loadedTemplate.hashtags : [],
         keywords: loadedTemplate.keywords || '',
         cta: loadedTemplate.cta || ''
       });
       
-      if (loadedTemplate.media_files) {
-        setMediaFiles(loadedTemplate.media_files);
-      }
-      
-      if (loadedTemplate.selected_platforms) {
+      // POPULATE SELECTED PLATFORMS
+      if (loadedTemplate.selected_platforms && Array.isArray(loadedTemplate.selected_platforms)) {
         setSelectedPlatforms(loadedTemplate.selected_platforms);
       }
       
+      // DO NOT LOAD MEDIA FILES - USER SPECIFIED TEXT ONLY
+      // setMediaFiles remains empty - user will add media manually if needed
+      
+      // SET TEMPLATE EDITING STATE
       setIsEditingTemplate(true);
       setupPlatformFields(loadedTemplate.platform);
       
+      // CLEAR THE LOADED TEMPLATE STATE
       if (onTemplateLoaded) {
         onTemplateLoaded();
       }
       
-      console.log('Template loaded into form:', loadedTemplate.template_id);
+      console.log('âœ… Template loaded successfully into form (text only)');
+      console.log('Selections populated:', {
+        characterProfile: matchedCharacterProfileId,
+        theme: loadedTemplate.theme,
+        audience: loadedTemplate.audience,
+        mediaType: loadedTemplate.media_type,
+        templateType: loadedTemplate.template_type,
+        platform: loadedTemplate.platform,
+        voiceStyle: loadedTemplate.voiceStyle
+      });
     }
-  }, [loadedTemplate, editingPost, onTemplateLoaded]);
+  }, [loadedTemplate, editingPost, onTemplateLoaded, characterProfiles]);
 
   const setupPlatformFields = (platform: string) => {
     if (platform) {
@@ -700,7 +786,7 @@ const EnhancedContentCreationForm = ({
               margin: '0'
             }}>
               {isEditingPost ? `Editing post: ${contentId}` :
-               isEditingTemplate ? `Working from template: ${loadedTemplate?.template_id}` :
+               isEditingTemplate ? `Working from template` :
                'Design and prepare your social media content for publishing (UK English)'
               }
             </p>
@@ -1545,13 +1631,13 @@ const EnhancedContentCreationForm = ({
               }}
               title="Add Link"
             >
-              🔗
+              ðŸ”—
             </button>
             
             <button
               type="button"
               onClick={() => {
-                const commonEmojis = ['😀', '😊', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '💡', '🙌', '💡', '📈', '📊'];
+                const commonEmojis = ['ðŸ˜€', 'ðŸ˜Š', 'ðŸ˜Ž', 'ðŸ¤”', 'ðŸ‘', 'ðŸ‘Ž', 'â¤ï¸', 'ðŸŽ‰', 'ðŸ”¥', 'ðŸ’¯', 'ðŸ“¢', 'âœ¨', 'ðŸ’ª', 'ðŸš€', 'â­', 'ðŸ’¡', 'ðŸ™Œ', 'ðŸ’¡', 'ðŸ“ˆ', 'ðŸ“Š'];
                 const emoji = prompt(`Choose an emoji:\n${commonEmojis.join(' ')}\n\nOr enter any emoji:`);
                 if (emoji) {
                   setContent(prev => ({ ...prev, description: prev.description + emoji }));
@@ -1568,7 +1654,7 @@ const EnhancedContentCreationForm = ({
               }}
               title="Add Emoji"
             >
-              😊
+              ðŸ˜Š
             </button>
             
             <div style={{
@@ -1707,7 +1793,7 @@ const EnhancedContentCreationForm = ({
                       fontSize: '14px'
                     }}
                   >
-                    ×
+                    Ã—
                   </button>
                 </div>
               ))}
@@ -2126,7 +2212,7 @@ const EnhancedContentCreationForm = ({
                                     fontSize: '48px',
                                     color: '#3b82f6'
                                   }}>
-                                    🔗
+                                    ðŸ”—
                                   </div>
                                 )}
                                 
