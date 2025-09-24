@@ -6,49 +6,7 @@ import ChatManagerPublic from './webchat';
 import MarketingControlCenter from './marketingcomponent';
 import SettingsComponentContent from './settingscomponent';
 import AdminComponentsContent from './admincomponents';
-
-// CREATE PLACEHOLDER COMPONENTS FOR MISSING FILES
-const ScheduleComponentContent = () => {
-  const { isDarkMode } = useTheme();
-  
-  return (
-    <div style={{
-      padding: '20px',
-      backgroundColor: isDarkMode ? '#1e293b' : 'white',
-      borderRadius: '8px',
-      border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
-      textAlign: 'center'
-    }}>
-      <h3 style={{
-        color: isDarkMode ? '#60a5fa' : '#3b82f6',
-        marginBottom: '16px'
-      }}>
-        📅 Schedule Component
-      </h3>
-      <p style={{
-        color: isDarkMode ? '#94a3b8' : '#6b7280',
-        marginBottom: '16px'
-      }}>
-        Schedule component will be implemented here.
-      </p>
-      <div style={{
-        padding: '16px',
-        backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
-        borderRadius: '6px',
-        fontSize: '14px',
-        color: isDarkMode ? '#e2e8f0' : '#374151'
-      }}>
-        This component will handle:
-        <ul style={{ textAlign: 'left', marginTop: '8px' }}>
-          <li>Post scheduling</li>
-          <li>Calendar view</li>
-          <li>Delivery tracking</li>
-          <li>Time zone management</li>
-        </ul>
-      </div>
-    </div>
-  );
-};
+import ScheduleComponent from './schedulecomponent/ScheduleComponent'; // REAL COMPONENT IMPORTED
 
 // Theme Context
 const ThemeContext = createContext({
@@ -728,7 +686,7 @@ const OverviewComponent = () => {
             fontSize: '11px',
             margin: '0'
           }}>
-            🌐 Language: English (UK) • ⏰ Timezone: WEST (UTC+1) • 🎯 3C Control Center v2.0
+            🌍 Language: English (UK) • ⏰ Timezone: WEST (UTC+1) • 🎯 3C Control Center v2.0
           </p>
         </div>
       </div>
@@ -742,7 +700,7 @@ const OverviewComponent = () => {
 
 const ThemedContentComponent = withThemeWrapper(ContentComponent);
 const ThemedChatManagerPublic = withThemeWrapper(ChatManagerPublic);
-const ThemedScheduleComponentContent = withThemeWrapper(ScheduleComponentContent);
+const ThemedScheduleComponent = withThemeWrapper(ScheduleComponent); // REAL SCHEDULE COMPONENT
 const ThemedMarketingControlCenter = withThemeWrapper(MarketingControlCenter);
 const ThemedSettingsComponentContent = withThemeWrapper(SettingsComponentContent);
 const ThemedAdminComponentsContent = withThemeWrapper(AdminComponentsContent);
@@ -1133,43 +1091,11 @@ function App() {
           )}
           
           {activeSection === 'schedule-manager' && (
-            <div style={{ 
-              minHeight: '100vh',
+            <div className="schedule-content" style={{
               backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-              paddingTop: '80px',
-              padding: '80px 20px 20px 20px'
+              minHeight: '100vh'
             }}>
-              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <div style={{
-                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                  boxShadow: isDarkMode 
-                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-                    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  marginBottom: '20px',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
-                }}>
-                  <h1 style={{
-                    fontSize: '20px',
-                    fontWeight: 'bold',
-                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                    margin: '0 0 8px 0'
-                  }}>
-                    📅 Schedule Manager
-                  </h1>
-                  <p style={{
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
-                    fontSize: '14px',
-                    margin: '0'
-                  }}>
-                    Schedule posts and track their delivery status
-                  </p>
-                </div>
-                <div className="schedule-content">
-                  <ThemedScheduleComponentContent />
-                </div>
-              </div>
+              <ThemedScheduleComponent />
             </div>
           )}
           
