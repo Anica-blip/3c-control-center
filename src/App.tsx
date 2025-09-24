@@ -1,9 +1,9 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 
-// Import your real components - with fallbacks for missing components
+// Import your real components
 import ContentComponent from './contentcomponent';
 import ChatManagerPublic from './webchat';
-import ScheduleComponent from './schedulecomponent/ScheduleComponent'; // REAL COMPONENT IMPORTED
+import ScheduleComponentContent from './schedulecomponent';
 import MarketingControlCenter from './marketingcomponent';
 import SettingsComponentContent from './settingscomponent';
 import AdminComponentsContent from './admincomponents';
@@ -700,7 +700,7 @@ const OverviewComponent = () => {
 
 const ThemedContentComponent = withThemeWrapper(ContentComponent);
 const ThemedChatManagerPublic = withThemeWrapper(ChatManagerPublic);
-const ThemedScheduleComponent = withThemeWrapper(ScheduleComponent); // REAL SCHEDULE COMPONENT
+const ThemedScheduleComponentContent = withThemeWrapper(ScheduleComponentContent);
 const ThemedMarketingControlCenter = withThemeWrapper(MarketingControlCenter);
 const ThemedSettingsComponentContent = withThemeWrapper(SettingsComponentContent);
 const ThemedAdminComponentsContent = withThemeWrapper(AdminComponentsContent);
@@ -1091,11 +1091,43 @@ function App() {
           )}
           
           {activeSection === 'schedule-manager' && (
-            <div className="schedule-content" style={{
+            <div style={{ 
+              minHeight: '100vh',
               backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-              minHeight: '100vh'
+              paddingTop: '80px',
+              padding: '80px 20px 20px 20px'
             }}>
-              <ThemedScheduleComponent />
+              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <div style={{
+                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                  boxShadow: isDarkMode 
+                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+                    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                  borderRadius: '8px',
+                  padding: '20px',
+                  marginBottom: '20px',
+                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+                }}>
+                  <h1 style={{
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                    margin: '0 0 8px 0'
+                  }}>
+                    📅 Schedule Manager
+                  </h1>
+                  <p style={{
+                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    fontSize: '14px',
+                    margin: '0'
+                  }}>
+                    Schedule posts and track their delivery status
+                  </p>
+                </div>
+                <div className="schedule-content">
+                  <ThemedScheduleComponentContent />
+                </div>
+              </div>
             </div>
           )}
           
