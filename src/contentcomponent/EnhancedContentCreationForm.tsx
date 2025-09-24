@@ -1631,13 +1631,13 @@ const EnhancedContentCreationForm = ({
               }}
               title="Add Link"
             >
-              ðŸ”—
+              🔗
             </button>
             
             <button
               type="button"
               onClick={() => {
-                const commonEmojis = ['ðŸ˜€', 'ðŸ˜Š', 'ðŸ˜Ž', 'ðŸ¤”', 'ðŸ‘', 'ðŸ‘Ž', 'â¤ï¸', 'ðŸŽ‰', 'ðŸ”¥', 'ðŸ’¯', 'ðŸ“¢', 'âœ¨', 'ðŸ’ª', 'ðŸš€', 'â­', 'ðŸ’¡', 'ðŸ™Œ', 'ðŸ’¡', 'ðŸ“ˆ', 'ðŸ“Š'];
+                const commonEmojis = ['😀', '😊', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '💯', '📢', '✨', '💪', '🚀', '⭐', '💡', '🙌', '💡', '📈', '📊'];
                 const emoji = prompt(`Choose an emoji:\n${commonEmojis.join(' ')}\n\nOr enter any emoji:`);
                 if (emoji) {
                   setContent(prev => ({ ...prev, description: prev.description + emoji }));
@@ -1654,7 +1654,7 @@ const EnhancedContentCreationForm = ({
               }}
               title="Add Emoji"
             >
-              ðŸ˜Š
+              😊
             </button>
             
             <div style={{
@@ -1793,7 +1793,7 @@ const EnhancedContentCreationForm = ({
                       fontSize: '14px'
                     }}
                   >
-                    Ã—
+                    x
                   </button>
                 </div>
               ))}
