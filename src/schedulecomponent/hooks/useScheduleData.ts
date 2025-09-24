@@ -1,4 +1,4 @@
-// /src/schedulecomponent/hooks/useScheduleData.ts - FIXED
+// /src/schedulecomponent/hooks/useScheduleData.ts - IMPORT PATHS FIXED
 import { useState, useEffect } from 'react';
 import { scheduleAPI } from '../api/scheduleAPI';
 import { ScheduledPost, SavedTemplate } from '../types';
@@ -15,8 +15,8 @@ const getCurrentUserId = async () => {
       }
     }
     
-    // Fallback: Import supabase and get user
-    const { supabase } = await import('../../supabase/config');
+    // Fallback: Import supabase from the root config.ts file
+    const { supabase } = await import('../../../config');
     const { data: { user } } = await supabase.auth.getUser();
     return user?.id || 'anonymous';
   } catch (error) {
