@@ -16,7 +16,7 @@ const getCurrentUserId = async () => {
     }
     
     // Fallback: Import supabase and get user
-    const { supabase } = await import('../../../config');
+    const { supabase } = await import('config');
     const { data: { user } } = await supabase.auth.getUser();
     return user?.id || 'anonymous';
   } catch (error) {
