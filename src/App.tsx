@@ -3,10 +3,10 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 // Import your real components - with fallbacks for missing components
 import ContentComponent from './contentcomponent';
 import ChatManagerPublic from './webchat';
+import ScheduleComponent from './schedulecomponent/ScheduleComponent'; // REAL COMPONENT IMPORTED
 import MarketingControlCenter from './marketingcomponent';
 import SettingsComponentContent from './settingscomponent';
 import AdminComponentsContent from './admincomponents';
-import ScheduleComponent from './schedulecomponent/ScheduleComponent'; // REAL COMPONENT IMPORTED
 
 // Theme Context
 const ThemeContext = createContext({
