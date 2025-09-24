@@ -3,6 +3,9 @@ import { Upload, X, Image, Video, FileText, Settings, ExternalLink, Plus, User, 
 import { ContentPost, MediaFile, SocialPlatform, CharacterProfile } from './types';
 import { SavedPostsList } from './SavedPostsList';
 import { supabaseAPI } from './supabaseAPI';
+// ADD NEW IMPORTS FOR SUPABASE INTEGRATION
+import { contentAPI } from './contentAPI';
+import { scheduleAPI } from './scheduleAPI';
 import { 
   fetchUrlPreview, 
   getThemeCode, 
@@ -2033,7 +2036,7 @@ const EnhancedContentCreationForm = ({
           {isSaving ? 'Saving...' : 'Schedule Post'}
         </button>
       </div>
-
+      
       {/* Live Preview Section - Shows Exact Final Post Format */}
       {(selections.characterProfile || content.title || content.description || mediaFiles.length > 0) && (
         <div style={{
