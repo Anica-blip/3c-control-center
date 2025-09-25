@@ -1,4 +1,4 @@
-// /src/schedulecomponent/utils/platformUtils.ts - FIXED for Schedule Manager integration
+// /src/schedulecomponent/utils/platformUtils.ts - FIXED React element rendering issue
 import React from 'react';
 import { SocialPlatform, ScheduledPost } from '../types';
 
@@ -67,7 +67,7 @@ export const PLATFORM_CONFIG: Record<string, PlatformInfo> = {
     displayName: 'Twitter/X',
     abbreviation: 'TW',
     color: '#000000',
-    icon: '🦅',
+    icon: '🐦',
     maxLength: {
       description: 280,
       hashtags: 2
@@ -605,11 +605,11 @@ export const extractPlatformIds = (platforms: SocialPlatform[]): string[] => {
 };
 
 /**
- * Schedule Manager specific utilities
+ * Schedule Manager specific utilities - FIXED React element handling
  */
 
 /**
- * Get platform badge component for Schedule Manager tabs
+ * Get platform badge component for Schedule Manager tabs - FIXED
  * @param platformId - Platform identifier
  * @param isDarkMode - Dark mode flag
  * @param variant - Badge style variant
@@ -636,22 +636,34 @@ export const getPlatformBadge = (
     border: `1px solid ${color}40`
   };
 
-  const content = (() => {
-    switch (variant) {
-      case 'icon':
-        return getPlatformIcon(platformId, 12);
-      case 'abbreviated':
-        return `${getPlatformIcon(platformId, 12)} ${getPlatformAbbreviation(platformId)}`;
-      case 'full':
-        return `${getPlatformIcon(platformId, 14)} ${getPlatformDisplayName(platformId)}`;
-    }
-  })();
-
-  return React.createElement('span', { style: badgeStyle }, content);
+  // FIXED: Properly create React elements instead of mixing strings with React elements
+  switch (variant) {
+    case 'icon':
+      return React.createElement('span', { style: badgeStyle }, 
+        getPlatformIcon(platformId, 12)
+      );
+      
+    case 'abbreviated':
+      return React.createElement('span', { style: badgeStyle }, [
+        getPlatformIcon(platformId, 12),
+        React.createElement('span', { key: 'abbrev' }, ` ${getPlatformAbbreviation(platformId)}`)
+      ]);
+      
+    case 'full':
+      return React.createElement('span', { style: badgeStyle }, [
+        getPlatformIcon(platformId, 14),
+        React.createElement('span', { key: 'name' }, ` ${getPlatformDisplayName(platformId)}`)
+      ]);
+      
+    default:
+      return React.createElement('span', { style: badgeStyle }, 
+        getPlatformIcon(platformId, 12)
+      );
+  }
 };
 
 /**
- * Get multiple platform badges for Schedule Manager display
+ * Get multiple platform badges for Schedule Manager display - FIXED
  * @param platformIds - Array of platform IDs
  * @param isDarkMode - Dark mode flag
  * @param maxDisplay - Maximum badges to show
