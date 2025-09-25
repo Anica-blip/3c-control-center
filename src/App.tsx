@@ -786,13 +786,13 @@ function App() {
   };
 
   const navigationItems = [
-    { id: 'overview', icon: '[3C]', label: 'Overview', available: true },
-    { id: 'content-manager', icon: '[DOC]', label: 'Content Manager', available: true },
-    { id: 'webchat-public', icon: '[CHAT]', label: 'WebChat Public', available: true },
-    { id: 'schedule-manager', icon: '[CAL]', label: 'Schedule Manager', available: true },
-    { id: 'marketing-center', icon: '[BRAIN]', label: 'Marketing Center', available: true },
-    { id: 'dashboard-settings', icon: '[SET]', label: 'Dashboard Settings', available: true },
-    { id: 'admin-center', icon: '[ADM]', label: 'Admin Center', available: true }
+    { id: 'overview', icon: '🧵', label: 'Overview', available: true },
+    { id: 'content-manager', icon: '📝', label: 'Content Manager', available: true },
+    { id: 'webchat-public', icon: '💬', label: 'WebChat Public', available: true },
+    { id: 'schedule-manager', icon: '📅', label: 'Schedule Manager', available: true },
+    { id: 'marketing-center', icon: '🧠', label: 'Marketing Center', available: true },
+    { id: 'dashboard-settings', icon: '⚙️', label: 'Dashboard Settings', available: true },
+    { id: 'admin-center', icon: '🔧', label: 'Admin Center', available: true }
   ];
 
   // Loading screen
