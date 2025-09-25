@@ -249,7 +249,7 @@ const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) =>
         border: '1px solid #e5e7eb'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🧵</div>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>[3C]</div>
           <h1 style={{
             fontSize: '24px',
             fontWeight: 'bold',
@@ -276,7 +276,7 @@ const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) =>
             marginBottom: '16px'
           }}>
             <p style={{ color: '#dc2626', fontSize: '14px', margin: '0' }}>
-              🚨 {error}
+              [!] {error}
             </p>
           </div>
         )}
@@ -326,7 +326,7 @@ const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) =>
             textAlign: 'center',
             lineHeight: '1.5'
           }}>
-            🧵 <strong>Thread To Success</strong><br />
+            [3C] <strong>Thread To Success</strong><br />
             Professional dashboard for content management and analytics.
           </p>
         </div>
@@ -350,20 +350,20 @@ const OverviewComponent = () => {
   }, []);
 
   const quickActions = [
-    { icon: '📝', label: 'Create Content', section: 'content-manager', color: '#3b82f6' },
-    { icon: '📅', label: 'Schedule Posts', section: 'schedule-manager', color: '#10b981' },
-    { icon: '💬', label: 'Manage Chat', section: 'webchat-public', color: '#8b5cf6' },
-    { icon: '📊', label: 'View Analytics', section: 'marketing-center', color: '#f59e0b' },
-    { icon: '⚙️', label: 'Settings', section: 'settings', color: '#6b7280' },
-    { icon: '🔧', label: 'Admin Panel', section: 'admin-center', color: '#ef4444' }
+    { icon: '[DOC]', label: 'Create Content', section: 'content-manager', color: '#3b82f6' },
+    { icon: '[CAL]', label: 'Schedule Posts', section: 'schedule-manager', color: '#10b981' },
+    { icon: '[CHAT]', label: 'Manage Chat', section: 'webchat-public', color: '#8b5cf6' },
+    { icon: '[CHART]', label: 'View Analytics', section: 'marketing-center', color: '#f59e0b' },
+    { icon: '[SET]', label: 'Settings', section: 'settings', color: '#6b7280' },
+    { icon: '[ADM]', label: 'Admin Panel', section: 'admin-center', color: '#ef4444' }
   ];
 
   const recentActivity = [
-    { icon: '📝', action: 'New content created', time: '2 min ago', status: 'success' },
-    { icon: '📤', action: 'Post scheduled for tomorrow', time: '15 min ago', status: 'pending' },
-    { icon: '💬', action: 'Chat message received', time: '1 hour ago', status: 'info' },
-    { icon: '🔄', action: 'Settings updated', time: '3 hours ago', status: 'success' },
-    { icon: '📊', action: 'Weekly report generated', time: '1 day ago', status: 'info' }
+    { icon: '[DOC]', action: 'New content created', time: '2 min ago', status: 'success' },
+    { icon: '[UP]', action: 'Post scheduled for tomorrow', time: '15 min ago', status: 'pending' },
+    { icon: '[MSG]', action: 'Chat message received', time: '1 hour ago', status: 'info' },
+    { icon: '[UPD]', action: 'Settings updated', time: '3 hours ago', status: 'success' },
+    { icon: '[RPT]', action: 'Weekly report generated', time: '1 day ago', status: 'info' }
   ];
 
   const metrics = [
@@ -400,7 +400,7 @@ const OverviewComponent = () => {
                 color: isDarkMode ? '#60a5fa' : '#3b82f6',
                 margin: '0 0 8px 0'
               }}>
-                🎯 Overview
+                [OVERVIEW] Overview
               </h1>
               <p style={{
                 color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -516,7 +516,7 @@ const OverviewComponent = () => {
               fontWeight: 'bold',
               margin: '0 0 16px 0'
             }}>
-              🚀 Quick Actions
+              [ROCKET] Quick Actions
             </h3>
             <div style={{
               display: 'grid',
@@ -581,7 +581,7 @@ const OverviewComponent = () => {
               fontWeight: 'bold',
               margin: '0 0 16px 0'
             }}>
-              📊 Recent Activity
+              [CHART] Recent Activity
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {recentActivity.map((activity, index) => (
@@ -635,7 +635,7 @@ const OverviewComponent = () => {
                 color: isDarkMode ? '#f8fafc' : '#111827',
                 margin: '0 0 4px 0'
               }}>
-                🔧 System Status
+                [SYS] System Status
               </h4>
               <p style={{
                 color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -678,14 +678,14 @@ const OverviewComponent = () => {
             fontSize: '12px',
             margin: '0 0 8px 0'
           }}>
-            📝 <strong>Open Source Project</strong> • Designed by Claude • GitHub Repository Access
+            [CODE] <strong>Open Source Project</strong> • Designed by Claude • GitHub Repository Access
           </p>
           <p style={{
             color: isDarkMode ? '#94a3b8' : '#6b7280',
             fontSize: '11px',
             margin: '0'
           }}>
-            🌍 Language: English (UK) • ⏰ Timezone: WEST (UTC+1) • 🎯 3C Control Center v2.0
+            [GLOBE] Language: English (UK) • [CLOCK] Timezone: WEST (UTC+1) • [TARGET] 3C Control Center v2.0
           </p>
         </div>
       </div>
@@ -786,13 +786,13 @@ function App() {
   };
 
   const navigationItems = [
-    { id: 'overview', icon: '🧵', label: 'Overview', available: true },
-    { id: 'content-manager', icon: '📝', label: 'Content Manager', available: true },
-    { id: 'webchat-public', icon: '💬', label: 'WebChat Public', available: true },
-    { id: 'schedule-manager', icon: '📅', label: 'Schedule Manager', available: true },
-    { id: 'marketing-center', icon: '🧠', label: 'Marketing Center', available: true },
-    { id: 'dashboard-settings', icon: '⚙️', label: 'Dashboard Settings', available: true },
-    { id: 'admin-center', icon: '🔧', label: 'Admin Center', available: true }
+    { id: 'overview', icon: '[3C]', label: 'Overview', available: true },
+    { id: 'content-manager', icon: '[DOC]', label: 'Content Manager', available: true },
+    { id: 'webchat-public', icon: '[CHAT]', label: 'WebChat Public', available: true },
+    { id: 'schedule-manager', icon: '[CAL]', label: 'Schedule Manager', available: true },
+    { id: 'marketing-center', icon: '[BRAIN]', label: 'Marketing Center', available: true },
+    { id: 'dashboard-settings', icon: '[SET]', label: 'Dashboard Settings', available: true },
+    { id: 'admin-center', icon: '[ADM]', label: 'Admin Center', available: true }
   ];
 
   // Loading screen
@@ -807,7 +807,7 @@ function App() {
         fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}>
         <div style={{ textAlign: 'center', color: 'white' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🧵</div>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>[3C]</div>
           <div style={{ fontSize: '18px' }}>Loading 3C Thread To Success...</div>
           <div style={{ fontSize: '14px', marginTop: '8px', opacity: 0.8 }}>Professional Dashboard</div>
         </div>
@@ -884,10 +884,10 @@ function App() {
                 }}
                 title="Select Language"
               >
-                <option value="en-GB">🇬🇧</option>
-                <option value="pt-PT">🇵🇹</option>
-                <option value="fr-FR">🇫🇷</option>
-                <option value="de-DE">🇩🇪</option>
+                <option value="en-GB">GB</option>
+                <option value="pt-PT">PT</option>
+                <option value="fr-FR">FR</option>
+                <option value="de-DE">DE</option>
               </select>
             </div>
 
@@ -911,7 +911,7 @@ function App() {
               }}
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
-              {isDarkMode ? '☀️' : '🌙'}
+              {isDarkMode ? '[SUN]' : '[MOON]'}
             </button>
 
             <button
@@ -933,7 +933,7 @@ function App() {
               }}
               title="Logout"
             >
-              🚪
+              [EXIT]
             </button>
           </div>
         )}
@@ -1022,8 +1022,7 @@ function App() {
                     : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                   borderRadius: '8px',
                   padding: '20px',
-                  marginBottom: '20px',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+                  marginBottom: '20px'
                 }}>
                   <h1 style={{
                     fontSize: '20px',
@@ -1031,7 +1030,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    📝 Content Manager
+                    [DOC] Content Manager
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1063,8 +1062,7 @@ function App() {
                     : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                   borderRadius: '8px',
                   padding: '20px',
-                  marginBottom: '20px',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+                  marginBottom: '20px'
                 }}>
                   <h1 style={{
                     fontSize: '20px',
@@ -1072,7 +1070,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    💬 Chat Manager - Public
+                    [CHAT] Chat Manager - Public
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1104,8 +1102,7 @@ function App() {
                     : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                   borderRadius: '8px',
                   padding: '20px',
-                  marginBottom: '20px',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+                  marginBottom: '20px'
                 }}>
                   <h1 style={{
                     fontSize: '20px',
@@ -1113,7 +1110,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    📅 Schedule Manager
+                    [CAL] Schedule Manager
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1145,8 +1142,7 @@ function App() {
                     : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                   borderRadius: '8px',
                   padding: '20px',
-                  marginBottom: '20px',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+                  marginBottom: '20px'
                 }}>
                   <h1 style={{
                     fontSize: '20px',
@@ -1154,7 +1150,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    🧠 Marketing Center
+                    [BRAIN] Marketing Center
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1171,7 +1167,7 @@ function App() {
             </div>
           )}
           
-          {activeSection === 'settings' && (
+          {activeSection === 'dashboard-settings' && (
             <div style={{ 
               minHeight: '100vh',
               backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
@@ -1186,8 +1182,7 @@ function App() {
                     : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                   borderRadius: '8px',
                   padding: '20px',
-                  marginBottom: '20px',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+                  marginBottom: '20px'
                 }}>
                   <h1 style={{
                     fontSize: '20px',
@@ -1195,7 +1190,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    ⚙️ Dashboard Settings
+                    [SET] Dashboard Settings
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1227,8 +1222,7 @@ function App() {
                     : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                   borderRadius: '8px',
                   padding: '20px',
-                  marginBottom: '20px',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+                  marginBottom: '20px'
                 }}>
                   <h1 style={{
                     fontSize: '20px',
@@ -1236,7 +1230,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    🔧 Admin Center
+                    [ADM] Admin Center
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
