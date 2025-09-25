@@ -1,172 +1,254 @@
-// /src/schedulecomponent/api/scheduleAPI.ts - FIXED SINGLE SUPABASE INSTANCE
-import { supabase } from '../config'; // DIRECT IMPORT - NO DYNAMIC IMPORT
+// /src/schedulecomponent/api/scheduleAPI.ts - FIXED TO FOLLOW CORRECT WORKFLOW
+import { supabase } from '../config';
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
-// Helper function to map database records to TypeScript interface
-const mapDatabaseToScheduledPost = (data: any): ScheduledPost => {
+// Helper function to map content_posts to ScheduledPost interface
+const mapContentPostToScheduledPost = (data: any): ScheduledPost => {
   return {
     id: data.id,
-    content_id: data.content_id || data.media_content_id || '',
-    character_profile: data.character_profile || data.character_profile_id || '',
-    theme: data.theme || '',
-    audience: data.audience || '',
-    media_type: data.media_type || '',
-    template_type: data.template_type || '',
-    platform: data.platform || '',
-    title: data.title || '',
-    description: data.post_description || data.description || '',
+    content_id: data.content_id,
+    character_profile: data.character_profile,
+    theme: data.theme,
+    audience: data.audience,
+    media_type: data.media_type,
+    template_type: data.template_type,
+    platform: data.platform,
+    title: data.title,
+    description: data.description,
     hashtags: Array.isArray(data.hashtags) ? data.hashtags : [],
-    keywords: data.keywords || '',
-    cta: data.cta || '',
+    keywords: data.keywords,
+    cta: data.cta,
     media_files: Array.isArray(data.media_files) ? data.media_files : [],
     selected_platforms: Array.isArray(data.selected_platforms) ? data.selected_platforms : [],
-    scheduled_date: new Date(data.scheduled_time || data.scheduled_date),
+    scheduled_date: new Date(), // Will be set when user adds date/time
     status: data.status,
-    failure_reason: data.error_message,
-    last_attempt: data.last_attempt_at ? new Date(data.last_attempt_at) : undefined,
-    retry_count: data.attempt_count || 0,
     created_date: new Date(data.created_at),
-    user_id: data.user_id || '',
-    created_by: data.created_by || '',
+    user_id: data.user_id,
+    created_by: data.created_by,
     is_from_template: data.is_from_template,
-    source_template_id: data.source_template_id,
-    original_post_id: data.original_post_id,
-    priority_level: data.priority_level,
-    persona_target: data.persona_target,
-    audience_segment: data.audience_segment,
-    campaign_id: data.campaign_id
+    source_template_id: data.source_template_id
   };
 };
 
-// Scheduled Posts Operations
+// Helper function to map dashboard_posts to ScheduledPost interface  
+const mapDashboardPostToScheduledPost = (data: any): ScheduledPost => {
+  return {
+    id: data.id,
+    content_id: data.content_id,
+    character_profile: data.character_profile,
+    theme: data.theme,
+    audience: data.audience,
+    media_type: data.media_type,
+    template_type: data.template_type,
+    platform: data.platform,
+    title: data.title,
+    description: data.description,
+    hashtags: Array.isArray(data.hashtags) ? data.hashtags : [],
+    keywords: data.keywords,
+    cta: data.cta,
+    media_files: Array.isArray(data.media_files) ? data.media_files : [],
+    selected_platforms: Array.isArray(data.selected_platforms) ? data.selected_platforms : [],
+    scheduled_date: new Date(data.scheduled_date),
+    status: data.status,
+    failure_reason: data.failure_reason,
+    retry_count: data.retry_count || 0,
+    created_date: new Date(data.created_at),
+    user_id: data.user_id,
+    created_by: data.created_by,
+    is_from_template: data.is_from_template,
+    source_template_id: data.source_template_id
+  };
+};
+
+// PENDING POSTS - Read from content_posts table where status = 'pending_schedule'
 export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost[]> => {
   try {
-    const { data, error } = await supabase
-      .from('scheduled_posts')
-      .select(`
-        *,
-        character_profiles(name, username, role),
-        platform_assignment_details(*)
-      `)
+    // Get pending posts from content_posts table
+    const { data: pendingPosts, error: pendingError } = await supabase
+      .from('content_posts')
+      .select('*')
+      .eq('status', 'pending_schedule')
       .or(`user_id.eq.${userId},user_id.is.null`)
       .order('created_at', { ascending: false });
-      
-    if (error) throw error;
     
-    return (data || []).map(post => mapDatabaseToScheduledPost(post));
+    if (pendingError) throw pendingError;
+
+    // Get scheduled posts from dashboard_posts table  
+    const { data: scheduledPosts, error: scheduledError } = await supabase
+      .from('dashboard_posts')
+      .select('*')
+      .or(`user_id.eq.${userId},user_id.is.null`)
+      .order('created_at', { ascending: false });
+    
+    if (scheduledError) throw scheduledError;
+
+    // Combine and map both arrays
+    const allPosts = [
+      ...(pendingPosts || []).map(post => mapContentPostToScheduledPost(post)),
+      ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post))
+    ];
+
+    return allPosts;
   } catch (error) {
-    console.error('Error fetching scheduled posts:', error);
+    console.error('Error fetching posts:', error);
     throw error;
   }
 };
 
+// SAVE CHANGES TO PENDING POST - Updates content_posts table
+export const updateScheduledPost = async (id: string, updates: Partial<ScheduledPost>): Promise<ScheduledPost> => {
+  try {
+    // First check if post is in content_posts (pending) or dashboard_posts (scheduled)
+    const { data: contentPost } = await supabase
+      .from('content_posts')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (contentPost) {
+      // Post is pending - update in content_posts table
+      const updateData: any = {};
+      
+      if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.hashtags !== undefined) updateData.hashtags = updates.hashtags;
+      if (updates.keywords !== undefined) updateData.keywords = updates.keywords;
+      if (updates.cta !== undefined) updateData.cta = updates.cta;
+      if (updates.media_files !== undefined) updateData.media_files = updates.media_files;
+      if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
+      if (updates.character_profile !== undefined) updateData.character_profile = updates.character_profile;
+      if (updates.theme !== undefined) updateData.theme = updates.theme;
+      if (updates.audience !== undefined) updateData.audience = updates.audience;
+      if (updates.media_type !== undefined) updateData.media_type = updates.media_type;
+      if (updates.template_type !== undefined) updateData.template_type = updates.template_type;
+      if (updates.platform !== undefined) updateData.platform = updates.platform;
+
+      const { data, error } = await supabase
+        .from('content_posts')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapContentPostToScheduledPost(data);
+    } else {
+      // Post is scheduled - update in dashboard_posts table
+      const updateData: any = {};
+      
+      if (updates.scheduled_date !== undefined) updateData.scheduled_date = updates.scheduled_date.toISOString();
+      if (updates.status !== undefined) updateData.status = updates.status;
+      if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.description !== undefined) updateData.description = updates.description;
+
+      const { data, error } = await supabase
+        .from('dashboard_posts')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapDashboardPostToScheduledPost(data);
+    }
+  } catch (error) {
+    console.error('Error updating post:', error);
+    throw error;
+  }
+};
+
+// SCHEDULE POST - Move from content_posts to dashboard_posts with date/time
 export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | 'created_date'>): Promise<ScheduledPost> => {
   try {
-    // Map dashboard fields to database fields
-    const databaseRecord = {
-      // Existing telegram bot fields (maintain compatibility)
-      media_content_id: postData.content_id,
-      post_description: postData.description,
-      scheduled_time: postData.scheduled_date.toISOString(),
-      character_profile_id: postData.character_profile,
-      status: postData.status,
-      
-      // New dashboard fields
-      content_id: postData.content_id,
-      original_post_id: postData.original_post_id,
-      theme: postData.theme,
-      audience: postData.audience,
-      media_type: postData.media_type,
-      template_type: postData.template_type,
-      platform: postData.platform,
-      title: postData.title,
-      hashtags: postData.hashtags,
-      keywords: postData.keywords,
-      cta: postData.cta,
-      media_files: postData.media_files,
-      selected_platforms: postData.selected_platforms,
-      is_from_template: postData.is_from_template,
-      source_template_id: postData.source_template_id,
-      user_id: postData.user_id,
-      created_by: postData.created_by,
-      priority_level: postData.priority_level,
-      persona_target: postData.persona_target,
-      audience_segment: postData.audience_segment,
-      campaign_id: postData.campaign_id,
-      
-      // Error tracking fields
-      error_message: postData.failure_reason,
-      attempt_count: postData.retry_count || 0,
-      last_attempt_at: postData.last_attempt?.toISOString()
+    // Get the original post from content_posts
+    const { data: originalPost, error: fetchError } = await supabase
+      .from('content_posts')
+      .select('*')
+      .eq('id', postData.content_id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Create scheduled post in dashboard_posts table
+    const dashboardPostData = {
+      content_id: originalPost.content_id,
+      character_profile: originalPost.character_profile,
+      theme: originalPost.theme,
+      audience: originalPost.audience,
+      media_type: originalPost.media_type,
+      template_type: originalPost.template_type,
+      platform: originalPost.platform,
+      title: originalPost.title,
+      description: originalPost.description,
+      hashtags: originalPost.hashtags,
+      keywords: originalPost.keywords,
+      cta: originalPost.cta,
+      media_files: originalPost.media_files,
+      selected_platforms: originalPost.selected_platforms,
+      scheduled_date: postData.scheduled_date.toISOString(),
+      status: 'scheduled',
+      is_from_template: originalPost.is_from_template,
+      source_template_id: originalPost.source_template_id,
+      user_id: originalPost.user_id,
+      created_by: originalPost.created_by,
+      original_post_id: originalPost.id
     };
-    
-    const { data, error } = await supabase
-      .from('scheduled_posts')
-      .insert(databaseRecord)
+
+    const { data: newScheduledPost, error: insertError } = await supabase
+      .from('dashboard_posts')
+      .insert(dashboardPostData)
       .select()
       .single();
-      
-    if (error) throw error;
-    return mapDatabaseToScheduledPost(data);
+
+    if (insertError) throw insertError;
+
+    // Update original post status to 'scheduled' in content_posts
+    await supabase
+      .from('content_posts')
+      .update({ status: 'scheduled' })
+      .eq('id', originalPost.id);
+
+    return mapDashboardPostToScheduledPost(newScheduledPost);
   } catch (error) {
     console.error('Error creating scheduled post:', error);
     throw error;
   }
 };
 
-export const updateScheduledPost = async (id: string, updates: Partial<ScheduledPost>): Promise<ScheduledPost> => {
-  try {
-    const updateData: any = {};
-    
-    // Map dashboard fields back to database fields
-    if (updates.description !== undefined) updateData.post_description = updates.description;
-    if (updates.scheduled_date !== undefined) updateData.scheduled_time = updates.scheduled_date.toISOString();
-    if (updates.status !== undefined) updateData.status = updates.status;
-    if (updates.failure_reason !== undefined) updateData.error_message = updates.failure_reason;
-    if (updates.retry_count !== undefined) updateData.attempt_count = updates.retry_count;
-    if (updates.theme !== undefined) updateData.theme = updates.theme;
-    if (updates.audience !== undefined) updateData.audience = updates.audience;
-    if (updates.media_type !== undefined) updateData.media_type = updates.media_type;
-    if (updates.template_type !== undefined) updateData.template_type = updates.template_type;
-    if (updates.platform !== undefined) updateData.platform = updates.platform;
-    if (updates.title !== undefined) updateData.title = updates.title;
-    if (updates.hashtags !== undefined) updateData.hashtags = updates.hashtags;
-    if (updates.keywords !== undefined) updateData.keywords = updates.keywords;
-    if (updates.cta !== undefined) updateData.cta = updates.cta;
-    if (updates.media_files !== undefined) updateData.media_files = updates.media_files;
-    if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
-    if (updates.last_attempt !== undefined) updateData.last_attempt_at = updates.last_attempt.toISOString();
-
-    const { data, error } = await supabase
-      .from('scheduled_posts')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-      
-    if (error) throw error;
-    return mapDatabaseToScheduledPost(data);
-  } catch (error) {
-    console.error('Error updating scheduled post:', error);
-    throw error;
-  }
-};
-
+// DELETE POST - Remove from dashboard (not database)
 export const deleteScheduledPost = async (id: string): Promise<void> => {
   try {
-    const { error } = await supabase
-      .from('scheduled_posts')
-      .delete()
-      .eq('id', id);
+    // Check if post is in content_posts or dashboard_posts
+    const { data: contentPost } = await supabase
+      .from('content_posts')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (contentPost) {
+      // Delete from content_posts
+      const { error } = await supabase
+        .from('content_posts')
+        .delete()
+        .eq('id', id);
       
-    if (error) throw error;
+      if (error) throw error;
+    } else {
+      // Update status in dashboard_posts (keep for statistics)
+      const { error } = await supabase
+        .from('dashboard_posts')
+        .update({ status: 'deleted', updated_at: new Date().toISOString() })
+        .eq('id', id);
+      
+      if (error) throw error;
+    }
   } catch (error) {
-    console.error('Error deleting scheduled post:', error);
+    console.error('Error deleting post:', error);
     throw error;
   }
 };
 
-// Template Operations
+// TEMPLATE OPERATIONS
 export const fetchTemplates = async (userId: string): Promise<SavedTemplate[]> => {
   try {
     const { data, error } = await supabase
@@ -233,75 +315,79 @@ export const deleteTemplate = async (id: string): Promise<void> => {
 
 export const incrementTemplateUsage = async (id: string): Promise<void> => {
   try {
-    // Try to use RPC function first, fallback to manual update
-    try {
-      const { error } = await supabase.rpc('increment_template_usage', { template_id: id });
-      if (error) throw error;
-    } catch (rpcError) {
-      console.warn('RPC increment failed, using manual update:', rpcError);
+    const { data: template, error: fetchError } = await supabase
+      .from('dashboard_templates')
+      .select('usage_count')
+      .eq('id', id)
+      .single();
       
-      // Fallback: Manual increment
-      const { data: template, error: fetchError } = await supabase
-        .from('dashboard_templates')
-        .select('usage_count')
-        .eq('id', id)
-        .single();
-        
-      if (fetchError) throw fetchError;
+    if (fetchError) throw fetchError;
+    
+    const { error: updateError } = await supabase
+      .from('dashboard_templates')
+      .update({ usage_count: (template.usage_count || 0) + 1 })
+      .eq('id', id);
       
-      const { error: updateError } = await supabase
-        .from('dashboard_templates')
-        .update({ usage_count: (template.usage_count || 0) + 1 })
-        .eq('id', id);
-        
-      if (updateError) throw updateError;
-    }
+    if (updateError) throw updateError;
   } catch (error) {
     console.error('Error incrementing template usage:', error);
     throw error;
   }
 };
 
-// Pending Posts Operations (for content creation integration)
-export const createPendingPost = async (postData: any): Promise<any> => {
+// RESCHEDULE TEMPLATE - Send back to content_posts for re-editing
+export const rescheduleFromTemplate = async (templateId: string, userId: string): Promise<any> => {
   try {
+    // Get template data
+    const { data: template, error: templateError } = await supabase
+      .from('dashboard_templates')
+      .select('*')
+      .eq('id', templateId)
+      .single();
+
+    if (templateError) throw templateError;
+
+    // Create new post in content_posts with template data
+    const newPostData = {
+      content_id: `template-${templateId}-${Date.now()}`,
+      character_profile: template.character_profile,
+      theme: template.theme,
+      audience: template.audience,
+      media_type: template.media_type,
+      template_type: template.template_type,
+      platform: template.platform,
+      title: template.title,
+      description: template.description,
+      hashtags: template.hashtags,
+      keywords: template.keywords,
+      cta: template.cta,
+      selected_platforms: template.selected_platforms,
+      status: 'pending_schedule', // Goes to Schedule Pending
+      is_from_template: true,
+      source_template_id: templateId,
+      user_id: userId,
+      created_by: userId
+    };
+
     const { data, error } = await supabase
-      .from('pending_schedule')
-      .insert({
-        original_post_id: postData.original_post_id,
-        content_id: postData.contentId,
-        character_profile_id: postData.characterProfile,
-        theme: postData.theme,
-        audience: postData.audience,
-        media_type: postData.mediaType,
-        template_type: postData.templateType,
-        platform: postData.platform,
-        voice_style: postData.voiceStyle,
-        title: postData.title,
-        description: postData.description,
-        hashtags: postData.hashtags,
-        keywords: postData.keywords,
-        cta: postData.cta,
-        media_files: postData.mediaFiles,
-        selected_platforms: postData.selectedPlatforms,
-        status: postData.status,
-        is_from_template: postData.isFromTemplate,
-        source_template_id: postData.sourceTemplateId,
-        user_id: postData.user_id,
-        created_by: postData.created_by
-      })
+      .from('content_posts')
+      .insert(newPostData)
       .select()
       .single();
-      
+
     if (error) throw error;
-    return data;
+
+    // Increment template usage
+    await incrementTemplateUsage(templateId);
+
+    return mapContentPostToScheduledPost(data);
   } catch (error) {
-    console.error('Error creating pending post:', error);
+    console.error('Error rescheduling from template:', error);
     throw error;
   }
 };
 
-// MAIN API OBJECT EXPORT - This is what gets imported
+// MAIN API OBJECT EXPORT
 export const scheduleAPI = {
   fetchScheduledPosts,
   createScheduledPost,
@@ -312,6 +398,5 @@ export const scheduleAPI = {
   updateTemplate,
   deleteTemplate,
   incrementTemplateUsage,
-  createPendingPost,
-  mapDatabaseToScheduledPost
+  rescheduleFromTemplate
 };
