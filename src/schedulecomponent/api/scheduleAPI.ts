@@ -1,11 +1,6 @@
-// /src/schedulecomponent/api/scheduleAPI.ts - FIXED EXPORTS
+// /src/schedulecomponent/api/scheduleAPI.ts - FIXED SINGLE SUPABASE INSTANCE
+import { supabase } from '../config'; // DIRECT IMPORT - NO DYNAMIC IMPORT
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
-
-// Dynamic import for supabase to avoid import issues
-const getSupabase = async () => {
-  const { supabase } = await import('../config');
-  return supabase;
-};
 
 // Helper function to map database records to TypeScript interface
 const mapDatabaseToScheduledPost = (data: any): ScheduledPost => {
@@ -46,7 +41,6 @@ const mapDatabaseToScheduledPost = (data: any): ScheduledPost => {
 // Scheduled Posts Operations
 export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost[]> => {
   try {
-    const supabase = await getSupabase();
     const { data, error } = await supabase
       .from('scheduled_posts')
       .select(`
@@ -68,8 +62,6 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
 
 export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | 'created_date'>): Promise<ScheduledPost> => {
   try {
-    const supabase = await getSupabase();
-    
     // Map dashboard fields to database fields
     const databaseRecord = {
       // Existing telegram bot fields (maintain compatibility)
@@ -124,7 +116,6 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
 
 export const updateScheduledPost = async (id: string, updates: Partial<ScheduledPost>): Promise<ScheduledPost> => {
   try {
-    const supabase = await getSupabase();
     const updateData: any = {};
     
     // Map dashboard fields back to database fields
@@ -163,7 +154,6 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
 
 export const deleteScheduledPost = async (id: string): Promise<void> => {
   try {
-    const supabase = await getSupabase();
     const { error } = await supabase
       .from('scheduled_posts')
       .delete()
@@ -179,7 +169,6 @@ export const deleteScheduledPost = async (id: string): Promise<void> => {
 // Template Operations
 export const fetchTemplates = async (userId: string): Promise<SavedTemplate[]> => {
   try {
-    const supabase = await getSupabase();
     const { data, error } = await supabase
       .from('dashboard_templates')
       .select('*')
@@ -197,7 +186,6 @@ export const fetchTemplates = async (userId: string): Promise<SavedTemplate[]> =
 
 export const createTemplate = async (templateData: Omit<SavedTemplate, 'id' | 'created_at' | 'updated_at'>): Promise<SavedTemplate> => {
   try {
-    const supabase = await getSupabase();
     const { data, error } = await supabase
       .from('dashboard_templates')
       .insert(templateData)
@@ -214,7 +202,6 @@ export const createTemplate = async (templateData: Omit<SavedTemplate, 'id' | 'c
 
 export const updateTemplate = async (id: string, updates: Partial<SavedTemplate>): Promise<SavedTemplate> => {
   try {
-    const supabase = await getSupabase();
     const { data, error } = await supabase
       .from('dashboard_templates')
       .update(updates)
@@ -232,7 +219,6 @@ export const updateTemplate = async (id: string, updates: Partial<SavedTemplate>
 
 export const deleteTemplate = async (id: string): Promise<void> => {
   try {
-    const supabase = await getSupabase();
     const { error } = await supabase
       .from('dashboard_templates')
       .update({ is_active: false })
@@ -247,8 +233,6 @@ export const deleteTemplate = async (id: string): Promise<void> => {
 
 export const incrementTemplateUsage = async (id: string): Promise<void> => {
   try {
-    const supabase = await getSupabase();
-    
     // Try to use RPC function first, fallback to manual update
     try {
       const { error } = await supabase.rpc('increment_template_usage', { template_id: id });
@@ -281,7 +265,6 @@ export const incrementTemplateUsage = async (id: string): Promise<void> => {
 // Pending Posts Operations (for content creation integration)
 export const createPendingPost = async (postData: any): Promise<any> => {
   try {
-    const supabase = await getSupabase();
     const { data, error } = await supabase
       .from('pending_schedule')
       .insert({
