@@ -140,7 +140,7 @@ export default function ScheduleComponent() {
   const [templateName, setTemplateName] = useState('');
 
   // Get theme
-  const { isDarkMode, theme } = getTheme();
+  const { isDarkMode, colors: theme } = getTheme();
 
   // Filter posts by status for each tab
   const pendingPosts = scheduledPosts.filter(p => p.status === 'pending_schedule');
