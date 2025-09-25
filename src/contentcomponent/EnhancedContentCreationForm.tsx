@@ -3,9 +3,6 @@ import { Upload, X, Image, Video, FileText, Settings, ExternalLink, Plus, User, 
 import { ContentPost, MediaFile, SocialPlatform, CharacterProfile } from './types';
 import { SavedPostsList } from './SavedPostsList';
 import { supabaseAPI } from './supabaseAPI';
-// ADD NEW IMPORTS FOR SUPABASE INTEGRATION
-import { contentAPI } from './contentAPI';
-import { scheduleAPI } from './scheduleAPI';
 import { 
   fetchUrlPreview, 
   getThemeCode, 
