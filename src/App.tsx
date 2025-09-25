@@ -350,7 +350,7 @@ const OverviewComponent = () => {
   }, []);
 
   const quickActions = [
-    { icon: '📝', label: 'Create Content', section: 'content-manager', color: '#3b82f6' },
+    { icon: '📄', label: 'Create Content', section: 'content-manager', color: '#3b82f6' },
     { icon: '📅', label: 'Schedule Posts', section: 'schedule-manager', color: '#10b981' },
     { icon: '💬', label: 'Manage Chat', section: 'webchat-public', color: '#8b5cf6' },
     { icon: '📊', label: 'View Analytics', section: 'marketing-center', color: '#f59e0b' },
@@ -359,7 +359,7 @@ const OverviewComponent = () => {
   ];
 
   const recentActivity = [
-    { icon: '📝', action: 'New content created', time: '2 min ago', status: 'success' },
+    { icon: '📄', action: 'New content created', time: '2 min ago', status: 'success' },
     { icon: '📤', action: 'Post scheduled for tomorrow', time: '15 min ago', status: 'pending' },
     { icon: '💬', action: 'Chat message received', time: '1 hour ago', status: 'info' },
     { icon: '🔄', action: 'Settings updated', time: '3 hours ago', status: 'success' },
@@ -712,6 +712,7 @@ function App() {
   const [currentLanguage, setCurrentLanguage] = useState('en-GB');
   const [githubUser, setGitHubUser] = useState<AuthenticatedUser | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
   // Online/offline status
   useEffect(() => {
@@ -780,11 +781,19 @@ function App() {
   const changeLanguage = (lang: string) => {
     setCurrentLanguage(lang);
     localStorage.setItem('3c-language', lang);
+    setShowLanguageDropdown(false);
   };
+
+  const languages = [
+    { code: 'en-GB', name: 'English (UK)', flag: '🇬🇧' },
+    { code: 'pt-PT', name: 'Português', flag: '🇵🇹' },
+    { code: 'fr-FR', name: 'Français', flag: '🇫🇷' },
+    { code: 'de-DE', name: 'Deutsch', flag: '🇩🇪' }
+  ];
 
   const navigationItems = [
     { id: 'overview', icon: '🧵', label: 'Overview', available: true },
-    { id: 'content-manager', icon: '📝', label: 'Content Manager', available: true },
+    { id: 'content-manager', icon: '📄', label: 'Content Manager', available: true },
     { id: 'webchat-public', icon: '💬', label: 'WebChat Public', available: true },
     { id: 'schedule-manager', icon: '📅', label: 'Schedule Manager', available: true },
     { id: 'marketing-center', icon: '🧠', label: 'Marketing Center', available: true },
@@ -865,27 +874,75 @@ function App() {
               </div>
             )}
 
-            {/* Language Selector - Working Pattern from Older Version */}
+            {/* Language Dropdown */}
             <div style={{ position: 'relative' }}>
-              <select
-                value={currentLanguage}
-                onChange={(e) => changeLanguage(e.target.value)}
+              <button
+                onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
                 style={{
-                  appearance: 'none',
                   background: 'transparent',
                   border: 'none',
                   fontSize: '20px',
                   cursor: 'pointer',
-                  outline: 'none',
-                  padding: '4px'
+                  padding: '4px',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
                 }}
                 title="Select Language"
               >
-                <option value="en-GB">GB</option>
-                <option value="pt-PT">PT</option>
-                <option value="fr-FR">FR</option>
-                <option value="de-DE">DE</option>
-              </select>
+                {languages.find(lang => lang.code === currentLanguage)?.flag || '🇬🇧'}
+                <span style={{ fontSize: '12px' }}>▼</span>
+              </button>
+              
+              {showLanguageDropdown && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: '0',
+                  marginTop: '4px',
+                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                  border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+                  borderRadius: '8px',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                  minWidth: '150px',
+                  zIndex: 1001
+                }}>
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.code}
+                      onClick={() => changeLanguage(lang.code)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        background: 'transparent',
+                        border: 'none',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px',
+                        color: isDarkMode ? '#f8fafc' : '#111827',
+                        backgroundColor: currentLanguage === lang.code ? (isDarkMode ? '#334155' : '#f3f4f6') : 'transparent'
+                      }}
+                      onMouseOver={(e) => {
+                        if (currentLanguage !== lang.code) {
+                          e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f9fafb';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (currentLanguage !== lang.code) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                    >
+                      <span style={{ fontSize: '16px' }}>{lang.flag}</span>
+                      <span>{lang.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Dark Mode Toggle */}
@@ -933,6 +990,21 @@ function App() {
               🚪
             </button>
           </div>
+        )}
+
+        {/* Close dropdown when clicking outside */}
+        {showLanguageDropdown && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 999
+            }}
+            onClick={() => setShowLanguageDropdown(false)}
+          />
         )}
 
         {/* Sidebar Navigation */}
@@ -1027,7 +1099,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    📝 Content Manager
+                    📄 Content Manager
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
