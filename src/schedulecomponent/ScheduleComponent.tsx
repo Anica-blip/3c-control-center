@@ -1,4 +1,4 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - CORRECTED VERSION with original tabs restored
+// /src/schedulecomponent/ScheduleComponent.tsx - FIXED VERSION with proper loading guards
 import React, { useState, useEffect } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
@@ -28,6 +28,102 @@ export default function ScheduleComponent() {
     deleteTemplate,
     incrementUsage
   } = useTemplates();
+
+  // CRITICAL FIX: Early returns for loading/error states BEFORE any rendering
+  if (postsLoading || templatesLoading) {
+    return (
+      <div style={{
+        minHeight: '600px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f8fafc'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          padding: '24px',
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div style={{
+            width: '24px',
+            height: '24px',
+            border: '3px solid #e5e7eb',
+            borderTop: '3px solid #3b82f6',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+          }} />
+          <span style={{ 
+            color: '#111827',
+            fontSize: '16px',
+            fontWeight: '600'
+          }}>
+            Loading Schedule Manager...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (postsError || templatesError) {
+    return (
+      <div style={{
+        minHeight: '600px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f8fafc'
+      }}>
+        <div style={{
+          padding: '24px',
+          backgroundColor: '#fee2e2',
+          borderRadius: '12px',
+          border: '1px solid #fca5a5',
+          textAlign: 'center'
+        }}>
+          <AlertCircle style={{
+            height: '48px',
+            width: '48px',
+            color: '#dc2626',
+            margin: '0 auto 16px auto'
+          }} />
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: 'bold',
+            color: '#991b1b',
+            margin: '0 0 8px 0'
+          }}>
+            Error Loading Schedule Manager
+          </h3>
+          <p style={{
+            color: '#7f1d1d',
+            margin: '0 0 16px 0'
+          }}>
+            {postsError || templatesError}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#dc2626',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '600'
+            }}
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // UI state
   const [activeTab, setActiveTab] = useState('pending');
@@ -1342,7 +1438,7 @@ export default function ScheduleComponent() {
         })}
       </div>
 
-      {/* Tab Content - ORIGINAL CONTENT RESTORED */}
+      {/* Tab Content */}
       <div style={{
         backgroundColor: theme.cardBg,
         borderRadius: '12px',
@@ -1658,49 +1754,6 @@ export default function ScheduleComponent() {
           </div>
         )}
       </div>
-
-      {/* Loading State Overlay */}
-      {(postsLoading || templatesLoading) && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.3)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999
-        }}>
-          <div style={{
-            backgroundColor: theme.bg,
-            padding: '24px',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            border: `1px solid ${theme.border}`,
-            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
-          }}>
-            <div style={{
-              width: '24px',
-              height: '24px',
-              border: `3px solid ${theme.border}`,
-              borderTop: `3px solid ${theme.primary}`,
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite'
-            }} />
-            <span style={{ 
-              color: theme.text,
-              fontSize: '16px',
-              fontWeight: '600'
-            }}>
-              Loading Schedule Manager...
-            </span>
-          </div>
-        </div>
-      )}
 
       {/* Modals */}
       {isScheduleModalOpen && selectedPost && (
