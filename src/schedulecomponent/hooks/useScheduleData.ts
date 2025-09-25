@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { scheduleAPI } from '../api/scheduleAPI';
 import { ScheduledPost, SavedTemplate } from '../types';
-import { supabase } from '../../supabase/config';
+import { supabase } from '../config(1)';
 
 export const useScheduledPosts = () => {
   const [posts, setPosts] = useState<ScheduledPost[]>([]);
