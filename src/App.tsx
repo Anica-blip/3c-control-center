@@ -249,7 +249,7 @@ const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) =>
         border: '1px solid #e5e7eb'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>&nbsp;</div>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🧵</div>
           <h1 style={{
             fontSize: '24px',
             fontWeight: 'bold',
@@ -276,7 +276,7 @@ const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) =>
             marginBottom: '16px'
           }}>
             <p style={{ color: '#dc2626', fontSize: '14px', margin: '0' }}>
-              &#9888; {error}
+              ⚠️ {error}
             </p>
           </div>
         )}
@@ -350,20 +350,20 @@ const OverviewComponent = () => {
   }, []);
 
   const quickActions = [
-    { icon: '&#128221;', label: 'Create Content', section: 'content-manager', color: '#3b82f6' },
-    { icon: '&#128197;', label: 'Schedule Posts', section: 'schedule-manager', color: '#10b981' },
-    { icon: '&#128172;', label: 'Manage Chat', section: 'webchat-public', color: '#8b5cf6' },
-    { icon: '&#128202;', label: 'View Analytics', section: 'marketing-center', color: '#f59e0b' },
-    { icon: '&#9881;', label: 'Settings', section: 'settings', color: '#6b7280' },
-    { icon: '&#128295;', label: 'Admin Panel', section: 'admin-center', color: '#ef4444' }
+    { icon: '📝', label: 'Create Content', section: 'content-manager', color: '#3b82f6' },
+    { icon: '📅', label: 'Schedule Posts', section: 'schedule-manager', color: '#10b981' },
+    { icon: '💬', label: 'Manage Chat', section: 'webchat-public', color: '#8b5cf6' },
+    { icon: '📊', label: 'View Analytics', section: 'marketing-center', color: '#f59e0b' },
+    { icon: '⚙️', label: 'Settings', section: 'dashboard-settings', color: '#6b7280' },
+    { icon: '🔧', label: 'Admin Panel', section: 'admin-center', color: '#ef4444' }
   ];
 
   const recentActivity = [
-    { icon: '&#128221;', action: 'New content created', time: '2 min ago', status: 'success' },
-    { icon: '&#11014;', action: 'Post scheduled for tomorrow', time: '15 min ago', status: 'pending' },
-    { icon: '&#128172;', action: 'Chat message received', time: '1 hour ago', status: 'info' },
-    { icon: '&#128260;', action: 'Settings updated', time: '3 hours ago', status: 'success' },
-    { icon: '&#128202;', action: 'Weekly report generated', time: '1 day ago', status: 'info' }
+    { icon: '📝', action: 'New content created', time: '2 min ago', status: 'success' },
+    { icon: '📤', action: 'Post scheduled for tomorrow', time: '15 min ago', status: 'pending' },
+    { icon: '💬', action: 'Chat message received', time: '1 hour ago', status: 'info' },
+    { icon: '🔄', action: 'Settings updated', time: '3 hours ago', status: 'success' },
+    { icon: '📊', action: 'Weekly report generated', time: '1 day ago', status: 'info' }
   ];
 
   const metrics = [
@@ -400,7 +400,7 @@ const OverviewComponent = () => {
                 color: isDarkMode ? '#60a5fa' : '#3b82f6',
                 margin: '0 0 8px 0'
               }}>
-                &#128202; Overview
+                🎯 Overview
               </h1>
               <p style={{
                 color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -516,7 +516,7 @@ const OverviewComponent = () => {
               fontWeight: 'bold',
               margin: '0 0 16px 0'
             }}>
-              &#128640; Quick Actions
+              🚀 Quick Actions
             </h3>
             <div style={{
               display: 'grid',
@@ -526,10 +526,7 @@ const OverviewComponent = () => {
               {quickActions.map((action, index) => (
                 <button
                   key={index}
-                  onClick={() => {
-                    window.location.hash = action.section;
-                    window.dispatchEvent(new HashChangeEvent('hashchange'));
-                  }}
+                  onClick={() => setActiveSection(action.section)}
                   style={{
                     padding: '16px',
                     backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
@@ -581,7 +578,7 @@ const OverviewComponent = () => {
               fontWeight: 'bold',
               margin: '0 0 16px 0'
             }}>
-              &#128202; Recent Activity
+              📊 Recent Activity
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {recentActivity.map((activity, index) => (
@@ -635,7 +632,7 @@ const OverviewComponent = () => {
                 color: isDarkMode ? '#f8fafc' : '#111827',
                 margin: '0 0 4px 0'
               }}>
-                &#128295; System Status
+                🔧 System Status
               </h4>
               <p style={{
                 color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -678,14 +675,14 @@ const OverviewComponent = () => {
             fontSize: '12px',
             margin: '0 0 8px 0'
           }}>
-            &#128187; <strong>Open Source Project</strong> &#8226; Designed by Claude &#8226; GitHub Repository Access
+            💻 <strong>Open Source Project</strong> • Designed by Claude • GitHub Repository Access
           </p>
           <p style={{
             color: isDarkMode ? '#94a3b8' : '#6b7280',
             fontSize: '11px',
             margin: '0'
           }}>
-            &#127758; Language: English (UK) &#8226; &#128337; Timezone: WEST (UTC+1) &#8226; &#127919; 3C Control Center v2.0
+            🌎 Language: English (UK) • 🕘 Timezone: WEST (UTC+1) • 🎯 3C Control Center v2.0
           </p>
         </div>
       </div>
@@ -786,13 +783,13 @@ function App() {
   };
 
   const navigationItems = [
-    { id: 'overview', icon: '&#129520;', label: 'Overview', available: true },
-    { id: 'content-manager', icon: '&#128221;', label: 'Content Manager', available: true },
-    { id: 'webchat-public', icon: '&#128172;', label: 'WebChat Public', available: true },
-    { id: 'schedule-manager', icon: '&#128197;', label: 'Schedule Manager', available: true },
-    { id: 'marketing-center', icon: '&#129504;', label: 'Marketing Center', available: true },
-    { id: 'dashboard-settings', icon: '&#9881;', label: 'Dashboard Settings', available: true },
-    { id: 'admin-center', icon: '&#128295;', label: 'Admin Center', available: true }
+    { id: 'overview', icon: '🧵', label: 'Overview', available: true },
+    { id: 'content-manager', icon: '📝', label: 'Content Manager', available: true },
+    { id: 'webchat-public', icon: '💬', label: 'WebChat Public', available: true },
+    { id: 'schedule-manager', icon: '📅', label: 'Schedule Manager', available: true },
+    { id: 'marketing-center', icon: '🧠', label: 'Marketing Center', available: true },
+    { id: 'dashboard-settings', icon: '⚙️', label: 'Dashboard Settings', available: true },
+    { id: 'admin-center', icon: '🔧', label: 'Admin Center', available: true }
   ];
 
   // Loading screen
@@ -807,7 +804,7 @@ function App() {
         fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}>
         <div style={{ textAlign: 'center', color: 'white' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>&nbsp;</div>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🧵</div>
           <div style={{ fontSize: '18px' }}>Loading 3C Thread To Success...</div>
           <div style={{ fontSize: '14px', marginTop: '8px', opacity: 0.8 }}>Professional Dashboard</div>
         </div>
@@ -911,7 +908,7 @@ function App() {
               }}
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
-              {isDarkMode ? '&#9728;' : '&#127769;'}
+              {isDarkMode ? '☀️' : '🌙'}
             </button>
 
             <button
@@ -933,7 +930,7 @@ function App() {
               }}
               title="Logout"
             >
-              [EXIT]
+              🚪
             </button>
           </div>
         )}
@@ -1030,7 +1027,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    &#128221; Content Manager
+                    📝 Content Manager
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1070,7 +1067,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    &#128172; Chat Manager - Public
+                    💬 Chat Manager - Public
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1110,7 +1107,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    &#128197; Schedule Manager
+                    📅 Schedule Manager
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1150,7 +1147,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    &#129504; Marketing Center
+                    🧠 Marketing Center
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1190,7 +1187,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    &#9881; Dashboard Settings
+                    ⚙️ Dashboard Settings
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1230,7 +1227,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    &#128295; Admin Center
+                    🔧 Admin Center
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
