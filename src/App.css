@@ -5,6 +5,15 @@
   text-align: center;
 }
 
+body, #root {
+  background: #f8fafc; /* default light */
+  transition: background 0.2s;
+}
+
+body.dark, #root.dark {
+  background: #0f172a !important; /* dark background */
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;
