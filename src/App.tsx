@@ -5,7 +5,7 @@ import ChatManagerPublic from './webchat';
 import ScheduleComponent from './schedulecomponent';
 import MarketingComponent from './marketingcomponent';
 import SettingsComponent from './settingscomponent';
-import AdminComponents from './admincomponens';
+import AdminComponents from './admincomponents';
 
 // Theme Context
 const ThemeContext = createContext({
