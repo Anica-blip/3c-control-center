@@ -1197,9 +1197,6 @@ function App() {
                     Schedule posts and track their delivery status
                   </p>
                 </div>
-                <div className="schedule-content">
-                  <ThemedScheduleComponent />
-                </div>
               </div>
             </div>
           )}
