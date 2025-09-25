@@ -1,45 +1,27 @@
-// /src/schedulecomponent/hooks/useScheduleData.ts - FIXED
 import { useState, useEffect } from 'react';
 import { scheduleAPI } from '../api/scheduleAPI';
 import { ScheduledPost, SavedTemplate } from '../types';
-
-// Helper function to get current user ID
-const getCurrentUserId = async () => {
-  try {
-    // Try to get user from localStorage first (faster)
-    const cachedUser = localStorage.getItem('supabase.auth.token');
-    if (cachedUser) {
-      const parsed = JSON.parse(cachedUser);
-      if (parsed?.user?.id) {
-        return parsed.user.id;
-      }
-    }
-    
-    // Fallback: Import supabase and get user
-    const { supabase } = await import('../../config');
-    const { data: { user } } = await supabase.auth.getUser();
-    return user?.id || 'anonymous';
-  } catch (error) {
-    console.warn('Could not get user ID, using anonymous:', error);
-    return 'anonymous';
-  }
-};
+import { supabase } from '../../supabase/config';
 
 export const useScheduledPosts = () => {
   const [posts, setPosts] = useState<ScheduledPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const getCurrentUserId = () => {
+    const { data: { user } } = supabase.auth.getUser();
+    return user?.id || '';
+  };
+
   const refreshPosts = async () => {
     try {
       setLoading(true);
       setError(null);
-      const userId = await getCurrentUserId();
+      const userId = getCurrentUserId();
       const data = await scheduleAPI.fetchScheduledPosts(userId);
       setPosts(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load posts');
-      console.error('Error refreshing posts:', err);
     } finally {
       setLoading(false);
     }
@@ -48,13 +30,7 @@ export const useScheduledPosts = () => {
   const createPost = async (postData: Omit<ScheduledPost, 'id' | 'created_date'>) => {
     try {
       setError(null);
-      const userId = await getCurrentUserId();
-      const postWithUser = {
-        ...postData,
-        user_id: userId,
-        created_by: userId
-      };
-      const newPost = await scheduleAPI.createScheduledPost(postWithUser);
+      const newPost = await scheduleAPI.createScheduledPost(postData);
       setPosts(prev => [newPost, ...prev]);
       return newPost;
     } catch (err) {
@@ -106,16 +82,20 @@ export const useTemplates = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const getCurrentUserId = () => {
+    const { data: { user } } = supabase.auth.getUser();
+    return user?.id || '';
+  };
+
   const refreshTemplates = async () => {
     try {
       setLoading(true);
       setError(null);
-      const userId = await getCurrentUserId();
+      const userId = getCurrentUserId();
       const data = await scheduleAPI.fetchTemplates(userId);
       setTemplates(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load templates');
-      console.error('Error refreshing templates:', err);
     } finally {
       setLoading(false);
     }
@@ -124,13 +104,7 @@ export const useTemplates = () => {
   const createTemplate = async (templateData: Omit<SavedTemplate, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       setError(null);
-      const userId = await getCurrentUserId();
-      const templateWithUser = {
-        ...templateData,
-        user_id: userId,
-        created_by: userId
-      };
-      const newTemplate = await scheduleAPI.createTemplate(templateWithUser);
+      const newTemplate = await scheduleAPI.createTemplate(templateData);
       setTemplates(prev => [newTemplate, ...prev]);
       return newTemplate;
     } catch (err) {
