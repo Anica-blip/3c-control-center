@@ -714,6 +714,14 @@ function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
+  useEffect(() => {
+    document.body.style.backgroundColor = isDarkMode ? '#0f172a' : '#f8fafc';
+    const root = document.getElementById('root');
+    if (root) {
+      (root as HTMLElement).style.backgroundColor = isDarkMode ? '#0f172a' : '#f8fafc';
+    }
+  }, [isDarkMode]);
+  
   // Online/offline status
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
