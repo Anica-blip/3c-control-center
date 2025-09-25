@@ -1,4 +1,4 @@
-// /src/schedulecomponent/components/EditModal.tsx
+// /src/schedulecomponent/components/EditModal.tsx - FIXED MISSING onSave PROP
 import React, { useState, useEffect } from 'react';
 import { Edit3, X, Save, Calendar, Clock, User, Hash, FileText, ExternalLink, Image, Video, Trash2, Plus } from 'lucide-react';
 import { formatDate, formatTime, isValidDate } from '../utils/dateUtils';
@@ -40,8 +40,10 @@ interface EditablePost {
   status: string;
 }
 
+// FIXED: Added missing onSave prop
 interface EditModalProps {
   post: ScheduledPost | null;
+  onSave: (postId: string, updates: Partial<EditablePost>) => Promise<void>;
   onCancel: () => void;
   availablePlatforms?: Array<{ id: string; name: string; isActive: boolean }>;
   characterProfiles?: Array<{ id: string; name: string; username: string; role: string }>;
@@ -104,8 +106,7 @@ export default function EditModal({
         audience: post.audience,
         media_type: post.media_type,
         template_type: post.template_type,
-        platform: post.platform,
-        voice_style: post.voice_style
+        platform: post.platform
       });
     }
   }, [post]);
@@ -524,7 +525,7 @@ export default function EditModal({
             </div>
           </div>
 
-          {/* Media Files */}
+          {/* Character Profile */}
           <div>
             <label style={{
               display: 'block',
@@ -533,245 +534,20 @@ export default function EditModal({
               color: theme.text,
               marginBottom: '8px'
             }}>
-              Media & Links
+              Character Profile
             </label>
-
-            {/* URL Input */}
-            <div style={{
-              backgroundColor: theme.cardBg,
-              border: `1px solid ${theme.border}`,
-              borderRadius: '8px',
-              padding: '16px',
-              marginBottom: '16px'
-            }}>
-              <h4 style={{
-                fontSize: '14px',
-                fontWeight: '600',
-                color: theme.text,
-                margin: '0 0 12px 0',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <ExternalLink size={16} />
-                Add URL Link
-              </h4>
-              
-              <div style={{ display: 'grid', gap: '12px' }}>
-                <input
-                  type="text"
-                  value={urlTitle}
-                  onChange={(e) => setUrlTitle(e.target.value)}
-                  placeholder="Link title (optional)"
-                  style={{
-                    padding: '10px 12px',
-                    border: `1px solid ${theme.border}`,
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: theme.bg,
-                    color: theme.text,
-                    fontFamily: 'inherit'
-                  }}
-                />
-                
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="url"
-                    value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
-                    placeholder="https://example.com"
-                    style={{
-                      flex: 1,
-                      padding: '10px 12px',
-                      border: `1px solid ${theme.border}`,
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      backgroundColor: theme.bg,
-                      color: theme.text,
-                      fontFamily: 'inherit'
-                    }}
-                  />
-                  <button
-                    onClick={handleAddUrl}
-                    disabled={!urlInput.trim()}
-                    style={{
-                      padding: '10px 16px',
-                      backgroundColor: urlInput.trim() ? theme.primary : theme.border,
-                      color: urlInput.trim() ? 'white' : theme.textSecondary,
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: urlInput.trim() ? 'pointer' : 'not-allowed',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      fontFamily: 'inherit',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <Plus size={14} />
-                    Add URL
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Media Files List */}
-            {formData.media_files && formData.media_files.length > 0 && (
-              <div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '12px'
-                }}>
-                  <h4 style={{
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: theme.text,
-                    margin: '0'
-                  }}>
-                    Added Media & Links
-                  </h4>
-                  <span style={{
-                    padding: '4px 8px',
-                    backgroundColor: theme.primary,
-                    color: 'white',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    borderRadius: '12px'
-                  }}>
-                    {formData.media_files.length} items
-                  </span>
-                </div>
-                <div style={{ display: 'grid', gap: '8px' }}>
-                  {formData.media_files.map((file) => (
-                    <div key={file.id} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '12px',
-                      backgroundColor: theme.cardBg,
-                      borderRadius: '6px',
-                      border: `1px solid ${theme.border}`
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-                        <div style={{
-                          padding: '8px',
-                          backgroundColor: theme.bg,
-                          borderRadius: '6px',
-                          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
-                        }}>
-                          {getFileIcon(file.type)}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            color: theme.text,
-                            marginBottom: '2px'
-                          }}>
-                            {file.name}
-                          </div>
-                          <div style={{
-                            fontSize: '11px',
-                            color: theme.textSecondary
-                          }}>
-                            {file.type === 'url_link' ? (
-                              <span style={{ 
-                                wordBreak: 'break-all',
-                                display: 'block'
-                              }}>
-                                {file.url.length > 50 ? file.url.substring(0, 50) + '...' : file.url}
-                              </span>
-                            ) : (
-                              `${file.type.toUpperCase()} • ${Math.round(file.size / 1024)}KB`
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleRemoveFile(file.id)}
-                        style={{
-                          padding: '6px',
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          color: theme.textSecondary,
-                          marginLeft: '8px',
-                          flexShrink: 0
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.backgroundColor = theme.hoverBg;
-                          e.currentTarget.style.color = theme.danger;
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                          e.currentTarget.style.color = theme.textSecondary;
-                        }}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Character Profile & Selection Fields */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '16px'
-          }}>
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: theme.text,
-                marginBottom: '8px'
-              }}>
-                Character Profile
-              </label>
-              <select
-                value={formData.character_profile || ''}
-                onChange={(e) => handleFieldChange('character_profile', e.target.value)}
-                style={inputStyle}
-              >
-                <option value="">Select character...</option>
-                {characterProfiles.map(profile => (
-                  <option key={profile.id} value={profile.id}>
-                    {profile.name} ({profile.username}) - {profile.role}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: theme.text,
-                marginBottom: '8px'
-              }}>
-                Voice Style
-              </label>
-              <select
-                value={formData.voice_style || ''}
-                onChange={(e) => handleFieldChange('voice_style', e.target.value)}
-                style={inputStyle}
-              >
-                <option value="">Select voice style...</option>
-                <option value="casual">Casual</option>
-                <option value="friendly">Friendly</option>
-                <option value="professional">Professional</option>
-                <option value="creative">Creative</option>
-              </select>
-            </div>
+            <select
+              value={formData.character_profile || ''}
+              onChange={(e) => handleFieldChange('character_profile', e.target.value)}
+              style={inputStyle}
+            >
+              <option value="">Select character...</option>
+              {characterProfiles.map(profile => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.name} ({profile.username}) - {profile.role}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Platform Selection */}
