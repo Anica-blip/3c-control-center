@@ -3,10 +3,10 @@
 export const getTheme = () => {
   // Check for dark mode (your dashboard appears to be dark)
   const isDarkMode = true; // Matching your dashboard theme
-  
+
   return {
     isDarkMode,
-    colors: isDarkMode ? {
+    theme: isDarkMode ? {
       // Dark theme matching your dashboard
       primary: '#60a5fa',
       primaryHover: '#3b82f6',
