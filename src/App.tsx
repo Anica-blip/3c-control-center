@@ -5,7 +5,7 @@ import ChatManagerPublic from './webchat';
 import ScheduleComponent from './schedulecomponent';
 import MarketingComponent from './marketingcomponent';
 import SettingsComponent from './settingscomponent';
-import AdminComponent from './admincomponent';
+import AdminComponents from './admincomponens';
 
 // Theme Context
 const ThemeContext = createContext({
@@ -702,7 +702,7 @@ const ThemedChatManagerPublic = withThemeWrapper(ChatManagerPublic);
 const ThemedScheduleComponent = withThemeWrapper(ScheduleComponent);
 const ThemedMarketingComponent = withThemeWrapper(MarketingComponent);
 const ThemedSettingsComponent = withThemeWrapper(SettingsComponent);
-const ThemedAdminComponent = withThemeWrapper(AdminComponent);
+const ThemedAdminComponents = withThemeWrapper(AdminComponents);
 
 // =============================================================================
 // MAIN APP - With Working Patterns Applied
@@ -1247,7 +1247,7 @@ function App() {
                   </p>
                 </div>
                 <div className="admin-content">
-                  <ThemedAdminComponent />
+                  <ThemedAdminComponents />
                 </div>
               </div>
             </div>
