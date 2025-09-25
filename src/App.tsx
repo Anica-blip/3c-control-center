@@ -1,12 +1,11 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 
-// Import your real components
 import ContentComponent from './contentcomponent';
 import ChatManagerPublic from './webchat';
-import ScheduleComponentContent from './schedulecomponent';
-import MarketingControlCenter from './marketingcomponent';
-import SettingsComponentContent from './settingscomponent';
-import AdminComponentsContent from './admincomponents';
+import ScheduleComponent from './schedulecomponent';
+import MarketingComponent from './marketingcomponent';
+import SettingsComponent from './settingscomponent';
+import AdminComponent from './admincomponent';
 
 // Theme Context
 const ThemeContext = createContext({
@@ -700,10 +699,10 @@ const OverviewComponent = () => {
 
 const ThemedContentComponent = withThemeWrapper(ContentComponent);
 const ThemedChatManagerPublic = withThemeWrapper(ChatManagerPublic);
-const ThemedScheduleComponentContent = withThemeWrapper(ScheduleComponentContent);
-const ThemedMarketingControlCenter = withThemeWrapper(MarketingControlCenter);
-const ThemedSettingsComponentContent = withThemeWrapper(SettingsComponentContent);
-const ThemedAdminComponentsContent = withThemeWrapper(AdminComponentsContent);
+const ThemedScheduleComponent = withThemeWrapper(ScheduleComponent);
+const ThemedMarketingComponent = withThemeWrapper(MarketingComponent);
+const ThemedSettingsComponent = withThemeWrapper(SettingsComponent);
+const ThemedAdminComponent = withThemeWrapper(AdminComponent);
 
 // =============================================================================
 // MAIN APP - With Working Patterns Applied
@@ -792,7 +791,7 @@ function App() {
     { id: 'webchat-public', icon: '💬', label: 'WebChat Public', available: true },
     { id: 'schedule-manager', icon: '📅', label: 'Schedule Manager', available: true },
     { id: 'marketing-center', icon: '🧠', label: 'Marketing Center', available: true },
-    { id: 'settings', icon: '⚙️', label: 'Dashboard Settings', available: true },
+    { id: 'dashboard-settings', icon: '⚙️', label: 'Dashboard Settings', available: true },
     { id: 'admin-center', icon: '🔧', label: 'Admin Center', available: true }
   ];
 
@@ -1125,7 +1124,7 @@ function App() {
                   </p>
                 </div>
                 <div className="schedule-content">
-                  <ThemedScheduleComponentContent />
+                  <ThemedScheduleComponent />
                 </div>
               </div>
             </div>
@@ -1155,7 +1154,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    🧠 Marketing Control Center
+                    🧠 Marketing Center
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1166,7 +1165,7 @@ function App() {
                   </p>
                 </div>
                 <div className="marketing-content">
-                  <ThemedMarketingControlCenter />
+                  <ThemedMarketingComponent />
                 </div>
               </div>
             </div>
@@ -1207,7 +1206,7 @@ function App() {
                   </p>
                 </div>
                 <div className="settings-content">
-                  <ThemedSettingsComponentContent />
+                  <ThemedSettingsComponent />
                 </div>
               </div>
             </div>
@@ -1248,7 +1247,7 @@ function App() {
                   </p>
                 </div>
                 <div className="admin-content">
-                  <ThemedAdminComponentsContent />
+                  <ThemedAdminComponent />
                 </div>
               </div>
             </div>
