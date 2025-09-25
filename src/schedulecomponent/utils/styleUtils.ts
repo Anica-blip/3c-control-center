@@ -46,31 +46,31 @@ export const getTheme = () => {
 };
 
 export const getContainerStyle = (isDarkMode: boolean) => {
-  const { theme } = getTheme();
+  const { colors } = getTheme();
   
   return {
-    backgroundColor: theme.background,
-    color: theme.text,
+    backgroundColor: colors.background,
+    color: colors.text,
     borderRadius: '8px',
     padding: '24px',
     fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     minHeight: '600px',
-    border: `1px solid ${theme.border}`
+    border: `1px solid ${colors.border}`
   };
 };
 
 export const getTabStyle = (tabId: string, activeTab: string, isDarkMode: boolean) => {
-  const { theme } = getTheme();
+  const { colors } = getTheme();
   const isActive = tabId === activeTab;
   
   // Get tab-specific color
   const getTabColor = (tab: string) => {
     switch (tab) {
-      case 'pending': return theme.pending;
-      case 'calendar': return theme.calendar;
-      case 'status': return theme.status;
-      case 'saved': return theme.templates;
-      default: return theme.primary;
+      case 'pending': return colors.pending;
+      case 'calendar': return colors.calendar;
+      case 'status': return colors.status;
+      case 'saved': return colors.templates;
+      default: return colors.primary;
     }
   };
   
@@ -79,7 +79,7 @@ export const getTabStyle = (tabId: string, activeTab: string, isDarkMode: boolea
   return {
     padding: '12px 20px',
     backgroundColor: isActive ? `${tabColor}20` : 'transparent',
-    color: isActive ? tabColor : theme.secondary,
+    color: isActive ? tabColor : colors.secondary,
     border: 'none',
     borderBottom: isActive ? `2px solid ${tabColor}` : `2px solid transparent`,
     cursor: 'pointer',
@@ -89,24 +89,24 @@ export const getTabStyle = (tabId: string, activeTab: string, isDarkMode: boolea
     transition: 'all 0.2s ease',
     borderRadius: '4px 4px 0 0',
     ':hover': {
-      backgroundColor: isActive ? `${tabColor}30` : `${theme.border}50`,
-      color: isActive ? tabColor : theme.text
+      backgroundColor: isActive ? `${tabColor}30` : `${colors.border}50`,
+      color: isActive ? tabColor : colors.text
     }
   };
 };
 
 export const getCardStyle = (isDarkMode: boolean) => {
-  const { theme } = getTheme();
+  const { colors } = getTheme();
   
   return {
-    backgroundColor: theme.cardBg,
-    border: `1px solid ${theme.border}`,
+    backgroundColor: colors.cardBg,
+    border: `1px solid ${colors.border}`,
     borderRadius: '8px',
     padding: '20px',
     marginBottom: '16px',
     transition: 'all 0.2s ease',
     ':hover': {
-      borderColor: theme.primary,
+      borderColor: colors.primary,
       transform: 'translateY(-1px)',
       boxShadow: isDarkMode 
         ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
@@ -116,32 +116,32 @@ export const getCardStyle = (isDarkMode: boolean) => {
 };
 
 export const getButtonStyle = (variant: 'primary' | 'secondary' | 'danger', isDarkMode: boolean) => {
-  const { theme } = getTheme();
+  const { colors } = getTheme();
   
   const variants = {
     primary: {
-      backgroundColor: theme.primary,
+      backgroundColor: colors.primary,
       color: 'white',
       border: 'none',
       ':hover': {
-        backgroundColor: theme.primaryHover
+        backgroundColor: colors.primaryHover
       }
     },
     secondary: {
       backgroundColor: 'transparent',
-      color: theme.secondary,
-      border: `1px solid ${theme.border}`,
+      color: colors.secondary,
+      border: `1px solid ${colors.border}`,
       ':hover': {
-        backgroundColor: theme.cardBg,
-        color: theme.text
+        backgroundColor: colors.cardBg,
+        color: colors.text
       }
     },
     danger: {
       backgroundColor: 'transparent',
-      color: theme.danger,
-      border: `1px solid ${theme.danger}`,
+      color: colors.danger,
+      border: `1px solid ${colors.danger}`,
       ':hover': {
-        backgroundColor: theme.danger,
+        backgroundColor: colors.danger,
         color: 'white'
       }
     }
@@ -163,27 +163,27 @@ export const getButtonStyle = (variant: 'primary' | 'secondary' | 'danger', isDa
 };
 
 export const getInputStyle = (isDarkMode: boolean) => {
-  const { theme } = getTheme();
+  const { colors } = getTheme();
   
   return {
     width: '100%',
     padding: '12px',
-    border: `1px solid ${theme.border}`,
+    border: `1px solid ${colors.border}`,
     borderRadius: '6px',
     fontSize: '14px',
-    backgroundColor: theme.cardBg,
-    color: theme.text,
+    backgroundColor: colors.cardBg,
+    color: colors.text,
     fontFamily: 'inherit',
     ':focus': {
       outline: 'none',
-      borderColor: theme.primary,
-      boxShadow: `0 0 0 3px ${theme.primary}20`
+      borderColor: colors.primary,
+      boxShadow: `0 0 0 3px ${colors.primary}20`
     }
   };
 };
 
 export const getModalStyle = (isDarkMode: boolean) => {
-  const { theme } = getTheme();
+  const { colors } = getTheme();
   
   return {
     overlay: {
@@ -200,7 +200,7 @@ export const getModalStyle = (isDarkMode: boolean) => {
       padding: '20px'
     },
     content: {
-      backgroundColor: theme.background,
+      backgroundColor: colors.background,
       borderRadius: '12px',
       padding: '24px',
       maxWidth: '500px',
@@ -211,39 +211,39 @@ export const getModalStyle = (isDarkMode: boolean) => {
         ? '0 20px 25px -5px rgba(0, 0, 0, 0.4)' 
         : '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
       fontFamily: 'inherit',
-      border: `1px solid ${theme.border}`
+      border: `1px solid ${colors.border}`
     }
   };
 };
 
 export const getStatusColors = (status: string, isDarkMode: boolean) => {
-  const { theme } = getTheme();
+  const { colors } = getTheme();
   
   const statusColors = {
     pending_schedule: {
-      bg: `${theme.pending}20`,
-      text: theme.pending,
-      border: theme.pending
+      bg: `${colors.pending}20`,
+      text: colors.pending,
+      border: colors.pending
     },
     scheduled: {
-      bg: `${theme.calendar}20`,
-      text: theme.calendar,
-      border: theme.calendar
+      bg: `${colors.calendar}20`,
+      text: colors.calendar,
+      border: colors.calendar
     },
     processing: {
-      bg: `${theme.warning}20`,
-      text: theme.warning,
-      border: theme.warning
+      bg: `${colors.warning}20`,
+      text: colors.warning,
+      border: colors.warning
     },
     published: {
-      bg: `${theme.success}20`,
-      text: theme.success,
-      border: theme.success
+      bg: `${colors.success}20`,
+      text: colors.success,
+      border: colors.success
     },
     failed: {
-      bg: `${theme.danger}20`,
-      text: theme.danger,
-      border: theme.danger
+      bg: `${colors.danger}20`,
+      text: colors.danger,
+      border: colors.danger
     }
   };
   
