@@ -20,7 +20,7 @@ const mapContentPostToScheduledPost = (data: any): ScheduledPost => {
     cta: data.cta,
     media_files: Array.isArray(data.media_files) ? data.media_files : [],
     selected_platforms: Array.isArray(data.selected_platforms) ? data.selected_platforms : [],
-    scheduled_date: new Date(), // Will be set when user adds date/time
+    scheduled_date: data.scheduled_date ? new Date(data.scheduled_date) : null, // ✅ FIXED: Only set if exists in database
     status: data.status,
     created_date: new Date(data.created_at),
     user_id: data.user_id,
@@ -215,36 +215,36 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
   }
 };
 
-// DELETE POST - Remove from dashboard (not database)
+// DELETE POST - Properly handle both content_posts and dashboard_posts
 export const deleteScheduledPost = async (id: string): Promise<void> => {
   try {
-    // Check if post is in content_posts or dashboard_posts
-    const { data: contentPost } = await supabase
+    console.log('Attempting to delete post with ID:', id);
+    
+    // Try to delete from content_posts first (where scheduled posts live)
+    const { error: contentError } = await supabase
       .from('content_posts')
-      .select('id')
-      .eq('id', id)
-      .single();
+      .delete()
+      .eq('id', id);
 
-    if (contentPost) {
-      // Delete from content_posts
-      const { error } = await supabase
-        .from('content_posts')
-        .delete()
-        .eq('id', id);
+    if (contentError) {
+      console.log('Not found in content_posts, trying dashboard_posts:', contentError);
       
-      if (error) throw error;
-    } else {
-      // Update status in dashboard_posts (keep for statistics)
-      const { error } = await supabase
+      // If not in content_posts, try dashboard_posts
+      const { error: dashboardError } = await supabase
         .from('dashboard_posts')
         .update({ status: 'deleted', updated_at: new Date().toISOString() })
         .eq('id', id);
       
-      if (error) throw error;
+      if (dashboardError) {
+        console.error('Failed to delete from both tables:', dashboardError);
+        throw dashboardError;
+      }
     }
+    
+    console.log('Post deleted successfully');
   } catch (error) {
     console.error('Error deleting post:', error);
-    throw error;
+    throw new Error(`Failed to delete post: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
