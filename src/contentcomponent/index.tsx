@@ -227,7 +227,7 @@ export default function ContentComponent() {
     fetchSupabasePosts();
   };
 
-const handleSchedulePost = async (postId: string) => {
+  const handleSchedulePost = async (postId: string) => {
     try {
       // Find the post to schedule
       const postToSchedule = savedPosts.find(p => p.id === postId);
