@@ -227,9 +227,31 @@ export default function ContentComponent() {
     fetchSupabasePosts();
   };
 
-  const handleSchedulePost = (postId: string) => {
-    // TODO: Move to scheduler
-    alert('Schedule functionality coming next');
+const handleSchedulePost = async (postId: string) => {
+    try {
+      // Find the post to schedule
+      const postToSchedule = savedPosts.find(p => p.id === postId);
+      if (!postToSchedule) {
+        alert('Post not found for scheduling.');
+        return;
+      }
+
+      // Update post status to pending_schedule in database
+      await supabaseAPI.updateContentPost(postId, { status: 'pending_schedule' });
+      
+      // Update local state
+      setSavedPosts(prev => prev.map(post => 
+        post.id === postId 
+          ? { ...post, status: 'pending_schedule' as const }
+          : post
+      ));
+      
+      alert(`"${postToSchedule.title || 'Untitled Post'}" sent to Schedule Manager!\n\nYou can now set the date and time in the Schedule Manager > Pending Scheduling tab.`);
+      
+    } catch (error) {
+      console.error('Schedule failed:', error);
+      alert('Failed to send post to scheduler. Please try again.');
+    }
   };
 
   const handleDeletePost = async (postId: string) => {
