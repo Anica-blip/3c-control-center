@@ -1,23 +1,10 @@
-// /src/schedulecomponent/components/EditModal.tsx - FIXED MISSING onSave PROP
+// /src/schedulecomponent/components/EditModal.tsx - FIXED to use centralized getTheme()
 import React, { useState, useEffect } from 'react';
 import { Edit3, X, Save, Calendar, Clock, User, Hash, FileText, ExternalLink, Image, Video, Trash2, Plus } from 'lucide-react';
 import { formatDate, formatTime, isValidDate } from '../utils/dateUtils';
 import { getPlatformIcon, formatPlatformList } from '../utils/platformUtils';
+import { getTheme } from '../utils/styleUtils';
 import { MediaFile, ScheduledPost } from '../types';
-
-interface MediaFile {
-  id: string;
-  name: string;
-  type: 'image' | 'video' | 'pdf' | 'gif' | 'interactive' | 'url_link' | 'other';
-  size: number;
-  url: string;
-  urlPreview?: {
-    title?: string;
-    description?: string;
-    image?: string;
-    siteName?: string;
-  };
-}
 
 interface EditablePost {
   id: string;
@@ -40,7 +27,6 @@ interface EditablePost {
   status: string;
 }
 
-// FIXED: Added missing onSave prop
 interface EditModalProps {
   post: ScheduledPost | null;
   onSave: (postId: string, updates: Partial<EditablePost>) => Promise<void>;
@@ -63,32 +49,7 @@ export default function EditModal({
   const [urlInput, setUrlInput] = useState('');
   const [urlTitle, setUrlTitle] = useState('');
 
-  const isDarkMode = localStorage.getItem('darkMode') === 'true';
-
-  // Theme colors
-  const theme = isDarkMode ? {
-    bg: '#1e293b',
-    cardBg: '#334155',
-    border: '#475569',
-    text: '#f8fafc',
-    textSecondary: '#94a3b8',
-    primary: '#60a5fa',
-    primaryHover: '#3b82f6',
-    hoverBg: '#475569',
-    success: '#10b981',
-    danger: '#ef4444'
-  } : {
-    bg: 'white',
-    cardBg: '#f9fafb',
-    border: '#e5e7eb',
-    text: '#111827',
-    textSecondary: '#6b7280',
-    primary: '#3b82f6',
-    primaryHover: '#2563eb',
-    hoverBg: '#f3f4f6',
-    success: '#059669',
-    danger: '#dc2626'
-  };
+  const { isDarkMode, theme } = getTheme();
 
   // Initialize form data when post changes
   useEffect(() => {
@@ -128,7 +89,7 @@ export default function EditModal({
   };
 
   const modalStyle = {
-    backgroundColor: theme.bg,
+    backgroundColor: theme.background,
     borderRadius: '12px',
     padding: '24px',
     maxWidth: '800px',
@@ -264,9 +225,9 @@ export default function EditModal({
 
   const getFileIcon = (type: string) => {
     switch (type) {
-      case 'image': return <Image size={16} style={{ color: '#3b82f6' }} />;
-      case 'video': return <Video size={16} style={{ color: '#10b981' }} />;
-      case 'pdf': return <FileText size={16} style={{ color: '#ef4444' }} />;
+      case 'image': return <Image size={16} style={{ color: theme.primary }} />;
+      case 'video': return <Video size={16} style={{ color: theme.success }} />;
+      case 'pdf': return <FileText size={16} style={{ color: theme.danger }} />;
       case 'url_link': return <ExternalLink size={16} style={{ color: '#8b5cf6' }} />;
       default: return <FileText size={16} style={{ color: theme.textSecondary }} />;
     }
@@ -412,7 +373,7 @@ export default function EditModal({
                     border: `1px solid ${theme.border}`,
                     borderRadius: '6px',
                     fontSize: '14px',
-                    backgroundColor: theme.bg,
+                    backgroundColor: theme.background,
                     color: theme.text,
                     fontFamily: 'inherit'
                   }}
@@ -442,7 +403,7 @@ export default function EditModal({
                 gap: '8px',
                 minHeight: '40px',
                 padding: '8px',
-                backgroundColor: theme.bg,
+                backgroundColor: theme.background,
                 borderRadius: '6px',
                 border: `1px dashed ${theme.border}`
               }}>
@@ -641,7 +602,7 @@ export default function EditModal({
             style={buttonStyle('secondary')}
             onMouseOver={(e) => {
               if (!isSubmitting) {
-                e.currentTarget.style.backgroundColor = theme.hoverBg;
+                e.currentTarget.style.backgroundColor = theme.cardBg;
               }
             }}
             onMouseOut={(e) => {
