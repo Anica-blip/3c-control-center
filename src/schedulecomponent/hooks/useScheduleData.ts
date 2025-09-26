@@ -273,12 +273,15 @@ export const useScheduledPosts = () => {
         throw new Error('Post ID is required');
       }
       
+      // Remove from dashboard view only (no database deletion)
       await withRetry(() => scheduleAPI.deleteScheduledPost(id));
+      
+      // Update local state to remove from display
       setPosts(prev => prev.filter(p => p.id !== id));
       
       return { success: true };
     } catch (err) {
-      const apiError = createApiError(err, 'delete post');
+      const apiError = createApiError(err, 'remove post from dashboard');
       setError(apiError);
       return { success: false, error: apiError };
     }
