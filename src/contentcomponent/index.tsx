@@ -182,14 +182,47 @@ export default function ContentComponent() {
     try {
       setIsSaving(true);
       
-      // FIXED: Save to Supabase with pending_schedule status (not 'scheduled')
-      const scheduledData = { ...postData, status: 'pending_schedule' as const };
+      // Save to Supabase with scheduled status
+      const scheduledData = { ...postData, status: 'scheduled' as const };
       const savedPost = await supabaseAPI.saveContentPost(scheduledData);
       
       setSavedPosts(prev => [savedPost, ...prev]);
       
       // Clear template after scheduling:
       clearLoadedTemplate();
+      
+      // Format post for Schedule Manager (convert ContentPost to PendingPost format)
+      const pendingPost = {
+        id: 'pending-' + Date.now(),
+        characterProfile: postData.characterProfile,
+        type: postData.theme.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        template: postData.templateType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        description: postData.description,
+        mediaFiles: postData.mediaFiles,
+        platforms: postData.selectedPlatforms.map(platformId => ({
+          platformId: platformId,
+          platformName: platforms?.find(p => p.id === platformId)?.name || 'Unknown',
+          platformIcon: platforms?.find(p => p.id === platformId)?.name?.substring(0, 2).toUpperCase() || 'UN',
+          status: 'pending' as const
+        })),
+        status: 'pending_schedule' as const,
+        createdDate: new Date(),
+        contentId: postData.contentId // Include the generated content ID
+      };
+      
+      // Send to Schedule Manager - this would typically be done via:
+      // 1. Parent component callback prop
+      // 2. Context/State management
+      // 3. Event system
+      // For now, store in localStorage as bridge between components
+      const existingPending = JSON.parse(localStorage.getItem('pendingSchedulePosts') || '[]');
+      existingPending.unshift(pendingPost);
+      localStorage.setItem('pendingSchedulePosts', JSON.stringify(existingPending));
+      
+      // Dispatch custom event to notify Schedule Manager
+      window.dispatchEvent(new CustomEvent('newPendingPost', { 
+        detail: pendingPost 
+      }));
       
       alert('Content sent to Schedule Manager for scheduling!\n\nYou can now set the date and time in the Schedule Manager > Pending Scheduling tab.');
       
@@ -236,13 +269,13 @@ export default function ContentComponent() {
         return;
       }
 
-      // Update post status to pending_schedule in database
-      await supabaseAPI.updateContentPost(postId, { status: 'pending_schedule' });
+      // Update post status to scheduled in database
+      await supabaseAPI.updateContentPost(postId, { status: 'scheduled' });
       
       // Update local state
       setSavedPosts(prev => prev.map(post => 
         post.id === postId 
-          ? { ...post, status: 'pending_schedule' as const }
+          ? { ...post, status: 'scheduled' as const }
           : post
       ));
       
