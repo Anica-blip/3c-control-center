@@ -1,9 +1,8 @@
-// /src/schedulecomponent/hooks/useScheduleData.ts - ENHANCED with robust error handling
+// /src/schedulecomponent/hooks/useScheduleData.ts - ENHANCED with error handling, NO AUTH REQUIRED
 
 import { useState, useEffect, useCallback } from 'react';
 import { scheduleAPI } from '../api/scheduleAPI';
 import { ScheduledPost, SavedTemplate, ApiError, OperationResult, ValidationError } from '../types';
-import { supabase } from '../config';
 
 // ✅ ERROR UTILITIES
 const createApiError = (error: any, operation: string): ApiError => {
@@ -28,17 +27,6 @@ const createApiError = (error: any, operation: string): ApiError => {
       timestamp,
       retryable: true,
       details: { operation, originalError: error }
-    };
-  }
-
-  if (error?.status === 401 || error?.message?.includes('auth')) {
-    return {
-      message: 'Authentication failed. Please log in again.',
-      code: 'AUTH_ERROR',
-      type: 'authorization',
-      timestamp,
-      retryable: false,
-      details: { operation }
     };
   }
 
@@ -158,27 +146,13 @@ export const useScheduledPosts = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const getCurrentUserId = useCallback(() => {
-    try {
-      const { data: { user } } = supabase.auth.getUser();
-      return user?.id || '';
-    } catch (err) {
-      console.error('Failed to get current user:', err);
-      return '';
-    }
-  }, []);
-
   const refreshPosts = useCallback(async (): Promise<OperationResult<ScheduledPost[]>> => {
     try {
       setLoading(true);
       setError(null);
       
-      const userId = getCurrentUserId();
-      if (!userId) {
-        throw new Error('User not authenticated');
-      }
-      
-      const data = await withRetry(() => scheduleAPI.fetchScheduledPosts(userId));
+      // ✅ NO AUTH REQUIRED - just call API directly
+      const data = await withRetry(() => scheduleAPI.fetchScheduledPosts(''));
       setPosts(data);
       
       return { success: true, data };
@@ -189,7 +163,7 @@ export const useScheduledPosts = () => {
     } finally {
       setLoading(false);
     }
-  }, [getCurrentUserId]);
+  }, []);
 
   const createPost = useCallback(async (
     postData: Omit<ScheduledPost, 'id' | 'created_date'>
@@ -295,27 +269,13 @@ export const useTemplates = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const getCurrentUserId = useCallback(() => {
-    try {
-      const { data: { user } } = supabase.auth.getUser();
-      return user?.id || '';
-    } catch (err) {
-      console.error('Failed to get current user:', err);
-      return '';
-    }
-  }, []);
-
   const refreshTemplates = useCallback(async (): Promise<OperationResult<SavedTemplate[]>> => {
     try {
       setLoading(true);
       setError(null);
       
-      const userId = getCurrentUserId();
-      if (!userId) {
-        throw new Error('User not authenticated');
-      }
-      
-      const data = await withRetry(() => scheduleAPI.fetchTemplates(userId));
+      // ✅ NO AUTH REQUIRED - just call API directly
+      const data = await withRetry(() => scheduleAPI.fetchTemplates(''));
       setTemplates(data);
       
       return { success: true, data };
@@ -326,7 +286,7 @@ export const useTemplates = () => {
     } finally {
       setLoading(false);
     }
-  }, [getCurrentUserId]);
+  }, []);
 
   const createTemplate = useCallback(async (
     templateData: Omit<SavedTemplate, 'id' | 'created_at' | 'updated_at'>
