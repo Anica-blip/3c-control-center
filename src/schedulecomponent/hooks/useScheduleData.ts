@@ -151,9 +151,9 @@ export const useScheduledPosts = () => {
       setLoading(true);
       setError(null);
       
-      // ✅ NO AUTH REQUIRED - use default UUID for personal dashboard
-      const defaultUserId = '00000000-0000-0000-0000-000000000000';
-      const data = await withRetry(() => scheduleAPI.fetchScheduledPosts(defaultUserId));
+  // ✅ NO AUTH REQUIRED - use default UUID for personal dashboard
+  const defaultUserId = '00000000-0000-0000-0000-000000000000';
+  const data = await withRetry(() => scheduleAPI.fetchScheduledPosts(defaultUserId));
       setPosts(data);
       
       return { success: true, data };
