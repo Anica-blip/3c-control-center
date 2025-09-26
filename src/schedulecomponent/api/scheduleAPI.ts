@@ -1,4 +1,4 @@
-// /src/schedulecomponent/api/scheduleAPI.ts - FIXED CIRCULAR IMPORT
+// /src/schedulecomponent/api/scheduleAPI.ts - FIXED TO MATCH COMPONENT LOGIC
 import { supabase } from '../config';
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
@@ -160,11 +160,12 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
 // SCHEDULE POST - Move from content_posts to dashboard_posts with date/time
 export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | 'created_date'>): Promise<ScheduledPost> => {
   try {
-    // Get the original post from content_posts
+    // FIXED: Get the original post from content_posts using the post ID (not content_id)
+    // Since postData contains the full post object, we need to find by ID to get the source record
     const { data: originalPost, error: fetchError } = await supabase
       .from('content_posts')
       .select('*')
-      .eq('id', postData.content_id)
+      .eq('id', postData.id)  // ✅ FIXED: Use actual post ID to find original record
       .single();
 
     if (fetchError) throw fetchError;
