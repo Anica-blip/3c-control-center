@@ -1,4 +1,4 @@
-// /src/schedulecomponent/api/scheduleAPI.ts - FIXED TO QUERY 'scheduled' STATUS
+// /src/schedulecomponent/api/scheduleAPI.ts - FIXED CIRCULAR IMPORT
 import { supabase } from '../config';
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
