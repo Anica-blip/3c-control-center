@@ -1,9 +1,11 @@
-// /src/schedulecomponent/components/StatusManagement.tsx
+// /src/schedulecomponent/components/StatusManagement.tsx - FIXED to use centralized getTheme()
 import React, { useState, useMemo } from 'react';
 import { CheckCircle, AlertCircle, Clock, PlayCircle, XCircle, RefreshCw, Edit, Trash2, Eye, Filter, Search, TrendingUp } from 'lucide-react';
 import { formatDate, formatTime, getRelativeTime } from '../utils/dateUtils';
 import { getPlatformIcon, formatPlatformList } from '../utils/platformUtils';
+import { getTheme } from '../utils/styleUtils';
 import { ScheduledPost } from '../types';
+import { 
   getStatusColor, 
   getStatusIcon, 
   getStatusDisplayInfo,
@@ -15,29 +17,13 @@ import { ScheduledPost } from '../types';
   PostStatus
 } from '../utils/statusUtils';
 
-interface StatusPost {
-  id: string;
-  content_id: string;
-  title: string;
-  description: string;
-  character_profile: string;
-  selected_platforms: string[];
-  scheduled_date?: Date;
-  status: PostStatus;
-  hashtags: string[];
-  media_files?: any[];
-  failure_reason?: string;
-  retry_count?: number;
-  last_attempt?: Date;
-}
-
 interface StatusManagementProps {
-  posts: ScheduledPost[];  // Changed from StatusPost[]
+  posts: ScheduledPost[];
   loading: boolean;
   error?: string | null;
   onUpdateStatus: (postId: string, newStatus: PostStatus) => Promise<void>;
   onDelete: (postId: string) => Promise<void>;
-  onEdit: (post: ScheduledPost) => void;  // Changed from StatusPost
+  onEdit: (post: ScheduledPost) => void;
   onRetry?: (postId: string) => Promise<void>;
 }
 
@@ -53,36 +39,9 @@ export default function StatusManagement({
   const [selectedStatus, setSelectedStatus] = useState<PostStatus | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'status' | 'date' | 'retry'>('status');
-  const [selectedPost, setSelectedPost] = useState<StatusPost | null>(null);
+  const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
 
-  const isDarkMode = localStorage.getItem('darkMode') === 'true';
-
-  // Theme colors
-  const theme = isDarkMode ? {
-    bg: '#1e293b',
-    cardBg: '#334155',
-    border: '#475569',
-    text: '#f8fafc',
-    textSecondary: '#94a3b8',
-    primary: '#60a5fa',
-    primaryHover: '#3b82f6',
-    hoverBg: '#475569',
-    success: '#10b981',
-    warning: '#f59e0b',
-    danger: '#ef4444'
-  } : {
-    bg: 'white',
-    cardBg: '#f9fafb',
-    border: '#e5e7eb',
-    text: '#111827',
-    textSecondary: '#6b7280',
-    primary: '#3b82f6',
-    primaryHover: '#2563eb',
-    hoverBg: '#f3f4f6',
-    success: '#059669',
-    warning: '#d97706',
-    danger: '#dc2626'
-  };
+  const { isDarkMode, theme } = getTheme();
 
   // Calculate status counts
   const statusCounts = useMemo(() => getStatusCounts(posts), [posts]);
@@ -157,7 +116,7 @@ export default function StatusManagement({
   };
 
   const containerStyle = {
-    backgroundColor: theme.bg,
+    backgroundColor: theme.background,
     color: theme.text,
     borderRadius: '8px',
     padding: '24px',
@@ -265,7 +224,7 @@ export default function StatusManagement({
           onClick={() => setSelectedStatus(option.key)}
           onMouseOver={(e) => {
             if (selectedStatus !== option.key) {
-              e.currentTarget.style.backgroundColor = theme.hoverBg;
+              e.currentTarget.style.backgroundColor = theme.cardBg;
             }
           }}
           onMouseOut={(e) => {
@@ -355,7 +314,7 @@ export default function StatusManagement({
               border: `1px solid ${theme.border}`,
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: theme.bg,
+              backgroundColor: theme.background,
               color: theme.text,
               fontFamily: 'inherit'
             }}
@@ -371,7 +330,7 @@ export default function StatusManagement({
             border: `1px solid ${theme.border}`,
             borderRadius: '6px',
             fontSize: '14px',
-            backgroundColor: theme.bg,
+            backgroundColor: theme.background,
             color: theme.text,
             fontFamily: 'inherit',
             minWidth: '120px'
@@ -592,7 +551,7 @@ export default function StatusManagement({
                         alignItems: 'center',
                         gap: '6px'
                       }}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.hoverBg}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.cardBg}
                       onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <Eye size={14} />
@@ -639,7 +598,7 @@ export default function StatusManagement({
                           alignItems: 'center',
                           gap: '6px'
                         }}
-                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.hoverBg}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.cardBg}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
                         <Edit size={14} />
@@ -697,7 +656,7 @@ export default function StatusManagement({
           padding: '20px'
         }} onClick={() => setSelectedPost(null)}>
           <div style={{
-            backgroundColor: theme.bg,
+            backgroundColor: theme.background,
             borderRadius: '12px',
             padding: '24px',
             maxWidth: '600px',
@@ -774,7 +733,7 @@ export default function StatusManagement({
                       color: theme.textSecondary,
                       cursor: 'pointer'
                     }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.hoverBg}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.cardBg}
                     onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     {action}
