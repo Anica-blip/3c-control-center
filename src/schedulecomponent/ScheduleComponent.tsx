@@ -1,11 +1,168 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - HOOKS ORDER FIXED
-import React, { useState, useEffect } from 'react';
+// /src/schedulecomponent/ScheduleComponent.tsx - ENHANCED with error handling + THEME FIXES
+import React, { useState, useEffect, useCallback } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
 import EditModal from './components/EditModal';
 import { getTabStyle, getTheme, getContainerStyle, getCSSAnimations } from './utils/styleUtils';
-import { Calendar, Clock, Edit3, Trash2, RefreshCw, Eye, AlertCircle, CheckCircle, Play, X, Plus, ChevronLeft, ChevronRight, Save } from 'lucide-react';
-import { ScheduledPost, SavedTemplate } from './types';
+import { Calendar, Clock, Edit3, Trash2, RefreshCw, Eye, AlertCircle, CheckCircle, Play, X, Plus, ChevronLeft, ChevronRight, Save, XCircle, WifiOff } from 'lucide-react';
+import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './types';
+
+// ✅ ERROR NOTIFICATION COMPONENT
+const ErrorNotificationBanner: React.FC<{
+  error: ApiError;
+  onDismiss: () => void;
+  onRetry?: () => void;
+}> = ({ error, onDismiss, onRetry }) => {
+  const { theme } = getTheme();
+  
+  const getErrorIcon = () => {
+    switch (error.type) {
+      case 'network': return <WifiOff style={{ height: '16px', width: '16px' }} />;
+      case 'authorization': return <XCircle style={{ height: '16px', width: '16px' }} />;
+      default: return <AlertCircle style={{ height: '16px', width: '16px' }} />;
+    }
+  };
+
+  const getErrorColors = () => {
+    if (error.type === 'network') {
+      return {
+        background: theme.warningBg,
+        border: theme.warning,
+        text: theme.warning
+      };
+    }
+    return {
+      background: theme.dangerBg,
+      border: theme.danger,
+      text: theme.danger
+    };
+  };
+
+  const colors = getErrorColors();
+
+  return (
+    <div style={{
+      padding: '12px 16px',
+      backgroundColor: colors.background,
+      border: `1px solid ${colors.border}`,
+      borderRadius: '8px',
+      marginBottom: '16px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+        <div style={{ color: colors.border }}>
+          {getErrorIcon()}
+        </div>
+        <div>
+          <div style={{
+            fontSize: '14px',
+            fontWeight: 'bold',
+            color: colors.text,
+            marginBottom: '2px'
+          }}>
+            {error.type === 'network' ? 'Connection Issue' : 'Error'}
+          </div>
+          <div style={{
+            fontSize: '13px',
+            color: colors.text,
+            opacity: 0.9
+          }}>
+            {error.message}
+          </div>
+        </div>
+      </div>
+      
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {error.retryable && onRetry && (
+          <button
+            onClick={onRetry}
+            style={{
+              padding: '6px 12px',
+              fontSize: '12px',
+              backgroundColor: colors.border,
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            Retry
+          </button>
+        )}
+        <button
+          onClick={onDismiss}
+          style={{
+            padding: '4px',
+            backgroundColor: 'transparent',
+            border: 'none',
+            color: colors.text,
+            cursor: 'pointer',
+            opacity: 0.7
+          }}
+        >
+          <X style={{ height: '14px', width: '14px' }} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ✅ SUCCESS NOTIFICATION COMPONENT
+const SuccessNotification: React.FC<{
+  message: string;
+  onDismiss: () => void;
+}> = ({ message, onDismiss }) => {
+  const { theme } = getTheme();
+
+  useEffect(() => {
+    const timer = setTimeout(onDismiss, 4000);
+    return () => clearTimeout(timer);
+  }, [onDismiss]);
+
+  return (
+    <div style={{
+      padding: '12px 16px',
+      backgroundColor: theme.successBg,
+      border: `1px solid ${theme.success}`,
+      borderRadius: '8px',
+      marginBottom: '16px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <CheckCircle style={{ 
+          height: '16px', 
+          width: '16px', 
+          color: theme.success
+        }} />
+        <span style={{
+          fontSize: '14px',
+          fontWeight: 'bold',
+          color: theme.success
+        }}>
+          {message}
+        </span>
+      </div>
+      <button
+        onClick={onDismiss}
+        style={{
+          padding: '4px',
+          backgroundColor: 'transparent',
+          border: 'none',
+          color: theme.success,
+          cursor: 'pointer',
+          opacity: 0.7
+        }}
+      >
+        <X style={{ height: '14px', width: '14px' }} />
+      </button>
+    </div>
+  );
+};
 
 export default function ScheduleComponent() {
   // ✅ ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY RETURNS
@@ -36,15 +193,62 @@ export default function ScheduleComponent() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isSaveTemplateModalOpen, setIsSaveTemplateModalOpen] = useState(false);
-  const [isEditTemplateModalOpen, setIsEditTemplateModalOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
   const [editingPost, setEditingPost] = useState<ScheduledPost | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<SavedTemplate | null>(null);
-  const [templateName, setTemplateName] = useState('');
+  
+  // ✅ NEW ERROR HANDLING STATE
+  const [notifications, setNotifications] = useState<ErrorNotification[]>([]);
+  const [operationStates, setOperationStates] = useState<Record<string, boolean>>({});
 
   // ✅ ALL OTHER HOOKS
   const { isDarkMode, theme } = getTheme();
+
+  // ✅ NOTIFICATION HELPERS
+  const addNotification = useCallback((notification: Omit<ErrorNotification, 'id' | 'timestamp'>) => {
+    const id = `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newNotification: ErrorNotification = {
+      ...notification,
+      id,
+      timestamp: new Date()
+    };
+    setNotifications(prev => [newNotification, ...prev].slice(0, 5)); // Keep max 5 notifications
+  }, []);
+
+  const dismissNotification = useCallback((id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
+
+  const showSuccess = useCallback((message: string) => {
+    addNotification({
+      type: 'success',
+      title: 'Success',
+      message,
+      dismissible: true
+    });
+  }, [addNotification]);
+
+  const showError = useCallback((error: ApiError, retryAction?: () => void) => {
+    addNotification({
+      type: 'error',
+      title: 'Operation Failed',
+      message: error.message,
+      dismissible: true,
+      action: error.retryable && retryAction ? {
+        label: 'Retry',
+        handler: retryAction
+      } : undefined
+    });
+  }, [addNotification]);
+
+  // ✅ OPERATION LOADING STATES
+  const setOperationLoading = useCallback((operation: string, loading: boolean) => {
+    setOperationStates(prev => ({ ...prev, [operation]: loading }));
+  }, []);
+
+  const isOperationLoading = useCallback((operation: string) => {
+    return operationStates[operation] || false;
+  }, [operationStates]);
 
   // ✅ NOW CONDITIONAL RETURNS ARE SAFE - ALL HOOKS CALLED
   if (postsLoading || templatesLoading) {
@@ -54,28 +258,28 @@ export default function ScheduleComponent() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#f8fafc'
+        backgroundColor: theme.background
       }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '16px',
           padding: '24px',
-          backgroundColor: 'white',
+          backgroundColor: theme.cardBg,
           borderRadius: '12px',
           boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-          border: '1px solid #e5e7eb'
+          border: `1px solid ${theme.border}`
         }}>
           <div style={{
             width: '24px',
             height: '24px',
-            border: '3px solid #e5e7eb',
-            borderTop: '3px solid #3b82f6',
+            border: `3px solid ${theme.border}`,
+            borderTop: `3px solid ${theme.primary}`,
             borderRadius: '50%',
             animation: 'spin 1s linear infinite'
           }} />
           <span style={{ 
-            color: '#111827',
+            color: theme.text,
             fontSize: '16px',
             fontWeight: '600'
           }}>
@@ -93,50 +297,72 @@ export default function ScheduleComponent() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#f8fafc'
+        backgroundColor: theme.background
       }}>
         <div style={{
           padding: '24px',
-          backgroundColor: '#fee2e2',
+          backgroundColor: theme.dangerBg,
           borderRadius: '12px',
-          border: '1px solid #fca5a5',
-          textAlign: 'center'
+          border: `1px solid ${theme.danger}`,
+          textAlign: 'center',
+          maxWidth: '400px'
         }}>
           <AlertCircle style={{
             height: '48px',
             width: '48px',
-            color: '#dc2626',
+            color: theme.danger,
             margin: '0 auto 16px auto'
           }} />
           <h3 style={{
             fontSize: '18px',
             fontWeight: 'bold',
-            color: '#991b1b',
+            color: theme.danger,
             margin: '0 0 8px 0'
           }}>
             Error Loading Schedule Manager
           </h3>
           <p style={{
-            color: '#7f1d1d',
-            margin: '0 0 16px 0'
+            color: theme.danger,
+            margin: '0 0 16px 0',
+            fontSize: '14px'
           }}>
-            {postsError || templatesError}
+            {postsError?.message || templatesError?.message}
           </p>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#dc2626',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '600'
-            }}
-          >
-            Reload Page
-          </button>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <button
+              onClick={() => {
+                refreshPosts();
+                window.location.reload();
+              }}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: theme.danger,
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: theme.textSecondary,
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}
+            >
+              Reload Page
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -175,43 +401,33 @@ export default function ScheduleComponent() {
 
   const getPlatformIcon = (platformId: string) => {
     const platform = platforms.find(p => p.id === platformId);
-    return platform || { icon: 'UN', color: '#9ca3af' };
+    return platform || { icon: 'UN', color: theme.textSecondary };
   };
 
   const getStatusColor = (status: string) => {
-    if (isDarkMode) {
-      switch (status) {
-        case 'pending': return { borderLeft: '4px solid #f59e0b', backgroundColor: '#451a03' };
-        case 'processing': return { borderLeft: '4px solid #3b82f6', backgroundColor: '#1e3a8a' };
-        case 'complete': return { borderLeft: '4px solid #10b981', backgroundColor: '#14532d' };
-        case 'failed': return { borderLeft: '4px solid #ef4444', backgroundColor: '#451a1a' };
-        case 'resending': return { borderLeft: '4px solid #f97316', backgroundColor: '#7c2d12' };
-        default: return { borderLeft: '4px solid #9ca3af', backgroundColor: '#334155' };
-      }
-    } else {
-      switch (status) {
-        case 'pending': return { borderLeft: '4px solid #f59e0b', backgroundColor: '#fefce8' };
-        case 'processing': return { borderLeft: '4px solid #3b82f6', backgroundColor: '#dbeafe' };
-        case 'complete': return { borderLeft: '4px solid #10b981', backgroundColor: '#d1fae5' };
-        case 'failed': return { borderLeft: '4px solid #ef4444', backgroundColor: '#fee2e2' };
-        case 'resending': return { borderLeft: '4px solid #f97316', backgroundColor: '#fed7aa' };
-        default: return { borderLeft: '4px solid #9ca3af', backgroundColor: '#f9fafb' };
-      }
+    switch (status) {
+      case 'pending': return { borderLeft: `4px solid ${theme.warning}`, backgroundColor: theme.warningBg };
+      case 'processing': return { borderLeft: `4px solid ${theme.primary}`, backgroundColor: theme.primaryBg };
+      case 'complete': return { borderLeft: `4px solid ${theme.success}`, backgroundColor: theme.successBg };
+      case 'failed': return { borderLeft: `4px solid ${theme.danger}`, backgroundColor: theme.dangerBg };
+      case 'resending': return { borderLeft: `4px solid ${theme.warning}`, backgroundColor: theme.warningBg };
+      default: return { borderLeft: `4px solid ${theme.textSecondary}`, backgroundColor: theme.cardBg };
     }
   };
 
   const getStatusIcon = (status: string) => {
     const iconStyle = { height: '12px', width: '12px' };
     switch (status) {
-      case 'pending': return <Clock style={{...iconStyle, color: '#d97706'}} />;
-      case 'processing': return <Play style={{...iconStyle, color: '#2563eb'}} />;
-      case 'complete': return <CheckCircle style={{...iconStyle, color: '#059669'}} />;
-      case 'failed': return <AlertCircle style={{...iconStyle, color: '#dc2626'}} />;
-      case 'resending': return <RefreshCw style={{...iconStyle, color: '#ea580c'}} />;
+      case 'pending': return <Clock style={{...iconStyle, color: theme.warning}} />;
+      case 'processing': return <Play style={{...iconStyle, color: theme.primary}} />;
+      case 'complete': return <CheckCircle style={{...iconStyle, color: theme.success}} />;
+      case 'failed': return <AlertCircle style={{...iconStyle, color: theme.danger}} />;
+      case 'resending': return <RefreshCw style={{...iconStyle, color: theme.warning}} />;
       default: return null;
     }
   };
 
+  // Calendar helper functions remain the same...
   const getPostsForDate = (date: Date) => {
     return scheduledPostsFiltered.filter(post => {
       const postDate = new Date(post.scheduled_date);
@@ -295,7 +511,7 @@ export default function ScheduleComponent() {
     }
   };
 
-  // Event handlers
+  // ✅ ENHANCED EVENT HANDLERS WITH ERROR HANDLING
   const handleSchedulePost = (post: ScheduledPost) => {
     setSelectedPost(post);
     setIsScheduleModalOpen(true);
@@ -306,22 +522,46 @@ export default function ScheduleComponent() {
     timezone: string;
     repeatOption?: string;
   }) => {
+    if (!selectedPost) return;
+    
+    const operationKey = `schedule-${selectedPost.id}`;
+    setOperationLoading(operationKey, true);
+    
     try {
-      if (!selectedPost) return;
-      
       const updatedPost = {
         ...selectedPost,
         scheduled_date: new Date(scheduleData.scheduledDate),
         status: 'scheduled' as const
       };
 
-      await updatePost(selectedPost.id, updatedPost);
+      const result = await updatePost(selectedPost.id, updatedPost);
       
-      setIsScheduleModalOpen(false);
-      setSelectedPost(null);
-      await refreshPosts();
+      if (result.success) {
+        setIsScheduleModalOpen(false);
+        setSelectedPost(null);
+        showSuccess('Post scheduled successfully!');
+        await refreshPosts();
+      } else {
+        if (result.validationErrors?.length) {
+          const errorMsg = result.validationErrors.map(e => e.message).join(', ');
+          showError({ 
+            ...result.error!, 
+            message: `Validation failed: ${errorMsg}` 
+          });
+        } else {
+          showError(result.error!, () => handleConfirmSchedule(scheduleData));
+        }
+      }
     } catch (error) {
-      console.error('Failed to schedule post:', error);
+      showError({
+        message: 'Failed to schedule post. Please try again.',
+        code: 'SCHEDULE_ERROR',
+        type: 'unknown',
+        timestamp: new Date(),
+        retryable: true
+      }, () => handleConfirmSchedule(scheduleData));
+    } finally {
+      setOperationLoading(operationKey, false);
     }
   };
 
@@ -331,28 +571,73 @@ export default function ScheduleComponent() {
   };
 
   const handleSaveEdit = async (postId: string, updates: Partial<ScheduledPost>) => {
+    const operationKey = `edit-${postId}`;
+    setOperationLoading(operationKey, true);
+    
     try {
-      await updatePost(postId, updates);
-      setIsEditModalOpen(false);
-      setEditingPost(null);
-      await refreshPosts();
+      const result = await updatePost(postId, updates);
+      
+      if (result.success) {
+        setIsEditModalOpen(false);
+        setEditingPost(null);
+        showSuccess('Post updated successfully!');
+        await refreshPosts();
+      } else {
+        if (result.validationErrors?.length) {
+          const errorMsg = result.validationErrors.map(e => e.message).join(', ');
+          showError({ 
+            ...result.error!, 
+            message: `Validation failed: ${errorMsg}` 
+          });
+        } else {
+          showError(result.error!, () => handleSaveEdit(postId, updates));
+        }
+      }
     } catch (error) {
-      console.error('Failed to update post:', error);
+      showError({
+        message: 'Failed to update post. Please try again.',
+        code: 'UPDATE_ERROR',
+        type: 'unknown',
+        timestamp: new Date(),
+        retryable: true
+      }, () => handleSaveEdit(postId, updates));
+    } finally {
+      setOperationLoading(operationKey, false);
     }
   };
 
   const handleDeletePost = async (postId: string) => {
-    if (confirm('Are you sure you want to delete this post?')) {
-      try {
-        await deletePost(postId);
+    if (!confirm('Are you sure you want to delete this post?')) return;
+    
+    const operationKey = `delete-${postId}`;
+    setOperationLoading(operationKey, true);
+    
+    try {
+      const result = await deletePost(postId);
+      
+      if (result.success) {
+        showSuccess('Post deleted successfully!');
         await refreshPosts();
-      } catch (error) {
-        console.error('Failed to delete post:', error);
+      } else {
+        showError(result.error!, () => handleDeletePost(postId));
       }
+    } catch (error) {
+      showError({
+        message: 'Failed to delete post. Please try again.',
+        code: 'DELETE_ERROR',
+        type: 'unknown',
+        timestamp: new Date(),
+        retryable: true
+      }, () => handleDeletePost(postId));
+    } finally {
+      setOperationLoading(operationKey, false);
     }
   };
 
   const handleSaveAsTemplate = async (post: ScheduledPost) => {
+    const operationKey = `save-template-${post.id}`;
+    setOperationLoading(operationKey, true);
+    
     try {
       const templateData = {
         template_name: post.title || 'Saved Template',
@@ -375,17 +660,39 @@ export default function ScheduleComponent() {
         created_by: post.created_by || ''
       };
 
-      await createTemplate(templateData);
-      alert('Post saved as template successfully!');
+      const result = await createTemplate(templateData);
+      
+      if (result.success) {
+        showSuccess('Post saved as template successfully!');
+      } else {
+        if (result.validationErrors?.length) {
+          const errorMsg = result.validationErrors.map(e => e.message).join(', ');
+          showError({ 
+            ...result.error!, 
+            message: `Validation failed: ${errorMsg}` 
+          });
+        } else {
+          showError(result.error!, () => handleSaveAsTemplate(post));
+        }
+      }
     } catch (error) {
-      console.error('Failed to save template:', error);
-      alert('Failed to save template. Please try again.');
+      showError({
+        message: 'Failed to save template. Please try again.',
+        code: 'SAVE_TEMPLATE_ERROR',
+        type: 'unknown',
+        timestamp: new Date(),
+        retryable: true
+      }, () => handleSaveAsTemplate(post));
+    } finally {
+      setOperationLoading(operationKey, false);
     }
   };
 
   const handleUseTemplate = async (template: SavedTemplate) => {
+    const operationKey = `use-template-${template.id}`;
+    setOperationLoading(operationKey, true);
+    
     try {
-      // Create a new pending post from the template
       const pendingPostData = {
         content_id: `template-${template.id}-${Date.now()}`,
         character_profile: template.character_profile,
@@ -408,21 +715,41 @@ export default function ScheduleComponent() {
         source_template_id: template.id
       };
 
-      await createPost(pendingPostData);
-      await incrementUsage(template.id);
+      const result = await createPost(pendingPostData);
       
-      // Switch to pending tab to show the new post
-      setActiveTab('pending');
-      await refreshPosts();
-      
-      alert('Template added to Pending Schedules!');
+      if (result.success) {
+        await incrementUsage(template.id);
+        setActiveTab('pending');
+        await refreshPosts();
+        showSuccess('Template added to Pending Schedules!');
+      } else {
+        if (result.validationErrors?.length) {
+          const errorMsg = result.validationErrors.map(e => e.message).join(', ');
+          showError({ 
+            ...result.error!, 
+            message: `Validation failed: ${errorMsg}` 
+          });
+        } else {
+          showError(result.error!, () => handleUseTemplate(template));
+        }
+      }
     } catch (error) {
-      console.error('Failed to use template:', error);
-      alert('Failed to use template. Please try again.');
+      showError({
+        message: 'Failed to use template. Please try again.',
+        code: 'USE_TEMPLATE_ERROR',
+        type: 'unknown',
+        timestamp: new Date(),
+        retryable: true
+      }, () => handleUseTemplate(template));
+    } finally {
+      setOperationLoading(operationKey, false);
     }
   };
 
   const handleCopyToPending = async (post: ScheduledPost) => {
+    const operationKey = `copy-${post.id}`;
+    setOperationLoading(operationKey, true);
+    
     try {
       const pendingPostData = {
         content_id: `copy-${post.id}-${Date.now()}`,
@@ -444,18 +771,28 @@ export default function ScheduleComponent() {
         created_by: post.created_by || ''
       };
 
-      await createPost(pendingPostData);
-      await refreshPosts();
+      const result = await createPost(pendingPostData);
       
-      alert('Post copied to Pending Scheduling for modification!');
+      if (result.success) {
+        await refreshPosts();
+        showSuccess('Post copied to Pending Scheduling for modification!');
+      } else {
+        showError(result.error!, () => handleCopyToPending(post));
+      }
     } catch (error) {
-      console.error('Failed to copy post:', error);
-      alert('Failed to copy post. Please try again.');
+      showError({
+        message: 'Failed to copy post. Please try again.',
+        code: 'COPY_ERROR',
+        type: 'unknown',
+        timestamp: new Date(),
+        retryable: true
+      }, () => handleCopyToPending(post));
+    } finally {
+      setOperationLoading(operationKey, false);
     }
   };
 
-  // ORIGINAL TAB RENDER FUNCTIONS RESTORED
-
+  // CALENDAR RENDER FUNCTIONS - KEEPING ORIGINAL LOGIC...
   const renderDayView = () => {
     const hourlyPosts = getHourlyPostsForDay(currentDate);
     
@@ -464,7 +801,7 @@ export default function ScheduleComponent() {
         display: 'grid',
         gridTemplateColumns: '80px 1fr',
         gap: '1px',
-        backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
+        backgroundColor: theme.border,
         borderRadius: '8px',
         overflow: 'hidden'
       }}>
@@ -472,9 +809,9 @@ export default function ScheduleComponent() {
           <React.Fragment key={hour}>
             <div style={{
               padding: '12px 8px',
-              backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
+              backgroundColor: theme.background,
               fontSize: '12px',
-              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              color: theme.textSecondary,
               textAlign: 'right',
               fontWeight: 'bold'
             }}>
@@ -482,7 +819,7 @@ export default function ScheduleComponent() {
             </div>
             <div style={{
               minHeight: '60px',
-              backgroundColor: isDarkMode ? '#1e293b' : 'white',
+              backgroundColor: theme.cardBg,
               padding: '8px',
               position: 'relative'
             }}>
@@ -496,7 +833,7 @@ export default function ScheduleComponent() {
                     fontSize: '11px',
                     fontWeight: 'bold',
                     cursor: 'pointer',
-                    color: isDarkMode ? '#e2e8f0' : '#111827',
+                    color: theme.text,
                     ...getStatusColor(post.status)
                   }}
                   title={`${post.description} - ${post.character_profile}`}
@@ -509,7 +846,7 @@ export default function ScheduleComponent() {
                     marginBottom: '2px'
                   }}>
                     {getStatusIcon(post.status)}
-                    <span style={{ fontSize: '10px', color: isDarkMode ? '#94a3b8' : '#6b7280' }}>
+                    <span style={{ fontSize: '10px', color: theme.textSecondary }}>
                       {new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
                         hour: '2-digit', 
                         minute: '2-digit',
@@ -526,7 +863,7 @@ export default function ScheduleComponent() {
                   </div>
                   <div style={{
                     fontSize: '9px',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    color: theme.textSecondary,
                     marginTop: '2px'
                   }}>
                     {post.character_profile}
@@ -549,7 +886,7 @@ export default function ScheduleComponent() {
         display: 'grid',
         gridTemplateColumns: 'repeat(7, 1fr)',
         gap: '1px',
-        backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
+        backgroundColor: theme.border,
         borderRadius: '8px',
         overflow: 'hidden'
       }}>
@@ -562,7 +899,7 @@ export default function ScheduleComponent() {
             <div
               key={date.toISOString()}
               style={{
-                backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                backgroundColor: theme.cardBg,
                 minHeight: '200px',
                 padding: '8px'
               }}
@@ -574,7 +911,7 @@ export default function ScheduleComponent() {
               }}>
                 <div style={{
                   fontSize: '11px',
-                  color: isDarkMode ? '#94a3b8' : '#6b7280',
+                  color: theme.textSecondary,
                   fontWeight: 'bold'
                 }}>
                   {dayNames[idx]}
@@ -582,8 +919,8 @@ export default function ScheduleComponent() {
                 <div style={{
                   fontSize: '16px',
                   fontWeight: 'bold',
-                  color: isToday ? '#2563eb' : (isCurrentMonth ? (isDarkMode ? '#e2e8f0' : '#111827') : (isDarkMode ? '#64748b' : '#9ca3af')),
-                  backgroundColor: isToday ? (isDarkMode ? '#1e3a8a' : '#dbeafe') : 'transparent',
+                  color: isToday ? theme.primary : (isCurrentMonth ? theme.text : theme.textSecondary),
+                  backgroundColor: isToday ? theme.primaryBg : 'transparent',
                   borderRadius: '50%',
                   width: '24px',
                   height: '24px',
@@ -606,7 +943,7 @@ export default function ScheduleComponent() {
                       fontSize: '10px',
                       fontWeight: 'bold',
                       cursor: 'pointer',
-                      color: isDarkMode ? '#e2e8f0' : '#111827',
+                      color: theme.text,
                       ...getStatusColor(post.status)
                     }}
                     title={`${post.description} - ${new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
@@ -632,7 +969,7 @@ export default function ScheduleComponent() {
                   <div style={{
                     padding: '4px 6px',
                     fontSize: '10px',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    color: theme.textSecondary,
                     textAlign: 'center',
                     fontWeight: 'bold'
                   }}>
@@ -658,7 +995,7 @@ export default function ScheduleComponent() {
           display: 'grid',
           gridTemplateColumns: 'repeat(7, 1fr)',
           gap: '1px',
-          backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
+          backgroundColor: theme.border,
           borderRadius: '8px 8px 0 0',
           overflow: 'hidden'
         }}>
@@ -666,12 +1003,12 @@ export default function ScheduleComponent() {
             <div
               key={day}
               style={{
-                backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
+                backgroundColor: theme.background,
                 padding: '12px 8px',
                 textAlign: 'center',
                 fontSize: '12px',
                 fontWeight: 'bold',
-                color: isDarkMode ? '#e2e8f0' : '#374151'
+                color: theme.text
               }}
             >
               {day}
@@ -684,7 +1021,7 @@ export default function ScheduleComponent() {
           display: 'grid',
           gridTemplateColumns: 'repeat(7, 1fr)',
           gap: '1px',
-          backgroundColor: isDarkMode ? '#475569' : '#e5e7eb'
+          backgroundColor: theme.border
         }}>
           {monthDates.map((date) => {
             const dayPosts = getPostsForDate(date);
@@ -695,7 +1032,7 @@ export default function ScheduleComponent() {
               <div
                 key={date.toISOString()}
                 style={{
-                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
+                  backgroundColor: theme.cardBg,
                   minHeight: '120px',
                   padding: '6px',
                   cursor: 'pointer'
@@ -705,7 +1042,7 @@ export default function ScheduleComponent() {
                 <div style={{
                   fontSize: '14px',
                   fontWeight: 'bold',
-                  color: isToday ? '#2563eb' : (isCurrentMonth ? (isDarkMode ? '#e2e8f0' : '#111827') : (isDarkMode ? '#64748b' : '#9ca3af')),
+                  color: isToday ? theme.primary : (isCurrentMonth ? theme.text : theme.textSecondary),
                   marginBottom: '4px',
                   textAlign: 'right'
                 }}>
@@ -713,7 +1050,7 @@ export default function ScheduleComponent() {
                     <div style={{
                       width: '6px',
                       height: '6px',
-                      backgroundColor: '#2563eb',
+                      backgroundColor: theme.primary,
                       borderRadius: '50%',
                       display: 'inline-block',
                       marginRight: '4px'
@@ -732,7 +1069,7 @@ export default function ScheduleComponent() {
                         fontSize: '9px',
                         fontWeight: 'bold',
                         cursor: 'pointer',
-                        color: isDarkMode ? '#e2e8f0' : '#111827',
+                        color: theme.text,
                         ...getStatusColor(post.status)
                       }}
                       title={`${post.description} - ${new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
@@ -761,7 +1098,7 @@ export default function ScheduleComponent() {
                     <div style={{
                       padding: '2px 4px',
                       fontSize: '8px',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280',
+                      color: theme.textSecondary,
                       fontWeight: 'bold'
                     }}>
                       +{dayPosts.length - 2}
@@ -802,24 +1139,24 @@ export default function ScheduleComponent() {
         <div style={{
           textAlign: 'center',
           padding: '48px',
-          color: isDarkMode ? '#94a3b8' : '#6b7280'
+          color: theme.textSecondary
         }}>
           <Calendar style={{
             height: '64px',
             width: '64px',
-            color: isDarkMode ? '#475569' : '#d1d5db',
+            color: theme.textSecondary,
             margin: '0 auto 16px auto'
           }} />
           <h3 style={{
             fontSize: '18px',
             fontWeight: 'bold',
-            color: isDarkMode ? '#e2e8f0' : '#111827',
+            color: theme.text,
             margin: '0 0 8px 0'
           }}>
             No scheduled posts yet
           </h3>
           <p style={{
-            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            color: theme.textSecondary,
             maxWidth: '400px',
             margin: '0 auto',
             fontSize: '12px',
@@ -834,7 +1171,7 @@ export default function ScheduleComponent() {
 
     return (
       <div style={{ display: 'grid', gap: '24px' }}>
-        <div style={{ borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}` }}>
+        <div style={{ borderBottom: `1px solid ${theme.border}` }}>
           <div style={{
             display: 'flex',
             gap: '32px',
@@ -848,10 +1185,10 @@ export default function ScheduleComponent() {
                 style={{
                   whiteSpace: 'nowrap',
                   padding: '8px 4px',
-                  borderBottom: statusFilter === tab.id ? '2px solid #3b82f6' : '2px solid transparent',
+                  borderBottom: statusFilter === tab.id ? `2px solid ${theme.primary}` : '2px solid transparent',
                   fontWeight: 'bold',
                   fontSize: '12px',
-                  color: statusFilter === tab.id ? '#2563eb' : (isDarkMode ? '#94a3b8' : '#6b7280'),
+                  color: statusFilter === tab.id ? theme.primary : theme.textSecondary,
                   backgroundColor: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
@@ -866,8 +1203,8 @@ export default function ScheduleComponent() {
                     padding: '2px 8px',
                     fontSize: '12px',
                     borderRadius: '12px',
-                    backgroundColor: statusFilter === tab.id ? (isDarkMode ? '#1e3a8a' : '#dbeafe') : (isDarkMode ? '#374151' : '#f3f4f6'),
-                    color: statusFilter === tab.id ? '#2563eb' : (isDarkMode ? '#94a3b8' : '#6b7280')
+                    backgroundColor: statusFilter === tab.id ? theme.primaryBg : theme.background,
+                    color: statusFilter === tab.id ? theme.primary : theme.textSecondary
                   }}>
                     {tab.count}
                   </span>
@@ -880,8 +1217,8 @@ export default function ScheduleComponent() {
         <div style={{ display: 'grid', gap: '16px' }}>
           {filteredPosts.map((post) => (
             <div key={post.id} style={{
-              backgroundColor: isDarkMode ? '#1e293b' : 'white',
-              border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+              backgroundColor: theme.cardBg,
+              border: `1px solid ${theme.border}`,
               borderRadius: '8px',
               padding: '20px'
             }}>
@@ -903,21 +1240,21 @@ export default function ScheduleComponent() {
                       borderRadius: '12px',
                       fontWeight: 'bold',
                       backgroundColor: 
-                        post.status === 'scheduled' ? (isDarkMode ? '#451a03' : '#fef3c7') :
-                        post.status === 'processing' ? (isDarkMode ? '#1e3a8a' : '#dbeafe') :
-                        post.status === 'published' ? (isDarkMode ? '#14532d' : '#d1fae5') :
-                        post.status === 'failed' ? (isDarkMode ? '#451a1a' : '#fee2e2') : (isDarkMode ? '#7c2d12' : '#fed7aa'),
+                        post.status === 'scheduled' ? theme.warningBg :
+                        post.status === 'processing' ? theme.primaryBg :
+                        post.status === 'published' ? theme.successBg :
+                        post.status === 'failed' ? theme.dangerBg : theme.warningBg,
                       color:
-                        post.status === 'scheduled' ? (isDarkMode ? '#fbbf24' : '#92400e') :
-                        post.status === 'processing' ? (isDarkMode ? '#60a5fa' : '#1e40af') :
-                        post.status === 'published' ? (isDarkMode ? '#4ade80' : '#065f46') :
-                        post.status === 'failed' ? (isDarkMode ? '#f87171' : '#991b1b') : (isDarkMode ? '#fb923c' : '#9a3412')
+                        post.status === 'scheduled' ? theme.warning :
+                        post.status === 'processing' ? theme.primary :
+                        post.status === 'published' ? theme.success :
+                        post.status === 'failed' ? theme.danger : theme.warning
                     }}>
                       {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
                     </span>
                     <span style={{
                       fontSize: '12px',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280',
+                      color: theme.textSecondary,
                       fontWeight: 'bold'
                     }}>
                       {new Date(post.scheduled_date).toLocaleString('en-GB')}
@@ -925,14 +1262,14 @@ export default function ScheduleComponent() {
                     <span style={{
                       fontSize: '12px',
                       fontWeight: 'bold',
-                      color: '#2563eb'
+                      color: theme.primary
                     }}>
                       {post.character_profile}
                     </span>
                   </div>
                   
                   <p style={{
-                    color: isDarkMode ? '#e2e8f0' : '#111827',
+                    color: theme.text,
                     marginBottom: '12px',
                     fontSize: '14px',
                     lineHeight: '1.5',
@@ -953,7 +1290,7 @@ export default function ScheduleComponent() {
                       alignItems: 'center',
                       gap: '8px'
                     }}>
-                      <span style={{ color: isDarkMode ? '#94a3b8' : '#6b7280', fontWeight: 'bold' }}>Platforms:</span>
+                      <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Platforms:</span>
                       <div style={{ display: 'flex', gap: '4px' }}>
                         {post.selected_platforms?.map((platformId, idx) => {
                           const platform = getPlatformIcon(platformId);
@@ -981,7 +1318,7 @@ export default function ScheduleComponent() {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
-                        color: isDarkMode ? '#94a3b8' : '#6b7280',
+                        color: theme.textSecondary,
                         fontWeight: 'bold'
                       }}>
                         <Eye style={{ height: '14px', width: '14px' }} />
@@ -999,13 +1336,15 @@ export default function ScheduleComponent() {
                 }}>
                   <button
                     onClick={() => handleEditPost(post)}
+                    disabled={isOperationLoading(`edit-${post.id}`)}
                     style={{
                       padding: '8px',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280',
+                      color: theme.textSecondary,
                       backgroundColor: 'transparent',
                       border: 'none',
                       borderRadius: '6px',
-                      cursor: 'pointer'
+                      cursor: isOperationLoading(`edit-${post.id}`) ? 'not-allowed' : 'pointer',
+                      opacity: isOperationLoading(`edit-${post.id}`) ? 0.5 : 1
                     }}
                     title="Edit"
                   >
@@ -1015,50 +1354,63 @@ export default function ScheduleComponent() {
                   {post.status === 'published' && (
                     <button
                       onClick={() => handleSaveAsTemplate(post)}
+                      disabled={isOperationLoading(`save-template-${post.id}`)}
                       style={{
                         padding: '8px',
-                        color: isDarkMode ? '#94a3b8' : '#6b7280',
+                        color: theme.textSecondary,
                         backgroundColor: 'transparent',
                         border: 'none',
                         borderRadius: '6px',
-                        cursor: 'pointer'
+                        cursor: isOperationLoading(`save-template-${post.id}`) ? 'not-allowed' : 'pointer',
+                        opacity: isOperationLoading(`save-template-${post.id}`) ? 0.5 : 1
                       }}
                       title="Save as Template"
                     >
-                      <Save style={{ height: '16px', width: '16px' }} />
+                      {isOperationLoading(`save-template-${post.id}`) ? (
+                        <RefreshCw style={{ height: '16px', width: '16px', animation: 'spin 1s linear infinite' }} />
+                      ) : (
+                        <Save style={{ height: '16px', width: '16px' }} />
+                      )}
                     </button>
                   )}
 
                   <button
                     onClick={() => handleCopyToPending(post)}
+                    disabled={isOperationLoading(`copy-${post.id}`)}
                     style={{
                       padding: '6px 12px',
                       fontSize: '12px',
-                      backgroundColor: isDarkMode ? '#1e3a8a' : '#dbeafe',
-                      color: '#1e40af',
+                      backgroundColor: isOperationLoading(`copy-${post.id}`) ? theme.background : theme.primaryBg,
+                      color: isOperationLoading(`copy-${post.id}`) ? theme.textSecondary : theme.primary,
                       borderRadius: '6px',
                       fontWeight: 'bold',
                       border: 'none',
-                      cursor: 'pointer'
+                      cursor: isOperationLoading(`copy-${post.id}`) ? 'not-allowed' : 'pointer'
                     }}
                     title="Copy to Pending Scheduling"
                   >
-                    Copy
+                    {isOperationLoading(`copy-${post.id}`) ? 'Copying...' : 'Copy'}
                   </button>
                   
                   <button
                     onClick={() => handleDeletePost(post.id)}
+                    disabled={isOperationLoading(`delete-${post.id}`)}
                     style={{
                       padding: '8px',
-                      color: isDarkMode ? '#94a3b8' : '#6b7280',
+                      color: theme.textSecondary,
                       backgroundColor: 'transparent',
                       border: 'none',
                       borderRadius: '6px',
-                      cursor: 'pointer'
+                      cursor: isOperationLoading(`delete-${post.id}`) ? 'not-allowed' : 'pointer',
+                      opacity: isOperationLoading(`delete-${post.id}`) ? 0.5 : 1
                     }}
                     title="Delete"
                   >
-                    <Trash2 style={{ height: '16px', width: '16px' }} />
+                    {isOperationLoading(`delete-${post.id}`) ? (
+                      <RefreshCw style={{ height: '16px', width: '16px', animation: 'spin 1s linear infinite' }} />
+                    ) : (
+                      <Trash2 style={{ height: '16px', width: '16px' }} />
+                    )}
                   </button>
                 </div>
               </div>
@@ -1074,28 +1426,28 @@ export default function ScheduleComponent() {
       <div style={{ display: 'grid', gap: '24px' }}>
         {savedTemplates.length === 0 ? (
           <div style={{
-            backgroundColor: isDarkMode ? '#1e293b' : 'white',
+            backgroundColor: theme.cardBg,
             padding: '32px',
             borderRadius: '8px',
-            border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+            border: `1px solid ${theme.border}`,
             textAlign: 'center'
           }}>
             <Save style={{
               height: '48px',
               width: '48px',
-              color: isDarkMode ? '#64748b' : '#9ca3af',
+              color: theme.textSecondary,
               margin: '0 auto 16px auto'
             }} />
             <h3 style={{
               fontSize: '16px',
               fontWeight: 'bold',
-              color: isDarkMode ? '#e2e8f0' : '#111827',
+              color: theme.text,
               margin: '0 0 8px 0'
             }}>
               No Saved Templates
             </h3>
             <p style={{
-              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              color: theme.textSecondary,
               fontSize: '12px',
               fontWeight: 'bold',
               margin: '0'
@@ -1111,8 +1463,8 @@ export default function ScheduleComponent() {
           }}>
             {savedTemplates.map((template) => (
               <div key={template.id} style={{
-                backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+                backgroundColor: theme.cardBg,
+                border: `1px solid ${theme.border}`,
                 borderRadius: '8px',
                 padding: '16px'
               }}>
@@ -1125,7 +1477,7 @@ export default function ScheduleComponent() {
                   <h3 style={{
                     fontSize: '16px',
                     fontWeight: 'bold',
-                    color: isDarkMode ? '#e2e8f0' : '#111827',
+                    color: theme.text,
                     margin: '0'
                   }}>
                     {template.template_name}
@@ -1143,7 +1495,7 @@ export default function ScheduleComponent() {
                       }}
                       style={{
                         padding: '4px',
-                        color: isDarkMode ? '#94a3b8' : '#6b7280',
+                        color: theme.textSecondary,
                         backgroundColor: 'transparent',
                         border: 'none',
                         borderRadius: '4px',
@@ -1167,10 +1519,10 @@ export default function ScheduleComponent() {
                     gap: '8px',
                     fontSize: '12px'
                   }}>
-                    <span style={{ color: isDarkMode ? '#94a3b8' : '#6b7280', fontWeight: 'bold' }}>Profile:</span>
+                    <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Profile:</span>
                     <span style={{
                       fontWeight: 'bold',
-                      color: '#2563eb'
+                      color: theme.primary
                     }}>
                       {template.character_profile}
                     </span>
@@ -1182,14 +1534,14 @@ export default function ScheduleComponent() {
                     gap: '8px',
                     fontSize: '12px'
                   }}>
-                    <span style={{ color: isDarkMode ? '#94a3b8' : '#6b7280', fontWeight: 'bold' }}>Type:</span>
-                    <span style={{ color: isDarkMode ? '#e2e8f0' : '#111827', fontWeight: 'bold' }}>{template.template_type}</span>
+                    <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Type:</span>
+                    <span style={{ color: theme.text, fontWeight: 'bold' }}>{template.template_type}</span>
                   </div>
                   
                   <div style={{ fontSize: '12px' }}>
-                    <span style={{ color: isDarkMode ? '#94a3b8' : '#6b7280', fontWeight: 'bold' }}>Description:</span>
+                    <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Description:</span>
                     <p style={{
-                      color: isDarkMode ? '#e2e8f0' : '#111827',
+                      color: theme.text,
                       marginTop: '4px',
                       fontSize: '13px',
                       lineHeight: '1.4',
@@ -1206,7 +1558,7 @@ export default function ScheduleComponent() {
                     gap: '8px',
                     fontSize: '12px'
                   }}>
-                    <span style={{ color: isDarkMode ? '#94a3b8' : '#6b7280', fontWeight: 'bold' }}>Platforms:</span>
+                    <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Platforms:</span>
                     <div style={{ display: 'flex', gap: '4px' }}>
                       {template.selected_platforms?.map((platformId, idx) => {
                         const platformInfo = getPlatformIcon(platformId);
@@ -1238,7 +1590,7 @@ export default function ScheduleComponent() {
                 }}>
                   <div style={{
                     fontSize: '11px',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    color: theme.textSecondary,
                     fontWeight: 'bold'
                   }}>
                     Used {template.usage_count} times
@@ -1251,19 +1603,27 @@ export default function ScheduleComponent() {
                 }}>
                   <button
                     onClick={() => handleUseTemplate(template)}
+                    disabled={isOperationLoading(`use-template-${template.id}`)}
                     style={{
                       flex: 1,
                       padding: '8px 12px',
-                      backgroundColor: '#3b82f6',
+                      backgroundColor: isOperationLoading(`use-template-${template.id}`) ? theme.textSecondary : theme.primary,
                       color: 'white',
                       fontSize: '12px',
                       borderRadius: '6px',
                       fontWeight: 'bold',
                       border: 'none',
-                      cursor: 'pointer'
+                      cursor: isOperationLoading(`use-template-${template.id}`) ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
                     }}
                   >
-                    Use Template
+                    {isOperationLoading(`use-template-${template.id}`) && (
+                      <RefreshCw style={{ height: '12px', width: '12px', animation: 'spin 1s linear infinite' }} />
+                    )}
+                    {isOperationLoading(`use-template-${template.id}`) ? 'Using...' : 'Use Template'}
                   </button>
                 </div>
               </div>
@@ -1323,6 +1683,45 @@ export default function ScheduleComponent() {
         }}>
           Manage your social media content scheduling and templates
         </p>
+      </div>
+
+      {/* ✅ ERROR NOTIFICATIONS */}
+      <div style={{ marginBottom: '16px' }}>
+        {postsError && (
+          <ErrorNotificationBanner
+            error={postsError}
+            onDismiss={() => {}}
+            onRetry={refreshPosts}
+          />
+        )}
+        {templatesError && (
+          <ErrorNotificationBanner
+            error={templatesError}
+            onDismiss={() => {}}
+            onRetry={() => {}}
+          />
+        )}
+        {notifications.filter(n => n.type === 'success').map((notification) => (
+          <SuccessNotification
+            key={notification.id}
+            message={notification.message}
+            onDismiss={() => dismissNotification(notification.id)}
+          />
+        ))}
+        {notifications.filter(n => n.type === 'error').map((notification) => (
+          <ErrorNotificationBanner
+            key={notification.id}
+            error={{
+              message: notification.message,
+              code: 'NOTIFICATION_ERROR',
+              type: 'unknown',
+              timestamp: notification.timestamp,
+              retryable: !!notification.action
+            }}
+            onDismiss={() => dismissNotification(notification.id)}
+            onRetry={notification.action?.handler}
+          />
+        ))}
       </div>
 
       {/* Compact Status Summary */}
@@ -1449,8 +1848,8 @@ export default function ScheduleComponent() {
           <div style={{ padding: '24px' }}>
             {pendingPosts.length === 0 ? (
               <div style={{
-                backgroundColor: isDarkMode ? '#1e3a8a' : '#dbeafe',
-                border: `1px solid ${isDarkMode ? '#1d4ed8' : '#93c5fd'}`,
+                backgroundColor: theme.primaryBg,
+                border: `1px solid ${theme.primary}`,
                 borderRadius: '8px',
                 padding: '32px',
                 textAlign: 'center'
@@ -1458,19 +1857,19 @@ export default function ScheduleComponent() {
                 <Clock style={{
                   height: '48px',
                   width: '48px',
-                  color: '#3b82f6',
+                  color: theme.primary,
                   margin: '0 auto 16px auto'
                 }} />
                 <h3 style={{
                   fontSize: '16px',
                   fontWeight: 'bold',
-                  color: isDarkMode ? '#93c5fd' : '#1e3a8a',
+                  color: theme.primary,
                   margin: '0 0 8px 0'
                 }}>
                   Ready for Scheduling
                 </h3>
                 <p style={{
-                  color: isDarkMode ? '#93c5fd' : '#1e40af',
+                  color: theme.primary,
                   fontSize: '12px',
                   fontWeight: 'bold',
                   margin: '0'
@@ -1482,8 +1881,8 @@ export default function ScheduleComponent() {
               <div style={{ display: 'grid', gap: '16px' }}>
                 {pendingPosts.map((post) => (
                   <div key={post.id} style={{
-                    backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                    border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+                    backgroundColor: theme.cardBg,
+                    border: `1px solid ${theme.border}`,
                     borderRadius: '8px',
                     padding: '20px'
                   }}>
@@ -1502,8 +1901,8 @@ export default function ScheduleComponent() {
                           <span style={{
                             padding: '4px 12px',
                             fontSize: '11px',
-                            backgroundColor: isDarkMode ? '#f59e0b' : '#fed7aa',
-                            color: isDarkMode ? '#000000' : '#9a3412',
+                            backgroundColor: theme.warningBg,
+                            color: theme.warning,
                             borderRadius: '12px',
                             fontWeight: 'bold'
                           }}>
@@ -1511,22 +1910,22 @@ export default function ScheduleComponent() {
                           </span>
                           <span style={{
                             fontSize: '12px',
-                            color: isDarkMode ? '#94a3b8' : '#6b7280',
+                            color: theme.textSecondary,
                             fontWeight: 'bold'
                           }}>
-                            Created {new Date(post.created_at).toLocaleDateString('en-GB')}
+                            Created {new Date(post.created_date).toLocaleDateString('en-GB')}
                           </span>
                           <span style={{
                             fontSize: '12px',
                             fontWeight: 'bold',
-                            color: '#2563eb'
+                            color: theme.primary
                           }}>
                             {post.character_profile}
                           </span>
                         </div>
                         
                         <p style={{
-                          color: isDarkMode ? '#e2e8f0' : '#111827',
+                          color: theme.text,
                           fontSize: '14px',
                           lineHeight: '1.5',
                           fontWeight: 'bold',
@@ -1546,7 +1945,7 @@ export default function ScheduleComponent() {
                             alignItems: 'center',
                             gap: '8px'
                           }}>
-                            <span style={{ color: isDarkMode ? '#94a3b8' : '#6b7280', fontWeight: 'bold' }}>Platforms:</span>
+                            <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Platforms:</span>
                             <div style={{ display: 'flex', gap: '4px' }}>
                               {post.selected_platforms?.map((platformId, idx) => {
                                 const platform = getPlatformIcon(platformId);
@@ -1579,47 +1978,61 @@ export default function ScheduleComponent() {
                       }}>
                         <button
                           onClick={() => handleEditPost(post)}
+                          disabled={isOperationLoading(`edit-${post.id}`)}
                           style={{
                             padding: '8px 16px',
-                            backgroundColor: isDarkMode ? '#475569' : '#4b5563',
+                            backgroundColor: isOperationLoading(`edit-${post.id}`) ? theme.background : theme.textSecondary,
                             color: 'white',
                             fontSize: '12px',
                             borderRadius: '6px',
                             fontWeight: 'bold',
                             border: 'none',
-                            cursor: 'pointer'
+                            cursor: isOperationLoading(`edit-${post.id}`) ? 'not-allowed' : 'pointer'
                           }}
                         >
-                          Edit
+                          {isOperationLoading(`edit-${post.id}`) ? 'Loading...' : 'Edit'}
                         </button>
                         <button
                           onClick={() => handleSchedulePost(post)}
+                          disabled={isOperationLoading(`schedule-${post.id}`)}
                           style={{
                             padding: '8px 16px',
-                            backgroundColor: '#3b82f6',
+                            backgroundColor: isOperationLoading(`schedule-${post.id}`) ? theme.textSecondary : theme.primary,
                             color: 'white',
                             borderRadius: '6px',
                             fontWeight: 'bold',
                             border: 'none',
-                            cursor: 'pointer',
-                            fontSize: '14px'
+                            cursor: isOperationLoading(`schedule-${post.id}`) ? 'not-allowed' : 'pointer',
+                            fontSize: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
                           }}
                         >
-                          Schedule
+                          {isOperationLoading(`schedule-${post.id}`) && (
+                            <RefreshCw style={{ height: '14px', width: '14px', animation: 'spin 1s linear infinite' }} />
+                          )}
+                          {isOperationLoading(`schedule-${post.id}`) ? 'Scheduling...' : 'Schedule'}
                         </button>
                         <button
                           onClick={() => handleDeletePost(post.id)}
+                          disabled={isOperationLoading(`delete-${post.id}`)}
                           style={{
                             padding: '8px',
-                            color: isDarkMode ? '#94a3b8' : '#6b7280',
+                            color: theme.textSecondary,
                             backgroundColor: 'transparent',
                             border: 'none',
                             borderRadius: '6px',
-                            cursor: 'pointer'
+                            cursor: isOperationLoading(`delete-${post.id}`) ? 'not-allowed' : 'pointer',
+                            opacity: isOperationLoading(`delete-${post.id}`) ? 0.5 : 1
                           }}
                           title="Delete"
                         >
-                          <Trash2 style={{ height: '16px', width: '16px' }} />
+                          {isOperationLoading(`delete-${post.id}`) ? (
+                            <RefreshCw style={{ height: '16px', width: '16px', animation: 'spin 1s linear infinite' }} />
+                          ) : (
+                            <Trash2 style={{ height: '16px', width: '16px' }} />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -1648,9 +2061,9 @@ export default function ScheduleComponent() {
                   onClick={() => navigateCalendar('prev')}
                   style={{
                     padding: '8px',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    color: theme.textSecondary,
                     backgroundColor: 'transparent',
-                    border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                    border: `1px solid ${theme.border}`,
                     borderRadius: '6px',
                     cursor: 'pointer'
                   }}
@@ -1661,7 +2074,7 @@ export default function ScheduleComponent() {
                 <h2 style={{
                   fontSize: '20px',
                   fontWeight: 'bold',
-                  color: isDarkMode ? '#e2e8f0' : '#111827',
+                  color: theme.text,
                   margin: '0',
                   minWidth: '300px'
                 }}>
@@ -1672,9 +2085,9 @@ export default function ScheduleComponent() {
                   onClick={() => navigateCalendar('next')}
                   style={{
                     padding: '8px',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280',
+                    color: theme.textSecondary,
                     backgroundColor: 'transparent',
-                    border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                    border: `1px solid ${theme.border}`,
                     borderRadius: '6px',
                     cursor: 'pointer'
                   }}
@@ -1693,9 +2106,9 @@ export default function ScheduleComponent() {
                   style={{
                     padding: '8px 12px',
                     fontSize: '12px',
-                    backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
-                    color: isDarkMode ? '#e2e8f0' : '#374151',
-                    border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                    backgroundColor: theme.background,
+                    color: theme.text,
+                    border: `1px solid ${theme.border}`,
                     borderRadius: '6px',
                     fontWeight: 'bold',
                     cursor: 'pointer'
@@ -1706,7 +2119,7 @@ export default function ScheduleComponent() {
                 
                 <div style={{
                   display: 'flex',
-                  backgroundColor: isDarkMode ? '#374151' : '#f3f4f6',
+                  backgroundColor: theme.background,
                   borderRadius: '6px',
                   padding: '2px'
                 }}>
@@ -1721,8 +2134,8 @@ export default function ScheduleComponent() {
                         borderRadius: '4px',
                         border: 'none',
                         cursor: 'pointer',
-                        backgroundColor: calendarView === view ? (isDarkMode ? '#1e293b' : 'white') : 'transparent',
-                        color: calendarView === view ? (isDarkMode ? '#e2e8f0' : '#111827') : (isDarkMode ? '#94a3b8' : '#6b7280'),
+                        backgroundColor: calendarView === view ? theme.cardBg : 'transparent',
+                        color: calendarView === view ? theme.text : theme.textSecondary,
                         boxShadow: calendarView === view ? '0 1px 2px 0 rgba(0, 0, 0, 0.05)' : 'none'
                       }}
                     >
@@ -1783,4 +2196,3 @@ export default function ScheduleComponent() {
     </div>
   );
 }
-
