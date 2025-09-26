@@ -151,8 +151,9 @@ export const useScheduledPosts = () => {
       setLoading(true);
       setError(null);
       
-      // ✅ NO AUTH REQUIRED - just call API directly
-      const data = await withRetry(() => scheduleAPI.fetchScheduledPosts(''));
+      // ✅ NO AUTH REQUIRED - use default UUID for personal dashboard
+      const defaultUserId = '00000000-0000-0000-0000-000000000000';
+      const data = await withRetry(() => scheduleAPI.fetchScheduledPosts(defaultUserId));
       setPosts(data);
       
       return { success: true, data };
@@ -274,9 +275,9 @@ export const useTemplates = () => {
       setLoading(true);
       setError(null);
       
-      // ✅ NO AUTH REQUIRED - just call API directly
-      const data = await withRetry(() => scheduleAPI.fetchTemplates(''));
-      setTemplates(data);
+  const defaultUserId = '00000000-0000-0000-0000-000000000000';
+  const data = await withRetry(() => scheduleAPI.fetchScheduledPosts(defaultUserId));
+  const data = await withRetry(() => scheduleAPI.fetchTemplates(defaultUserId));
       
       return { success: true, data };
     } catch (err) {
