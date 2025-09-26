@@ -1,6 +1,7 @@
-// /src/schedulecomponent/components/ScheduleModal.tsx - FIXED
+// /src/schedulecomponent/components/ScheduleModal.tsx - FIXED to use centralized getTheme()
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, X, Check, AlertCircle } from 'lucide-react';
+import { getTheme } from '../utils/styleUtils';
 import { ScheduledPost } from '../types';
 
 // Local utility functions to avoid import issues
@@ -48,7 +49,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const isDarkMode = localStorage.getItem('darkMode') === 'true';
+  const { isDarkMode, theme } = getTheme();
 
   // Initialize with current date/time + 1 hour
   useEffect(() => {
@@ -78,7 +79,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
   };
 
   const modalStyle = {
-    backgroundColor: isDarkMode ? '#1e293b' : 'white',
+    backgroundColor: theme.background,
     borderRadius: '12px',
     padding: '24px',
     maxWidth: '500px',
@@ -92,11 +93,11 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
   const inputStyle = {
     width: '100%',
     padding: '12px',
-    border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+    border: `1px solid ${theme.border}`,
     borderRadius: '8px',
     fontSize: '14px',
-    backgroundColor: isDarkMode ? '#334155' : 'white',
-    color: isDarkMode ? '#f8fafc' : '#111827',
+    backgroundColor: theme.cardBg,
+    color: theme.text,
     fontFamily: 'inherit'
   };
 
@@ -110,13 +111,13 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
     alignItems: 'center',
     gap: '8px',
     transition: 'all 0.2s ease',
-    border: variant === 'primary' ? 'none' : `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+    border: variant === 'primary' ? 'none' : `1px solid ${theme.border}`,
     backgroundColor: variant === 'primary' 
-      ? (isDarkMode ? '#3b82f6' : '#2563eb')
+      ? theme.primary
       : 'transparent',
     color: variant === 'primary' 
       ? 'white' 
-      : (isDarkMode ? '#94a3b8' : '#6b7280'),
+      : theme.textSecondary,
     fontFamily: 'inherit'
   });
 
@@ -213,7 +214,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
           <h2 style={{
             fontSize: '20px',
             fontWeight: '600',
-            color: isDarkMode ? '#60a5fa' : '#2563eb',
+            color: theme.primary,
             margin: '0',
             display: 'flex',
             alignItems: 'center',
@@ -228,7 +229,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              color: theme.textSecondary,
               padding: '4px'
             }}
           >
@@ -238,8 +239,8 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
 
         {/* Post Preview */}
         <div style={{
-          backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
-          border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+          backgroundColor: theme.cardBg,
+          border: `1px solid ${theme.border}`,
           borderRadius: '8px',
           padding: '16px',
           marginBottom: '24px'
@@ -247,14 +248,14 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
           <h3 style={{
             fontSize: '16px',
             fontWeight: '600',
-            color: isDarkMode ? '#f8fafc' : '#111827',
+            color: theme.text,
             margin: '0 0 8px 0'
           }}>
             {post.title || 'Untitled Post'}
           </h3>
           <p style={{
             fontSize: '14px',
-            color: isDarkMode ? '#e2e8f0' : '#4b5563',
+            color: theme.textSecondary,
             margin: '0 0 12px 0',
             display: '-webkit-box',
             WebkitLineClamp: 2,
@@ -268,7 +269,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
             alignItems: 'center',
             gap: '12px',
             fontSize: '12px',
-            color: isDarkMode ? '#94a3b8' : '#6b7280'
+            color: theme.textSecondary
           }}>
             <span>ID: {post.content_id}</span>
             <span>Platforms: {post.selected_platforms?.length || 0}</span>
@@ -282,7 +283,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
             display: 'block',
             fontSize: '14px',
             fontWeight: '600',
-            color: isDarkMode ? '#f8fafc' : '#111827',
+            color: theme.text,
             marginBottom: '12px'
           }}>
             Quick Schedule Options
@@ -298,20 +299,22 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
                 onClick={() => handleQuickSchedule(option.value)}
                 style={{
                   padding: '8px 12px',
-                  backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
-                  border: `1px solid ${isDarkMode ? '#64748b' : '#e5e7eb'}`,
+                  backgroundColor: theme.cardBg,
+                  border: `1px solid ${theme.border}`,
                   borderRadius: '6px',
                   fontSize: '12px',
-                  color: isDarkMode ? '#f8fafc' : '#374151',
+                  color: theme.text,
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                   fontFamily: 'inherit'
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = isDarkMode ? '#60a5fa' : '#e5e7eb';
+                  e.currentTarget.style.backgroundColor = theme.primary;
+                  e.currentTarget.style.color = 'white';
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#f3f4f6';
+                  e.currentTarget.style.backgroundColor = theme.cardBg;
+                  e.currentTarget.style.color = theme.text;
                 }}
               >
                 {option.label}
@@ -326,7 +329,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
             display: 'block',
             fontSize: '14px',
             fontWeight: '600',
-            color: isDarkMode ? '#f8fafc' : '#111827',
+            color: theme.text,
             marginBottom: '12px'
           }}>
             Custom Schedule
@@ -342,7 +345,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
               <label style={{
                 display: 'block',
                 fontSize: '12px',
-                color: isDarkMode ? '#94a3b8' : '#6b7280',
+                color: theme.textSecondary,
                 marginBottom: '4px'
               }}>
                 Date
@@ -360,7 +363,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
               <label style={{
                 display: 'block',
                 fontSize: '12px',
-                color: isDarkMode ? '#94a3b8' : '#6b7280',
+                color: theme.textSecondary,
                 marginBottom: '4px'
               }}>
                 Time
@@ -379,7 +382,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
             <label style={{
               display: 'block',
               fontSize: '12px',
-              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              color: theme.textSecondary,
               marginBottom: '4px'
             }}>
               Timezone
@@ -407,7 +410,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
             <label style={{
               display: 'block',
               fontSize: '12px',
-              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              color: theme.textSecondary,
               marginBottom: '4px'
             }}>
               Repeat (Optional)
@@ -429,7 +432,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
         {selectedDate && selectedTime && (
           <div style={{
             backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
-            border: `1px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
+            border: `1px solid ${theme.primary}`,
             borderRadius: '8px',
             padding: '12px',
             marginBottom: '24px'
@@ -438,7 +441,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              color: isDarkMode ? '#60a5fa' : '#1e40af',
+              color: theme.primary,
               fontSize: '14px',
               fontWeight: '600'
             }}>
@@ -447,7 +450,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
             </div>
             <div style={{
               fontSize: '12px',
-              color: isDarkMode ? '#94a3b8' : '#6b7280',
+              color: theme.textSecondary,
               marginTop: '4px'
             }}>
               Timezone: {timezone}
@@ -480,7 +483,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
           justifyContent: 'flex-end',
           gap: '12px',
           paddingTop: '16px',
-          borderTop: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
+          borderTop: `1px solid ${theme.border}`
         }}>
           <button
             onClick={onCancel}
