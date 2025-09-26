@@ -1,10 +1,11 @@
 // /src/schedulecomponent/components/EditModal.tsx - FIXED to display all post data
 import React, { useState, useEffect } from 'react';
-import { Edit3, X, Save, Calendar, Clock, User, Hash, FileText, ExternalLink, Image, Video, Trash2, Plus } from 'lucide-react';
+import { Edit3, X, Save, Calendar, Clock, User, Hash, FileText, ExternalLink, Image, Video, Trash2, Plus, MessageCircle, Users } from 'lucide-react';
 import { formatDate, formatTime, isValidDate } from '../utils/dateUtils';
 import { getPlatformIcon, formatPlatformList } from '../utils/platformUtils';
 import { getTheme } from '../utils/styleUtils';
 import { MediaFile, ScheduledPost } from '../types';
+import { supabase } from '../config';
 
 interface EditablePost {
   id: string;
@@ -48,8 +49,52 @@ export default function EditModal({
   const [hashtagInput, setHashtagInput] = useState('');
   const [urlInput, setUrlInput] = useState('');
   const [urlTitle, setUrlTitle] = useState('');
+  
+  // ADDED: Platform configuration state
+  const [socialPlatforms, setSocialPlatforms] = useState<any[]>([]);
+  const [telegramConfigs, setTelegramConfigs] = useState<any[]>([]);
+  const [selectedSocialPlatforms, setSelectedSocialPlatforms] = useState<string[]>([]);
+  const [selectedTelegramConfigs, setSelectedTelegramConfigs] = useState<string[]>([]);
+  const [platformsLoading, setPlatformsLoading] = useState(false);
 
   const { isDarkMode, theme } = getTheme();
+
+  // ADDED: Fetch platform configurations
+  const fetchPlatformConfigurations = async () => {
+    try {
+      setPlatformsLoading(true);
+      
+      // Fetch social platforms
+      const { data: socialData, error: socialError } = await supabase
+        .from('social_platforms')
+        .select('*')
+        .eq('is_active', true)
+        .order('platform_name', { ascending: true });
+      
+      if (socialError) {
+        console.error('Error fetching social platforms:', socialError);
+      } else {
+        setSocialPlatforms(socialData || []);
+      }
+
+      // Fetch telegram configurations
+      const { data: telegramData, error: telegramError } = await supabase
+        .from('telegram_configurations')
+        .select('*')
+        .eq('is_active', true)
+        .order('channel_name', { ascending: true });
+      
+      if (telegramError) {
+        console.error('Error fetching telegram configs:', telegramError);
+      } else {
+        setTelegramConfigs(telegramData || []);
+      }
+    } catch (error) {
+      console.error('Error fetching platform configurations:', error);
+    } finally {
+      setPlatformsLoading(false);
+    }
+  };
 
   // FIXED: Enhanced form data initialization
   useEffect(() => {
@@ -69,6 +114,17 @@ export default function EditModal({
         template_type: post.template_type || '',
         platform: post.platform || ''
       });
+      
+      // Initialize platform selections if they exist in the post data
+      setSelectedSocialPlatforms(post.social_platforms || []);
+      setSelectedTelegramConfigs(post.telegram_configurations || []);
+    }
+  }, [post]);
+
+  // Fetch platform configurations when modal opens
+  useEffect(() => {
+    if (post) {
+      fetchPlatformConfigurations();
     }
   }, [post]);
 
@@ -233,7 +289,14 @@ export default function EditModal({
         return;
       }
 
-      await onSave(post.id, formData);
+      // Include platform configurations in the save data
+      const updatedFormData = {
+        ...formData,
+        social_platforms: selectedSocialPlatforms,
+        telegram_configurations: selectedTelegramConfigs
+      };
+
+      await onSave(post.id, updatedFormData);
     } catch (err) {
       setError('Failed to update post. Please try again.');
       console.error('Update failed:', err);
@@ -799,7 +862,7 @@ export default function EditModal({
               color: theme.text,
               marginBottom: '12px'
             }}>
-              Publishing Platforms
+              Publishing Platforms (General)
             </label>
             <div style={{
               display: 'grid',
@@ -854,6 +917,236 @@ export default function EditModal({
                   </div>
                 </label>
               ))}
+            </div>
+          </div>
+
+          {/* ADDED: Social Platforms Configuration */}
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: theme.text,
+              marginBottom: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <Users size={16} />
+              Social Platform Configurations
+              {platformsLoading && (
+                <div style={{
+                  width: '12px',
+                  height: '12px',
+                  border: `2px solid ${theme.border}`,
+                  borderTop: `2px solid ${theme.primary}`,
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+              )}
+            </label>
+            <div style={{
+              backgroundColor: theme.cardBg,
+              border: `1px solid ${theme.border}`,
+              borderRadius: '8px',
+              padding: '16px',
+              maxHeight: '200px',
+              overflowY: 'auto'
+            }}>
+              {socialPlatforms.length === 0 && !platformsLoading ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '20px',
+                  color: theme.textSecondary,
+                  fontSize: '14px'
+                }}>
+                  No social platform configurations found
+                </div>
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gap: '8px'
+                }}>
+                  {socialPlatforms.map((platform) => (
+                    <label
+                      key={platform.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px',
+                        border: selectedSocialPlatforms.includes(platform.id)
+                          ? `1px solid ${theme.primary}`
+                          : `1px solid ${theme.border}`,
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        backgroundColor: selectedSocialPlatforms.includes(platform.id)
+                          ? (isDarkMode ? '#1e3a8a30' : '#dbeafe')
+                          : theme.background,
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSocialPlatforms.includes(platform.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedSocialPlatforms(prev => [...prev, platform.id]);
+                          } else {
+                            setSelectedSocialPlatforms(prev => prev.filter(id => id !== platform.id));
+                          }
+                        }}
+                        style={{
+                          height: '16px',
+                          width: '16px',
+                          accentColor: theme.primary
+                        }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: theme.text,
+                          marginBottom: '2px'
+                        }}>
+                          {platform.platform_name}
+                        </div>
+                        <div style={{
+                          fontSize: '12px',
+                          color: theme.textSecondary
+                        }}>
+                          {platform.description || platform.username || 'Social Platform'}
+                        </div>
+                      </div>
+                      <div style={{
+                        fontSize: '10px',
+                        padding: '2px 6px',
+                        backgroundColor: platform.is_active ? theme.successBg : theme.dangerBg,
+                        color: platform.is_active ? theme.success : theme.danger,
+                        borderRadius: '4px',
+                        fontWeight: '600'
+                      }}>
+                        {platform.is_active ? 'Active' : 'Inactive'}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ADDED: Telegram Configurations */}
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: theme.text,
+              marginBottom: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <MessageCircle size={16} />
+              Telegram Channels & Groups
+              {platformsLoading && (
+                <div style={{
+                  width: '12px',
+                  height: '12px',
+                  border: `2px solid ${theme.border}`,
+                  borderTop: `2px solid ${theme.primary}`,
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+              )}
+            </label>
+            <div style={{
+              backgroundColor: theme.cardBg,
+              border: `1px solid ${theme.border}`,
+              borderRadius: '8px',
+              padding: '16px',
+              maxHeight: '200px',
+              overflowY: 'auto'
+            }}>
+              {telegramConfigs.length === 0 && !platformsLoading ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '20px',
+                  color: theme.textSecondary,
+                  fontSize: '14px'
+                }}>
+                  No Telegram configurations found
+                </div>
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gap: '8px'
+                }}>
+                  {telegramConfigs.map((config) => (
+                    <label
+                      key={config.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px',
+                        border: selectedTelegramConfigs.includes(config.id)
+                          ? `1px solid ${theme.primary}`
+                          : `1px solid ${theme.border}`,
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        backgroundColor: selectedTelegramConfigs.includes(config.id)
+                          ? (isDarkMode ? '#1e3a8a30' : '#dbeafe')
+                          : theme.background,
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedTelegramConfigs.includes(config.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedTelegramConfigs(prev => [...prev, config.id]);
+                          } else {
+                            setSelectedTelegramConfigs(prev => prev.filter(id => id !== config.id));
+                          }
+                        }}
+                        style={{
+                          height: '16px',
+                          width: '16px',
+                          accentColor: theme.primary
+                        }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: theme.text,
+                          marginBottom: '2px'
+                        }}>
+                          {config.channel_name}
+                        </div>
+                        <div style={{
+                          fontSize: '12px',
+                          color: theme.textSecondary
+                        }}>
+                          {config.channel_type} • ID: {config.channel_id || 'N/A'}
+                        </div>
+                      </div>
+                      <div style={{
+                        fontSize: '10px',
+                        padding: '2px 6px',
+                        backgroundColor: config.is_active ? theme.successBg : theme.dangerBg,
+                        color: config.is_active ? theme.success : theme.danger,
+                        borderRadius: '4px',
+                        fontWeight: '600'
+                      }}>
+                        {config.is_active ? 'Active' : 'Inactive'}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
