@@ -1,4 +1,4 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - HOOKS ORDER FIXED
+// /src/schedulecomponent/ScheduleComponent.tsx - ENHANCED ERROR HANDLING
 import React, { useState, useEffect } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
@@ -8,7 +8,7 @@ import { Calendar, Clock, Edit3, Trash2, RefreshCw, Eye, AlertCircle, CheckCircl
 import { ScheduledPost, SavedTemplate } from './types';
 
 export default function ScheduleComponent() {
-  // ✅ ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY RETURNS
+  // Use hooks for data management
   const {
     posts: scheduledPosts,
     loading: postsLoading,
@@ -29,24 +29,38 @@ export default function ScheduleComponent() {
     incrementUsage
   } = useTemplates();
 
-  // ✅ ALL STATE HOOKS CALLED UNCONDITIONALLY
-  const [activeTab, setActiveTab] = useState('pending');
-  const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month'>('month');
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isSaveTemplateModalOpen, setIsSaveTemplateModalOpen] = useState(false);
-  const [isEditTemplateModalOpen, setIsEditTemplateModalOpen] = useState(false);
-  const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
-  const [editingPost, setEditingPost] = useState<ScheduledPost | null>(null);
-  const [editingTemplate, setEditingTemplate] = useState<SavedTemplate | null>(null);
-  const [templateName, setTemplateName] = useState('');
+  // ENHANCED ERROR STATE MANAGEMENT
+  const [persistentError, setPersistentError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<{
+    source: string;
+    timestamp: Date;
+    fullMessage: string;
+  } | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
 
-  // ✅ ALL OTHER HOOKS
-  const { isDarkMode, theme } = getTheme();
+  // AGGREGATE AND PERSIST ERRORS
+  useEffect(() => {
+    const aggregatedError = postsError || templatesError;
+    if (aggregatedError && aggregatedError !== persistentError) {
+      const errorSource = postsError ? 'Posts Data' : 'Templates Data';
+      setPersistentError(aggregatedError);
+      setErrorDetails({
+        source: errorSource,
+        timestamp: new Date(),
+        fullMessage: aggregatedError
+      });
+      setShowErrorModal(true);
+    }
+  }, [postsError, templatesError, persistentError]);
 
-  // ✅ NOW CONDITIONAL RETURNS ARE SAFE - ALL HOOKS CALLED
+  // MANUAL ERROR DISMISSAL ONLY
+  const handleErrorClose = () => {
+    setPersistentError(null);
+    setErrorDetails(null);
+    setShowErrorModal(false);
+  };
+
+  // CRITICAL FIX: Early returns for loading/error states BEFORE any rendering
   if (postsLoading || templatesLoading) {
     return (
       <div style={{
@@ -86,7 +100,8 @@ export default function ScheduleComponent() {
     );
   }
 
-  if (postsError || templatesError) {
+  // ENHANCED ERROR DISPLAY WITH COMPLETE INFORMATION
+  if (showErrorModal && errorDetails) {
     return (
       <div style={{
         minHeight: '600px',
@@ -96,51 +111,166 @@ export default function ScheduleComponent() {
         backgroundColor: '#f8fafc'
       }}>
         <div style={{
-          padding: '24px',
+          maxWidth: '600px',
+          width: '100%',
+          margin: '20px',
+          padding: '32px',
           backgroundColor: '#fee2e2',
           borderRadius: '12px',
-          border: '1px solid #fca5a5',
-          textAlign: 'center'
+          border: '2px solid #fca5a5',
+          boxShadow: '0 8px 25px rgba(220, 38, 38, 0.15)'
         }}>
-          <AlertCircle style={{
-            height: '48px',
-            width: '48px',
-            color: '#dc2626',
-            margin: '0 auto 16px auto'
-          }} />
-          <h3 style={{
-            fontSize: '18px',
-            fontWeight: 'bold',
-            color: '#991b1b',
-            margin: '0 0 8px 0'
+          {/* Error Header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '20px'
           }}>
-            Error Loading Schedule Manager
-          </h3>
-          <p style={{
-            color: '#7f1d1d',
-            margin: '0 0 16px 0'
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <AlertCircle style={{
+                height: '32px',
+                width: '32px',
+                color: '#dc2626'
+              }} />
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: 'bold',
+                color: '#991b1b',
+                margin: '0'
+              }}>
+                Schedule Manager Error
+              </h3>
+            </div>
+            
+            {/* MANUAL CLOSE BUTTON */}
+            <button
+              onClick={handleErrorClose}
+              style={{
+                padding: '8px',
+                backgroundColor: '#dc2626',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}
+            >
+              <X size={16} />
+              Close
+            </button>
+          </div>
+
+          {/* COMPLETE ERROR DETAILS */}
+          <div style={{
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fca5a5',
+            borderRadius: '8px',
+            padding: '16px',
+            marginBottom: '20px'
           }}>
-            {postsError || templatesError}
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#dc2626',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
+            <div style={{
               fontSize: '14px',
-              fontWeight: '600'
-            }}
-          >
-            Reload Page
-          </button>
+              fontWeight: '600',
+              color: '#7f1d1d',
+              marginBottom: '8px'
+            }}>
+              Error Source: {errorDetails.source}
+            </div>
+            <div style={{
+              fontSize: '12px',
+              color: '#991b1b',
+              marginBottom: '12px'
+            }}>
+              Timestamp: {errorDetails.timestamp.toLocaleString()}
+            </div>
+            <div style={{
+              fontSize: '14px',
+              color: '#7f1d1d',
+              lineHeight: '1.5',
+              fontFamily: 'monospace',
+              backgroundColor: 'white',
+              padding: '12px',
+              borderRadius: '4px',
+              border: '1px solid #fca5a5',
+              wordBreak: 'break-word',
+              whiteSpace: 'pre-wrap'
+            }}>
+              {errorDetails.fullMessage}
+            </div>
+          </div>
+
+          {/* ERROR ACTIONS */}
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            justifyContent: 'center'
+          }}>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#dc2626',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <RefreshCw size={16} />
+              Reload Page
+            </button>
+            
+            <button
+              onClick={handleErrorClose}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: 'transparent',
+                color: '#7f1d1d',
+                border: '2px solid #dc2626',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}
+            >
+              Continue Anyway
+            </button>
+          </div>
         </div>
       </div>
     );
   }
+
+  // UI state
+  const [activeTab, setActiveTab] = useState('pending');
+  const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month'>('month');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSaveTemplateModalOpen, setIsSaveTemplateModalOpen] = useState(false);
+  const [isEditTemplateModalOpen, setIsEditTemplateModalOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
+  const [editingPost, setEditingPost] = useState<ScheduledPost | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<SavedTemplate | null>(null);
+  const [templateName, setTemplateName] = useState('');
+
+  // Get theme
+  const { isDarkMode, colors: theme } = getTheme();
 
   // Filter posts by status for each tab
   const pendingPosts = scheduledPosts.filter(p => p.status === 'pending_schedule');
@@ -295,10 +425,20 @@ export default function ScheduleComponent() {
     }
   };
 
-  // Event handlers
-  const handleSchedulePost = (post: ScheduledPost) => {
-    setSelectedPost(post);
-    setIsScheduleModalOpen(true);
+  // Event handlers with error boundaries
+  const handleSchedulePost = async (post: ScheduledPost) => {
+    try {
+      setSelectedPost(post);
+      setIsScheduleModalOpen(true);
+    } catch (error) {
+      const errorMsg = `Failed to open schedule modal: ${error instanceof Error ? error.message : String(error)}`;
+      setErrorDetails({
+        source: 'Schedule Modal',
+        timestamp: new Date(),
+        fullMessage: errorMsg
+      });
+      setShowErrorModal(true);
+    }
   };
 
   const handleConfirmSchedule = async (scheduleData: {
@@ -321,13 +461,29 @@ export default function ScheduleComponent() {
       setSelectedPost(null);
       await refreshPosts();
     } catch (error) {
-      console.error('Failed to schedule post:', error);
+      const errorMsg = `Failed to schedule post: ${error instanceof Error ? error.message : String(error)}`;
+      setErrorDetails({
+        source: 'Post Scheduling',
+        timestamp: new Date(),
+        fullMessage: errorMsg
+      });
+      setShowErrorModal(true);
     }
   };
 
-  const handleEditPost = (post: ScheduledPost) => {
-    setEditingPost(post);
-    setIsEditModalOpen(true);
+  const handleEditPost = async (post: ScheduledPost) => {
+    try {
+      setEditingPost(post);
+      setIsEditModalOpen(true);
+    } catch (error) {
+      const errorMsg = `Failed to open edit modal: ${error instanceof Error ? error.message : String(error)}`;
+      setErrorDetails({
+        source: 'Edit Modal',
+        timestamp: new Date(),
+        fullMessage: errorMsg
+      });
+      setShowErrorModal(true);
+    }
   };
 
   const handleSaveEdit = async (postId: string, updates: Partial<ScheduledPost>) => {
@@ -337,7 +493,13 @@ export default function ScheduleComponent() {
       setEditingPost(null);
       await refreshPosts();
     } catch (error) {
-      console.error('Failed to update post:', error);
+      const errorMsg = `Failed to update post: ${error instanceof Error ? error.message : String(error)}`;
+      setErrorDetails({
+        source: 'Post Update',
+        timestamp: new Date(),
+        fullMessage: errorMsg
+      });
+      setShowErrorModal(true);
     }
   };
 
@@ -347,7 +509,13 @@ export default function ScheduleComponent() {
         await deletePost(postId);
         await refreshPosts();
       } catch (error) {
-        console.error('Failed to delete post:', error);
+        const errorMsg = `Failed to delete post: ${error instanceof Error ? error.message : String(error)}`;
+        setErrorDetails({
+          source: 'Post Deletion',
+          timestamp: new Date(),
+          fullMessage: errorMsg
+        });
+        setShowErrorModal(true);
       }
     }
   };
@@ -378,8 +546,13 @@ export default function ScheduleComponent() {
       await createTemplate(templateData);
       alert('Post saved as template successfully!');
     } catch (error) {
-      console.error('Failed to save template:', error);
-      alert('Failed to save template. Please try again.');
+      const errorMsg = `Failed to save template: ${error instanceof Error ? error.message : String(error)}`;
+      setErrorDetails({
+        source: 'Template Creation',
+        timestamp: new Date(),
+        fullMessage: errorMsg
+      });
+      setShowErrorModal(true);
     }
   };
 
@@ -417,8 +590,13 @@ export default function ScheduleComponent() {
       
       alert('Template added to Pending Schedules!');
     } catch (error) {
-      console.error('Failed to use template:', error);
-      alert('Failed to use template. Please try again.');
+      const errorMsg = `Failed to use template: ${error instanceof Error ? error.message : String(error)}`;
+      setErrorDetails({
+        source: 'Template Usage',
+        timestamp: new Date(),
+        fullMessage: errorMsg
+      });
+      setShowErrorModal(true);
     }
   };
 
@@ -449,8 +627,13 @@ export default function ScheduleComponent() {
       
       alert('Post copied to Pending Scheduling for modification!');
     } catch (error) {
-      console.error('Failed to copy post:', error);
-      alert('Failed to copy post. Please try again.');
+      const errorMsg = `Failed to copy post: ${error instanceof Error ? error.message : String(error)}`;
+      setErrorDetails({
+        source: 'Post Copy',
+        timestamp: new Date(),
+        fullMessage: errorMsg
+      });
+      setShowErrorModal(true);
     }
   };
 
