@@ -368,8 +368,8 @@ export default function ScheduleComponent() {
     );
   }
 
-  // Filter posts by status for each tab
-  const pendingPosts = scheduledPosts.filter(p => p.status === 'pending_schedule');
+  // FIXED: Filter posts by status for each tab - Use 'scheduled' for pending
+  const pendingPosts = scheduledPosts.filter(p => p.status === 'scheduled');
   const scheduledPostsFiltered = scheduledPosts.filter(p => 
     ['scheduled', 'processing', 'publishing', 'published', 'failed'].includes(p.status)
   );
@@ -606,8 +606,9 @@ export default function ScheduleComponent() {
     }
   };
 
+  // FIXED: Delete function - Remove from dashboard view only
   const handleDeletePost = async (postId: string) => {
-    if (!confirm('Are you sure you want to delete this post?')) return;
+    if (!confirm('Are you sure you want to remove this post from the dashboard?')) return;
     
     const operationKey = `delete-${postId}`;
     setOperationLoading(operationKey, true);
@@ -616,14 +617,14 @@ export default function ScheduleComponent() {
       const result = await deletePost(postId);
       
       if (result.success) {
-        showSuccess('Post deleted successfully!');
+        showSuccess('Post removed from dashboard successfully!');
         await refreshPosts();
       } else {
         showError(result.error!, () => handleDeletePost(postId));
       }
     } catch (error) {
       showError({
-        message: 'Failed to delete post. Please try again.',
+        message: 'Failed to remove post from dashboard. Please try again.',
         code: 'DELETE_ERROR',
         type: 'unknown',
         timestamp: new Date(),
@@ -708,7 +709,7 @@ export default function ScheduleComponent() {
         cta: template.cta,
         media_files: [],
         selected_platforms: template.selected_platforms,
-        status: 'pending_schedule' as const,
+        status: 'scheduled' as const,
         user_id: template.user_id,
         created_by: template.created_by,
         is_from_template: true,
@@ -766,7 +767,7 @@ export default function ScheduleComponent() {
         cta: post.cta || '',
         media_files: post.media_files || [],
         selected_platforms: post.selected_platforms,
-        status: 'pending_schedule' as const,
+        status: 'scheduled' as const,
         user_id: post.user_id || '',
         created_by: post.created_by || ''
       };
