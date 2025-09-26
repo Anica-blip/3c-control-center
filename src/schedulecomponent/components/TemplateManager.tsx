@@ -1,36 +1,10 @@
-// /src/schedulecomponent/components/TemplateManager.tsx
+// /src/schedulecomponent/components/TemplateManager.tsx - FIXED to use centralized getTheme()
 import React, { useState, useMemo } from 'react';
 import { Save, Plus, Edit, Trash2, Copy, Play, Search, Filter, Eye, Star, TrendingUp, Calendar, User, Hash } from 'lucide-react';
 import { formatDate, getRelativeTime } from '../utils/dateUtils';
 import { getPlatformIcon, formatPlatformList } from '../utils/platformUtils';
-import { SavedTemplate } from '../types';  // Ensure this matches types.ts
-
-interface SavedTemplate {
-  id: string;
-  template_name: string;
-  character_profile: string;
-  theme: string;
-  audience: string;
-  media_type: string;
-  template_type: string;
-  platform: string;
-  title: string;
-  description: string;
-  hashtags: string[];
-  keywords: string;
-  cta: string;
-  selected_platforms: string[];
-  usage_count: number;
-  is_active: boolean;
-  template_version: number;
-  persona_target?: string;
-  audience_segment?: string;
-  campaign_type?: string;
-  user_id: string;
-  created_by: string;
-  created_at: Date;
-  updated_at: Date;
-}
+import { getTheme } from '../utils/styleUtils';
+import { SavedTemplate } from '../types';
 
 interface TemplateManagerProps {
   templates: SavedTemplate[];
@@ -60,34 +34,7 @@ export default function TemplateManager({
   const [isEditing, setIsEditing] = useState(false);
   const [sortBy, setSortBy] = useState<'recent' | 'usage' | 'name'>('recent');
 
-  const isDarkMode = localStorage.getItem('darkMode') === 'true';
-
-  // Theme colors
-  const theme = isDarkMode ? {
-    bg: '#1e293b',
-    cardBg: '#334155',
-    border: '#475569',
-    text: '#f8fafc',
-    textSecondary: '#94a3b8',
-    primary: '#60a5fa',
-    primaryHover: '#3b82f6',
-    hoverBg: '#475569',
-    success: '#10b981',
-    warning: '#f59e0b',
-    danger: '#ef4444'
-  } : {
-    bg: 'white',
-    cardBg: '#f9fafb',
-    border: '#e5e7eb',
-    text: '#111827',
-    textSecondary: '#6b7280',
-    primary: '#3b82f6',
-    primaryHover: '#2563eb',
-    hoverBg: '#f3f4f6',
-    success: '#059669',
-    warning: '#d97706',
-    danger: '#dc2626'
-  };
+  const { isDarkMode, theme } = getTheme();
 
   // Filter and sort templates
   const filteredTemplates = useMemo(() => {
@@ -170,7 +117,7 @@ export default function TemplateManager({
   };
 
   const containerStyle = {
-    backgroundColor: theme.bg,
+    backgroundColor: theme.background,
     color: theme.text,
     borderRadius: '8px',
     padding: '24px',
@@ -375,7 +322,7 @@ export default function TemplateManager({
               border: `1px solid ${theme.border}`,
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: theme.bg,
+              backgroundColor: theme.background,
               color: theme.text,
               fontFamily: 'inherit'
             }}
@@ -391,7 +338,7 @@ export default function TemplateManager({
             border: `1px solid ${theme.border}`,
             borderRadius: '6px',
             fontSize: '14px',
-            backgroundColor: theme.bg,
+            backgroundColor: theme.background,
             color: theme.text,
             fontFamily: 'inherit',
             minWidth: '150px'
@@ -406,9 +353,9 @@ export default function TemplateManager({
             ))}
           </optgroup>
           <optgroup label="Themes">
-            {categories.themes.map(theme => (
-              <option key={theme} value={theme}>
-                {theme.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            {categories.themes.map(themeOption => (
+              <option key={themeOption} value={themeOption}>
+                {themeOption.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </option>
             ))}
           </optgroup>
@@ -423,7 +370,7 @@ export default function TemplateManager({
             border: `1px solid ${theme.border}`,
             borderRadius: '6px',
             fontSize: '14px',
-            backgroundColor: theme.bg,
+            backgroundColor: theme.background,
             color: theme.text,
             fontFamily: 'inherit',
             minWidth: '120px'
@@ -611,7 +558,7 @@ export default function TemplateManager({
                   <span style={{
                     fontSize: '11px',
                     padding: '2px 6px',
-                    backgroundColor: theme.hoverBg,
+                    backgroundColor: theme.cardBg,
                     color: theme.textSecondary,
                     borderRadius: '4px',
                     fontWeight: '500'
@@ -656,7 +603,7 @@ export default function TemplateManager({
                   color: theme.textSecondary,
                   marginBottom: '16px',
                   padding: '8px 12px',
-                  backgroundColor: theme.bg,
+                  backgroundColor: theme.background,
                   borderRadius: '6px'
                 }}>
                   <User size={14} />
@@ -711,7 +658,7 @@ export default function TemplateManager({
                     cursor: 'pointer',
                     color: theme.textSecondary
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.hoverBg}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.cardBg}
                   onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   <Eye size={14} />
@@ -730,7 +677,7 @@ export default function TemplateManager({
                     cursor: 'pointer',
                     color: theme.textSecondary
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.hoverBg}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.cardBg}
                   onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   <Copy size={14} />
@@ -778,7 +725,7 @@ export default function TemplateManager({
           padding: '20px'
         }} onClick={() => setSelectedTemplate(null)}>
           <div style={{
-            backgroundColor: theme.bg,
+            backgroundColor: theme.background,
             borderRadius: '12px',
             padding: '24px',
             maxWidth: '600px',
@@ -1033,7 +980,7 @@ export default function TemplateManager({
                   fontSize: '14px',
                   fontWeight: '600'
                 }}
-                onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.hoverBg}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.cardBg}
                 onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 Close
