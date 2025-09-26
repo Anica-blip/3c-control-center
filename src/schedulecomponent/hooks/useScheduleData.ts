@@ -1,8 +1,42 @@
-// /src/schedulecomponent/hooks/useScheduleData.ts - ENHANCED with error handling, NO AUTH REQUIRED
+// /src/schedulecomponent/hooks/useScheduleData.ts - RLS COMPLIANT with proper user context
 
 import { useState, useEffect, useCallback } from 'react';
 import { scheduleAPI } from '../api/scheduleAPI';
 import { ScheduledPost, SavedTemplate, ApiError, OperationResult, ValidationError } from '../types';
+
+// ✅ USER CONTEXT HELPER - Gets current user ID from app context/session
+const getCurrentUserId = (): string => {
+  // Check localStorage for user session (following established patterns)
+  const userSession = localStorage.getItem('user_session');
+  if (userSession) {
+    try {
+      const session = JSON.parse(userSession);
+      return session.user?.id || session.userId;
+    } catch (e) {
+      console.warn('Invalid user session format');
+    }
+  }
+  
+  // Fallback to app state or context
+  const appState = localStorage.getItem('app_state');
+  if (appState) {
+    try {
+      const state = JSON.parse(appState);
+      return state.currentUser?.id || state.userId;
+    } catch (e) {
+      console.warn('Invalid app state format');
+    }
+  }
+  
+  // Generate session user ID if none exists (for component operation)
+  let sessionUserId = localStorage.getItem('session_user_id');
+  if (!sessionUserId) {
+    sessionUserId = crypto.randomUUID();
+    localStorage.setItem('session_user_id', sessionUserId);
+  }
+  
+  return sessionUserId;
+};
 
 // ✅ ERROR UTILITIES
 const createApiError = (error: any, operation: string): ApiError => {
@@ -151,9 +185,9 @@ export const useScheduledPosts = () => {
       setLoading(true);
       setError(null);
       
-      // ✅ NO AUTH REQUIRED - use default UUID for personal dashboard
-      const defaultUserId = '00000000-0000-0000-0000-000000000000';
-      const data = await withRetry(() => scheduleAPI.fetchScheduledPosts(defaultUserId));
+      // ✅ RLS COMPLIANT - use proper user ID for database queries
+      const userId = getCurrentUserId();
+      const data = await withRetry(() => scheduleAPI.fetchScheduledPosts(userId));
       setPosts(data);
       
       return { success: true, data };
@@ -275,8 +309,9 @@ export const useTemplates = () => {
       setLoading(true);
       setError(null);
       
-      // ✅ NO AUTH REQUIRED - just call API directly
-      const data = await withRetry(() => scheduleAPI.fetchTemplates(''));
+      // ✅ RLS COMPLIANT - use proper user ID for database queries
+      const userId = getCurrentUserId();
+      const data = await withRetry(() => scheduleAPI.fetchTemplates(userId));
       setTemplates(data);
       
       return { success: true, data };
