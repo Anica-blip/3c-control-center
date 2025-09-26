@@ -1,4 +1,4 @@
-// /src/schedulecomponent/hooks/useScheduleData.ts - RLS COMPLIANT with proper user context
+// /src/schedulecomponent/hooks/useScheduleData.ts - FIXED TO MATCH COMPONENT LOGIC
 
 import { useState, useEffect, useCallback } from 'react';
 import { scheduleAPI } from '../api/scheduleAPI';
@@ -200,29 +200,54 @@ export const useScheduledPosts = () => {
     }
   }, []);
 
+  // FIXED: createPost now handles scheduling workflow correctly
   const createPost = useCallback(async (
-    postData: Omit<ScheduledPost, 'id' | 'created_date'>
+    postData: Omit<ScheduledPost, 'id' | 'created_date'> | ScheduledPost
   ): Promise<OperationResult<ScheduledPost>> => {
     try {
       setError(null);
       
-      // ✅ VALIDATION
-      const validationErrors = validatePost(postData);
-      if (validationErrors.length > 0) {
-        return { 
-          success: false, 
-          validationErrors,
-          error: createApiError(
-            { message: 'Validation failed' }, 
-            'create post'
-          )
-        };
+      // Check if this is a scheduling operation (has scheduled_date and existing post data)
+      const isSchedulingOperation = 'scheduled_date' in postData && postData.scheduled_date && 'id' in postData;
+      
+      if (isSchedulingOperation) {
+        // This is scheduling an existing post - move from content_posts to dashboard_posts
+        const scheduledPostData = postData as ScheduledPost;
+        const newPost = await withRetry(() => scheduleAPI.createScheduledPost(scheduledPostData));
+        
+        // Update local state - remove from pending, add to scheduled list
+        setPosts(prev => {
+          const filtered = prev.filter(p => p.id !== scheduledPostData.id);
+          return [newPost, ...filtered];
+        });
+        
+        return { success: true, data: newPost };
+      } else {
+        // This is creating a new post from template/copy - add to content_posts
+        const validationErrors = validatePost(postData);
+        if (validationErrors.length > 0) {
+          return { 
+            success: false, 
+            validationErrors,
+            error: createApiError(
+              { message: 'Validation failed' }, 
+              'create post'
+            )
+          };
+        }
+        
+        // For new posts, use rescheduleFromTemplate or create new content_post
+        // This is handled by the template system, so just add to local state
+        const newPostData = {
+          id: crypto.randomUUID(),
+          ...postData,
+          created_date: new Date(),
+          scheduled_date: null // New posts don't have scheduled_date yet
+        } as ScheduledPost;
+        
+        setPosts(prev => [newPostData, ...prev]);
+        return { success: true, data: newPostData };
       }
-      
-      const newPost = await withRetry(() => scheduleAPI.createScheduledPost(postData));
-      setPosts(prev => [newPost, ...prev]);
-      
-      return { success: true, data: newPost };
     } catch (err) {
       const apiError = createApiError(err, 'create post');
       setError(apiError);
@@ -241,17 +266,23 @@ export const useScheduledPosts = () => {
         throw new Error('Post ID is required');
       }
       
-      // ✅ VALIDATION
-      const validationErrors = validatePost(updates);
-      if (validationErrors.length > 0) {
-        return { 
-          success: false, 
-          validationErrors,
-          error: createApiError(
-            { message: 'Validation failed' }, 
-            'update post'
-          )
-        };
+      // ✅ VALIDATION - but skip for partial updates that don't include core fields
+      const hasDescriptionUpdate = 'description' in updates;
+      const hasProfileUpdate = 'character_profile' in updates;
+      const hasPlatformUpdate = 'selected_platforms' in updates;
+      
+      if (hasDescriptionUpdate || hasProfileUpdate || hasPlatformUpdate) {
+        const validationErrors = validatePost(updates);
+        if (validationErrors.length > 0) {
+          return { 
+            success: false, 
+            validationErrors,
+            error: createApiError(
+              { message: 'Validation failed' }, 
+              'update post'
+            )
+          };
+        }
       }
       
       const updatedPost = await withRetry(() => scheduleAPI.updateScheduledPost(id, updates));
