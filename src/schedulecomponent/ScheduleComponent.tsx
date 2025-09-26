@@ -368,10 +368,10 @@ export default function ScheduleComponent() {
     );
   }
 
-  // FIXED: Filter posts by status for each tab - Use 'scheduled' for pending
-  const pendingPosts = scheduledPosts.filter(p => p.status === 'scheduled');
+  // FIXED: Proper filtering - Pending ONLY from content_posts, Calendar ONLY from dashboard_posts
+  const pendingPosts = scheduledPosts.filter(p => p.status === 'scheduled'); // From content_posts
   const scheduledPostsFiltered = scheduledPosts.filter(p => 
-    ['scheduled', 'processing', 'publishing', 'published', 'failed'].includes(p.status)
+    ['processing', 'publishing', 'published', 'failed'].includes(p.status) // REMOVED 'scheduled' - only dashboard_posts
   );
   const publishedPosts = scheduledPosts.filter(p => p.status === 'published');
   const failedPosts = scheduledPosts.filter(p => p.status === 'failed');
@@ -528,13 +528,15 @@ export default function ScheduleComponent() {
     setOperationLoading(operationKey, true);
     
     try {
-      const updatedPost = {
+      // FIXED: Move post from content_posts to dashboard_posts with date/time
+      const scheduledPostData = {
         ...selectedPost,
         scheduled_date: new Date(scheduleData.scheduledDate),
         status: 'scheduled' as const
       };
 
-      const result = await updatePost(selectedPost.id, updatedPost);
+      // Use createPost (which calls createScheduledPost API) to move between tables
+      const result = await createPost(scheduledPostData);
       
       if (result.success) {
         setIsScheduleModalOpen(false);
