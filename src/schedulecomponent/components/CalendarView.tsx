@@ -1,24 +1,10 @@
-// /src/schedulecomponent/components/CalendarView.tsx
+// /src/schedulecomponent/components/CalendarView.tsx - FIXED
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, Clock, Edit, Eye, User } from 'lucide-react';
 import { formatDate, formatTime, addDays, startOfDay, isSameDay, isToday } from '../utils/dateUtils';
 import { getPlatformIcon, formatPlatformList } from '../utils/platformUtils';
 import { getStatusColor, getStatusIcon } from '../utils/statusUtils';
 import { ScheduledPost } from '../types';
-
-// REMOVE this local interface:
-interface ScheduledPost {
-  id: string;
-  content_id: string;
-  title: string;
-  description: string;
-  character_profile: string;
-  selected_platforms: string[];
-  scheduled_date: Date;
-  status: 'pending' | 'scheduled' | 'publishing' | 'published' | 'failed';
-  hashtags: string[];
-  media_files?: any[];
-}
 
 interface CalendarViewProps {
   posts: ScheduledPost[];
@@ -362,7 +348,7 @@ export default function CalendarView({ posts, onEditPost, loading = false, error
                     onMouseOver={(e) => e.currentTarget.style.opacity = '0.8'}
                     onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
                   >
-                    {getStatusIcon(post.status, 10)}
+                    {getStatusIcon(post.status)}
                     <span>{formatTime(post.scheduled_date)}</span>
                     <span style={{ 
                       overflow: 'hidden', 
