@@ -1,4 +1,4 @@
-// /src/schedulecomponent/api/scheduleAPI.ts - FIXED TO FOLLOW CORRECT WORKFLOW
+// /src/schedulecomponent/api/scheduleAPI.ts - FIXED TO QUERY 'scheduled' STATUS
 import { supabase } from '../config';
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
@@ -60,32 +60,32 @@ const mapDashboardPostToScheduledPost = (data: any): ScheduledPost => {
   };
 };
 
-// PENDING POSTS - Read from content_posts table where status = 'pending_schedule'
+// SCHEDULED POSTS - Read from content_posts table where status = 'scheduled'
 export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost[]> => {
   try {
-    // Get pending posts from content_posts table
-    const { data: pendingPosts, error: pendingError } = await supabase
+    // Get scheduled posts from content_posts table - FIXED: Query for 'scheduled' not 'pending_schedule'
+    const { data: scheduledPosts, error: scheduledError } = await supabase
       .from('content_posts')
       .select('*')
-      .eq('status', 'pending_schedule')
-      .or(`user_id.eq.${userId},user_id.is.null`)
-      .order('created_at', { ascending: false });
-    
-    if (pendingError) throw pendingError;
-
-    // Get scheduled posts from dashboard_posts table  
-    const { data: scheduledPosts, error: scheduledError } = await supabase
-      .from('dashboard_posts')
-      .select('*')
+      .eq('status', 'scheduled')
       .or(`user_id.eq.${userId},user_id.is.null`)
       .order('created_at', { ascending: false });
     
     if (scheduledError) throw scheduledError;
 
+    // Get completed posts from dashboard_posts table  
+    const { data: dashboardPosts, error: dashboardError } = await supabase
+      .from('dashboard_posts')
+      .select('*')
+      .or(`user_id.eq.${userId},user_id.is.null`)
+      .order('created_at', { ascending: false });
+    
+    if (dashboardError) throw dashboardError;
+
     // Combine and map both arrays
     const allPosts = [
-      ...(pendingPosts || []).map(post => mapContentPostToScheduledPost(post)),
-      ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post))
+      ...(scheduledPosts || []).map(post => mapContentPostToScheduledPost(post)),
+      ...(dashboardPosts || []).map(post => mapDashboardPostToScheduledPost(post))
     ];
 
     return allPosts;
@@ -95,10 +95,10 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
   }
 };
 
-// SAVE CHANGES TO PENDING POST - Updates content_posts table
+// SAVE CHANGES TO SCHEDULED POST - Updates content_posts table
 export const updateScheduledPost = async (id: string, updates: Partial<ScheduledPost>): Promise<ScheduledPost> => {
   try {
-    // First check if post is in content_posts (pending) or dashboard_posts (scheduled)
+    // First check if post is in content_posts (scheduled) or dashboard_posts (completed)
     const { data: contentPost } = await supabase
       .from('content_posts')
       .select('*')
@@ -106,7 +106,7 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       .single();
 
     if (contentPost) {
-      // Post is pending - update in content_posts table
+      // Post is scheduled - update in content_posts table
       const updateData: any = {};
       
       if (updates.title !== undefined) updateData.title = updates.title;
@@ -133,7 +133,7 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       if (error) throw error;
       return mapContentPostToScheduledPost(data);
     } else {
-      // Post is scheduled - update in dashboard_posts table
+      // Post is completed - update in dashboard_posts table
       const updateData: any = {};
       
       if (updates.scheduled_date !== undefined) updateData.scheduled_date = updates.scheduled_date.toISOString();
@@ -202,10 +202,10 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
 
     if (insertError) throw insertError;
 
-    // Update original post status to 'scheduled' in content_posts
+    // Update original post status to 'published' in content_posts
     await supabase
       .from('content_posts')
-      .update({ status: 'scheduled' })
+      .update({ status: 'published' })
       .eq('id', originalPost.id);
 
     return mapDashboardPostToScheduledPost(newScheduledPost);
@@ -362,7 +362,7 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
       keywords: template.keywords,
       cta: template.cta,
       selected_platforms: template.selected_platforms,
-      status: 'pending_schedule', // Goes to Schedule Pending
+      status: 'scheduled', // FIXED: Use 'scheduled' status
       is_from_template: true,
       source_template_id: templateId,
       user_id: userId,
