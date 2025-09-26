@@ -1,4 +1,4 @@
-// /src/schedulecomponent/types.ts - FIXED with all missing types
+// /src/schedulecomponent/types.ts - ENHANCED with error handling types
 
 export interface MediaFile {
   id: string;
@@ -14,7 +14,6 @@ export interface MediaFile {
   };
 }
 
-// ADDED: Missing SocialPlatform type
 export interface SocialPlatform {
   id: string;
   name: string;
@@ -23,7 +22,6 @@ export interface SocialPlatform {
   isDefault: boolean;
 }
 
-// ADDED: Missing CharacterProfile type  
 export interface CharacterProfile {
   id: string;
   name: string;
@@ -32,7 +30,6 @@ export interface CharacterProfile {
   avatar_id?: string;
 }
 
-// ADDED: Missing ContentPost type (used by EnhancedContentCreationForm)
 export interface ContentPost {
   id: string;
   contentId: string;
@@ -58,7 +55,6 @@ export interface ContentPost {
   created_by?: string;
 }
 
-// ADDED: DashboardPost type (used by utils)
 export interface DashboardPost {
   id: string;
   content_id: string;
@@ -162,4 +158,47 @@ export interface Platform {
   name: string;
   icon: string;
   color: string;
+}
+
+// ✅ NEW ERROR HANDLING TYPES
+export interface ApiError {
+  message: string;
+  code: string;
+  type: 'network' | 'validation' | 'authorization' | 'server' | 'unknown';
+  details?: Record<string, any>;
+  timestamp: Date;
+  retryable: boolean;
+}
+
+export interface OperationState {
+  loading: boolean;
+  error: ApiError | null;
+  success: boolean;
+  message?: string;
+}
+
+export interface ErrorNotification {
+  id: string;
+  type: 'error' | 'warning' | 'success' | 'info';
+  title: string;
+  message: string;
+  timestamp: Date;
+  dismissible: boolean;
+  action?: {
+    label: string;
+    handler: () => void;
+  };
+}
+
+export interface ValidationError {
+  field: string;
+  message: string;
+  code: string;
+}
+
+export interface OperationResult<T = any> {
+  success: boolean;
+  data?: T;
+  error?: ApiError;
+  validationErrors?: ValidationError[];
 }
