@@ -1,13 +1,14 @@
-// /src/schedulecomponent/components/PendingTab.tsx - FIXED
+// /src/schedulecomponent/components/PendingTab.tsx - FIXED to use centralized getTheme()
 import React from 'react';
 import { Clock, Calendar, Edit, Trash2, Play, AlertCircle } from 'lucide-react';
 import { formatDate, getRelativeTime } from '../utils/dateUtils';
 import { getPlatformIcon, formatPlatformList } from '../utils/platformUtils';
 import { getStatusColor, getStatusIcon } from '../utils/statusUtils';
+import { getTheme } from '../utils/styleUtils';
 import { ScheduledPost } from '../types';
 
 interface PendingTabProps {
-  posts: ScheduledPost[];  // Already correct, but ensure ScheduledPost is imported from '../types'
+  posts: ScheduledPost[];
   loading: boolean;
   error?: string | null;
   onSchedule: (post: ScheduledPost) => void;
@@ -23,11 +24,11 @@ export default function PendingTab({
   onEdit, 
   onDelete 
 }: PendingTabProps) {
-  const isDarkMode = localStorage.getItem('darkMode') === 'true';
+  const { isDarkMode, theme } = getTheme();
 
   const containerStyle = {
-    backgroundColor: isDarkMode ? '#1e293b' : 'white',
-    color: isDarkMode ? '#f8fafc' : '#111827',
+    backgroundColor: theme.background,
+    color: theme.text,
     borderRadius: '8px',
     padding: '24px',
     fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
@@ -39,12 +40,12 @@ export default function PendingTab({
     justifyContent: 'space-between',
     marginBottom: '24px',
     paddingBottom: '16px',
-    borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
+    borderBottom: `1px solid ${theme.border}`
   };
 
   const cardStyle = {
-    backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
-    border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+    backgroundColor: theme.cardBg,
+    border: `1px solid ${theme.border}`,
     borderRadius: '8px',
     padding: '20px',
     marginBottom: '16px',
@@ -54,19 +55,19 @@ export default function PendingTab({
   const buttonStyle = (variant: 'primary' | 'secondary' | 'danger') => {
     const styles = {
       primary: {
-        backgroundColor: isDarkMode ? '#3b82f6' : '#2563eb',
+        backgroundColor: theme.primary,
         color: 'white',
         border: 'none'
       },
       secondary: {
         backgroundColor: 'transparent',
-        color: isDarkMode ? '#94a3b8' : '#6b7280',
-        border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
+        color: theme.textSecondary,
+        border: `1px solid ${theme.border}`
       },
       danger: {
         backgroundColor: 'transparent',
-        color: '#ef4444',
-        border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
+        color: theme.danger,
+        border: `1px solid ${theme.border}`
       }
     };
 
@@ -92,13 +93,13 @@ export default function PendingTab({
           <div style={{ 
             width: '32px', 
             height: '32px', 
-            border: `3px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
-            borderTop: `3px solid ${isDarkMode ? '#3b82f6' : '#2563eb'}`,
+            border: `3px solid ${theme.border}`,
+            borderTop: `3px solid ${theme.primary}`,
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 16px'
           }} />
-          <p style={{ color: isDarkMode ? '#94a3b8' : '#6b7280' }}>Loading pending posts...</p>
+          <p style={{ color: theme.textSecondary }}>Loading pending posts...</p>
         </div>
         <style>{`
           @keyframes spin {
@@ -119,20 +120,20 @@ export default function PendingTab({
           padding: '40px'
         }}>
           <AlertCircle size={48} style={{ 
-            color: '#ef4444', 
+            color: theme.danger, 
             margin: '0 auto 16px',
             display: 'block'
           }} />
           <h3 style={{
             fontSize: '18px',
             fontWeight: '600',
-            color: '#ef4444',
+            color: theme.danger,
             margin: '0 0 8px 0'
           }}>
             Error Loading Posts
           </h3>
           <p style={{ 
-            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            color: theme.textSecondary,
             margin: '0 0 16px 0'
           }}>
             {error}
@@ -157,13 +158,13 @@ export default function PendingTab({
             fontSize: '20px',
             fontWeight: '600',
             margin: '0 0 8px 0',
-            color: isDarkMode ? '#60a5fa' : '#2563eb'
+            color: theme.primary
           }}>
             Pending Scheduling
           </h2>
           <p style={{
             fontSize: '14px',
-            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            color: theme.textSecondary,
             margin: '0'
           }}>
             {posts.length} posts awaiting schedule assignment
@@ -174,7 +175,7 @@ export default function PendingTab({
           alignItems: 'center',
           gap: '8px',
           backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
-          color: isDarkMode ? '#60a5fa' : '#1e40af',
+          color: theme.primary,
           padding: '8px 12px',
           borderRadius: '6px',
           fontSize: '14px',
@@ -190,7 +191,7 @@ export default function PendingTab({
         <div style={{
           textAlign: 'center',
           padding: '60px 20px',
-          color: isDarkMode ? '#94a3b8' : '#6b7280'
+          color: theme.textSecondary
         }}>
           <Clock size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
           <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0' }}>
@@ -215,7 +216,7 @@ export default function PendingTab({
                   <h3 style={{
                     fontSize: '16px',
                     fontWeight: '600',
-                    color: isDarkMode ? '#f8fafc' : '#111827',
+                    color: theme.text,
                     margin: '0 0 8px 0',
                     lineHeight: '1.4'
                   }}>
@@ -226,7 +227,7 @@ export default function PendingTab({
                     alignItems: 'center',
                     gap: '12px',
                     fontSize: '12px',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280'
+                    color: theme.textSecondary
                   }}>
                     <span>ID: {post.content_id}</span>
                     <span>Created: {getRelativeTime(post.created_date)}</span>
@@ -252,7 +253,7 @@ export default function PendingTab({
               <div style={{ marginBottom: '16px' }}>
                 <p style={{
                   fontSize: '14px',
-                  color: isDarkMode ? '#e2e8f0' : '#4b5563',
+                  color: theme.text,
                   lineHeight: '1.5',
                   margin: '0 0 12px 0',
                   display: '-webkit-box',
@@ -274,7 +275,7 @@ export default function PendingTab({
                     {post.hashtags.slice(0, 5).map((tag, index) => (
                       <span key={index} style={{
                         fontSize: '12px',
-                        color: isDarkMode ? '#60a5fa' : '#2563eb',
+                        color: theme.primary,
                         backgroundColor: isDarkMode ? '#1e3a8a20' : '#dbeafe',
                         padding: '2px 6px',
                         borderRadius: '4px'
@@ -285,7 +286,7 @@ export default function PendingTab({
                     {post.hashtags.length > 5 && (
                       <span style={{
                         fontSize: '12px',
-                        color: isDarkMode ? '#94a3b8' : '#6b7280'
+                        color: theme.textSecondary
                       }}>
                         +{post.hashtags.length - 5} more
                       </span>
@@ -299,7 +300,7 @@ export default function PendingTab({
                   alignItems: 'center',
                   gap: '8px',
                   fontSize: '12px',
-                  color: isDarkMode ? '#94a3b8' : '#6b7280'
+                  color: theme.textSecondary
                 }}>
                   <span>Platforms:</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -308,7 +309,7 @@ export default function PendingTab({
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
-                        backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
+                        backgroundColor: theme.cardBg,
                         padding: '4px 8px',
                         borderRadius: '4px'
                       }}>
@@ -328,16 +329,16 @@ export default function PendingTab({
                 <div style={{
                   marginBottom: '16px',
                   padding: '12px',
-                  backgroundColor: isDarkMode ? '#1e293b' : '#f8fafc',
+                  backgroundColor: theme.cardBg,
                   borderRadius: '6px',
-                  border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+                  border: `1px solid ${theme.border}`
                 }}>
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
                     fontSize: '12px',
-                    color: isDarkMode ? '#94a3b8' : '#6b7280'
+                    color: theme.textSecondary
                   }}>
                     <Calendar size={14} />
                     <span>{post.media_files.length} media file{post.media_files.length !== 1 ? 's' : ''} attached</span>
@@ -351,11 +352,11 @@ export default function PendingTab({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 paddingTop: '16px',
-                borderTop: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+                borderTop: `1px solid ${theme.border}`
               }}>
                 <div style={{
                   fontSize: '12px',
-                  color: isDarkMode ? '#94a3b8' : '#6b7280'
+                  color: theme.textSecondary
                 }}>
                   Character: {post.character_profile || 'Not set'}
                 </div>
@@ -365,7 +366,7 @@ export default function PendingTab({
                     onClick={() => onEdit(post)}
                     style={buttonStyle('secondary')}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#f3f4f6';
+                      e.currentTarget.style.backgroundColor = theme.cardBg;
                     }}
                     onMouseOut={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
@@ -380,11 +381,11 @@ export default function PendingTab({
                     style={buttonStyle('danger')}
                     onMouseOver={(e) => {
                       e.currentTarget.style.backgroundColor = '#fef2f2';
-                      e.currentTarget.style.borderColor = '#ef4444';
+                      e.currentTarget.style.borderColor = theme.danger;
                     }}
                     onMouseOut={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.borderColor = isDarkMode ? '#475569' : '#d1d5db';
+                      e.currentTarget.style.borderColor = theme.border;
                     }}
                   >
                     <Trash2 size={14} />
@@ -395,10 +396,10 @@ export default function PendingTab({
                     onClick={() => onSchedule(post)}
                     style={buttonStyle('primary')}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? '#2563eb' : '#1d4ed8';
+                      e.currentTarget.style.backgroundColor = theme.primaryHover;
                     }}
                     onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? '#3b82f6' : '#2563eb';
+                      e.currentTarget.style.backgroundColor = theme.primary;
                     }}
                   >
                     <Play size={14} />
