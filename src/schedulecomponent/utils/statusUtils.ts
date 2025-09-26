@@ -1,4 +1,4 @@
-// /src/schedulecomponent/utils/statusUtils.ts - FIXED React element creation
+// /src/schedulecomponent/utils/statusUtils.ts - FIXED with missing functions
 import React from 'react';
 import { ScheduledPost } from '../types';
 
@@ -145,7 +145,7 @@ export const STATUS_CONFIG: Record<PostStatus, StatusInfo> = {
   }
 };
 
-// FIXED: Proper null checking and string return instead of React element
+// FIXED: Return string instead of React element for simple usage
 export const getStatusIcon = (
   status: PostStatus, 
   size: number = 16
@@ -210,4 +210,77 @@ export const isValidStatusTransition = (
 export const getStatusPriority = (status: PostStatus): number => {
   const statusInfo = STATUS_CONFIG[status];
   return statusInfo?.priority || 999;
+};
+
+// ADDED: Missing functions that other components import
+export const getStatusCounts = (posts: ScheduledPost[]) => {
+  const counts = {
+    all: posts.length,
+    draft: 0,
+    pending: 0,
+    pending_schedule: 0,
+    scheduled: 0,
+    processing: 0,
+    publishing: 0,
+    published: 0,
+    failed: 0,
+    cancelled: 0,
+    complete: 0
+  };
+
+  posts.forEach(post => {
+    if (counts.hasOwnProperty(post.status)) {
+      counts[post.status as keyof typeof counts]++;
+    }
+  });
+
+  return counts;
+};
+
+export const filterPostsByStatus = (posts: ScheduledPost[], status: PostStatus): ScheduledPost[] => {
+  return posts.filter(post => post.status === status);
+};
+
+export const sortByStatusPriority = (posts: ScheduledPost[]): ScheduledPost[] => {
+  return [...posts].sort((a, b) => {
+    const priorityA = getStatusPriority(a.status);
+    const priorityB = getStatusPriority(b.status);
+    
+    // Sort by priority first (lower numbers = higher priority)
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+    
+    // If same priority, sort by date (newer first)
+    const dateA = new Date(a.scheduled_date || a.created_at || 0);
+    const dateB = new Date(b.scheduled_date || b.created_at || 0);
+    return dateB.getTime() - dateA.getTime();
+  });
+};
+
+export const getSuggestedActions = (status: PostStatus): string[] => {
+  switch (status) {
+    case 'draft':
+      return ['Edit Content', 'Schedule', 'Delete'];
+    case 'pending':
+      return ['Review', 'Schedule', 'Edit', 'Approve'];
+    case 'pending_schedule':
+      return ['Schedule Now', 'Edit', 'Cancel'];
+    case 'scheduled':
+      return ['Reschedule', 'Cancel', 'Edit'];
+    case 'processing':
+      return ['Monitor', 'View Logs'];
+    case 'publishing':
+      return ['Monitor', 'View Status'];
+    case 'published':
+      return ['View Analytics', 'Save as Template', 'Copy'];
+    case 'failed':
+      return ['Retry', 'Edit & Retry', 'View Error', 'Cancel'];
+    case 'cancelled':
+      return ['Reschedule', 'Edit', 'Delete'];
+    case 'complete':
+      return ['Archive', 'View Analytics', 'Save as Template'];
+    default:
+      return ['Edit', 'Delete'];
+  }
 };
