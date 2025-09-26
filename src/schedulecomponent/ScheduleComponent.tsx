@@ -1,4 +1,4 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - FIXED VERSION with proper loading guards
+// /src/schedulecomponent/ScheduleComponent.tsx - HOOKS ORDER FIXED
 import React, { useState, useEffect } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
@@ -8,7 +8,7 @@ import { Calendar, Clock, Edit3, Trash2, RefreshCw, Eye, AlertCircle, CheckCircl
 import { ScheduledPost, SavedTemplate } from './types';
 
 export default function ScheduleComponent() {
-  // Use hooks for data management
+  // ✅ ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY RETURNS
   const {
     posts: scheduledPosts,
     loading: postsLoading,
@@ -29,7 +29,24 @@ export default function ScheduleComponent() {
     incrementUsage
   } = useTemplates();
 
-  // CRITICAL FIX: Early returns for loading/error states BEFORE any rendering
+  // ✅ ALL STATE HOOKS CALLED UNCONDITIONALLY
+  const [activeTab, setActiveTab] = useState('pending');
+  const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month'>('month');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSaveTemplateModalOpen, setIsSaveTemplateModalOpen] = useState(false);
+  const [isEditTemplateModalOpen, setIsEditTemplateModalOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
+  const [editingPost, setEditingPost] = useState<ScheduledPost | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<SavedTemplate | null>(null);
+  const [templateName, setTemplateName] = useState('');
+
+  // ✅ ALL OTHER HOOKS
+  const { isDarkMode, theme } = getTheme();
+
+  // ✅ NOW CONDITIONAL RETURNS ARE SAFE - ALL HOOKS CALLED
   if (postsLoading || templatesLoading) {
     return (
       <div style={{
@@ -124,23 +141,6 @@ export default function ScheduleComponent() {
       </div>
     );
   }
-
-  // UI state
-  const [activeTab, setActiveTab] = useState('pending');
-  const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month'>('month');
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isSaveTemplateModalOpen, setIsSaveTemplateModalOpen] = useState(false);
-  const [isEditTemplateModalOpen, setIsEditTemplateModalOpen] = useState(false);
-  const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
-  const [editingPost, setEditingPost] = useState<ScheduledPost | null>(null);
-  const [editingTemplate, setEditingTemplate] = useState<SavedTemplate | null>(null);
-  const [templateName, setTemplateName] = useState('');
-
-  // Get theme
-  const { isDarkMode, theme } = getTheme();
 
   // Filter posts by status for each tab
   const pendingPosts = scheduledPosts.filter(p => p.status === 'pending_schedule');
