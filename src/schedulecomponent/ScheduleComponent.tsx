@@ -400,8 +400,52 @@ export default function ScheduleComponent() {
   };
 
   const getPlatformIcon = (platformId: string) => {
-    const platform = platforms.find(p => p.id === platformId);
-    return platform || { icon: 'UN', color: theme.textSecondary };
+    // FIXED: Handle various platform ID formats and names
+    const normalizedId = platformId?.toString().toLowerCase();
+    
+    // Check exact ID match first
+    let platform = platforms.find(p => p.id === platformId);
+    
+    // If no exact match, try name matching
+    if (!platform) {
+      platform = platforms.find(p => 
+        p.name.toLowerCase() === normalizedId ||
+        p.icon.toLowerCase() === normalizedId ||
+        normalizedId.includes(p.name.toLowerCase()) ||
+        normalizedId.includes(p.icon.toLowerCase())
+      );
+    }
+    
+    // Enhanced platform mapping for common variations
+    if (!platform) {
+      switch (normalizedId) {
+        case 'telegram':
+        case 'tg':
+          platform = { id: '1', name: 'Telegram', icon: 'TG', color: '#3b82f6' };
+          break;
+        case 'youtube':
+        case 'yt':
+          platform = { id: '2', name: 'YouTube', icon: 'YT', color: '#ef4444' };
+          break;
+        case 'facebook':
+        case 'fb':
+          platform = { id: '3', name: 'Facebook', icon: 'FB', color: '#2563eb' };
+          break;
+        case 'twitter':
+        case 'tw':
+        case 'x':
+          platform = { id: '4', name: 'Twitter', icon: 'TW', color: '#0ea5e9' };
+          break;
+        case 'forum':
+        case 'fr':
+          platform = { id: '5', name: 'Forum', icon: 'FR', color: '#4b5563' };
+          break;
+        default:
+          platform = { id: platformId, name: platformId, icon: platformId.substring(0, 2).toUpperCase(), color: theme.textSecondary };
+      }
+    }
+    
+    return platform;
   };
 
   const getStatusColor = (status: string) => {
