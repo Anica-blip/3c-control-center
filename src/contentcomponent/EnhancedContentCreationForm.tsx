@@ -713,7 +713,7 @@ const EnhancedContentCreationForm = ({
       ...content,
       mediaFiles,
       selectedPlatforms,
-      status: 'scheduled' as const,
+      status: 'pending_schedule' as const,
       isFromTemplate: isEditingTemplate, // CHANGED: Use template status
       sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
     };
