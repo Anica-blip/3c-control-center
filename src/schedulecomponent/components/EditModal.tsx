@@ -1,4 +1,4 @@
-// /src/schedulecomponent/components/EditModal.tsx - FIXED to use centralized getTheme()
+// /src/schedulecomponent/components/EditModal.tsx - FIXED to display all post data
 import React, { useState, useEffect } from 'react';
 import { Edit3, X, Save, Calendar, Clock, User, Hash, FileText, ExternalLink, Image, Video, Trash2, Plus } from 'lucide-react';
 import { formatDate, formatTime, isValidDate } from '../utils/dateUtils';
@@ -11,7 +11,7 @@ interface EditablePost {
   content_id: string;
   title: string;
   description: string;
-  character_profile: string;
+  character_profile: string | string[]; // FIXED: Handle both string and array
   theme: string;
   audience: string;
   media_type: string;
@@ -51,28 +51,47 @@ export default function EditModal({
 
   const { isDarkMode, theme } = getTheme();
 
-  // Initialize form data when post changes
+  // FIXED: Enhanced form data initialization
   useEffect(() => {
     if (post) {
       setFormData({
-        title: post.title,
-        description: post.description,
-        hashtags: [...post.hashtags],
-        keywords: post.keywords,
-        cta: post.cta,
-        media_files: [...post.media_files],
-        selected_platforms: [...post.selected_platforms],
-        character_profile: post.character_profile,
-        theme: post.theme,
-        audience: post.audience,
-        media_type: post.media_type,
-        template_type: post.template_type,
-        platform: post.platform
+        title: post.title || '',
+        description: post.description || '',
+        hashtags: Array.isArray(post.hashtags) ? [...post.hashtags] : [],
+        keywords: post.keywords || '',
+        cta: post.cta || '',
+        media_files: Array.isArray(post.media_files) ? [...post.media_files] : [],
+        selected_platforms: Array.isArray(post.selected_platforms) ? [...post.selected_platforms] : [],
+        character_profile: post.character_profile || '',
+        theme: post.theme || '',
+        audience: post.audience || '',
+        media_type: post.media_type || '',
+        template_type: post.template_type || '',
+        platform: post.platform || ''
       });
     }
   }, [post]);
 
   if (!post) return null;
+
+  // FIXED: Helper to get character profile display value
+  const getCharacterProfileDisplay = () => {
+    if (Array.isArray(post.character_profile)) {
+      return post.character_profile[0] || ''; // Take first element
+    }
+    return post.character_profile || '';
+  };
+
+  // FIXED: Helper to check if character profile has image
+  const getCharacterProfileImage = () => {
+    if (Array.isArray(post.character_profile)) {
+      // Look for image URLs in the array
+      return post.character_profile.find(item => 
+        typeof item === 'string' && (item.includes('http') || item.includes('supabase'))
+      );
+    }
+    return null;
+  };
 
   const modalOverlayStyle = {
     position: 'fixed' as const,
@@ -92,7 +111,7 @@ export default function EditModal({
     backgroundColor: theme.background,
     borderRadius: '12px',
     padding: '24px',
-    maxWidth: '800px',
+    maxWidth: '900px', // Increased width
     width: '100%',
     maxHeight: '90vh',
     overflow: 'auto',
@@ -233,6 +252,8 @@ export default function EditModal({
     }
   };
 
+  const characterProfileImage = getCharacterProfileImage();
+
   return (
     <div style={modalOverlayStyle} onClick={onCancel}>
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
@@ -271,6 +292,28 @@ export default function EditModal({
           </button>
         </div>
 
+        {/* FIXED: Character Profile Header Image */}
+        {characterProfileImage && (
+          <div style={{
+            marginBottom: '24px',
+            textAlign: 'center'
+          }}>
+            <img 
+              src={characterProfileImage}
+              alt="Character Profile Header"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '200px',
+                borderRadius: '8px',
+                border: `1px solid ${theme.border}`
+              }}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          </div>
+        )}
+
         {/* Post Info */}
         <div style={{
           backgroundColor: theme.cardBg,
@@ -284,10 +327,16 @@ export default function EditModal({
             alignItems: 'center',
             gap: '12px',
             fontSize: '12px',
-            color: theme.textSecondary
+            color: theme.textSecondary,
+            flexWrap: 'wrap'
           }}>
             <span>ID: {post.content_id}</span>
             <span>Status: {post.status}</span>
+            <span>Profile: {getCharacterProfileDisplay()}</span>
+            {post.theme && <span>Theme: {post.theme}</span>}
+            {post.audience && <span>Audience: {post.audience}</span>}
+            {post.media_type && <span>Media Type: {post.media_type}</span>}
+            {post.template_type && <span>Template: {post.template_type}</span>}
             {post.scheduled_date && (
               <span>Scheduled: {formatDate(post.scheduled_date)} {formatTime(post.scheduled_date)}</span>
             )}
@@ -337,6 +386,153 @@ export default function EditModal({
                 minHeight: '120px'
               }}
             />
+          </div>
+
+          {/* FIXED: Media Files Section - Display existing files */}
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: theme.text,
+              marginBottom: '8px'
+            }}>
+              Media Files
+            </label>
+            <div style={{
+              backgroundColor: theme.cardBg,
+              border: `1px solid ${theme.border}`,
+              borderRadius: '8px',
+              padding: '16px'
+            }}>
+              {/* Existing Media Files */}
+              {formData.media_files && formData.media_files.length > 0 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    color: theme.textSecondary,
+                    marginBottom: '8px'
+                  }}>
+                    Attached Files ({formData.media_files.length})
+                  </div>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    {formData.media_files.map((file) => (
+                      <div key={file.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px',
+                        backgroundColor: theme.background,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: '6px'
+                      }}>
+                        {getFileIcon(file.type)}
+                        <div style={{ flex: 1 }}>
+                          <div style={{
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: theme.text,
+                            marginBottom: '2px'
+                          }}>
+                            {file.name}
+                          </div>
+                          <div style={{
+                            fontSize: '12px',
+                            color: theme.textSecondary
+                          }}>
+                            {file.type} • {file.size ? `${Math.round(file.size / 1024)} KB` : 'Link'}
+                          </div>
+                          {file.url && (
+                            <a 
+                              href={file.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{
+                                fontSize: '12px',
+                                color: theme.primary,
+                                textDecoration: 'none'
+                              }}
+                            >
+                              View File →
+                            </a>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleRemoveFile(file.id)}
+                          style={{
+                            padding: '4px',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            color: theme.danger,
+                            cursor: 'pointer',
+                            borderRadius: '4px'
+                          }}
+                          title="Remove file"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Add URL Section */}
+              <div style={{
+                padding: '12px',
+                backgroundColor: theme.background,
+                borderRadius: '6px',
+                border: `1px dashed ${theme.border}`
+              }}>
+                <div style={{
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: theme.textSecondary,
+                  marginBottom: '8px'
+                }}>
+                  Add URL Link
+                </div>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto',
+                  gap: '8px'
+                }}>
+                  <input
+                    type="text"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    placeholder="https://example.com"
+                    style={{
+                      padding: '8px 12px',
+                      border: `1px solid ${theme.border}`,
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      backgroundColor: theme.cardBg,
+                      color: theme.text,
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                  <button
+                    onClick={handleAddUrl}
+                    disabled={!urlInput.trim()}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: urlInput.trim() ? theme.primary : theme.border,
+                      color: urlInput.trim() ? 'white' : theme.textSecondary,
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: urlInput.trim() ? 'pointer' : 'not-allowed',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    Add URL
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Hashtags */}
@@ -486,29 +682,112 @@ export default function EditModal({
             </div>
           </div>
 
-          {/* Character Profile */}
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '600',
-              color: theme.text,
-              marginBottom: '8px'
-            }}>
-              Character Profile
-            </label>
-            <select
-              value={formData.character_profile || ''}
-              onChange={(e) => handleFieldChange('character_profile', e.target.value)}
-              style={inputStyle}
-            >
-              <option value="">Select character...</option>
-              {characterProfiles.map(profile => (
-                <option key={profile.id} value={profile.id}>
-                  {profile.name} ({profile.username}) - {profile.role}
-                </option>
-              ))}
-            </select>
+          {/* FIXED: Additional Fields - Theme, Audience, etc. */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 1fr',
+            gap: '16px'
+          }}>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: theme.text,
+                marginBottom: '8px'
+              }}>
+                Theme
+              </label>
+              <input
+                type="text"
+                value={formData.theme || ''}
+                onChange={(e) => handleFieldChange('theme', e.target.value)}
+                placeholder="Content theme..."
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: theme.text,
+                marginBottom: '8px'
+              }}>
+                Audience
+              </label>
+              <input
+                type="text"
+                value={formData.audience || ''}
+                onChange={(e) => handleFieldChange('audience', e.target.value)}
+                placeholder="Target audience..."
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: theme.text,
+                marginBottom: '8px'
+              }}>
+                Media Type
+              </label>
+              <input
+                type="text"
+                value={formData.media_type || ''}
+                onChange={(e) => handleFieldChange('media_type', e.target.value)}
+                placeholder="Media type..."
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '16px'
+          }}>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: theme.text,
+                marginBottom: '8px'
+              }}>
+                Template Type
+              </label>
+              <input
+                type="text"
+                value={formData.template_type || ''}
+                onChange={(e) => handleFieldChange('template_type', e.target.value)}
+                placeholder="Template type..."
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: theme.text,
+                marginBottom: '8px'
+              }}>
+                Primary Platform
+              </label>
+              <input
+                type="text"
+                value={formData.platform || ''}
+                onChange={(e) => handleFieldChange('platform', e.target.value)}
+                placeholder="Primary platform..."
+                style={inputStyle}
+              />
+            </div>
           </div>
 
           {/* Platform Selection */}
@@ -527,7 +806,14 @@ export default function EditModal({
               gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
               gap: '12px'
             }}>
-              {availablePlatforms.filter(p => p.isActive).map((platform) => (
+              {/* Default platforms if none provided */}
+              {(availablePlatforms.length > 0 ? availablePlatforms : [
+                { id: 'telegram', name: 'Telegram', isActive: true },
+                { id: 'youtube', name: 'YouTube', isActive: true },
+                { id: 'facebook', name: 'Facebook', isActive: true },
+                { id: 'twitter', name: 'Twitter', isActive: true },
+                { id: 'forum', name: 'Forum', isActive: true }
+              ]).filter(p => p.isActive).map((platform) => (
                 <label
                   key={platform.id}
                   style={{
