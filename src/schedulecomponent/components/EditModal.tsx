@@ -1,4 +1,4 @@
-// /src/schedulecomponent/components/EditModal.tsx - FIXED to display all post data
+// /src/schedulecomponent/components/EditModal.tsx - CORRECTED: Character Profile Header & Platform Connections
 import React, { useState, useEffect } from 'react';
 import { Edit3, X, Save, Calendar, Clock, User, Hash, FileText, ExternalLink, Image, Video, Trash2, Plus, MessageCircle, Users } from 'lucide-react';
 import { formatDate, formatTime, isValidDate } from '../utils/dateUtils';
@@ -12,7 +12,7 @@ interface EditablePost {
   content_id: string;
   title: string;
   description: string;
-  character_profile: string | string[]; // FIXED: Handle both string and array
+  character_profile: string | string[];
   theme: string;
   audience: string;
   media_type: string;
@@ -26,6 +26,8 @@ interface EditablePost {
   selected_platforms: string[];
   scheduled_date?: Date;
   status: string;
+  social_platforms?: string[];
+  telegram_configurations?: string[];
 }
 
 interface EditModalProps {
@@ -50,7 +52,7 @@ export default function EditModal({
   const [urlInput, setUrlInput] = useState('');
   const [urlTitle, setUrlTitle] = useState('');
   
-  // ADDED: Platform configuration state
+  // Platform configuration state
   const [socialPlatforms, setSocialPlatforms] = useState<any[]>([]);
   const [telegramConfigs, setTelegramConfigs] = useState<any[]>([]);
   const [selectedSocialPlatforms, setSelectedSocialPlatforms] = useState<string[]>([]);
@@ -59,44 +61,88 @@ export default function EditModal({
 
   const { isDarkMode, theme } = getTheme();
 
-  // ADDED: Fetch platform configurations
+  // FIXED: Simplified character profile image extraction
+  const getCharacterProfileImage = () => {
+    if (!post?.character_profile) return null;
+
+    // If it's an array, look for image URLs
+    if (Array.isArray(post.character_profile)) {
+      for (const item of post.character_profile) {
+        if (typeof item === 'string' && isImageUrl(item)) {
+          return item;
+        }
+      }
+    }
+    
+    // If it's a string, check if it's an image URL
+    if (typeof post.character_profile === 'string' && isImageUrl(post.character_profile)) {
+      return post.character_profile;
+    }
+    
+    return null;
+  };
+
+  // FIXED: Helper function to detect image URLs
+  const isImageUrl = (url: string): boolean => {
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+    const lowerUrl = url.toLowerCase();
+    
+    // Check for common image hosting patterns or file extensions
+    return (
+      lowerUrl.includes('http') && (
+        imageExtensions.some(ext => lowerUrl.includes(ext)) ||
+        lowerUrl.includes('supabase') ||
+        lowerUrl.includes('cloudinary') ||
+        lowerUrl.includes('imgur') ||
+        lowerUrl.includes('amazonaws')
+      )
+    );
+  };
+
+  // CORRECTED: Fetch platform configurations with proper error handling
   const fetchPlatformConfigurations = async () => {
     try {
       setPlatformsLoading(true);
       
-      // Fetch social platforms
+      // Fetch social platforms with name + url
       const { data: socialData, error: socialError } = await supabase
         .from('social_platforms')
-        .select('*')
+        .select('id, name, url, is_active')
         .eq('is_active', true)
-        .order('platform_name', { ascending: true });
+        .order('name', { ascending: true });
       
       if (socialError) {
         console.error('Error fetching social platforms:', socialError);
+        setSocialPlatforms([]);
       } else {
+        console.log('Fetched social platforms:', socialData);
         setSocialPlatforms(socialData || []);
       }
 
-      // Fetch telegram configurations
+      // Fetch telegram configurations with name + channel_group_id + thread_id
       const { data: telegramData, error: telegramError } = await supabase
         .from('telegram_configurations')
-        .select('*')
+        .select('id, name, channel_group_id, thread_id, is_active')
         .eq('is_active', true)
-        .order('channel_name', { ascending: true });
+        .order('name', { ascending: true });
       
       if (telegramError) {
         console.error('Error fetching telegram configs:', telegramError);
+        setTelegramConfigs([]);
       } else {
+        console.log('Fetched telegram configs:', telegramData);
         setTelegramConfigs(telegramData || []);
       }
     } catch (error) {
       console.error('Error fetching platform configurations:', error);
+      setSocialPlatforms([]);
+      setTelegramConfigs([]);
     } finally {
       setPlatformsLoading(false);
     }
   };
 
-  // FIXED: Enhanced form data initialization
+  // FIXED: Initialize form data and platform selections
   useEffect(() => {
     if (post) {
       setFormData({
@@ -115,9 +161,14 @@ export default function EditModal({
         platform: post.platform || ''
       });
       
-      // Initialize platform selections if they exist in the post data
-      setSelectedSocialPlatforms(post.social_platforms || []);
-      setSelectedTelegramConfigs(post.telegram_configurations || []);
+      // CORRECTED: Initialize platform selections from post data
+      const postData = post as any; // Type assertion for additional fields
+      setSelectedSocialPlatforms(
+        Array.isArray(postData.social_platforms) ? postData.social_platforms : []
+      );
+      setSelectedTelegramConfigs(
+        Array.isArray(postData.telegram_configurations) ? postData.telegram_configurations : []
+      );
     }
   }, [post]);
 
@@ -130,23 +181,12 @@ export default function EditModal({
 
   if (!post) return null;
 
-  // FIXED: Helper to get character profile display value
+  // Helper to get character profile display value
   const getCharacterProfileDisplay = () => {
     if (Array.isArray(post.character_profile)) {
-      return post.character_profile[0] || ''; // Take first element
+      return post.character_profile[0] || '';
     }
     return post.character_profile || '';
-  };
-
-  // FIXED: Helper to check if character profile has image
-  const getCharacterProfileImage = () => {
-    if (Array.isArray(post.character_profile)) {
-      // Look for image URLs in the array
-      return post.character_profile.find(item => 
-        typeof item === 'string' && (item.includes('http') || item.includes('supabase'))
-      );
-    }
-    return null;
   };
 
   const modalOverlayStyle = {
@@ -167,7 +207,7 @@ export default function EditModal({
     backgroundColor: theme.background,
     borderRadius: '12px',
     padding: '24px',
-    maxWidth: '900px', // Increased width
+    maxWidth: '900px',
     width: '100%',
     maxHeight: '90vh',
     overflow: 'auto',
@@ -267,16 +307,6 @@ export default function EditModal({
     handleFieldChange('media_files', formData.media_files?.filter(f => f.id !== fileId) || []);
   };
 
-  // Handle platform toggle
-  const handlePlatformToggle = (platformId: string) => {
-    const currentPlatforms = formData.selected_platforms || [];
-    const updatedPlatforms = currentPlatforms.includes(platformId)
-      ? currentPlatforms.filter(id => id !== platformId)
-      : [...currentPlatforms, platformId];
-    
-    handleFieldChange('selected_platforms', updatedPlatforms);
-  };
-
   // Handle form submission
   const handleSubmit = async () => {
     try {
@@ -355,12 +385,24 @@ export default function EditModal({
           </button>
         </div>
 
-        {/* FIXED: Character Profile Header Image */}
+        {/* CORRECTED: Character Profile Header Image with better error handling */}
         {characterProfileImage && (
           <div style={{
             marginBottom: '24px',
-            textAlign: 'center'
+            textAlign: 'center',
+            padding: '16px',
+            backgroundColor: theme.cardBg,
+            border: `1px solid ${theme.border}`,
+            borderRadius: '8px'
           }}>
+            <div style={{
+              fontSize: '12px',
+              fontWeight: '600',
+              color: theme.textSecondary,
+              marginBottom: '8px'
+            }}>
+              Character Profile Header
+            </div>
             <img 
               src={characterProfileImage}
               alt="Character Profile Header"
@@ -368,10 +410,15 @@ export default function EditModal({
                 maxWidth: '100%',
                 maxHeight: '200px',
                 borderRadius: '8px',
-                border: `1px solid ${theme.border}`
+                border: `1px solid ${theme.border}`,
+                objectFit: 'contain'
               }}
               onError={(e) => {
+                console.error('Failed to load character profile image:', characterProfileImage);
                 e.currentTarget.style.display = 'none';
+              }}
+              onLoad={() => {
+                console.log('Successfully loaded character profile image:', characterProfileImage);
               }}
             />
           </div>
@@ -451,7 +498,7 @@ export default function EditModal({
             />
           </div>
 
-          {/* FIXED: Media Files Section - Display existing files */}
+          {/* Media Files Section */}
           <div>
             <label style={{
               display: 'block',
@@ -745,7 +792,7 @@ export default function EditModal({
             </div>
           </div>
 
-          {/* FIXED: Additional Fields - Theme, Audience, etc. */}
+          {/* Additional Fields */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr 1fr',
@@ -853,74 +900,7 @@ export default function EditModal({
             </div>
           </div>
 
-          {/* Platform Selection */}
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '600',
-              color: theme.text,
-              marginBottom: '12px'
-            }}>
-              Publishing Platforms (General)
-            </label>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: '12px'
-            }}>
-              {/* Default platforms if none provided */}
-              {(availablePlatforms.length > 0 ? availablePlatforms : [
-                { id: 'telegram', name: 'Telegram', isActive: true },
-                { id: 'youtube', name: 'YouTube', isActive: true },
-                { id: 'facebook', name: 'Facebook', isActive: true },
-                { id: 'twitter', name: 'Twitter', isActive: true },
-                { id: 'forum', name: 'Forum', isActive: true }
-              ]).filter(p => p.isActive).map((platform) => (
-                <label
-                  key={platform.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '12px',
-                    border: formData.selected_platforms?.includes(platform.id)
-                      ? `1px solid ${theme.primary}`
-                      : `1px solid ${theme.border}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    backgroundColor: formData.selected_platforms?.includes(platform.id)
-                      ? (isDarkMode ? '#1e3a8a30' : '#dbeafe')
-                      : theme.cardBg,
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.selected_platforms?.includes(platform.id) || false}
-                    onChange={() => handlePlatformToggle(platform.id)}
-                    style={{
-                      height: '16px',
-                      width: '16px',
-                      accentColor: theme.primary
-                    }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: theme.text,
-                      marginBottom: '2px'
-                    }}>
-                      {platform.name}
-                    </div>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* ADDED: Social Platforms Configuration */}
+          {/* CORRECTED: Social Platforms with proper name + url display */}
           <div>
             <label style={{
               display: 'block',
@@ -933,7 +913,7 @@ export default function EditModal({
               gap: '8px'
             }}>
               <Users size={16} />
-              Social Platform Configurations
+              Social Platforms
               {platformsLoading && (
                 <div style={{
                   width: '12px',
@@ -1009,24 +989,27 @@ export default function EditModal({
                           color: theme.text,
                           marginBottom: '2px'
                         }}>
-                          {platform.platform_name}
+                          {platform.name}
                         </div>
                         <div style={{
                           fontSize: '12px',
                           color: theme.textSecondary
                         }}>
-                          {platform.description || platform.username || 'Social Platform'}
+                          {platform.url ? (
+                            <a 
+                              href={platform.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{
+                                color: theme.primary,
+                                textDecoration: 'none'
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {platform.url} →
+                            </a>
+                          ) : 'No URL configured'}
                         </div>
-                      </div>
-                      <div style={{
-                        fontSize: '10px',
-                        padding: '2px 6px',
-                        backgroundColor: platform.is_active ? theme.successBg : theme.dangerBg,
-                        color: platform.is_active ? theme.success : theme.danger,
-                        borderRadius: '4px',
-                        fontWeight: '600'
-                      }}>
-                        {platform.is_active ? 'Active' : 'Inactive'}
                       </div>
                     </label>
                   ))}
@@ -1035,7 +1018,7 @@ export default function EditModal({
             </div>
           </div>
 
-          {/* ADDED: Telegram Configurations */}
+          {/* CORRECTED: Telegram Configurations with proper name + channel_group_id + thread_id display */}
           <div>
             <label style={{
               display: 'block',
@@ -1124,24 +1107,15 @@ export default function EditModal({
                           color: theme.text,
                           marginBottom: '2px'
                         }}>
-                          {config.channel_name}
+                          {config.name}
                         </div>
                         <div style={{
                           fontSize: '12px',
                           color: theme.textSecondary
                         }}>
-                          {config.channel_type} • ID: {config.channel_id || 'N/A'}
+                          Channel: {config.channel_group_id || 'N/A'}
+                          {config.thread_id && ` • Thread: ${config.thread_id}`}
                         </div>
-                      </div>
-                      <div style={{
-                        fontSize: '10px',
-                        padding: '2px 6px',
-                        backgroundColor: config.is_active ? theme.successBg : theme.dangerBg,
-                        color: config.is_active ? theme.success : theme.danger,
-                        borderRadius: '4px',
-                        fontWeight: '600'
-                      }}>
-                        {config.is_active ? 'Active' : 'Inactive'}
                       </div>
                     </label>
                   ))}
