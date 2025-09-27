@@ -685,7 +685,9 @@ export default function EditModal({
                         lineHeight: '1.2',
                         marginBottom: '2px'
                       }}>
-                        @{characterProfileData.username}
+                        {characterProfileData.username.startsWith('@') 
+                          ? characterProfileData.username 
+                          : `@${characterProfileData.username}`}
                       </div>
                     )}
                     
