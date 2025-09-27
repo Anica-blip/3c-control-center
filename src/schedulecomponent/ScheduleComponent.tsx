@@ -616,14 +616,19 @@ export default function ScheduleComponent() {
     setIsEditModalOpen(true);
   };
 
-  // 🔥 FIXED: handleSaveEdit - simplified to work with existing updatePost
+  // FIXED: handleSaveEdit - keeps post in pending schedule 
   const handleSaveEdit = async (postId: string, updates: Partial<ScheduledPost>) => {
     const operationKey = `edit-${postId}`;
     setOperationLoading(operationKey, true);
     
     try {
-      // Simple update - the hook will handle routing to correct table
-      const result = await updatePost(postId, updates);
+      // Ensure post stays in pending - preserve status
+      const safeUpdates = {
+        ...updates,
+        status: 'scheduled' as const // Keep it in pending schedule
+      };
+      
+      const result = await updatePost(postId, safeUpdates);
       
       if (result.success) {
         setIsEditModalOpen(false);
