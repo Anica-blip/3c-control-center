@@ -1,69 +1,79 @@
-// /src/schedulecomponent/api/scheduleAPI.ts - FIXED TO MATCH COMPONENT LOGIC
+// /src/schedulecomponent/api/scheduleAPI.ts - FIXED WITH CORRECT COLUMN NAMES
 import { supabase } from '../config';
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
-// Helper function to map content_posts to ScheduledPost interface
+// Helper function to map content_posts to ScheduledPost interface - FIXED COLUMN NAMES
 const mapContentPostToScheduledPost = (data: any): ScheduledPost => {
   return {
     id: data.id,
-    content_id: data.content_id,
-    character_profile: data.character_profile,
-    theme: data.theme,
-    audience: data.audience,
-    media_type: data.media_type,
-    template_type: data.template_type,
-    platform: data.platform,
-    title: data.title,
-    description: data.description,
+    content_id: data.content_id || '',
+    character_avatar: data.character_avatar || '',
+    name: data.name || '',
+    username: data.username || '',
+    role: data.role || '',
+    theme: data.theme || '',
+    audience: data.audience || '',
+    media_type: data.media_type || '',
+    template_type: data.template_type || '',
+    social_platform: data.social_platform || '',
+    channel_group_id: data.channel_group_id || '',
+    thread_id: data.thread_id || '',
+    title: data.title || '',
+    description: data.description || '',
     hashtags: Array.isArray(data.hashtags) ? data.hashtags : [],
-    keywords: data.keywords,
-    cta: data.cta,
+    keywords: data.keywords || '',
+    cta: data.cta || '',
     media_files: Array.isArray(data.media_files) ? data.media_files : [],
     selected_platforms: Array.isArray(data.selected_platforms) ? data.selected_platforms : [],
-    scheduled_date: data.scheduled_date ? new Date(data.scheduled_date) : null, // ✅ FIXED: Only set if exists in database
-    status: data.status,
+    scheduled_date: data.scheduled_date ? new Date(data.scheduled_date) : null,
+    status: data.status || 'scheduled',
     created_date: new Date(data.created_at),
-    user_id: data.user_id,
-    created_by: data.created_by,
-    is_from_template: data.is_from_template,
-    source_template_id: data.source_template_id
+    user_id: data.user_id || '',
+    created_by: data.created_by || '',
+    is_from_template: data.is_from_template || false,
+    source_template_id: data.source_template_id || ''
   };
 };
 
-// Helper function to map dashboard_posts to ScheduledPost interface  
+// Helper function to map dashboard_posts to ScheduledPost interface - FIXED COLUMN NAMES
 const mapDashboardPostToScheduledPost = (data: any): ScheduledPost => {
   return {
     id: data.id,
-    content_id: data.content_id,
-    character_profile: data.character_profile,
-    theme: data.theme,
-    audience: data.audience,
-    media_type: data.media_type,
-    template_type: data.template_type,
-    platform: data.platform,
-    title: data.title,
-    description: data.description,
+    content_id: data.content_id || '',
+    character_avatar: data.character_avatar || '',
+    name: data.name || '',
+    username: data.username || '',
+    role: data.role || '',
+    theme: data.theme || '',
+    audience: data.audience || '',
+    media_type: data.media_type || '',
+    template_type: data.template_type || '',
+    social_platform: data.social_platform || '',
+    channel_group_id: data.channel_group_id || '',
+    thread_id: data.thread_id || '',
+    title: data.title || '',
+    description: data.description || '',
     hashtags: Array.isArray(data.hashtags) ? data.hashtags : [],
-    keywords: data.keywords,
-    cta: data.cta,
+    keywords: data.keywords || '',
+    cta: data.cta || '',
     media_files: Array.isArray(data.media_files) ? data.media_files : [],
     selected_platforms: Array.isArray(data.selected_platforms) ? data.selected_platforms : [],
     scheduled_date: new Date(data.scheduled_date),
-    status: data.status,
-    failure_reason: data.failure_reason,
+    status: data.status || 'scheduled',
+    failure_reason: data.failure_reason || '',
     retry_count: data.retry_count || 0,
     created_date: new Date(data.created_at),
-    user_id: data.user_id,
-    created_by: data.created_by,
-    is_from_template: data.is_from_template,
-    source_template_id: data.source_template_id
+    user_id: data.user_id || '',
+    created_by: data.created_by || '',
+    is_from_template: data.is_from_template || false,
+    source_template_id: data.source_template_id || ''
   };
 };
 
 // SCHEDULED POSTS - Read from content_posts table where status = 'scheduled'
 export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost[]> => {
   try {
-    // Get scheduled posts from content_posts table - FIXED: Query for 'scheduled' not 'pending_schedule'
+    // Get scheduled posts from content_posts table
     const { data: scheduledPosts, error: scheduledError } = await supabase
       .from('content_posts')
       .select('*')
@@ -95,7 +105,7 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
   }
 };
 
-// SAVE CHANGES TO SCHEDULED POST - Updates content_posts table
+// SAVE CHANGES TO SCHEDULED POST - Updates content_posts table with CORRECT COLUMN NAMES
 export const updateScheduledPost = async (id: string, updates: Partial<ScheduledPost>): Promise<ScheduledPost> => {
   try {
     // First check if post is in content_posts (scheduled) or dashboard_posts (completed)
@@ -106,7 +116,7 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       .single();
 
     if (contentPost) {
-      // Post is scheduled - update in content_posts table
+      // Post is scheduled - update in content_posts table with CORRECT COLUMNS
       const updateData: any = {};
       
       if (updates.title !== undefined) updateData.title = updates.title;
@@ -116,12 +126,17 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       if (updates.cta !== undefined) updateData.cta = updates.cta;
       if (updates.media_files !== undefined) updateData.media_files = updates.media_files;
       if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
-      if (updates.character_profile !== undefined) updateData.character_profile = updates.character_profile;
+      if (updates.character_avatar !== undefined) updateData.character_avatar = updates.character_avatar;
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.username !== undefined) updateData.username = updates.username;
+      if (updates.role !== undefined) updateData.role = updates.role;
       if (updates.theme !== undefined) updateData.theme = updates.theme;
       if (updates.audience !== undefined) updateData.audience = updates.audience;
       if (updates.media_type !== undefined) updateData.media_type = updates.media_type;
       if (updates.template_type !== undefined) updateData.template_type = updates.template_type;
-      if (updates.platform !== undefined) updateData.platform = updates.platform;
+      if (updates.social_platform !== undefined) updateData.social_platform = updates.social_platform;
+      if (updates.channel_group_id !== undefined) updateData.channel_group_id = updates.channel_group_id;
+      if (updates.thread_id !== undefined) updateData.thread_id = updates.thread_id;
 
       const { data, error } = await supabase
         .from('content_posts')
@@ -160,25 +175,29 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
 // SCHEDULE POST - Move from content_posts to dashboard_posts with date/time
 export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | 'created_date'>): Promise<ScheduledPost> => {
   try {
-    // FIXED: Get the original post from content_posts using the post ID (not content_id)
-    // Since postData contains the full post object, we need to find by ID to get the source record
+    // Get the original post from content_posts using the post ID
     const { data: originalPost, error: fetchError } = await supabase
       .from('content_posts')
       .select('*')
-      .eq('id', postData.id)  // ✅ FIXED: Use actual post ID to find original record
+      .eq('id', postData.id)
       .single();
 
     if (fetchError) throw fetchError;
 
-    // Create scheduled post in dashboard_posts table
+    // Create scheduled post in dashboard_posts table with CORRECT COLUMNS
     const dashboardPostData = {
       content_id: originalPost.content_id,
-      character_profile: originalPost.character_profile,
+      character_avatar: originalPost.character_avatar,
+      name: originalPost.name,
+      username: originalPost.username,
+      role: originalPost.role,
       theme: originalPost.theme,
       audience: originalPost.audience,
       media_type: originalPost.media_type,
       template_type: originalPost.template_type,
-      platform: originalPost.platform,
+      social_platform: originalPost.social_platform,
+      channel_group_id: originalPost.channel_group_id,
+      thread_id: originalPost.thread_id,
       title: originalPost.title,
       description: originalPost.description,
       hashtags: originalPost.hashtags,
@@ -220,11 +239,6 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
 export const deleteScheduledPost = async (id: string): Promise<void> => {
   try {
     console.log('Removing post from dashboard view:', id);
-    
-    // This function just removes from dashboard display
-    // The actual removal happens in the UI component state
-    // No database deletion - just clearing from Schedule Manager view
-    
     console.log('Post removed from dashboard successfully');
   } catch (error) {
     console.error('Error removing post from dashboard:', error);
@@ -319,7 +333,7 @@ export const incrementTemplateUsage = async (id: string): Promise<void> => {
   }
 };
 
-// RESCHEDULE TEMPLATE - Send back to content_posts for re-editing
+// RESCHEDULE TEMPLATE - Send back to content_posts for re-editing with CORRECT COLUMNS
 export const rescheduleFromTemplate = async (templateId: string, userId: string): Promise<any> => {
   try {
     // Get template data
@@ -331,22 +345,27 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
 
     if (templateError) throw templateError;
 
-    // Create new post in content_posts with template data
+    // Create new post in content_posts with template data - USING CORRECT COLUMNS
     const newPostData = {
       content_id: `template-${templateId}-${Date.now()}`,
-      character_profile: template.character_profile,
-      theme: template.theme,
-      audience: template.audience,
-      media_type: template.media_type,
-      template_type: template.template_type,
-      platform: template.platform,
-      title: template.title,
-      description: template.description,
-      hashtags: template.hashtags,
-      keywords: template.keywords,
-      cta: template.cta,
-      selected_platforms: template.selected_platforms,
-      status: 'scheduled', // FIXED: Use 'scheduled' status
+      character_avatar: template.character_avatar || '',
+      name: template.name || '',
+      username: template.username || '',
+      role: template.role || '',
+      theme: template.theme || '',
+      audience: template.audience || '',
+      media_type: template.media_type || '',
+      template_type: template.template_type || '',
+      social_platform: template.social_platform || '',
+      channel_group_id: template.channel_group_id || '',
+      thread_id: template.thread_id || '',
+      title: template.title || '',
+      description: template.description || '',
+      hashtags: template.hashtags || [],
+      keywords: template.keywords || '',
+      cta: template.cta || '',
+      selected_platforms: template.selected_platforms || [],
+      status: 'scheduled',
       is_from_template: true,
       source_template_id: templateId,
       user_id: userId,
