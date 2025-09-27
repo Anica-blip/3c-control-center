@@ -365,30 +365,46 @@ export default function EditModal({
         return;
       }
 
-      // FIXED: Ensure platform arrays are properly formatted as strings
-      const cleanSocialPlatforms = selectedSocialPlatforms.filter(id => 
-        id && typeof id === 'string' && id.trim() !== ''
-      );
+      // FIXED: Robust data cleaning to prevent c.trim errors
+      const cleanSocialPlatforms = selectedSocialPlatforms
+        .filter(id => id != null && id !== undefined)
+        .map(id => String(id).trim())
+        .filter(id => id !== '');
       
-      const cleanTelegramConfigs = selectedTelegramConfigs.filter(id => 
-        id && typeof id === 'string' && id.trim() !== ''
-      );
+      const cleanTelegramConfigs = selectedTelegramConfigs
+        .filter(id => id != null && id !== undefined)
+        .map(id => String(id).trim())
+        .filter(id => id !== '');
 
-      // ADDED: Populate character profile data if we have it
+      // Clean form data - ensure all fields are strings
+      const cleanFormData = {};
+      for (const [key, value] of Object.entries(formData)) {
+        if (value != null && value !== undefined) {
+          if (Array.isArray(value)) {
+            cleanFormData[key] = value.map(v => String(v || '').trim()).filter(v => v !== '');
+          } else {
+            cleanFormData[key] = String(value || '').trim();
+          }
+        } else {
+          cleanFormData[key] = '';
+        }
+      }
+
+      // Prepare final update data
       let updatedFormData = {
-        ...formData,
+        ...cleanFormData,
         social_platforms: cleanSocialPlatforms,
         telegram_configurations: cleanTelegramConfigs
       };
 
-      // If we have character profile data, include it in the save
+      // Add character profile data if available
       if (characterProfileData) {
         updatedFormData = {
           ...updatedFormData,
-          character_avatar: characterProfileData.avatar_id || '',
-          name: characterProfileData.name || '',
-          username: characterProfileData.username || '',
-          role: characterProfileData.role || ''
+          character_avatar: String(characterProfileData.avatar_id || '').trim(),
+          name: String(characterProfileData.name || '').trim(),
+          username: String(characterProfileData.username || '').trim(),
+          role: String(characterProfileData.role || '').trim()
         };
         console.log('Including character profile data in save:', {
           character_avatar: characterProfileData.avatar_id,
@@ -398,10 +414,11 @@ export default function EditModal({
         });
       }
 
-      console.log('Final form data being saved:', updatedFormData);
+      console.log('Final cleaned form data being saved:', updatedFormData);
       await onSave(post.id, updatedFormData);
     } catch (err) {
-      setError('Failed to update post. Please try again.');
+      const errorMessage = err?.message || 'Failed to update post. Please try again.';
+      setError(errorMessage);
       console.error('Update failed:', err);
     } finally {
       setIsSubmitting(false);
@@ -615,7 +632,6 @@ export default function EditModal({
           }}>
             <span>ID: {post.content_id}</span>
             <span>Status: {post.status}</span>
-            <span>Profile: {getCharacterProfileDisplay()}</span>
             {post.theme && <span>Theme: {post.theme}</span>}
             {post.audience && <span>Audience: {post.audience}</span>}
             {post.media_type && <span>Media Type: {post.media_type}</span>}
@@ -843,7 +859,7 @@ export default function EditModal({
                   )}
                   
                   <div style={{ flex: 1 }}>
-                    {/* Name, Username and Role in clean layout */}
+                    {/* Name */}
                     {characterProfileData.name && (
                       <div style={{
                         fontSize: '16px',
@@ -856,36 +872,29 @@ export default function EditModal({
                       </div>
                     )}
                     
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      flexWrap: 'wrap'
-                    }}>
-                      {characterProfileData.username && (
-                        <div style={{
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          color: theme.primary,
-                          lineHeight: '1.2'
-                        }}>
-                          @{characterProfileData.username}
-                        </div>
-                      )}
-                      
-                      {characterProfileData.role && (
-                        <div style={{
-                          fontSize: '12px',
-                          color: theme.textSecondary,
-                          backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
-                          padding: '2px 8px',
-                          borderRadius: '12px',
-                          lineHeight: '1.2'
-                        }}>
-                          {characterProfileData.role}
-                        </div>
-                      )}
-                    </div>
+                    {/* Username */}
+                    {characterProfileData.username && (
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: theme.primary,
+                        lineHeight: '1.2',
+                        marginBottom: '2px'
+                      }}>
+                        @{characterProfileData.username}
+                      </div>
+                    )}
+                    
+                    {/* Role - on separate line below username */}
+                    {characterProfileData.role && (
+                      <div style={{
+                        fontSize: '12px',
+                        color: theme.textSecondary,
+                        lineHeight: '1.2'
+                      }}>
+                        {characterProfileData.role}
+                      </div>
+                    )}
                   </div>
                 </div>
                 {/* REMOVED: Large header image - no duplication */}
