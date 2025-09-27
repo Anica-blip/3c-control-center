@@ -134,10 +134,10 @@ const validateCompletePost = (postData: ScheduledPost): ValidationError[] => {
     });
   }
   
-  if (!postData.character_profile?.trim()) {
+  if (!postData.name?.trim()) {
     errors.push({
-      field: 'character_profile',
-      message: 'Character profile is required',
+      field: 'name',
+      message: 'Character name is required',
       code: 'REQUIRED_FIELD'
     });
   }
