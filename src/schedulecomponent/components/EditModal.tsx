@@ -1,4 +1,4 @@
-// /src/schedulecomponent/components/EditModal.tsx - CORRECTED: Character Profile Header & Platform Connections
+// /src/schedulecomponent/components/EditModal.tsx - FINAL VERSION: Single Character Profile Header
 import React, { useState, useEffect } from 'react';
 import { Edit3, X, Save, Calendar, Clock, User, Hash, FileText, ExternalLink, Image, Video, Trash2, Plus, MessageCircle, Users } from 'lucide-react';
 import { formatDate, formatTime, isValidDate } from '../utils/dateUtils';
@@ -59,28 +59,26 @@ export default function EditModal({
   const [selectedTelegramConfigs, setSelectedTelegramConfigs] = useState<string[]>([]);
   const [platformsLoading, setPlatformsLoading] = useState(false);
   
-  // ADDED: Character profile state
+  // Character profile state
   const [characterProfileData, setCharacterProfileData] = useState<any>(null);
   const [characterProfileLoading, setCharacterProfileLoading] = useState(false);
 
   const { isDarkMode, theme } = getTheme();
 
-  // ADDED: Helper to check if string is UUID
+  // Helper to check if string is UUID
   const isUUID = (str: string): boolean => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
   };
 
-  // CORRECTED: Fetch character profile data by UUID
+  // Fetch character profile data by UUID
   const fetchCharacterProfile = async (profileId: string) => {
     try {
       setCharacterProfileLoading(true);
       
-      console.log('Fetching from character_profiles table with ID:', profileId);
-      
       const { data, error } = await supabase
         .from('character_profiles')
-        .select('avatar_id, name, username, role') // FIXED: Use avatar_id not character_avatar
+        .select('avatar_id, name, username, role')
         .eq('id', profileId)
         .single();
       
@@ -88,7 +86,6 @@ export default function EditModal({
         console.error('Error fetching character profile:', error);
         setCharacterProfileData(null);
       } else {
-        console.log('Successfully fetched character profile:', data);
         setCharacterProfileData(data);
       }
     } catch (error) {
@@ -99,7 +96,7 @@ export default function EditModal({
     }
   };
 
-  // UPDATED: Get character profile image from avatar_id
+  // Get character profile image from avatar_id
   const getCharacterProfileImage = () => {
     if (characterProfileData?.avatar_id) {
       return characterProfileData.avatar_id;
@@ -107,12 +104,11 @@ export default function EditModal({
     return null;
   };
 
-  // FIXED: Helper function to detect image URLs
+  // Helper to detect image URLs
   const isImageUrl = (url: string): boolean => {
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
     const lowerUrl = url.toLowerCase();
     
-    // Check for common image hosting patterns or file extensions
     return (
       lowerUrl.includes('http') && (
         imageExtensions.some(ext => lowerUrl.includes(ext)) ||
@@ -124,12 +120,11 @@ export default function EditModal({
     );
   };
 
-  // CORRECTED: Fetch platform configurations with proper error handling
+  // Fetch platform configurations
   const fetchPlatformConfigurations = async () => {
     try {
       setPlatformsLoading(true);
       
-      // Fetch social platforms with name + url
       const { data: socialData, error: socialError } = await supabase
         .from('social_platforms')
         .select('id, name, url, is_active')
@@ -140,11 +135,9 @@ export default function EditModal({
         console.error('Error fetching social platforms:', socialError);
         setSocialPlatforms([]);
       } else {
-        console.log('Fetched social platforms:', socialData);
         setSocialPlatforms(socialData || []);
       }
 
-      // Fetch telegram configurations with name + channel_group_id + thread_id
       const { data: telegramData, error: telegramError } = await supabase
         .from('telegram_configurations')
         .select('id, name, channel_group_id, thread_id, is_active')
@@ -155,7 +148,6 @@ export default function EditModal({
         console.error('Error fetching telegram configs:', telegramError);
         setTelegramConfigs([]);
       } else {
-        console.log('Fetched telegram configs:', telegramData);
         setTelegramConfigs(telegramData || []);
       }
     } catch (error) {
@@ -167,7 +159,7 @@ export default function EditModal({
     }
   };
 
-  // FIXED: Initialize form data and platform selections
+  // Initialize form data
   useEffect(() => {
     if (post) {
       setFormData({
@@ -186,8 +178,7 @@ export default function EditModal({
         platform: post.platform || ''
       });
       
-      // CORRECTED: Initialize platform selections from post data
-      const postData = post as any; // Type assertion for additional fields
+      const postData = post as any;
       setSelectedSocialPlatforms(
         Array.isArray(postData.social_platforms) ? postData.social_platforms : []
       );
@@ -204,21 +195,16 @@ export default function EditModal({
     }
   }, [post]);
 
-  // ADDED: Fetch character profile data when modal opens
+  // Fetch character profile data when modal opens
   useEffect(() => {
     if (post?.character_profile) {
-      // Check if character_profile is a UUID and fetch the data
       if (typeof post.character_profile === 'string' && isUUID(post.character_profile)) {
-        console.log('Fetching character profile for UUID:', post.character_profile);
         fetchCharacterProfile(post.character_profile);
-      }
-      // If it's an array, check for UUIDs
-      else if (Array.isArray(post.character_profile)) {
+      } else if (Array.isArray(post.character_profile)) {
         const uuid = post.character_profile.find(item => 
           typeof item === 'string' && isUUID(item)
         );
         if (uuid) {
-          console.log('Fetching character profile for UUID from array:', uuid);
           fetchCharacterProfile(uuid);
         }
       }
@@ -226,14 +212,6 @@ export default function EditModal({
   }, [post?.character_profile]);
 
   if (!post) return null;
-
-  // Helper to get character profile display value
-  const getCharacterProfileDisplay = () => {
-    if (Array.isArray(post.character_profile)) {
-      return post.character_profile[0] || '';
-    }
-    return post.character_profile || '';
-  };
 
   const modalOverlayStyle = {
     position: 'fixed' as const,
@@ -455,145 +433,6 @@ export default function EditModal({
           </button>
         </div>
 
-        {/* CORRECTED: Enhanced Character Profile Header with better debugging */}
-        {post?.character_profile && (
-          <div style={{
-            marginBottom: '24px',
-            padding: '16px',
-            backgroundColor: theme.cardBg,
-            border: `1px solid ${theme.border}`,
-            borderRadius: '8px'
-          }}>
-            <div style={{
-              fontSize: '12px',
-              fontWeight: '600',
-              color: theme.textSecondary,
-              marginBottom: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <User size={16} />
-              Character Profile Header
-              {characterProfileLoading && (
-                <div style={{
-                  width: '12px',
-                  height: '12px',
-                  border: `2px solid ${theme.border}`,
-                  borderTop: `2px solid ${theme.primary}`,
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }} />
-              )}
-            </div>
-
-            {/* Debug Info */}
-            <div style={{
-              fontSize: '10px',
-              color: theme.textSecondary,
-              marginBottom: '8px',
-              fontFamily: 'monospace'
-            }}>
-              Profile ID: {typeof post.character_profile === 'string' ? post.character_profile : JSON.stringify(post.character_profile)}
-            </div>
-
-            {characterProfileLoading && (
-              <div style={{
-                textAlign: 'center',
-                padding: '20px',
-                color: theme.textSecondary
-              }}>
-                Loading character profile data...
-              </div>
-            )}
-
-            {!characterProfileLoading && characterProfileData && (
-              <div style={{ marginBottom: '12px' }}>
-                <div style={{
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  color: theme.primary,
-                  marginBottom: '8px'
-                }}>
-                  {characterProfileData.name || 'Character Profile'}
-                </div>
-                
-                {/* Debug: Show all character profile fields */}
-                <details style={{ marginBottom: '8px' }}>
-                  <summary style={{ 
-                    fontSize: '10px', 
-                    color: theme.textSecondary, 
-                    cursor: 'pointer',
-                    marginBottom: '4px'
-                  }}>
-                    Debug: View Profile Data
-                  </summary>
-                  <pre style={{
-                    fontSize: '9px',
-                    color: theme.textSecondary,
-                    backgroundColor: theme.background,
-                    padding: '8px',
-                    borderRadius: '4px',
-                    overflow: 'auto',
-                    maxHeight: '100px'
-                  }}>
-                    {JSON.stringify(characterProfileData, null, 2)}
-                  </pre>
-                </details>
-              </div>
-            )}
-
-            {!characterProfileLoading && !characterProfileData && post.character_profile && (
-              <div style={{
-                padding: '12px',
-                backgroundColor: '#fff3cd',
-                border: '1px solid #ffeaa7',
-                borderRadius: '6px',
-                color: '#856404',
-                fontSize: '12px'
-              }}>
-                Failed to load character profile data. Check console for errors.
-              </div>
-            )}
-
-            {characterProfileImage && (
-              <div style={{ textAlign: 'center' }}>
-                <img 
-                  src={characterProfileImage}
-                  alt="Character Profile Header"
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '200px',
-                    borderRadius: '8px',
-                    border: `1px solid ${theme.border}`,
-                    objectFit: 'contain'
-                  }}
-                  onError={(e) => {
-                    console.error('Failed to load character profile image:', characterProfileImage);
-                    e.currentTarget.style.display = 'none';
-                  }}
-                  onLoad={() => {
-                    console.log('Successfully loaded character profile image:', characterProfileImage);
-                  }}
-                />
-              </div>
-            )}
-
-            {!characterProfileImage && characterProfileData && (
-              <div style={{
-                padding: '12px',
-                backgroundColor: '#f8d7da',
-                border: '1px solid #f5c6cb',
-                borderRadius: '6px',
-                color: '#721c24',
-                fontSize: '12px'
-              }}>
-                Character profile loaded but no image found. Check image field names.
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Post Info */}
         <div style={{
           backgroundColor: theme.cardBg,
@@ -770,128 +609,6 @@ export default function EditModal({
             </div>
           </div>
 
-        {/* CORRECTED: Character Profile Header with avatar_id + username + role - MOVED AFTER MEDIA */}
-        {post?.character_profile && (
-          <div style={{
-            marginBottom: '24px',
-            padding: '16px',
-            backgroundColor: theme.cardBg,
-            border: `1px solid ${theme.border}`,
-            borderRadius: '8px'
-          }}>
-            <div style={{
-              fontSize: '12px',
-              fontWeight: '600',
-              color: theme.textSecondary,
-              marginBottom: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <User size={16} />
-              Character Profile Header
-              {characterProfileLoading && (
-                <div style={{
-                  width: '12px',
-                  height: '12px',
-                  border: `2px solid ${theme.border}`,
-                  borderTop: `2px solid ${theme.primary}`,
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }} />
-              )}
-            </div>
-
-            {characterProfileLoading && (
-              <div style={{
-                textAlign: 'center',
-                padding: '20px',
-                color: theme.textSecondary
-              }}>
-                Loading character profile...
-              </div>
-            )}
-
-            {!characterProfileLoading && characterProfileData && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                {characterProfileImage && (
-                  <img 
-                    src={characterProfileImage}
-                    alt="Character Avatar"
-                    style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '50%',
-                      border: `2px solid ${theme.primary}`,
-                      objectFit: 'cover'
-                    }}
-                    onError={(e) => {
-                      console.error('Failed to load avatar:', characterProfileImage);
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                )}
-                
-                <div style={{ flex: 1 }}>
-                  {/* Name */}
-                  {characterProfileData.name && (
-                    <div style={{
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      color: theme.text,
-                      lineHeight: '1.2',
-                      marginBottom: '2px'
-                    }}>
-                      {characterProfileData.name}
-                    </div>
-                  )}
-                  
-                  {/* Username */}
-                  {characterProfileData.username && (
-                    <div style={{
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: theme.primary,
-                      lineHeight: '1.2',
-                      marginBottom: '2px'
-                    }}>
-                      @{characterProfileData.username}
-                    </div>
-                  )}
-                  
-                  {/* Role - on separate line below username */}
-                  {characterProfileData.role && (
-                    <div style={{
-                      fontSize: '12px',
-                      color: theme.textSecondary,
-                      lineHeight: '1.2'
-                    }}>
-                      {characterProfileData.role}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {!characterProfileLoading && !characterProfileData && (
-              <div style={{
-                padding: '12px',
-                backgroundColor: '#fff3cd',
-                border: '1px solid #ffeaa7',
-                borderRadius: '6px',
-                color: '#856404',
-                fontSize: '12px'
-              }}>
-                Failed to load character profile data. Check console for errors.
-              </div>
-            )}
-          </div>
-        )}
-
           {/* 2. CHARACTER PROFILE HEADER - SINGLE INSTANCE ONLY */}
           {post?.character_profile && (
             <div style={{
@@ -1044,7 +761,7 @@ export default function EditModal({
             />
           </div>
 
-          {/* 5. HASHTAGS - MOVED UP */}
+          {/* 5. HASHTAGS */}
           <div>
             <label style={{
               display: 'block',
@@ -1146,7 +863,7 @@ export default function EditModal({
             </div>
           </div>
 
-          {/* 6. KEYWORDS and 7. CTA - MOVED UP */}
+          {/* 6. KEYWORDS and 7. CTA */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
@@ -1299,7 +1016,7 @@ export default function EditModal({
             </div>
           </div>
 
-          {/* CORRECTED: Social Platforms with proper name + url display */}
+          {/* Social Platforms */}
           <div>
             <label style={{
               display: 'block',
@@ -1417,7 +1134,7 @@ export default function EditModal({
             </div>
           </div>
 
-          {/* CORRECTED: Telegram Configurations with proper name + channel_group_id + thread_id display */}
+          {/* Telegram Configurations */}
           <div>
             <label style={{
               display: 'block',
