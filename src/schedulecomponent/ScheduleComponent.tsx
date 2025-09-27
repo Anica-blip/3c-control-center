@@ -1130,31 +1130,13 @@ export default function ScheduleComponent() {
                           }}>
                             Created {new Date(post.created_date).toLocaleDateString('en-GB')}
                           </span>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
+                          <span style={{
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            color: theme.primary
                           }}>
-                            {post.character_avatar && (
-                              <img 
-                                src={post.character_avatar} 
-                                alt={post.name}
-                                style={{
-                                  width: '20px',
-                                  height: '20px',
-                                  borderRadius: '50%',
-                                  objectFit: 'cover'
-                                }}
-                              />
-                            )}
-                            <span style={{
-                              fontSize: '12px',
-                              fontWeight: 'bold',
-                              color: theme.primary
-                            }}>
-                              {post.character_profile}
-                            </span>
-                          </div>
+                            {post.character_profile}
+                          </span>
                         </div>
                         
                         <p style={{
