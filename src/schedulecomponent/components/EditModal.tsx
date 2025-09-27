@@ -353,72 +353,46 @@ export default function EditModal({
     handleFieldChange('media_files', formData.media_files?.filter(f => f.id !== fileId) || []);
   };
 
-  // Handle form submission
+  // Handle form submission - SIMPLIFIED: Direct save to content_posts table
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
       setError('');
       
-      // Validation
       if (!formData.description?.trim()) {
         setError('Description is required');
         return;
       }
 
-      // FIXED: Robust data cleaning to prevent c.trim errors
-      const cleanSocialPlatforms = selectedSocialPlatforms
-        .filter(id => id != null && id !== undefined)
-        .map(id => String(id).trim())
-        .filter(id => id !== '');
-      
-      const cleanTelegramConfigs = selectedTelegramConfigs
-        .filter(id => id != null && id !== undefined)
-        .map(id => String(id).trim())
-        .filter(id => id !== '');
-
-      // Clean form data - ensure all fields are strings
-      const cleanFormData = {};
-      for (const [key, value] of Object.entries(formData)) {
-        if (value != null && value !== undefined) {
-          if (Array.isArray(value)) {
-            cleanFormData[key] = value.map(v => String(v || '').trim()).filter(v => v !== '');
-          } else {
-            cleanFormData[key] = String(value || '').trim();
-          }
-        } else {
-          cleanFormData[key] = '';
-        }
-      }
-
-      // Prepare final update data
-      let updatedFormData = {
-        ...cleanFormData,
-        social_platforms: cleanSocialPlatforms,
-        telegram_configurations: cleanTelegramConfigs
+      // Prepare update data for content_posts table (based on Supabase report schema)
+      const updateData = {
+        title: formData.title || '',
+        description: formData.description || '',
+        hashtags: formData.hashtags || [],
+        keywords: formData.keywords || '',
+        cta: formData.cta || '',
+        media_files: formData.media_files || [],
+        selected_platforms: formData.selected_platforms || [],
+        theme: formData.theme || '',
+        audience: formData.audience || '',
+        media_type: formData.media_type || '',
+        template_type: formData.template_type || '',
+        platform: formData.platform || '',
+        social_platforms: selectedSocialPlatforms,
+        telegram_configurations: selectedTelegramConfigs
       };
 
       // Add character profile data if available
       if (characterProfileData) {
-        updatedFormData = {
-          ...updatedFormData,
-          character_avatar: String(characterProfileData.avatar_id || '').trim(),
-          name: String(characterProfileData.name || '').trim(),
-          username: String(characterProfileData.username || '').trim(),
-          role: String(characterProfileData.role || '').trim()
-        };
-        console.log('Including character profile data in save:', {
-          character_avatar: characterProfileData.avatar_id,
-          name: characterProfileData.name,
-          username: characterProfileData.username,
-          role: characterProfileData.role
-        });
+        updateData.character_avatar = characterProfileData.avatar_id || '';
+        updateData.name = characterProfileData.name || '';
+        updateData.username = characterProfileData.username || '';
+        updateData.role = characterProfileData.role || '';
       }
 
-      console.log('Final cleaned form data being saved:', updatedFormData);
-      await onSave(post.id, updatedFormData);
+      await onSave(post.id, updateData);
     } catch (err) {
-      const errorMessage = err?.message || 'Failed to update post. Please try again.';
-      setError(errorMessage);
+      setError('Failed to update post. Please try again.');
       console.error('Update failed:', err);
     } finally {
       setIsSubmitting(false);
@@ -833,71 +807,67 @@ export default function EditModal({
             )}
 
             {!characterProfileLoading && characterProfileData && (
-              <div>
-                {/* Character Profile Info - Single Display Only */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px'
-                }}>
-                  {characterProfileImage && (
-                    <img 
-                      src={characterProfileImage}
-                      alt="Character Avatar"
-                      style={{
-                        width: '48px',
-                        height: '48px',
-                        borderRadius: '50%',
-                        border: `2px solid ${theme.primary}`,
-                        objectFit: 'cover'
-                      }}
-                      onError={(e) => {
-                        console.error('Failed to load avatar:', characterProfileImage);
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                {characterProfileImage && (
+                  <img 
+                    src={characterProfileImage}
+                    alt="Character Avatar"
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '50%',
+                      border: `2px solid ${theme.primary}`,
+                      objectFit: 'cover'
+                    }}
+                    onError={(e) => {
+                      console.error('Failed to load avatar:', characterProfileImage);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                )}
+                
+                <div style={{ flex: 1 }}>
+                  {/* Name */}
+                  {characterProfileData.name && (
+                    <div style={{
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      color: theme.text,
+                      lineHeight: '1.2',
+                      marginBottom: '2px'
+                    }}>
+                      {characterProfileData.name}
+                    </div>
                   )}
                   
-                  <div style={{ flex: 1 }}>
-                    {/* Name */}
-                    {characterProfileData.name && (
-                      <div style={{
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        color: theme.text,
-                        lineHeight: '1.2',
-                        marginBottom: '2px'
-                      }}>
-                        {characterProfileData.name}
-                      </div>
-                    )}
-                    
-                    {/* Username */}
-                    {characterProfileData.username && (
-                      <div style={{
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: theme.primary,
-                        lineHeight: '1.2',
-                        marginBottom: '2px'
-                      }}>
-                        @{characterProfileData.username}
-                      </div>
-                    )}
-                    
-                    {/* Role - on separate line below username */}
-                    {characterProfileData.role && (
-                      <div style={{
-                        fontSize: '12px',
-                        color: theme.textSecondary,
-                        lineHeight: '1.2'
-                      }}>
-                        {characterProfileData.role}
-                      </div>
-                    )}
-                  </div>
+                  {/* Username */}
+                  {characterProfileData.username && (
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: theme.primary,
+                      lineHeight: '1.2',
+                      marginBottom: '2px'
+                    }}>
+                      @{characterProfileData.username}
+                    </div>
+                  )}
+                  
+                  {/* Role - on separate line below username */}
+                  {characterProfileData.role && (
+                    <div style={{
+                      fontSize: '12px',
+                      color: theme.textSecondary,
+                      lineHeight: '1.2'
+                    }}>
+                      {characterProfileData.role}
+                    </div>
+                  )}
                 </div>
-                {/* REMOVED: Large header image - no duplication */}
               </div>
             )}
 
