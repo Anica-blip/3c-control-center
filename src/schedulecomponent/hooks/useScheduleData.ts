@@ -122,8 +122,8 @@ const withRetry = async <T>(
   throw lastError;
 };
 
-// ✅ VALIDATION UTILITIES
-const validatePost = (postData: Partial<ScheduledPost>): ValidationError[] => {
+// FIXED: Validation only for COMPLETE posts, not partial updates
+const validateCompletePost = (postData: ScheduledPost): ValidationError[] => {
   const errors: ValidationError[] = [];
   
   if (!postData.description?.trim()) {
@@ -224,7 +224,7 @@ export const useScheduledPosts = () => {
         return { success: true, data: newPost };
       } else {
         // This is creating a new post from template/copy - add to content_posts
-        const validationErrors = validatePost(postData);
+        const validationErrors = validateCompletePost(postData as ScheduledPost);
         if (validationErrors.length > 0) {
           return { 
             success: false, 
@@ -255,7 +255,7 @@ export const useScheduledPosts = () => {
     }
   }, []);
 
-  // 🔥 FIXED: updatePost now correctly handles pending posts vs scheduled posts
+  // FIXED: updatePost - NO VALIDATION on partial updates, just like loading pattern
   const updatePost = useCallback(async (
     id: string, 
     updates: Partial<ScheduledPost>
@@ -271,26 +271,9 @@ export const useScheduledPosts = () => {
       const currentPost = posts.find(p => p.id === id);
       const isPendingPost = currentPost?.status === 'scheduled';
       
-      // ✅ VALIDATION - but skip for partial updates that don't include core fields
-      const hasDescriptionUpdate = 'description' in updates;
-      const hasProfileUpdate = 'character_profile' in updates;
-      const hasPlatformUpdate = 'selected_platforms' in updates;
+      // FIXED: NO VALIDATION - follow the loading pattern that works
+      // Just update the post directly, same as how loading works
       
-      if (hasDescriptionUpdate || hasProfileUpdate || hasPlatformUpdate) {
-        const validationErrors = validatePost(updates);
-        if (validationErrors.length > 0) {
-          return { 
-            success: false, 
-            validationErrors,
-            error: createApiError(
-              { message: 'Validation failed' }, 
-              'update post'
-            )
-          };
-        }
-      }
-      
-      // 🔥 CRITICAL FIX: Handle pending posts vs scheduled posts differently  
       let updatedPost;
       if (isPendingPost) {
         // For pending posts: ensure status stays 'scheduled' to remain in content_posts
