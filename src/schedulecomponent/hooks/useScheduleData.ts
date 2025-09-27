@@ -1,4 +1,4 @@
-// /src/schedulecomponent/hooks/useScheduleData.ts - FIXED TO MATCH COMPONENT LOGIC
+// /src/schedulecomponent/hooks/useScheduleData.ts - FIXED TO HANDLE PENDING POSTS CORRECTLY
 
 import { useState, useEffect, useCallback } from 'react';
 import { scheduleAPI } from '../api/scheduleAPI';
@@ -255,6 +255,7 @@ export const useScheduledPosts = () => {
     }
   }, []);
 
+  // 🔥 FIXED: updatePost now correctly handles pending posts vs scheduled posts
   const updatePost = useCallback(async (
     id: string, 
     updates: Partial<ScheduledPost>
@@ -265,6 +266,10 @@ export const useScheduledPosts = () => {
       if (!id?.trim()) {
         throw new Error('Post ID is required');
       }
+      
+      // Find the current post to determine if it's pending
+      const currentPost = posts.find(p => p.id === id);
+      const isPendingPost = currentPost?.status === 'scheduled';
       
       // ✅ VALIDATION - but skip for partial updates that don't include core fields
       const hasDescriptionUpdate = 'description' in updates;
@@ -285,7 +290,20 @@ export const useScheduledPosts = () => {
         }
       }
       
-      const updatedPost = await withRetry(() => scheduleAPI.updateScheduledPost(id, updates));
+      // 🔥 CRITICAL FIX: Handle pending posts vs scheduled posts differently
+      let updatedPost;
+      if (isPendingPost) {
+        // For pending posts: update content_posts table and maintain 'scheduled' status
+        const pendingUpdates = {
+          ...updates,
+          status: 'scheduled' // Ensure pending posts stay as 'scheduled' in content_posts
+        };
+        updatedPost = await withRetry(() => scheduleAPI.updateContentPost(id, pendingUpdates));
+      } else {
+        // For scheduled posts: update dashboard_posts table normally
+        updatedPost = await withRetry(() => scheduleAPI.updateScheduledPost(id, updates));
+      }
+      
       setPosts(prev => prev.map(p => p.id === id ? updatedPost : p));
       
       return { success: true, data: updatedPost };
@@ -294,7 +312,7 @@ export const useScheduledPosts = () => {
       setError(apiError);
       return { success: false, error: apiError };
     }
-  }, []);
+  }, [posts]);
 
   const deletePost = useCallback(async (id: string): Promise<OperationResult> => {
     try {
