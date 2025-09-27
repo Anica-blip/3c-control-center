@@ -365,12 +365,29 @@ export default function EditModal({
         return;
       }
 
-      // Include platform configurations in the save data
-      const updatedFormData = {
+      // ADDED: Populate character profile data if we have it
+      let updatedFormData = {
         ...formData,
         social_platforms: selectedSocialPlatforms,
         telegram_configurations: selectedTelegramConfigs
       };
+
+      // If we have character profile data, include it in the save
+      if (characterProfileData) {
+        updatedFormData = {
+          ...updatedFormData,
+          character_avatar: characterProfileData.avatar_id,
+          name: characterProfileData.name,
+          username: characterProfileData.username,
+          role: characterProfileData.role
+        };
+        console.log('Including character profile data in save:', {
+          character_avatar: characterProfileData.avatar_id,
+          name: characterProfileData.name,
+          username: characterProfileData.username,
+          role: characterProfileData.role
+        });
+      }
 
       await onSave(post.id, updatedFormData);
     } catch (err) {
@@ -600,51 +617,7 @@ export default function EditModal({
         </div>
 
         <div style={{ display: 'grid', gap: '20px' }}>
-          {/* Title */}
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '600',
-              color: theme.text,
-              marginBottom: '8px'
-            }}>
-              Title/Headline
-            </label>
-            <input
-              type="text"
-              value={formData.title || ''}
-              onChange={(e) => handleFieldChange('title', e.target.value)}
-              placeholder="Enter post title..."
-              style={inputStyle}
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '600',
-              color: theme.text,
-              marginBottom: '8px'
-            }}>
-              Description *
-            </label>
-            <textarea
-              value={formData.description || ''}
-              onChange={(e) => handleFieldChange('description', e.target.value)}
-              placeholder="Write your post content..."
-              rows={6}
-              style={{
-                ...inputStyle,
-                resize: 'vertical',
-                minHeight: '120px'
-              }}
-            />
-          </div>
-
-          {/* Media Files Section */}
+          {/* 1. MEDIA FILES - MOVED TO TOP */}
           <div>
             <label style={{
               display: 'block',
@@ -791,7 +764,54 @@ export default function EditModal({
             </div>
           </div>
 
-          {/* Hashtags */}
+          {/* 2. CHARACTER PROFILE HEADER - STAYS IN CURRENT POSITION */}
+          {/* This section is already positioned correctly - no changes needed */}
+
+          {/* 3. TITLE */}
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: theme.text,
+              marginBottom: '8px'
+            }}>
+              Title/Headline
+            </label>
+            <input
+              type="text"
+              value={formData.title || ''}
+              onChange={(e) => handleFieldChange('title', e.target.value)}
+              placeholder="Enter post title..."
+              style={inputStyle}
+            />
+          </div>
+
+          {/* 4. DESCRIPTION */}
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: theme.text,
+              marginBottom: '8px'
+            }}>
+              Description *
+            </label>
+            <textarea
+              value={formData.description || ''}
+              onChange={(e) => handleFieldChange('description', e.target.value)}
+              placeholder="Write your post content..."
+              rows={6}
+              style={{
+                ...inputStyle,
+                resize: 'vertical',
+                minHeight: '120px'
+              }}
+            />
+          </div>
+
+          {/* 5. HASHTAGS - MOVED UP */}
           <div>
             <label style={{
               display: 'block',
@@ -893,7 +913,7 @@ export default function EditModal({
             </div>
           </div>
 
-          {/* Keywords and CTA */}
+          {/* 6. KEYWORDS and 7. CTA - MOVED UP */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
