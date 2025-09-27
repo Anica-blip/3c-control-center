@@ -58,11 +58,58 @@ export default function EditModal({
   const [selectedSocialPlatforms, setSelectedSocialPlatforms] = useState<string[]>([]);
   const [selectedTelegramConfigs, setSelectedTelegramConfigs] = useState<string[]>([]);
   const [platformsLoading, setPlatformsLoading] = useState(false);
+  
+  // ADDED: Character profile state
+  const [characterProfileData, setCharacterProfileData] = useState<any>(null);
+  const [characterProfileLoading, setCharacterProfileLoading] = useState(false);
 
   const { isDarkMode, theme } = getTheme();
 
-  // FIXED: Simplified character profile image extraction
+  // ADDED: Helper to check if string is UUID
+  const isUUID = (str: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  };
+
+  // ADDED: Fetch character profile data by UUID
+  const fetchCharacterProfile = async (profileId: string) => {
+    try {
+      setCharacterProfileLoading(true);
+      
+      const { data, error } = await supabase
+        .from('character_profile') // Corrected to singular
+        .select('*') // Select all fields or specify: 'id, name, image_url, header_image'
+        .eq('id', profileId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching character profile:', error);
+        setCharacterProfileData(null);
+      } else {
+        console.log('Fetched character profile:', data);
+        setCharacterProfileData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching character profile:', error);
+      setCharacterProfileData(null);
+    } finally {
+      setCharacterProfileLoading(false);
+    }
+  };
+
+  // FIXED: Updated character profile image extraction
   const getCharacterProfileImage = () => {
+    // If we have fetched character profile data, use it
+    if (characterProfileData) {
+      // Check common field names for profile images
+      const imageFields = ['header_image', 'image_url', 'profile_image', 'avatar_url', 'image'];
+      for (const field of imageFields) {
+        if (characterProfileData[field] && isImageUrl(characterProfileData[field])) {
+          return characterProfileData[field];
+        }
+      }
+    }
+
     if (!post?.character_profile) return null;
 
     // If it's an array, look for image URLs
@@ -74,7 +121,7 @@ export default function EditModal({
       }
     }
     
-    // If it's a string, check if it's an image URL
+    // If it's a string and looks like an image URL
     if (typeof post.character_profile === 'string' && isImageUrl(post.character_profile)) {
       return post.character_profile;
     }
@@ -178,6 +225,27 @@ export default function EditModal({
       fetchPlatformConfigurations();
     }
   }, [post]);
+
+  // ADDED: Fetch character profile data when modal opens
+  useEffect(() => {
+    if (post?.character_profile) {
+      // Check if character_profile is a UUID and fetch the data
+      if (typeof post.character_profile === 'string' && isUUID(post.character_profile)) {
+        console.log('Fetching character profile for UUID:', post.character_profile);
+        fetchCharacterProfile(post.character_profile);
+      }
+      // If it's an array, check for UUIDs
+      else if (Array.isArray(post.character_profile)) {
+        const uuid = post.character_profile.find(item => 
+          typeof item === 'string' && isUUID(item)
+        );
+        if (uuid) {
+          console.log('Fetching character profile for UUID from array:', uuid);
+          fetchCharacterProfile(uuid);
+        }
+      }
+    }
+  }, [post?.character_profile]);
 
   if (!post) return null;
 
@@ -385,8 +453,37 @@ export default function EditModal({
           </button>
         </div>
 
-        {/* CORRECTED: Character Profile Header Image with better error handling */}
-        {characterProfileImage && (
+        {/* CORRECTED: Character Profile Header Image with UUID handling */}
+        {characterProfileLoading && (
+          <div style={{
+            marginBottom: '24px',
+            textAlign: 'center',
+            padding: '16px',
+            backgroundColor: theme.cardBg,
+            border: `1px solid ${theme.border}`,
+            borderRadius: '8px'
+          }}>
+            <div style={{
+              fontSize: '12px',
+              fontWeight: '600',
+              color: theme.textSecondary,
+              marginBottom: '8px'
+            }}>
+              Loading Character Profile...
+            </div>
+            <div style={{
+              width: '24px',
+              height: '24px',
+              border: `2px solid ${theme.border}`,
+              borderTop: `2px solid ${theme.primary}`,
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto'
+            }} />
+          </div>
+        )}
+
+        {characterProfileImage && !characterProfileLoading && (
           <div style={{
             marginBottom: '24px',
             textAlign: 'center',
@@ -402,6 +499,11 @@ export default function EditModal({
               marginBottom: '8px'
             }}>
               Character Profile Header
+              {characterProfileData?.name && (
+                <span style={{ marginLeft: '8px', color: theme.primary }}>
+                  - {characterProfileData.name}
+                </span>
+              )}
             </div>
             <img 
               src={characterProfileImage}
