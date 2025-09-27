@@ -695,12 +695,17 @@ export default function ScheduleComponent() {
     try {
       const templateData = {
         template_name: post.title || 'Saved Template',
-        character_profile: post.character_profile,
+        character_avatar: post.character_avatar,
+        name: post.name,
+        username: post.username,
+        role: post.role,
         theme: post.theme || '',
         audience: post.audience || '',
         media_type: post.media_type || '',
         template_type: post.template_type || '',
-        platform: post.platform || '',
+        social_platform: post.social_platform || '',
+        channel_group_id: post.channel_group_id || '',
+        thread_id: post.thread_id || '',
         title: post.title || '',
         description: post.description,
         hashtags: post.hashtags || [],
@@ -749,12 +754,17 @@ export default function ScheduleComponent() {
     try {
       const pendingPostData = {
         content_id: `template-${template.id}-${Date.now()}`,
-        character_profile: template.character_profile,
+        character_avatar: template.character_avatar,
+        name: template.name,
+        username: template.username,
+        role: template.role,
         theme: template.theme,
         audience: template.audience,
         media_type: template.media_type,
         template_type: template.template_type,
-        platform: template.platform,
+        social_platform: template.social_platform,
+        channel_group_id: template.channel_group_id,
+        thread_id: template.thread_id,
         title: template.title,
         description: template.description,
         hashtags: template.hashtags,
@@ -807,12 +817,17 @@ export default function ScheduleComponent() {
     try {
       const pendingPostData = {
         content_id: `copy-${post.id}-${Date.now()}`,
-        character_profile: post.character_profile,
+        character_avatar: post.character_avatar,
+        name: post.name,
+        username: post.username,
+        role: post.role,
         theme: post.theme || '',
         audience: post.audience || '',
         media_type: post.media_type || '',
         template_type: post.template_type || '',
-        platform: post.platform || '',
+        social_platform: post.social_platform || '',
+        channel_group_id: post.channel_group_id || '',
+        thread_id: post.thread_id || '',
         title: post.title || '',
         description: post.description,
         hashtags: post.hashtags || [],
@@ -1130,13 +1145,31 @@ export default function ScheduleComponent() {
                           }}>
                             Created {new Date(post.created_date).toLocaleDateString('en-GB')}
                           </span>
-                          <span style={{
-                            fontSize: '12px',
-                            fontWeight: 'bold',
-                            color: theme.primary
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
                           }}>
-                            {post.character_profile}
-                          </span>
+                            {post.character_avatar && (
+                              <img 
+                                src={post.character_avatar} 
+                                alt={post.name}
+                                style={{
+                                  width: '20px',
+                                  height: '20px',
+                                  borderRadius: '50%',
+                                  objectFit: 'cover'
+                                }}
+                              />
+                            )}
+                            <span style={{
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                              color: theme.primary
+                            }}>
+                              {post.name} {post.username && `(@${post.username})`} - {post.role}
+                            </span>
+                          </div>
                         </div>
                         
                         <p style={{
