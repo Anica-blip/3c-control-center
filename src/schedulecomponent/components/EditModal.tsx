@@ -365,21 +365,30 @@ export default function EditModal({
         return;
       }
 
+      // FIXED: Ensure platform arrays are properly formatted as strings
+      const cleanSocialPlatforms = selectedSocialPlatforms.filter(id => 
+        id && typeof id === 'string' && id.trim() !== ''
+      );
+      
+      const cleanTelegramConfigs = selectedTelegramConfigs.filter(id => 
+        id && typeof id === 'string' && id.trim() !== ''
+      );
+
       // ADDED: Populate character profile data if we have it
       let updatedFormData = {
         ...formData,
-        social_platforms: selectedSocialPlatforms,
-        telegram_configurations: selectedTelegramConfigs
+        social_platforms: cleanSocialPlatforms,
+        telegram_configurations: cleanTelegramConfigs
       };
 
       // If we have character profile data, include it in the save
       if (characterProfileData) {
         updatedFormData = {
           ...updatedFormData,
-          character_avatar: characterProfileData.avatar_id,
-          name: characterProfileData.name,
-          username: characterProfileData.username,
-          role: characterProfileData.role
+          character_avatar: characterProfileData.avatar_id || '',
+          name: characterProfileData.name || '',
+          username: characterProfileData.username || '',
+          role: characterProfileData.role || ''
         };
         console.log('Including character profile data in save:', {
           character_avatar: characterProfileData.avatar_id,
@@ -389,6 +398,7 @@ export default function EditModal({
         });
       }
 
+      console.log('Final form data being saved:', updatedFormData);
       await onSave(post.id, updatedFormData);
     } catch (err) {
       setError('Failed to update post. Please try again.');
@@ -763,6 +773,159 @@ export default function EditModal({
               </div>
             </div>
           </div>
+
+        {/* CORRECTED: Character Profile Header with avatar_id + username + role - MOVED AFTER MEDIA */}
+        {post?.character_profile && (
+          <div style={{
+            marginBottom: '24px',
+            padding: '16px',
+            backgroundColor: theme.cardBg,
+            border: `1px solid ${theme.border}`,
+            borderRadius: '8px'
+          }}>
+            <div style={{
+              fontSize: '12px',
+              fontWeight: '600',
+              color: theme.textSecondary,
+              marginBottom: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <User size={16} />
+              Character Profile Header
+              {characterProfileLoading && (
+                <div style={{
+                  width: '12px',
+                  height: '12px',
+                  border: `2px solid ${theme.border}`,
+                  borderTop: `2px solid ${theme.primary}`,
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+              )}
+            </div>
+
+            {characterProfileLoading && (
+              <div style={{
+                textAlign: 'center',
+                padding: '20px',
+                color: theme.textSecondary
+              }}>
+                Loading character profile...
+              </div>
+            )}
+
+            {!characterProfileLoading && characterProfileData && (
+              <div>
+                {/* Character Profile Info */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginBottom: '12px'
+                }}>
+                  {characterProfileImage && (
+                    <img 
+                      src={characterProfileImage}
+                      alt="Character Avatar"
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        border: `2px solid ${theme.primary}`,
+                        objectFit: 'cover'
+                      }}
+                      onError={(e) => {
+                        console.error('Failed to load avatar:', characterProfileImage);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  )}
+                  
+                  <div style={{ flex: 1 }}>
+                    {/* FIXED: Display name */}
+                    {characterProfileData.name && (
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: theme.text,
+                        marginBottom: '2px'
+                      }}>
+                        {characterProfileData.name}
+                      </div>
+                    )}
+                    
+                    {/* FIXED: Display username */}
+                    {characterProfileData.username && (
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: theme.primary,
+                        marginBottom: '4px'
+                      }}>
+                        @{characterProfileData.username}
+                      </div>
+                    )}
+                    
+                    {/* FIXED: Display role */}
+                    {characterProfileData.role && (
+                      <div style={{
+                        fontSize: '12px',
+                        color: theme.textSecondary,
+                        backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        display: 'inline-block'
+                      }}>
+                        {characterProfileData.role}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Header Image (if different from avatar) - EXCLUDED FROM SOCIAL SHARING */}
+                {characterProfileImage && (
+                  <div 
+                    style={{ textAlign: 'center' }}
+                    data-exclude-from-sharing="true"
+                    className="character-profile-ui-only"
+                  >
+                    <img 
+                      src={characterProfileImage}
+                      alt="Character Profile Header"
+                      data-exclude-from-sharing="true"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '200px',
+                        borderRadius: '8px',
+                        border: `1px solid ${theme.border}`,
+                        objectFit: 'contain'
+                      }}
+                      onError={(e) => {
+                        console.error('Failed to load header image:', characterProfileImage);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!characterProfileLoading && !characterProfileData && (
+              <div style={{
+                padding: '12px',
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffeaa7',
+                borderRadius: '6px',
+                color: '#856404',
+                fontSize: '12px'
+              }}>
+                Failed to load character profile data. Check console for errors.
+              </div>
+            )}
+          </div>
+        )}
 
           {/* 2. CHARACTER PROFILE HEADER - STAYS IN CURRENT POSITION */}
           {/* This section is already positioned correctly - no changes needed */}
