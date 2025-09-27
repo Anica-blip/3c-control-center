@@ -80,7 +80,7 @@ export default function EditModal({
       
       const { data, error } = await supabase
         .from('character_profiles')
-        .select('avatar_id, username, role') // Removed 'id' since we don't display it
+        .select('avatar_id, name, username, role') // FIXED: Use avatar_id not character_avatar
         .eq('id', profileId)
         .single();
       
