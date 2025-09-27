@@ -76,21 +76,49 @@ export default function EditModal({
     try {
       setCharacterProfileLoading(true);
       
+      console.log('Attempting to fetch from character_profile table with ID:', profileId);
+      
       const { data, error } = await supabase
-        .from('character_profile') // Corrected to singular
-        .select('*') // Select all fields or specify: 'id, name, image_url, header_image'
-        .eq('id', profileId)
+        .from('character_profile')
+        .select('id, name, image, header_image, avatar_url, profile_image, image_url, *') // Include both id + name + all fields
+        .eq('id', profileId) // Query by id column
         .single();
       
       if (error) {
-        console.error('Error fetching character profile:', error);
+        console.error('Supabase error details:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        
+        // Try with different possible table names
+        console.log('Trying alternative table names...');
+        
+        const alternatives = ['character_profiles', 'profiles', 'characters'];
+        for (const tableName of alternatives) {
+          console.log(`Trying table: ${tableName}`);
+          const { data: altData, error: altError } = await supabase
+            .from(tableName)
+            .select('id, name, image, header_image, avatar_url, profile_image, image_url, *')
+            .eq('id', profileId) // Query by id column
+            .single();
+          
+          if (!altError && altData) {
+            console.log(`Success with table: ${tableName}`, altData);
+            console.log(`Found profile: ID=${altData.id}, Name=${altData.name}`);
+            setCharacterProfileData(altData);
+            return;
+          } else if (altError) {
+            console.log(`Failed with ${tableName}:`, altError.message);
+          }
+        }
+        
         setCharacterProfileData(null);
       } else {
-        console.log('Fetched character profile:', data);
+        console.log('Successfully fetched character profile:', data);
+        console.log(`Found profile: ID=${data.id}, Name=${data.name}`);
         setCharacterProfileData(data);
       }
     } catch (error) {
-      console.error('Error fetching character profile:', error);
+      console.error('Unexpected error fetching character profile:', error);
       setCharacterProfileData(null);
     } finally {
       setCharacterProfileLoading(false);
