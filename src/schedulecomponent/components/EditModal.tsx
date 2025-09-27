@@ -353,7 +353,7 @@ export default function EditModal({
     handleFieldChange('media_files', formData.media_files?.filter(f => f.id !== fileId) || []);
   };
 
-  // Handle form submission - SIMPLIFIED: Direct save to content_posts table
+  // FIXED: Simple save to content_posts table
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
@@ -364,30 +364,36 @@ export default function EditModal({
         return;
       }
 
-      // Prepare update data for content_posts table (based on Supabase report schema)
+      // Simple update object for content_posts table
       const updateData = {
-        title: formData.title || '',
-        description: formData.description || '',
-        hashtags: formData.hashtags || [],
-        keywords: formData.keywords || '',
-        cta: formData.cta || '',
-        media_files: formData.media_files || [],
-        selected_platforms: formData.selected_platforms || [],
-        theme: formData.theme || '',
-        audience: formData.audience || '',
-        media_type: formData.media_type || '',
-        template_type: formData.template_type || '',
-        platform: formData.platform || '',
-        social_platforms: selectedSocialPlatforms,
-        telegram_configurations: selectedTelegramConfigs
+        title: formData.title,
+        description: formData.description,
+        hashtags: formData.hashtags,
+        keywords: formData.keywords,
+        cta: formData.cta,
+        media_files: formData.media_files,
+        selected_platforms: formData.selected_platforms,
+        theme: formData.theme,
+        audience: formData.audience,
+        media_type: formData.media_type,
+        template_type: formData.template_type,
+        platform: formData.platform
       };
 
       // Add character profile data if available
       if (characterProfileData) {
-        updateData.character_avatar = characterProfileData.avatar_id || '';
-        updateData.name = characterProfileData.name || '';
-        updateData.username = characterProfileData.username || '';
-        updateData.role = characterProfileData.role || '';
+        updateData.character_avatar = characterProfileData.avatar_id;
+        updateData.name = characterProfileData.name;
+        updateData.username = characterProfileData.username;
+        updateData.role = characterProfileData.role;
+      }
+
+      // Add platform selections
+      if (selectedSocialPlatforms.length > 0) {
+        updateData.social_platforms = selectedSocialPlatforms;
+      }
+      if (selectedTelegramConfigs.length > 0) {
+        updateData.telegram_configurations = selectedTelegramConfigs;
       }
 
       await onSave(post.id, updateData);
@@ -617,7 +623,7 @@ export default function EditModal({
         </div>
 
         <div style={{ display: 'grid', gap: '20px' }}>
-          {/* 1. MEDIA FILES - MOVED TO TOP */}
+          {/* 1. MEDIA FILES - AT TOP */}
           <div>
             <label style={{
               display: 'block',
@@ -886,8 +892,124 @@ export default function EditModal({
           </div>
         )}
 
-          {/* 2. CHARACTER PROFILE HEADER - STAYS IN CURRENT POSITION */}
-          {/* This section is already positioned correctly - no changes needed */}
+          {/* 2. CHARACTER PROFILE HEADER - AFTER MEDIA */}
+          {post?.character_profile && (
+            <div style={{
+              marginBottom: '24px',
+              padding: '16px',
+              backgroundColor: theme.cardBg,
+              border: `1px solid ${theme.border}`,
+              borderRadius: '8px'
+            }}>
+              <div style={{
+                fontSize: '12px',
+                fontWeight: '600',
+                color: theme.textSecondary,
+                marginBottom: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <User size={16} />
+                Character Profile Header
+                {characterProfileLoading && (
+                  <div style={{
+                    width: '12px',
+                    height: '12px',
+                    border: `2px solid ${theme.border}`,
+                    borderTop: `2px solid ${theme.primary}`,
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }} />
+                )}
+              </div>
+
+              {characterProfileLoading && (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '20px',
+                  color: theme.textSecondary
+                }}>
+                  Loading character profile...
+                </div>
+              )}
+
+              {!characterProfileLoading && characterProfileData && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}>
+                  {characterProfileImage && (
+                    <img 
+                      src={characterProfileImage}
+                      alt="Character Avatar"
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        border: `2px solid ${theme.primary}`,
+                        objectFit: 'cover'
+                      }}
+                      onError={(e) => {
+                        console.error('Failed to load avatar:', characterProfileImage);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  )}
+                  
+                  <div style={{ flex: 1 }}>
+                    {characterProfileData.name && (
+                      <div style={{
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        color: theme.text,
+                        lineHeight: '1.2',
+                        marginBottom: '2px'
+                      }}>
+                        {characterProfileData.name}
+                      </div>
+                    )}
+                    
+                    {characterProfileData.username && (
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: theme.primary,
+                        lineHeight: '1.2',
+                        marginBottom: '2px'
+                      }}>
+                        @{characterProfileData.username}
+                      </div>
+                    )}
+                    
+                    {characterProfileData.role && (
+                      <div style={{
+                        fontSize: '12px',
+                        color: theme.textSecondary,
+                        lineHeight: '1.2'
+                      }}>
+                        {characterProfileData.role}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {!characterProfileLoading && !characterProfileData && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#fff3cd',
+                  border: '1px solid #ffeaa7',
+                  borderRadius: '6px',
+                  color: '#856404',
+                  fontSize: '12px'
+                }}>
+                  Failed to load character profile data. Check console for errors.
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 3. TITLE */}
           <div>
