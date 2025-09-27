@@ -453,11 +453,10 @@ export default function EditModal({
           </button>
         </div>
 
-        {/* CORRECTED: Character Profile Header Image with UUID handling */}
-        {characterProfileLoading && (
+        {/* CORRECTED: Enhanced Character Profile Header with better debugging */}
+        {post?.character_profile && (
           <div style={{
             marginBottom: '24px',
-            textAlign: 'center',
             padding: '16px',
             backgroundColor: theme.cardBg,
             border: `1px solid ${theme.border}`,
@@ -467,62 +466,129 @@ export default function EditModal({
               fontSize: '12px',
               fontWeight: '600',
               color: theme.textSecondary,
-              marginBottom: '8px'
+              marginBottom: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}>
-              Loading Character Profile...
-            </div>
-            <div style={{
-              width: '24px',
-              height: '24px',
-              border: `2px solid ${theme.border}`,
-              borderTop: `2px solid ${theme.primary}`,
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto'
-            }} />
-          </div>
-        )}
-
-        {characterProfileImage && !characterProfileLoading && (
-          <div style={{
-            marginBottom: '24px',
-            textAlign: 'center',
-            padding: '16px',
-            backgroundColor: theme.cardBg,
-            border: `1px solid ${theme.border}`,
-            borderRadius: '8px'
-          }}>
-            <div style={{
-              fontSize: '12px',
-              fontWeight: '600',
-              color: theme.textSecondary,
-              marginBottom: '8px'
-            }}>
+              <User size={16} />
               Character Profile Header
-              {characterProfileData?.name && (
-                <span style={{ marginLeft: '8px', color: theme.primary }}>
-                  - {characterProfileData.name}
-                </span>
+              {characterProfileLoading && (
+                <div style={{
+                  width: '12px',
+                  height: '12px',
+                  border: `2px solid ${theme.border}`,
+                  borderTop: `2px solid ${theme.primary}`,
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
               )}
             </div>
-            <img 
-              src={characterProfileImage}
-              alt="Character Profile Header"
-              style={{
-                maxWidth: '100%',
-                maxHeight: '200px',
-                borderRadius: '8px',
-                border: `1px solid ${theme.border}`,
-                objectFit: 'contain'
-              }}
-              onError={(e) => {
-                console.error('Failed to load character profile image:', characterProfileImage);
-                e.currentTarget.style.display = 'none';
-              }}
-              onLoad={() => {
-                console.log('Successfully loaded character profile image:', characterProfileImage);
-              }}
-            />
+
+            {/* Debug Info */}
+            <div style={{
+              fontSize: '10px',
+              color: theme.textSecondary,
+              marginBottom: '8px',
+              fontFamily: 'monospace'
+            }}>
+              Profile ID: {typeof post.character_profile === 'string' ? post.character_profile : JSON.stringify(post.character_profile)}
+            </div>
+
+            {characterProfileLoading && (
+              <div style={{
+                textAlign: 'center',
+                padding: '20px',
+                color: theme.textSecondary
+              }}>
+                Loading character profile data...
+              </div>
+            )}
+
+            {!characterProfileLoading && characterProfileData && (
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: theme.primary,
+                  marginBottom: '8px'
+                }}>
+                  {characterProfileData.name || 'Character Profile'}
+                </div>
+                
+                {/* Debug: Show all character profile fields */}
+                <details style={{ marginBottom: '8px' }}>
+                  <summary style={{ 
+                    fontSize: '10px', 
+                    color: theme.textSecondary, 
+                    cursor: 'pointer',
+                    marginBottom: '4px'
+                  }}>
+                    Debug: View Profile Data
+                  </summary>
+                  <pre style={{
+                    fontSize: '9px',
+                    color: theme.textSecondary,
+                    backgroundColor: theme.background,
+                    padding: '8px',
+                    borderRadius: '4px',
+                    overflow: 'auto',
+                    maxHeight: '100px'
+                  }}>
+                    {JSON.stringify(characterProfileData, null, 2)}
+                  </pre>
+                </details>
+              </div>
+            )}
+
+            {!characterProfileLoading && !characterProfileData && post.character_profile && (
+              <div style={{
+                padding: '12px',
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffeaa7',
+                borderRadius: '6px',
+                color: '#856404',
+                fontSize: '12px'
+              }}>
+                Failed to load character profile data. Check console for errors.
+              </div>
+            )}
+
+            {characterProfileImage && (
+              <div style={{ textAlign: 'center' }}>
+                <img 
+                  src={characterProfileImage}
+                  alt="Character Profile Header"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '200px',
+                    borderRadius: '8px',
+                    border: `1px solid ${theme.border}`,
+                    objectFit: 'contain'
+                  }}
+                  onError={(e) => {
+                    console.error('Failed to load character profile image:', characterProfileImage);
+                    e.currentTarget.style.display = 'none';
+                  }}
+                  onLoad={() => {
+                    console.log('Successfully loaded character profile image:', characterProfileImage);
+                  }}
+                />
+              </div>
+            )}
+
+            {!characterProfileImage && characterProfileData && (
+              <div style={{
+                padding: '12px',
+                backgroundColor: '#f8d7da',
+                border: '1px solid #f5c6cb',
+                borderRadius: '6px',
+                color: '#721c24',
+                fontSize: '12px'
+              }}>
+                Character profile loaded but no image found. Check image field names.
+              </div>
+            )}
           </div>
         )}
 
