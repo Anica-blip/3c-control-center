@@ -892,10 +892,9 @@ export default function EditModal({
           </div>
         )}
 
-          {/* 2. CHARACTER PROFILE HEADER - AFTER MEDIA */}
+          {/* 2. CHARACTER PROFILE HEADER - SINGLE INSTANCE ONLY */}
           {post?.character_profile && (
             <div style={{
-              marginBottom: '24px',
               padding: '16px',
               backgroundColor: theme.cardBg,
               border: `1px solid ${theme.border}`,
@@ -923,16 +922,6 @@ export default function EditModal({
                   }} />
                 )}
               </div>
-
-              {characterProfileLoading && (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '20px',
-                  color: theme.textSecondary
-                }}>
-                  Loading character profile...
-                </div>
-              )}
 
               {!characterProfileLoading && characterProfileData && (
                 <div style={{
