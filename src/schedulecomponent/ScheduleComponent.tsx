@@ -173,7 +173,8 @@ export default function ScheduleComponent() {
     createPost,
     updatePost,
     deletePost,
-    refreshPosts
+    refreshPosts,
+    updateContentPost // 🔥 NEW: Function to update posts in content_posts table
   } = useScheduledPosts();
 
   const {
@@ -616,12 +617,28 @@ export default function ScheduleComponent() {
     setIsEditModalOpen(true);
   };
 
+  // 🔥 FIXED: Pending posts now save to content_posts and stay in Pending Schedules
   const handleSaveEdit = async (postId: string, updates: Partial<ScheduledPost>) => {
     const operationKey = `edit-${postId}`;
     setOperationLoading(operationKey, true);
     
     try {
-      const result = await updatePost(postId, updates);
+      // 🔥 CRITICAL FIX: Check if this is a pending post (should stay in content_posts)
+      const isPendingPost = pendingPosts.some(p => p.id === postId);
+      
+      let result;
+      if (isPendingPost) {
+        // 🔥 For pending posts: Update in content_posts table to stay in Pending Schedules
+        const updatedPostData = {
+          ...editingPost,
+          ...updates,
+          status: 'scheduled' as const // Keep as 'scheduled' in content_posts
+        };
+        result = await updateContentPost(postId, updatedPostData);
+      } else {
+        // For scheduled posts: Use regular updatePost for dashboard_posts
+        result = await updatePost(postId, updates);
+      }
       
       if (result.success) {
         setIsEditModalOpen(false);
