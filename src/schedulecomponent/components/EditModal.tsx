@@ -818,12 +818,11 @@ export default function EditModal({
 
             {!characterProfileLoading && characterProfileData && (
               <div>
-                {/* Character Profile Info */}
+                {/* Character Profile Info - Single Display Only */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  marginBottom: '12px'
+                  gap: '12px'
                 }}>
                   {characterProfileImage && (
                     <img 
@@ -844,71 +843,52 @@ export default function EditModal({
                   )}
                   
                   <div style={{ flex: 1 }}>
-                    {/* FIXED: Display name */}
+                    {/* Name, Username and Role in clean layout */}
                     {characterProfileData.name && (
                       <div style={{
-                        fontSize: '14px',
+                        fontSize: '16px',
                         fontWeight: '600',
                         color: theme.text,
+                        lineHeight: '1.2',
                         marginBottom: '2px'
                       }}>
                         {characterProfileData.name}
                       </div>
                     )}
                     
-                    {/* FIXED: Display username */}
-                    {characterProfileData.username && (
-                      <div style={{
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: theme.primary,
-                        marginBottom: '4px'
-                      }}>
-                        @{characterProfileData.username}
-                      </div>
-                    )}
-                    
-                    {/* FIXED: Display role */}
-                    {characterProfileData.role && (
-                      <div style={{
-                        fontSize: '12px',
-                        color: theme.textSecondary,
-                        backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        display: 'inline-block'
-                      }}>
-                        {characterProfileData.role}
-                      </div>
-                    )}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      flexWrap: 'wrap'
+                    }}>
+                      {characterProfileData.username && (
+                        <div style={{
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          color: theme.primary,
+                          lineHeight: '1.2'
+                        }}>
+                          @{characterProfileData.username}
+                        </div>
+                      )}
+                      
+                      {characterProfileData.role && (
+                        <div style={{
+                          fontSize: '12px',
+                          color: theme.textSecondary,
+                          backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          lineHeight: '1.2'
+                        }}>
+                          {characterProfileData.role}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                {/* Header Image (if different from avatar) - EXCLUDED FROM SOCIAL SHARING */}
-                {characterProfileImage && (
-                  <div 
-                    style={{ textAlign: 'center' }}
-                    data-exclude-from-sharing="true"
-                    className="character-profile-ui-only"
-                  >
-                    <img 
-                      src={characterProfileImage}
-                      alt="Character Profile Header"
-                      data-exclude-from-sharing="true"
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '200px',
-                        borderRadius: '8px',
-                        border: `1px solid ${theme.border}`,
-                        objectFit: 'contain'
-                      }}
-                      onError={(e) => {
-                        console.error('Failed to load header image:', characterProfileImage);
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
+                {/* REMOVED: Large header image - no duplication */}
               </div>
             )}
 
