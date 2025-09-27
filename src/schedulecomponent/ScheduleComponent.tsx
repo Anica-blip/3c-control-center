@@ -695,17 +695,12 @@ export default function ScheduleComponent() {
     try {
       const templateData = {
         template_name: post.title || 'Saved Template',
-        character_avatar: post.character_avatar,
-        name: post.name,
-        username: post.username,
-        role: post.role,
+        character_profile: post.character_profile,
         theme: post.theme || '',
         audience: post.audience || '',
         media_type: post.media_type || '',
         template_type: post.template_type || '',
-        social_platform: post.social_platform || '',
-        channel_group_id: post.channel_group_id || '',
-        thread_id: post.thread_id || '',
+        platform: post.platform || '',
         title: post.title || '',
         description: post.description,
         hashtags: post.hashtags || [],
@@ -754,17 +749,12 @@ export default function ScheduleComponent() {
     try {
       const pendingPostData = {
         content_id: `template-${template.id}-${Date.now()}`,
-        character_avatar: template.character_avatar,
-        name: template.name,
-        username: template.username,
-        role: template.role,
+        character_profile: template.character_profile,
         theme: template.theme,
         audience: template.audience,
         media_type: template.media_type,
         template_type: template.template_type,
-        social_platform: template.social_platform,
-        channel_group_id: template.channel_group_id,
-        thread_id: template.thread_id,
+        platform: template.platform,
         title: template.title,
         description: template.description,
         hashtags: template.hashtags,
@@ -817,17 +807,12 @@ export default function ScheduleComponent() {
     try {
       const pendingPostData = {
         content_id: `copy-${post.id}-${Date.now()}`,
-        character_avatar: post.character_avatar,
-        name: post.name,
-        username: post.username,
-        role: post.role,
+        character_profile: post.character_profile,
         theme: post.theme || '',
         audience: post.audience || '',
         media_type: post.media_type || '',
         template_type: post.template_type || '',
-        social_platform: post.social_platform || '',
-        channel_group_id: post.channel_group_id || '',
-        thread_id: post.thread_id || '',
+        platform: post.platform || '',
         title: post.title || '',
         description: post.description,
         hashtags: post.hashtags || [],
@@ -1167,7 +1152,7 @@ export default function ScheduleComponent() {
                               fontWeight: 'bold',
                               color: theme.primary
                             }}>
-                              {post.name} {post.username && `(@${post.username})`} - {post.role}
+                              {post.character_profile}
                             </span>
                           </div>
                         </div>
