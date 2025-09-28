@@ -8,6 +8,7 @@ const mapContentPostToScheduledPost = (data: any): ScheduledPost => {
     id: data.id,
     content_id: data.content_id || '',
     character_profile: data.character_profile || '', // FIXED: Use character_profile UUID
+    character_avatar: data.character_avatar || '', // FIXED: Use character_avatar URL from content_posts
     theme: data.theme || '',
     audience: data.audience || '',
     media_type: data.media_type || '',
@@ -36,6 +37,7 @@ const mapDashboardPostToScheduledPost = (data: any): ScheduledPost => {
     id: data.id,
     content_id: data.content_id || '',
     character_profile: data.character_profile || '', // FIXED: Use character_profile UUID
+    character_avatar: data.character_avatar || '', // FIXED: Use character_avatar URL from dashboard_posts
     theme: data.theme || '',
     audience: data.audience || '',
     media_type: data.media_type || '',
