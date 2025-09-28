@@ -6,7 +6,7 @@ import EditModal from './components/EditModal';
 import { getTheme, getContainerStyle, getCSSAnimations } from './utils/styleUtils';
 import { Calendar, Clock, Edit3, Trash2, RefreshCw, AlertCircle, CheckCircle, Play, X, ChevronLeft, ChevronRight, Save, XCircle, WifiOff } from 'lucide-react';
 import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './types';
-import { supabase } from '../contentcomponent/supabaseAPI'; // FIXED: Import from correct path
+import { supabase } from './config'; // FIXED: Import from centralized config
 
 // ✅ ERROR NOTIFICATION COMPONENT
 const ErrorNotificationBanner: React.FC<{
