@@ -300,7 +300,7 @@ export const supabaseAPI = {
     }
   },
 
-  // Update content post - FIXED: Removed duplicate code
+  // Update content post
   async updateContentPost(postId: string, updates: Partial<ContentPost>): Promise<ContentPost> {
     if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
     
@@ -338,7 +338,7 @@ export const supabaseAPI = {
         );
       }
 
-      // FIXED: Extract character profile details if character changed - SINGLE SECTION
+      // Re-extract character profile details if character changed
       let updatedCharacterDetails = {};
       if (updates.characterProfile) {
         try {
@@ -357,7 +357,7 @@ export const supabaseAPI = {
         }
       }
 
-      // FIXED: Extract platform details if platforms changed - SINGLE SECTION
+      // Re-extract platform details if platforms changed
       let updatedPlatformDetails = {};
       if (updates.selectedPlatforms && updates.selectedPlatforms.length > 0) {
         try {
@@ -383,6 +383,60 @@ export const supabaseAPI = {
                 social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
                 url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
                 channel_group_id: selectedTelegram.channel_group_id || null,
+                thread_id: selectedTelegram.thread_id || null
+              };
+            }
+          }
+        } catch (error) {
+          console.error('Error loading updated platform details:', error);
+        }
+      }
+
+      // Re-extract character profile details if character changed
+      let characterDetails = {};
+      if (updates.characterProfile) {
+        try {
+          const characterProfiles = await this.loadCharacterProfiles();
+          const selectedProfile = characterProfiles.find(p => p.id === updates.characterProfile);
+          if (selectedProfile) {
+            characterDetails = {
+              avatar_id: selectedProfile.avatar_id || null,
+              name: selectedProfile.name || null,
+              username: selectedProfile.username || null,
+              role: selectedProfile.role || null
+            };
+          }
+        } catch (error) {
+          console.error('Error loading updated character profile details:', error);
+        }
+      }
+
+      // Re-extract platform details if platforms changed
+      let platformDetails = {};
+      if (updates.selectedPlatforms && updates.selectedPlatforms.length > 0) {
+        try {
+          const [platforms, telegramChannels] = await Promise.all([
+            this.loadPlatforms(),
+            this.loadTelegramChannels()
+          ]);
+
+          const primaryPlatformId = updates.selectedPlatforms[0];
+          let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+          
+          if (selectedPlatform) {
+            platformDetails = {
+              social_platform: selectedPlatform.name || null,
+              url: selectedPlatform.url || null,
+              channel_group: null,
+              thread_id: null
+            };
+          } else {
+            const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
+            if (selectedTelegram) {
+              platformDetails = {
+                social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
+                url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
+                channel_group: selectedTelegram.channel_group_id || null,
                 thread_id: selectedTelegram.thread_id || null
               };
             }
