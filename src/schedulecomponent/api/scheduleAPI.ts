@@ -618,7 +618,7 @@ export default function EditModal({
                             fontSize: '12px',
                             color: theme.textSecondary
                           }}>
-                            {file.type} • {file.size ? `${Math.round(file.size / 1024)} KB` : 'Link'}
+                            {file.type} - {file.size ? `${Math.round(file.size / 1024)} KB` : 'Link'}
                           </div>
                           {file.url && (
                             <a 
@@ -631,7 +631,7 @@ export default function EditModal({
                                 textDecoration: 'none'
                               }}
                             >
-                              View File →
+                              View File ->
                             </a>
                           )}
                         </div>
@@ -850,7 +850,7 @@ export default function EditModal({
                         lineHeight: 1
                       }}
                     >
-                      &times;
+                      x
                     </button>
                   </div>
                 ))}
@@ -1117,7 +1117,7 @@ export default function EditModal({
                               }}
                               onClick={(e) => e.stopPropagation()}
                             >
-                              {platform.url} →
+                              {platform.url} ->
                             </a>
                           ) : 'No URL configured'}
                         </div>
@@ -1225,7 +1225,7 @@ export default function EditModal({
                           color: theme.textSecondary
                         }}>
                           Channel: {config.channel_group_id || 'N/A'}
-                          {config.thread_id && ` • Thread: ${config.thread_id}`}
+                          {config.thread_id && ` &bull; Thread: ${config.thread_id}`}
                         </div>
                       </div>
                     </label>
