@@ -78,32 +78,6 @@ export const supabaseAPI = {
       const { data: { user } } = await client.auth.getUser();
       const userId = user?.id || null;
 
-      // Upload media files first
-      const uploadedMediaFiles = await Promise.all(
-        (postData.mediaFiles || []).map(async (mediaFile) => {
-          if (mediaFile.url.startsWith('blob:')) {
-            // Convert blob URL to file and upload
-            try {
-              const response = await fetch(mediaFile.url);
-              const blob = await response.blob();
-              const file = new File([blob], mediaFile.name, { type: blob.type });
-              
-              const supabaseUrl = await this.uploadMediaFile(file, postData.contentId, userId || 'anonymous');
-              
-              return {
-                ...mediaFile,
-                supabaseUrl: supabaseUrl,
-                url: supabaseUrl // Update URL to Supabase URL
-              };
-            } catch (uploadError) {
-              console.error('Error uploading media file:', uploadError);
-              return mediaFile; // Keep original if upload fails
-            }
-          }
-          return mediaFile;
-        })
-      );
-
       // Extract character profile details for additional columns
       let characterDetails = {
         avatar_id: null,
@@ -169,6 +143,34 @@ export const supabaseAPI = {
           console.error('Error loading platform details:', error);
         }
       }
+
+      // Upload media files first
+      const uploadedMediaFiles = await Promise.all(
+        (postData.mediaFiles || []).map(async (mediaFile) => {
+          if (mediaFile.url.startsWith('blob:')) {
+            // Convert blob URL to file and upload
+            try {
+              const response = await fetch(mediaFile.url);
+              const blob = await response.blob();
+              const file = new File([blob], mediaFile.name, { type: blob.type });
+              
+              const supabaseUrl = await this.uploadMediaFile(file, postData.contentId, userId || 'anonymous');
+              
+              return {
+                ...mediaFile,
+                supabaseUrl: supabaseUrl,
+                url: supabaseUrl // Update URL to Supabase URL
+              };
+            } catch (uploadError) {
+              console.error('Error uploading media file:', uploadError);
+              return mediaFile; // Keep original if upload fails
+            }
+          }
+          return mediaFile;
+        })
+      );
+
+
 
       // Prepare data for database insert
       const insertData = {
@@ -329,6 +331,60 @@ export const supabaseAPI = {
             return mediaFile;
           })
         );
+      }
+
+      // Re-extract character profile details if character changed
+      let characterDetails = {};
+      if (updates.characterProfile) {
+        try {
+          const characterProfiles = await this.loadCharacterProfiles();
+          const selectedProfile = characterProfiles.find(p => p.id === updates.characterProfile);
+          if (selectedProfile) {
+            characterDetails = {
+              avatar_id: selectedProfile.avatar_id || null,
+              name: selectedProfile.name || null,
+              username: selectedProfile.username || null,
+              role: selectedProfile.role || null
+            };
+          }
+        } catch (error) {
+          console.error('Error loading updated character profile details:', error);
+        }
+      }
+
+      // Re-extract platform details if platforms changed
+      let platformDetails = {};
+      if (updates.selectedPlatforms && updates.selectedPlatforms.length > 0) {
+        try {
+          const [platforms, telegramChannels] = await Promise.all([
+            this.loadPlatforms(),
+            this.loadTelegramChannels()
+          ]);
+
+          const primaryPlatformId = updates.selectedPlatforms[0];
+          let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+          
+          if (selectedPlatform) {
+            platformDetails = {
+              social_platform: selectedPlatform.name || null,
+              url: selectedPlatform.url || null,
+              channel_group: null,
+              thread_id: null
+            };
+          } else {
+            const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
+            if (selectedTelegram) {
+              platformDetails = {
+                social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
+                url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
+                channel_group: selectedTelegram.channel_group_id || null,
+                thread_id: selectedTelegram.thread_id || null
+              };
+            }
+          }
+        } catch (error) {
+          console.error('Error loading updated platform details:', error);
+        }
       }
 
       // Re-extract character profile details if character changed
