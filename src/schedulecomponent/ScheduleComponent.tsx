@@ -1,4 +1,4 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - COMPLETE with Character Profiles + All Tabs
+// /src/schedulecomponent/ScheduleComponent.tsx - COMPLETE with Character Profiles + All Tabs - ERROR FREE
 import React, { useState, useEffect, useCallback } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
@@ -385,6 +385,13 @@ export default function ScheduleComponent() {
       case 'resending': return { borderLeft: `4px solid ${theme.warning}`, backgroundColor: theme.warningBg };
       default: return { borderLeft: `4px solid ${theme.textSecondary}`, backgroundColor: theme.cardBg };
     }
+  };
+
+  // ✅ FIXED - Extract color properly from status
+  const getStatusBorderColor = (status: string) => {
+    const statusStyle = getStatusColor(status);
+    const borderParts = statusStyle.borderLeft.split(' ');
+    return borderParts[2]; // Extract the color from "4px solid #color"
   };
 
   const getStatusIcon = (status: string) => {
@@ -1385,7 +1392,7 @@ export default function ScheduleComponent() {
                               key={idx}
                               style={{
                                 padding: '2px 4px',
-                                backgroundColor: getStatusColor(post.status).borderLeft.split(' ')[2],
+                                backgroundColor: getStatusBorderColor(post.status),
                                 borderRadius: '2px',
                                 fontSize: '10px',
                                 color: 'white',
