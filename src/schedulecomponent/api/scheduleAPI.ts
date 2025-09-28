@@ -1,5 +1,5 @@
 // /src/schedulecomponent/api/scheduleAPI.ts - FIXED: Use same Supabase instance
-import { supabase } from '../../contentcomponent/supabaseAPI'; // FIXED: Import from correct path
+import { supabase } from '../config'; // FIXED: Import from centralized config
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
 // Helper function to map content_posts to ScheduledPost interface - FIXED COLUMN NAMES
