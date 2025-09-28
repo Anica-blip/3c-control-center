@@ -850,7 +850,7 @@ export default function EditModal({
                         lineHeight: 1
                       }}
                     >
-                      ×
+                      &times;
                     </button>
                   </div>
                 ))}
