@@ -1385,7 +1385,7 @@ export default function ScheduleComponent() {
                               key={idx}
                               style={{
                                 padding: '2px 4px',
-                                backgroundColor: getStatusColor(post.status).borderLeft.split(' ')[3],
+                                backgroundColor: getStatusColor(post.status).borderLeft.split(' ')[2],
                                 borderRadius: '2px',
                                 fontSize: '10px',
                                 color: 'white',
