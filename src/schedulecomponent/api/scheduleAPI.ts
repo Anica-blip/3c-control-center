@@ -1,4 +1,4 @@
-// /src/schedulecomponent/api/scheduleAPI.ts - FIXED COLUMN MAPPINGS
+// /src/schedulecomponent/api/scheduleAPI.ts - LOGICAL FIXES FOR PENDING POST EDITING
 import { supabase } from '../config';
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
@@ -95,7 +95,45 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
   }
 };
 
-// SAVE CHANGES TO SCHEDULED POST - Updates content_posts table with CORRECT COLUMN NAMES
+// LOGICAL FIX: DIRECT PENDING POST UPDATE - NO TABLE CHECKING NEEDED
+export const updatePendingPost = async (id: string, updates: Partial<ScheduledPost>): Promise<ScheduledPost> => {
+  try {
+    // LOGICAL APPROACH: Pending posts are ALWAYS in content_posts - no checking needed
+    const updateData: any = {};
+    
+    if (updates.title !== undefined) updateData.title = updates.title;
+    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.hashtags !== undefined) updateData.hashtags = updates.hashtags;
+    if (updates.keywords !== undefined) updateData.keywords = updates.keywords;
+    if (updates.cta !== undefined) updateData.cta = updates.cta;
+    if (updates.media_files !== undefined) updateData.media_files = updates.media_files;
+    if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
+    if (updates.character_profile !== undefined) updateData.character_profile = updates.character_profile;
+    if (updates.theme !== undefined) updateData.theme = updates.theme;
+    if (updates.audience !== undefined) updateData.audience = updates.audience;
+    if (updates.media_type !== undefined) updateData.media_type = updates.media_type;
+    if (updates.template_type !== undefined) updateData.template_type = updates.template_type;
+    if (updates.platform !== undefined) updateData.platform = updates.platform;
+
+    // Force status to remain 'scheduled' to stay in pending section
+    updateData.status = 'scheduled';
+
+    const { data, error } = await supabase
+      .from('content_posts')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return mapContentPostToScheduledPost(data);
+  } catch (error) {
+    console.error('Error updating pending post:', error);
+    throw error;
+  }
+};
+
+// LEGACY: SAVE CHANGES TO SCHEDULED POST - Updates content_posts table with CORRECT COLUMN NAMES
 export const updateScheduledPost = async (id: string, updates: Partial<ScheduledPost>): Promise<ScheduledPost> => {
   try {
     // First check if post is in content_posts (scheduled) or dashboard_posts (completed)
@@ -365,38 +403,9 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
   }
 };
 
-// ADD CONTENT POST UPDATE METHOD FOR EDIT MODAL
+// DEPRECATED: Legacy method kept for compatibility
 export const updateContentPost = async (id: string, updates: Partial<ScheduledPost>): Promise<ScheduledPost> => {
-  try {
-    const updateData: any = {};
-    
-    if (updates.title !== undefined) updateData.title = updates.title;
-    if (updates.description !== undefined) updateData.description = updates.description;
-    if (updates.hashtags !== undefined) updateData.hashtags = updates.hashtags;
-    if (updates.keywords !== undefined) updateData.keywords = updates.keywords;
-    if (updates.cta !== undefined) updateData.cta = updates.cta;
-    if (updates.media_files !== undefined) updateData.media_files = updates.media_files;
-    if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
-    if (updates.character_profile !== undefined) updateData.character_profile = updates.character_profile;
-    if (updates.theme !== undefined) updateData.theme = updates.theme;
-    if (updates.audience !== undefined) updateData.audience = updates.audience;
-    if (updates.media_type !== undefined) updateData.media_type = updates.media_type;
-    if (updates.template_type !== undefined) updateData.template_type = updates.template_type;
-    if (updates.platform !== undefined) updateData.platform = updates.platform;
-
-    const { data, error } = await supabase
-      .from('content_posts')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return mapContentPostToScheduledPost(data);
-  } catch (error) {
-    console.error('Error updating content post:', error);
-    throw error;
-  }
+  return updatePendingPost(id, updates);
 };
 
 // MAIN API OBJECT EXPORT
@@ -404,7 +413,8 @@ export const scheduleAPI = {
   fetchScheduledPosts,
   createScheduledPost,
   updateScheduledPost,
-  updateContentPost, // ADDED: For EditModal support
+  updatePendingPost, // NEW: Direct logical pending post updates
+  updateContentPost, // LEGACY: For compatibility
   deleteScheduledPost,
   fetchTemplates,
   createTemplate,
