@@ -20,7 +20,6 @@ const mapContentPostToScheduledPost = (data: any): ScheduledPost => {
     cta: data.cta || '',
     media_files: Array.isArray(data.media_files) ? data.media_files : [],
     selected_platforms: Array.isArray(data.selected_platforms) ? data.selected_platforms : [],
-    detailed_platforms: Array.isArray(data.detailed_platforms) ? data.detailed_platforms : [], // ADD: Rich platform data
     scheduled_date: data.scheduled_date ? new Date(data.scheduled_date) : null,
     status: data.status || 'scheduled',
     created_date: new Date(data.created_at),
@@ -49,7 +48,6 @@ const mapDashboardPostToScheduledPost = (data: any): ScheduledPost => {
     cta: data.cta || '',
     media_files: Array.isArray(data.media_files) ? data.media_files : [],
     selected_platforms: Array.isArray(data.selected_platforms) ? data.selected_platforms : [],
-    detailed_platforms: Array.isArray(data.detailed_platforms) ? data.detailed_platforms : [], // ADD: Rich platform data
     scheduled_date: new Date(data.scheduled_date),
     status: data.status || 'scheduled',
     failure_reason: data.failure_reason || '',
@@ -97,122 +95,30 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
   }
 };
 
-// LOGICAL FIX: DIRECT PENDING POST UPDATE - NO TABLE CHECKING NEEDED
+// CORRECTED: Copy exact logic from supabaseAPI.ts updateContentPost
 export const updatePendingPost = async (id: string, updates: Partial<ScheduledPost>): Promise<ScheduledPost> => {
   try {
-    // LOGICAL APPROACH: Pending posts are ALWAYS in content_posts - no checking needed
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id || null;
-
-    // Extract character profile details for additional columns
-    let characterDetails = {
-      character_avatar: null,
-      name: null,
-      username: null,
-      role: null
-    };
-
-    if (updates.character_profile) {
-      try {
-        const { data: characterProfiles, error } = await supabase
-          .from('character_profiles')
-          .select('*')
-          .eq('is_active', true);
-          
-        if (!error && characterProfiles) {
-          const selectedProfile = characterProfiles.find(p => p.id === updates.character_profile);
-          if (selectedProfile) {
-            characterDetails = {
-              character_avatar: selectedProfile.avatar_id || null,
-              name: selectedProfile.name || null,
-              username: selectedProfile.username || null,
-              role: selectedProfile.role || null
-            };
-          }
-        }
-      } catch (error) {
-        console.error('Error loading character profile details:', error);
-      }
-    }
-
-    // Extract platform details for additional columns
-    let platformDetails = {
-      social_platform: null,
-      url: null,
-      channel_group_id: null,
-      thread_id: null
-    };
-
-    if (updates.selected_platforms && updates.selected_platforms.length > 0) {
-      try {
-        const [platformsResult, telegramResult] = await Promise.all([
-          supabase.from('social_platforms').select('*').eq('is_active', true),
-          supabase.from('telegram_configurations').select('*').eq('is_active', true)
-        ]);
-
-        const platforms = platformsResult.data || [];
-        const telegramChannels = telegramResult.data || [];
-
-        // Get first platform ID - handle both string IDs and rich objects
-        const firstPlatform = updates.selected_platforms[0];
-        const primaryPlatformId = typeof firstPlatform === 'string' ? firstPlatform : firstPlatform?.id;
-        
-        let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
-        
-        if (selectedPlatform) {
-          platformDetails = {
-            social_platform: selectedPlatform.name || null,
-            url: selectedPlatform.url || null,
-            channel_group_id: null,
-            thread_id: null
-          };
-        } else {
-          const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
-          if (selectedTelegram) {
-            platformDetails = {
-              social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
-              url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
-              channel_group_id: selectedTelegram.channel_group_id || null,
-              thread_id: selectedTelegram.thread_id || null
-            };
-          }
-        }
-      } catch (error) {
-        console.error('Error loading platform details:', error);
-      }
-    }
-
-    // Use detailedPlatforms if available, otherwise fallback to selectedPlatforms
-    const platformsToUpdate = updates.detailed_platforms && updates.detailed_platforms.length > 0 
-      ? updates.detailed_platforms 
-      : updates.selected_platforms;
-
-    const updateData: any = {};
+    // Prepare update data - EXACT SAME LOGIC as supabaseAPI.ts
+    const updateData: Record<string, any> = {};
     
+    if (updates.character_profile) updateData.character_profile = updates.character_profile;
+    if (updates.theme) updateData.theme = updates.theme;
+    if (updates.audience) updateData.audience = updates.audience;
+    if (updates.media_type) updateData.media_type = updates.media_type;
+    if (updates.template_type) updateData.template_type = updates.template_type;
+    if (updates.platform !== undefined) updateData.platform = updates.platform;
     if (updates.title !== undefined) updateData.title = updates.title;
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.hashtags !== undefined) updateData.hashtags = updates.hashtags;
     if (updates.keywords !== undefined) updateData.keywords = updates.keywords;
     if (updates.cta !== undefined) updateData.cta = updates.cta;
     if (updates.media_files !== undefined) updateData.media_files = updates.media_files;
-    if (platformsToUpdate !== undefined) updateData.selected_platforms = platformsToUpdate;
-    if (updates.character_profile !== undefined) updateData.character_profile = updates.character_profile;
-    if (updates.theme !== undefined) updateData.theme = updates.theme;
-    if (updates.audience !== undefined) updateData.audience = updates.audience;
-    if (updates.media_type !== undefined) updateData.media_type = updates.media_type;
-    if (updates.template_type !== undefined) updateData.template_type = updates.template_type;
-    if (updates.platform !== undefined) updateData.platform = updates.platform;
-
-    // Add character profile details
-    Object.assign(updateData, characterDetails);
+    if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
+    if (updates.status) updateData.status = updates.status; // COPIED FROM supabaseAPI.ts
     
-    // Add platform details  
-    Object.assign(updateData, platformDetails);
-
-    // Force status to remain 'scheduled' to stay in pending section
-    updateData.status = 'scheduled';
     updateData.updated_at = new Date().toISOString();
 
+    // Update in content_posts table - SAME TABLE, SAME POST
     const { data, error } = await supabase
       .from('content_posts')
       .update(updateData)
@@ -249,13 +155,13 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       if (updates.cta !== undefined) updateData.cta = updates.cta;
       if (updates.media_files !== undefined) updateData.media_files = updates.media_files;
       if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
-      if (updates.detailed_platforms !== undefined) updateData.detailed_platforms = updates.detailed_platforms; // ADD: Rich platform data
       if (updates.character_profile !== undefined) updateData.character_profile = updates.character_profile; // FIXED: correct column
       if (updates.theme !== undefined) updateData.theme = updates.theme;
       if (updates.audience !== undefined) updateData.audience = updates.audience;
       if (updates.media_type !== undefined) updateData.media_type = updates.media_type;
       if (updates.template_type !== undefined) updateData.template_type = updates.template_type;
       if (updates.platform !== undefined) updateData.platform = updates.platform; // FIXED: correct column
+      if (updates.status) updateData.status = updates.status; // COPIED FROM supabaseAPI.ts
 
       const { data, error } = await supabase
         .from('content_posts')
@@ -274,7 +180,6 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       if (updates.status !== undefined) updateData.status = updates.status;
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.description !== undefined) updateData.description = updates.description;
-      if (updates.detailed_platforms !== undefined) updateData.detailed_platforms = updates.detailed_platforms; // ADD: Rich platform data
 
       const { data, error } = await supabase
         .from('dashboard_posts')
@@ -320,7 +225,6 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       cta: originalPost.cta,
       media_files: originalPost.media_files,
       selected_platforms: originalPost.selected_platforms,
-      detailed_platforms: originalPost.detailed_platforms, // ADD: Rich platform data
       scheduled_date: postData.scheduled_date.toISOString(),
       status: 'scheduled',
       is_from_template: originalPost.is_from_template,
@@ -337,12 +241,6 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       .single();
 
     if (insertError) throw insertError;
-
-    // Update original post status to 'published' in content_posts
-    await supabase
-      .from('content_posts')
-      .update({ status: 'published' })
-      .eq('id', originalPost.id);
 
     return mapDashboardPostToScheduledPost(newScheduledPost);
   } catch (error) {
@@ -476,7 +374,7 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
       keywords: template.keywords || '',
       cta: template.cta || '',
       selected_platforms: template.selected_platforms || [],
-      status: 'scheduled',
+      status: template.status || 'pending', // COPIED FROM supabaseAPI.ts
       is_from_template: true,
       source_template_id: templateId,
       user_id: userId,
