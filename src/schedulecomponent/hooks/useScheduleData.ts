@@ -1,4 +1,4 @@
-// /src/schedulecomponent/hooks/useScheduleData.ts - FIXED TO MATCH COMPONENT LOGIC
+// /src/schedulecomponent/hooks/useScheduleData.ts - LOGICAL FIXES FOR PENDING POST EDITING
 
 import { useState, useEffect, useCallback } from 'react';
 import { scheduleAPI } from '../api/scheduleAPI';
@@ -255,7 +255,7 @@ export const useScheduledPosts = () => {
     }
   }, []);
 
-  // FIXED: updatePost - NO VALIDATION on partial updates, just like loading pattern
+  // LOGICAL FIX: Direct pending post updates - no dependency bloat, no over-engineering
   const updatePost = useCallback(async (
     id: string, 
     updates: Partial<ScheduledPost>
@@ -267,32 +267,11 @@ export const useScheduledPosts = () => {
         throw new Error('Post ID is required');
       }
       
-      // Find the current post to determine if it's pending
-      const currentPost = posts.find(p => p.id === id);
-      const isPendingPost = currentPost?.status === 'scheduled';
+      // LOGICAL APPROACH: For pending posts, use direct updatePendingPost
+      // This keeps status='scheduled' and stays in content_posts table
+      const updatedPost = await withRetry(() => scheduleAPI.updatePendingPost(id, updates));
       
-      // FIXED: NO VALIDATION - follow the loading pattern that works
-      // Just update the post directly, same as how loading works
-      
-      let updatedPost;
-      if (isPendingPost) {
-        // For pending posts: ensure status stays 'scheduled' to remain in content_posts
-        const pendingUpdates = {
-          ...updates,
-          status: 'scheduled' as const // Keep as 'scheduled' in content_posts
-        };
-        // Use the content post update API (assuming scheduleAPI has this method)
-        if (scheduleAPI.updateContentPost) {
-          updatedPost = await withRetry(() => scheduleAPI.updateContentPost(id, pendingUpdates));
-        } else {
-          // Fallback: use regular update but ensure status preservation
-          updatedPost = await withRetry(() => scheduleAPI.updateScheduledPost(id, pendingUpdates));
-        }
-      } else {
-        // For scheduled posts: update dashboard_posts table normally
-        updatedPost = await withRetry(() => scheduleAPI.updateScheduledPost(id, updates));
-      }
-      
+      // Update local state with the updated post
       setPosts(prev => prev.map(p => p.id === id ? updatedPost : p));
       
       return { success: true, data: updatedPost };
@@ -301,7 +280,7 @@ export const useScheduledPosts = () => {
       setError(apiError);
       return { success: false, error: apiError };
     }
-  }, [posts]);
+  }, []); // ✅ NO DEPENDENCY BLOAT - no [posts] array needed
 
   const deletePost = useCallback(async (id: string): Promise<OperationResult> => {
     try {
