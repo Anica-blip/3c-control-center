@@ -6,7 +6,7 @@ import EditModal from './components/EditModal';
 import { getTheme, getContainerStyle, getCSSAnimations } from './utils/styleUtils';
 import { Calendar, Clock, Edit3, Trash2, RefreshCw, AlertCircle, CheckCircle, Play, X, ChevronLeft, ChevronRight, Save, XCircle, WifiOff } from 'lucide-react';
 import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './types';
-import { supabase } from './config';
+import { supabase } from '../contentcomponent/supabaseAPI'; // FIXED: Import from correct path
 
 // ✅ ERROR NOTIFICATION COMPONENT
 const ErrorNotificationBanner: React.FC<{
@@ -202,7 +202,7 @@ export default function ScheduleComponent() {
   const [notifications, setNotifications] = useState<ErrorNotification[]>([]);
   const [operationStates, setOperationStates] = useState<Record<string, boolean>>({});
 
-  // ✅ CHARACTER PROFILE STATE
+  // ✅ SIMPLIFIED CHARACTER PROFILE STATE - NO LONGER NEEDED
   const [characterProfiles, setCharacterProfiles] = useState<Record<string, any>>({});
   const [profilesLoading, setProfilesLoading] = useState<Record<string, boolean>>({});
 
@@ -216,7 +216,7 @@ export default function ScheduleComponent() {
     return uuidRegex.test(str);
   };
 
-  // ✅ DEFENSIVE CHARACTER PROFILE FETCHING
+  // ✅ SIMPLIFIED CHARACTER PROFILE FETCHING - STILL KEEP FOR ADDITIONAL DATA
   const fetchCharacterProfile = useCallback(async (profileId: string) => {
     if (!profileId || !isUUID(profileId) || characterProfiles[profileId] !== undefined) return;
     
@@ -297,7 +297,7 @@ export default function ScheduleComponent() {
   const publishedPosts = (scheduledPosts || []).filter(p => p?.status === 'published');
   const failedPosts = (scheduledPosts || []).filter(p => p?.status === 'failed');
 
-  // ✅ DEFENSIVE CHARACTER PROFILE FETCHING
+  // ✅ SIMPLIFIED CHARACTER PROFILE FETCHING - STILL FETCH FOR NAME/USERNAME/ROLE
   useEffect(() => {
     if (!pendingPosts?.length) return;
     
@@ -1082,16 +1082,16 @@ export default function ScheduleComponent() {
                               </span>
                             )}
                             
-                            {/* Character Profile Display */}
+                            {/* FIXED: Character Profile Display - Use character_avatar directly */}
                             <div style={{
                               display: 'flex',
                               alignItems: 'center',
                               gap: '8px'
                             }}>
-                              {profileData?.avatar_id && (
+                              {post.character_avatar && (
                                 <img 
-                                  src={profileData.avatar_id} 
-                                  alt={profileData.name || 'Profile'}
+                                  src={post.character_avatar} 
+                                  alt={profileData?.name || 'Profile'}
                                   style={{
                                     width: '20px',
                                     height: '20px',
