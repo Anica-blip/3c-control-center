@@ -1,5 +1,5 @@
-// /src/schedulecomponent/api/scheduleAPI.ts - LOGICAL FIXES FOR PENDING POST EDITING
-import { supabase } from '../config';
+// /src/schedulecomponent/api/scheduleAPI.ts - FIXED: Use same Supabase instance
+import { supabase } from '../../contentcomponent/supabaseAPI'; // FIXED: Import from correct path
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
 // Helper function to map content_posts to ScheduledPost interface - FIXED COLUMN NAMES
@@ -63,6 +63,8 @@ const mapDashboardPostToScheduledPost = (data: any): ScheduledPost => {
 // SCHEDULED POSTS - Read from content_posts table where status = 'scheduled'
 export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost[]> => {
   try {
+    if (!supabase) throw new Error('Supabase client not available');
+
     // Get scheduled posts from content_posts table
     const { data: scheduledPosts, error: scheduledError } = await supabase
       .from('content_posts')
@@ -98,6 +100,8 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
 // CORRECTED: Copy exact logic from supabaseAPI.ts updateContentPost
 export const updatePendingPost = async (id: string, updates: Partial<ScheduledPost>): Promise<ScheduledPost> => {
   try {
+    if (!supabase) throw new Error('Supabase client not available');
+
     // Prepare update data - EXACT SAME LOGIC as supabaseAPI.ts
     const updateData: Record<string, any> = {};
     
@@ -137,6 +141,8 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
 // LEGACY: SAVE CHANGES TO SCHEDULED POST - Updates content_posts table with CORRECT COLUMN NAMES
 export const updateScheduledPost = async (id: string, updates: Partial<ScheduledPost>): Promise<ScheduledPost> => {
   try {
+    if (!supabase) throw new Error('Supabase client not available');
+
     // First check if post is in content_posts (scheduled) or dashboard_posts (completed)
     const { data: contentPost } = await supabase
       .from('content_posts')
@@ -200,6 +206,8 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
 // SCHEDULE POST - Move from content_posts to dashboard_posts with date/time
 export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | 'created_date'>): Promise<ScheduledPost> => {
   try {
+    if (!supabase) throw new Error('Supabase client not available');
+
     // Get the original post from content_posts using the post ID
     const { data: originalPost, error: fetchError } = await supabase
       .from('content_posts')
@@ -263,6 +271,8 @@ export const deleteScheduledPost = async (id: string): Promise<void> => {
 // TEMPLATE OPERATIONS
 export const fetchTemplates = async (userId: string): Promise<SavedTemplate[]> => {
   try {
+    if (!supabase) throw new Error('Supabase client not available');
+
     const { data, error } = await supabase
       .from('dashboard_templates')
       .select('*')
@@ -280,6 +290,8 @@ export const fetchTemplates = async (userId: string): Promise<SavedTemplate[]> =
 
 export const createTemplate = async (templateData: Omit<SavedTemplate, 'id' | 'created_at' | 'updated_at'>): Promise<SavedTemplate> => {
   try {
+    if (!supabase) throw new Error('Supabase client not available');
+
     const { data, error } = await supabase
       .from('dashboard_templates')
       .insert(templateData)
@@ -296,6 +308,8 @@ export const createTemplate = async (templateData: Omit<SavedTemplate, 'id' | 'c
 
 export const updateTemplate = async (id: string, updates: Partial<SavedTemplate>): Promise<SavedTemplate> => {
   try {
+    if (!supabase) throw new Error('Supabase client not available');
+
     const { data, error } = await supabase
       .from('dashboard_templates')
       .update(updates)
@@ -313,6 +327,8 @@ export const updateTemplate = async (id: string, updates: Partial<SavedTemplate>
 
 export const deleteTemplate = async (id: string): Promise<void> => {
   try {
+    if (!supabase) throw new Error('Supabase client not available');
+
     const { error } = await supabase
       .from('dashboard_templates')
       .update({ is_active: false })
@@ -327,6 +343,8 @@ export const deleteTemplate = async (id: string): Promise<void> => {
 
 export const incrementTemplateUsage = async (id: string): Promise<void> => {
   try {
+    if (!supabase) throw new Error('Supabase client not available');
+
     const { data: template, error: fetchError } = await supabase
       .from('dashboard_templates')
       .select('usage_count')
@@ -350,6 +368,8 @@ export const incrementTemplateUsage = async (id: string): Promise<void> => {
 // RESCHEDULE TEMPLATE - Send back to content_posts for re-editing with CORRECT COLUMNS
 export const rescheduleFromTemplate = async (templateId: string, userId: string): Promise<any> => {
   try {
+    if (!supabase) throw new Error('Supabase client not available');
+
     // Get template data
     const { data: template, error: templateError } = await supabase
       .from('dashboard_templates')
