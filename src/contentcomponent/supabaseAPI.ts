@@ -67,7 +67,7 @@ export const supabaseAPI = {
     }
   }, 
 
-  // ENHANCED: Save content post to content_posts table with additional columns
+  // Save content post to content_posts table
   async saveContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
     if (!isSupabaseConfigured()) {
       throw new Error('Supabase not configured - cannot save to database');
@@ -82,6 +82,7 @@ export const supabaseAPI = {
       const uploadedMediaFiles = await Promise.all(
         (postData.mediaFiles || []).map(async (mediaFile) => {
           if (mediaFile.url.startsWith('blob:')) {
+            // Convert blob URL to file and upload
             try {
               const response = await fetch(mediaFile.url);
               const blob = await response.blob();
@@ -92,18 +93,18 @@ export const supabaseAPI = {
               return {
                 ...mediaFile,
                 supabaseUrl: supabaseUrl,
-                url: supabaseUrl
+                url: supabaseUrl // Update URL to Supabase URL
               };
             } catch (uploadError) {
               console.error('Error uploading media file:', uploadError);
-              return mediaFile;
+              return mediaFile; // Keep original if upload fails
             }
           }
           return mediaFile;
         })
       );
 
-      // ENHANCEMENT: Extract character profile details for additional columns
+      // Extract character profile details for additional columns
       let characterDetails = {
         avatar_id: null,
         name: null,
@@ -122,14 +123,13 @@ export const supabaseAPI = {
               username: selectedProfile.username || null,
               role: selectedProfile.role || null
             };
-            console.log('Character profile details extracted:', characterDetails);
           }
         } catch (error) {
           console.error('Error loading character profile details:', error);
         }
       }
 
-      // ENHANCEMENT: Extract platform details for additional columns
+      // Extract platform details for additional columns
       let platformDetails = {
         social_platform: null,
         url: null,
@@ -139,27 +139,22 @@ export const supabaseAPI = {
 
       if (postData.selectedPlatforms && postData.selectedPlatforms.length > 0) {
         try {
-          // Load both regular platforms and Telegram channels
           const [platforms, telegramChannels] = await Promise.all([
             this.loadPlatforms(),
             this.loadTelegramChannels()
           ]);
 
-          // Find the first selected platform details (primary platform for column storage)
           const primaryPlatformId = postData.selectedPlatforms[0];
-          
-          // Check regular platforms first
           let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
           
           if (selectedPlatform) {
             platformDetails = {
               social_platform: selectedPlatform.name || null,
               url: selectedPlatform.url || null,
-              channel_group: null, // Regular platforms don't have channel_group
-              thread_id: null // Regular platforms don't have thread_id
+              channel_group: null,
+              thread_id: null
             };
           } else {
-            // Check Telegram channels
             const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
             if (selectedTelegram) {
               platformDetails = {
@@ -170,14 +165,12 @@ export const supabaseAPI = {
               };
             }
           }
-          
-          console.log('Platform details extracted:', platformDetails);
         } catch (error) {
           console.error('Error loading platform details:', error);
         }
       }
 
-      // Prepare data for database insert with BOTH JSON and individual columns
+      // Prepare data for database insert
       const insertData = {
         content_id: postData.contentId,
         character_profile: postData.characterProfile,
@@ -192,15 +185,14 @@ export const supabaseAPI = {
         hashtags: postData.hashtags || [],
         keywords: postData.keywords || '',
         cta: postData.cta || '',
-        media_files: uploadedMediaFiles, // JSON field for publishing
-        selected_platforms: postData.selectedPlatforms || [], // JSON field for publishing
+        media_files: uploadedMediaFiles,
+        selected_platforms: postData.selectedPlatforms || [],
         status: postData.status || 'pending',
         is_from_template: postData.isFromTemplate || false,
         source_template_id: postData.sourceTemplateId || null,
-        user_id: userId,
-        created_by: userId,
+        user_id: userId, // REQUIRED for RLS
+        created_by: userId, // REQUIRED for tracking
         is_active: true,
-        // ENHANCEMENT: Additional individual columns for fast querying
         avatar_id: characterDetails.avatar_id,
         name: characterDetails.name,
         username: characterDetails.username,
@@ -210,14 +202,6 @@ export const supabaseAPI = {
         channel_group: platformDetails.channel_group,
         thread_id: platformDetails.thread_id
       };
-
-      console.log('Saving content post with enhanced data:', {
-        contentId: postData.contentId,
-        characterDetails,
-        platformDetails,
-        mediaFilesCount: uploadedMediaFiles.length,
-        selectedPlatformsCount: postData.selectedPlatforms?.length || 0
-      });
 
       const { data, error } = await client
         .from('content_posts')
@@ -253,7 +237,6 @@ export const supabaseAPI = {
         supabaseId: data.id.toString()
       };
 
-      console.log('Content post saved successfully with enhanced data');
       return contentPost;
     } catch (error) {
       console.error('Error saving content post:', error);
@@ -310,7 +293,7 @@ export const supabaseAPI = {
     }
   },
 
-  // ENHANCED: Update content post with additional columns sync
+  // Update content post
   async updateContentPost(postId: string, updates: Partial<ContentPost>): Promise<ContentPost> {
     if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
     
@@ -325,6 +308,7 @@ export const supabaseAPI = {
         updatedMediaFiles = await Promise.all(
           updates.mediaFiles.map(async (mediaFile) => {
             if (mediaFile.url.startsWith('blob:')) {
+              // Upload new media file
               try {
                 const response = await fetch(mediaFile.url);
                 const blob = await response.blob();
@@ -347,7 +331,7 @@ export const supabaseAPI = {
         );
       }
 
-      // ENHANCEMENT: Re-extract character profile details if character changed
+      // Re-extract character profile details if character changed
       let characterDetails = {};
       if (updates.characterProfile) {
         try {
@@ -360,14 +344,13 @@ export const supabaseAPI = {
               username: selectedProfile.username || null,
               role: selectedProfile.role || null
             };
-            console.log('Updated character profile details:', characterDetails);
           }
         } catch (error) {
           console.error('Error loading updated character profile details:', error);
         }
       }
 
-      // ENHANCEMENT: Re-extract platform details if platforms changed
+      // Re-extract platform details if platforms changed
       let platformDetails = {};
       if (updates.selectedPlatforms && updates.selectedPlatforms.length > 0) {
         try {
@@ -377,7 +360,6 @@ export const supabaseAPI = {
           ]);
 
           const primaryPlatformId = updates.selectedPlatforms[0];
-          
           let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
           
           if (selectedPlatform) {
@@ -398,14 +380,12 @@ export const supabaseAPI = {
               };
             }
           }
-          
-          console.log('Updated platform details:', platformDetails);
         } catch (error) {
           console.error('Error loading updated platform details:', error);
         }
       }
 
-      // Prepare update data with BOTH JSON and individual columns
+      // Prepare update data
       const updateData: Record<string, any> = {};
       if (updates.characterProfile) updateData.character_profile = updates.characterProfile;
       if (updates.theme) updateData.theme = updates.theme;
@@ -423,17 +403,10 @@ export const supabaseAPI = {
       if (updates.selectedPlatforms !== undefined) updateData.selected_platforms = updates.selectedPlatforms;
       if (updates.status) updateData.status = updates.status;
       
-      // ENHANCEMENT: Add individual columns to update data
+      // Add individual columns to update data
       Object.assign(updateData, characterDetails, platformDetails);
       
       updateData.updated_at = new Date().toISOString();
-
-      console.log('Updating content post with enhanced data:', {
-        postId,
-        updateFields: Object.keys(updateData),
-        hasCharacterUpdates: Object.keys(characterDetails).length > 0,
-        hasPlatformUpdates: Object.keys(platformDetails).length > 0
-      });
 
       const { data, error } = await client
         .from('content_posts')
@@ -470,7 +443,6 @@ export const supabaseAPI = {
         supabaseId: data.id.toString()
       };
 
-      console.log('Content post updated successfully with enhanced data');
       return contentPost;
     } catch (error) {
       console.error('Error updating content post:', error);
