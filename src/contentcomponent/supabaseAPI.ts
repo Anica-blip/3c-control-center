@@ -170,7 +170,10 @@ export const supabaseAPI = {
         })
       );
 
-
+      // Use detailedPlatforms if available, otherwise fallback to selectedPlatforms
+      const platformsToStore = postData.detailedPlatforms && postData.detailedPlatforms.length > 0 
+        ? postData.detailedPlatforms 
+        : postData.selectedPlatforms || [];
 
       // Prepare data for database insert
       const insertData = {
@@ -188,8 +191,7 @@ export const supabaseAPI = {
         keywords: postData.keywords || '',
         cta: postData.cta || '',
         media_files: uploadedMediaFiles,
-        selected_platforms: postData.selectedPlatforms || [],
-        detailed_platforms: postData.detailedPlatforms || [], // ADD: Rich platform data
+        selected_platforms: platformsToStore,
         status: postData.status || 'pending',
         is_from_template: postData.isFromTemplate || false,
         source_template_id: postData.sourceTemplateId || null,
@@ -232,7 +234,7 @@ export const supabaseAPI = {
         cta: data.cta || '',
         mediaFiles: uploadedMediaFiles,
         selectedPlatforms: data.selected_platforms || [],
-        detailedPlatforms: data.detailed_platforms || [], // ADD: Rich platform data
+        detailedPlatforms: data.selected_platforms || [],
         status: data.status || 'pending',
         createdDate: new Date(data.created_at),
         scheduledDate: data.scheduled_date ? new Date(data.scheduled_date) : undefined,
@@ -282,7 +284,7 @@ export const supabaseAPI = {
         cta: record.cta || '',
         mediaFiles: Array.isArray(record.media_files) ? record.media_files : [],
         selectedPlatforms: Array.isArray(record.selected_platforms) ? record.selected_platforms : [],
-        detailedPlatforms: Array.isArray(record.detailed_platforms) ? record.detailed_platforms : [], // ADD: Rich platform data
+        detailedPlatforms: Array.isArray(record.selected_platforms) ? record.selected_platforms : [],
         status: record.status || 'pending',
         createdDate: new Date(record.created_at),
         scheduledDate: record.scheduled_date ? new Date(record.scheduled_date) : undefined,
@@ -444,6 +446,11 @@ export const supabaseAPI = {
         }
       }
 
+      // Use detailedPlatforms if available, otherwise fallback to selectedPlatforms
+      const platformsToUpdate = updates.detailedPlatforms && updates.detailedPlatforms.length > 0 
+        ? updates.detailedPlatforms 
+        : updates.selectedPlatforms;
+
       // Prepare update data
       const updateData: Record<string, any> = {};
       if (updates.characterProfile) updateData.character_profile = updates.characterProfile;
@@ -459,8 +466,7 @@ export const supabaseAPI = {
       if (updates.keywords !== undefined) updateData.keywords = updates.keywords;
       if (updates.cta !== undefined) updateData.cta = updates.cta;
       if (updatedMediaFiles !== undefined) updateData.media_files = updatedMediaFiles;
-      if (updates.selectedPlatforms !== undefined) updateData.selected_platforms = updates.selectedPlatforms;
-      if (updates.detailedPlatforms !== undefined) updateData.detailed_platforms = updates.detailedPlatforms; // ADD: Rich platform data
+      if (platformsToUpdate !== undefined) updateData.selected_platforms = platformsToUpdate;
       if (updates.status) updateData.status = updates.status;
       
       // Add individual columns to update data
@@ -495,7 +501,7 @@ export const supabaseAPI = {
         cta: data.cta || '',
         mediaFiles: data.media_files || [],
         selectedPlatforms: data.selected_platforms || [],
-        detailedPlatforms: data.detailed_platforms || [], // ADD: Rich platform data
+        detailedPlatforms: data.selected_platforms || [],
         status: data.status || 'pending',
         createdDate: new Date(data.created_at),
         scheduledDate: data.scheduled_date ? new Date(data.scheduled_date) : undefined,
