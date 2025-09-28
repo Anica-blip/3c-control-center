@@ -1,12 +1,12 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - COMPLETE with Character Profiles + All Tabs - ERROR FREE
+// /src/schedulecomponent/ScheduleComponent.tsx - DEFENSIVE ERROR-FREE VERSION
 import React, { useState, useEffect, useCallback } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
 import EditModal from './components/EditModal';
-import { getTabStyle, getTheme, getContainerStyle, getCSSAnimations } from './utils/styleUtils';
-import { Calendar, Clock, Edit3, Trash2, RefreshCw, Eye, AlertCircle, CheckCircle, Play, X, Plus, ChevronLeft, ChevronRight, Save, XCircle, WifiOff } from 'lucide-react';
+import { getTheme, getContainerStyle, getCSSAnimations } from './utils/styleUtils';
+import { Calendar, Clock, Edit3, Trash2, RefreshCw, AlertCircle, CheckCircle, Play, X, ChevronLeft, ChevronRight, Save, XCircle, WifiOff } from 'lucide-react';
 import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './types';
-import { supabase } from '../config';
+import { supabase } from './config';
 
 // ✅ ERROR NOTIFICATION COMPONENT
 const ErrorNotificationBanner: React.FC<{
@@ -198,7 +198,7 @@ export default function ScheduleComponent() {
   const [editingPost, setEditingPost] = useState<ScheduledPost | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<SavedTemplate | null>(null);
   
-  // ✅ NEW ERROR HANDLING STATE
+  // ✅ ERROR HANDLING STATE
   const [notifications, setNotifications] = useState<ErrorNotification[]>([]);
   const [operationStates, setOperationStates] = useState<Record<string, boolean>>({});
 
@@ -206,17 +206,19 @@ export default function ScheduleComponent() {
   const [characterProfiles, setCharacterProfiles] = useState<Record<string, any>>({});
   const [profilesLoading, setProfilesLoading] = useState<Record<string, boolean>>({});
 
-  // ✅ ALL OTHER HOOKS
+  // ✅ THEME HOOK
   const { isDarkMode, theme } = getTheme();
 
-  // ✅ CHARACTER PROFILE FETCHING
+  // ✅ DEFENSIVE UUID CHECK
   const isUUID = (str: string): boolean => {
+    if (!str || typeof str !== 'string') return false;
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
   };
 
+  // ✅ DEFENSIVE CHARACTER PROFILE FETCHING
   const fetchCharacterProfile = useCallback(async (profileId: string) => {
-    if (!profileId || !isUUID(profileId) || characterProfiles[profileId]) return;
+    if (!profileId || !isUUID(profileId) || characterProfiles[profileId] !== undefined) return;
     
     try {
       setProfilesLoading(prev => ({ ...prev, [profileId]: true }));
@@ -239,7 +241,7 @@ export default function ScheduleComponent() {
     } finally {
       setProfilesLoading(prev => ({ ...prev, [profileId]: false }));
     }
-  }, [characterProfiles]);
+  }, []); // Remove characterProfiles dependency to prevent infinite loops
 
   // ✅ NOTIFICATION HELPERS
   const addNotification = useCallback((notification: Omit<ErrorNotification, 'id' | 'timestamp'>) => {
@@ -249,7 +251,7 @@ export default function ScheduleComponent() {
       id,
       timestamp: new Date()
     };
-    setNotifications(prev => [newNotification, ...prev].slice(0, 5)); // Keep max 5 notifications
+    setNotifications(prev => [newNotification, ...prev].slice(0, 5));
   }, []);
 
   const dismissNotification = useCallback((id: string) => {
@@ -287,24 +289,26 @@ export default function ScheduleComponent() {
     return operationStates[operation] || false;
   }, [operationStates]);
 
-  // FIXED: Proper filtering - Pending ONLY from content_posts, Calendar ONLY from dashboard_posts
-  const pendingPosts = scheduledPosts.filter(p => p.status === 'scheduled'); // From content_posts
-  const scheduledPostsFiltered = scheduledPosts.filter(p => 
-    ['processing', 'publishing', 'published', 'failed'].includes(p.status) // REMOVED 'scheduled' - only dashboard_posts
+  // ✅ DEFENSIVE POST FILTERING
+  const pendingPosts = (scheduledPosts || []).filter(p => p?.status === 'scheduled');
+  const scheduledPostsFiltered = (scheduledPosts || []).filter(p => 
+    p?.status && ['processing', 'publishing', 'published', 'failed'].includes(p.status)
   );
-  const publishedPosts = scheduledPosts.filter(p => p.status === 'published');
-  const failedPosts = scheduledPosts.filter(p => p.status === 'failed');
+  const publishedPosts = (scheduledPosts || []).filter(p => p?.status === 'published');
+  const failedPosts = (scheduledPosts || []).filter(p => p?.status === 'failed');
 
-  // ✅ FETCH CHARACTER PROFILES FOR PENDING POSTS
+  // ✅ DEFENSIVE CHARACTER PROFILE FETCHING
   useEffect(() => {
+    if (!pendingPosts?.length) return;
+    
     pendingPosts.forEach(post => {
-      if (post.character_profile && typeof post.character_profile === 'string' && isUUID(post.character_profile)) {
+      if (post?.character_profile && typeof post.character_profile === 'string' && isUUID(post.character_profile)) {
         fetchCharacterProfile(post.character_profile);
       }
     });
-  }, [pendingPosts, fetchCharacterProfile]);
+  }, [pendingPosts.length, fetchCharacterProfile]); // Use length instead of full array
 
-  // Platform configuration
+  // ✅ PLATFORM CONFIGURATION
   const platforms = [
     { id: '1', name: 'Telegram', icon: 'TG', color: '#3b82f6' },
     { id: '2', name: 'YouTube', icon: 'YT', color: '#ef4444' },
@@ -313,9 +317,9 @@ export default function ScheduleComponent() {
     { id: '5', name: 'Forum', icon: 'FR', color: '#4b5563' },
   ];
 
-  // Helper function to truncate description
-  const truncateDescription = (description: string, maxLength: number = 120) => {
-    if (description.length <= maxLength) return description;
+  // ✅ DEFENSIVE DESCRIPTION TRUNCATION
+  const truncateDescription = (description: string = '', maxLength: number = 120) => {
+    if (!description || description.length <= maxLength) return description;
     
     const truncated = description.substring(0, maxLength);
     const lastSpaceIndex = truncated.lastIndexOf(' ');
@@ -327,14 +331,16 @@ export default function ScheduleComponent() {
     return truncated + '...';
   };
 
-  const getPlatformIcon = (platformId: string) => {
-    // FIXED: Handle various platform ID formats and names
-    const normalizedId = platformId?.toString().toLowerCase();
+  // ✅ DEFENSIVE PLATFORM ICON MAPPING
+  const getPlatformIcon = (platformId: string | undefined) => {
+    if (!platformId) {
+      return { id: '', name: 'Unknown', icon: '??', color: theme.textSecondary };
+    }
+
+    const normalizedId = platformId.toString().toLowerCase();
     
-    // Check exact ID match first
     let platform = platforms.find(p => p.id === platformId);
     
-    // If no exact match, try name matching
     if (!platform) {
       platform = platforms.find(p => 
         p.name.toLowerCase() === normalizedId ||
@@ -344,7 +350,6 @@ export default function ScheduleComponent() {
       );
     }
     
-    // Enhanced platform mapping for common variations
     if (!platform) {
       switch (normalizedId) {
         case 'telegram':
@@ -369,48 +374,70 @@ export default function ScheduleComponent() {
           platform = { id: '5', name: 'Forum', icon: 'FR', color: '#4b5563' };
           break;
         default:
-          platform = { id: platformId, name: platformId, icon: platformId.substring(0, 2).toUpperCase(), color: theme.textSecondary };
+          platform = { 
+            id: platformId, 
+            name: platformId, 
+            icon: platformId.substring(0, 2).toUpperCase(), 
+            color: theme.textSecondary 
+          };
       }
     }
     
     return platform;
   };
 
-  const getStatusColor = (status: string) => {
+  // ✅ DEFENSIVE STATUS COLOR MAPPING
+  const getStatusColor = (status: string | undefined) => {
     switch (status) {
-      case 'pending': return { borderLeft: `4px solid ${theme.warning}`, backgroundColor: theme.warningBg };
-      case 'processing': return { borderLeft: `4px solid ${theme.primary}`, backgroundColor: theme.primaryBg };
-      case 'complete': return { borderLeft: `4px solid ${theme.success}`, backgroundColor: theme.successBg };
-      case 'failed': return { borderLeft: `4px solid ${theme.danger}`, backgroundColor: theme.dangerBg };
-      case 'resending': return { borderLeft: `4px solid ${theme.warning}`, backgroundColor: theme.warningBg };
-      default: return { borderLeft: `4px solid ${theme.textSecondary}`, backgroundColor: theme.cardBg };
+      case 'pending': 
+      case 'scheduled': 
+        return { borderLeft: `4px solid ${theme.warning}`, backgroundColor: theme.warningBg };
+      case 'processing': 
+        return { borderLeft: `4px solid ${theme.primary}`, backgroundColor: theme.primaryBg };
+      case 'complete': 
+      case 'published':
+        return { borderLeft: `4px solid ${theme.success}`, backgroundColor: theme.successBg };
+      case 'failed': 
+        return { borderLeft: `4px solid ${theme.danger}`, backgroundColor: theme.dangerBg };
+      case 'resending': 
+        return { borderLeft: `4px solid ${theme.warning}`, backgroundColor: theme.warningBg };
+      default: 
+        return { borderLeft: `4px solid ${theme.textSecondary}`, backgroundColor: theme.cardBg };
     }
   };
 
-  // ✅ FIXED - Extract color properly from status
-  const getStatusBorderColor = (status: string) => {
-    const statusStyle = getStatusColor(status);
-    const borderParts = statusStyle.borderLeft.split(' ');
-    return borderParts[2]; // Extract the color from "4px solid #color"
-  };
-
-  const getStatusIcon = (status: string) => {
+  // ✅ DEFENSIVE STATUS ICON MAPPING
+  const getStatusIcon = (status: string | undefined) => {
     const iconStyle = { height: '12px', width: '12px' };
     switch (status) {
-      case 'pending': return <Clock style={{...iconStyle, color: theme.warning}} />;
-      case 'processing': return <Play style={{...iconStyle, color: theme.primary}} />;
-      case 'complete': return <CheckCircle style={{...iconStyle, color: theme.success}} />;
-      case 'failed': return <AlertCircle style={{...iconStyle, color: theme.danger}} />;
-      case 'resending': return <RefreshCw style={{...iconStyle, color: theme.warning}} />;
-      default: return null;
+      case 'pending':
+      case 'scheduled': 
+        return <Clock style={{...iconStyle, color: theme.warning}} />;
+      case 'processing': 
+        return <Play style={{...iconStyle, color: theme.primary}} />;
+      case 'complete': 
+      case 'published':
+        return <CheckCircle style={{...iconStyle, color: theme.success}} />;
+      case 'failed': 
+        return <AlertCircle style={{...iconStyle, color: theme.danger}} />;
+      case 'resending': 
+        return <RefreshCw style={{...iconStyle, color: theme.warning}} />;
+      default: 
+        return null;
     }
   };
 
-  // Calendar helper functions
+  // ✅ DEFENSIVE DATE HELPERS
   const getPostsForDate = (date: Date) => {
+    if (!scheduledPostsFiltered?.length) return [];
     return scheduledPostsFiltered.filter(post => {
-      const postDate = new Date(post.scheduled_date);
-      return postDate.toDateString() === date.toDateString();
+      if (!post?.scheduled_date) return false;
+      try {
+        const postDate = new Date(post.scheduled_date);
+        return postDate.toDateString() === date.toDateString();
+      } catch {
+        return false;
+      }
     });
   };
 
@@ -419,7 +446,13 @@ export default function ScheduleComponent() {
     const hourlyPosts: { [key: number]: ScheduledPost[] } = {};
     
     for (let hour = 0; hour < 24; hour++) {
-      hourlyPosts[hour] = dayPosts.filter(post => new Date(post.scheduled_date).getHours() === hour);
+      hourlyPosts[hour] = dayPosts.filter(post => {
+        try {
+          return new Date(post.scheduled_date).getHours() === hour;
+        } catch {
+          return false;
+        }
+      });
     }
     
     return hourlyPosts;
@@ -443,14 +476,13 @@ export default function ScheduleComponent() {
     const year = date.getFullYear();
     const month = date.getMonth();
     const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
     
     const dates = [];
     const current = new Date(startDate);
     
-    for (let i = 0; i < 42; i++) { // 6 weeks * 7 days
+    for (let i = 0; i < 42; i++) {
       dates.push(new Date(current));
       current.setDate(current.getDate() + 1);
     }
@@ -473,24 +505,28 @@ export default function ScheduleComponent() {
   };
 
   const formatCalendarTitle = () => {
-    if (calendarView === 'day') {
-      return currentDate.toLocaleDateString('en-GB', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      });
-    } else if (calendarView === 'week') {
-      const weekDates = getWeekDates(currentDate);
-      const start = weekDates[0].toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-      const end = weekDates[6].toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-      return `${start} - ${end}, ${weekDates[0].getFullYear()}`;
-    } else {
-      return currentDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'long' });
+    try {
+      if (calendarView === 'day') {
+        return currentDate.toLocaleDateString('en-GB', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+      } else if (calendarView === 'week') {
+        const weekDates = getWeekDates(currentDate);
+        const start = weekDates[0]?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        const end = weekDates[6]?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        return `${start} - ${end}, ${weekDates[0]?.getFullYear()}`;
+      } else {
+        return currentDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'long' });
+      }
+    } catch {
+      return 'Invalid Date';
     }
   };
 
-  // ✅ ENHANCED EVENT HANDLERS WITH ERROR HANDLING
+  // ✅ DEFENSIVE EVENT HANDLERS
   const handleSchedulePost = (post: ScheduledPost) => {
     setSelectedPost(post);
     setIsScheduleModalOpen(true);
@@ -507,14 +543,12 @@ export default function ScheduleComponent() {
     setOperationLoading(operationKey, true);
     
     try {
-      // FIXED: Move post from content_posts to dashboard_posts with date/time
       const scheduledPostData = {
         ...selectedPost,
         scheduled_date: new Date(scheduleData.scheduledDate),
         status: 'scheduled' as const
       };
 
-      // Use createPost (which calls createScheduledPost API) to move between tables
       const result = await createPost(scheduledPostData);
       
       if (result.success) {
@@ -551,16 +585,14 @@ export default function ScheduleComponent() {
     setIsEditModalOpen(true);
   };
 
-  // FIXED: handleSaveEdit - keeps post in pending schedule 
   const handleSaveEdit = async (postId: string, updates: Partial<ScheduledPost>) => {
     const operationKey = `edit-${postId}`;
     setOperationLoading(operationKey, true);
     
     try {
-      // Ensure post stays in pending - preserve status
       const safeUpdates = {
         ...updates,
-        status: 'scheduled' as const // Keep it in pending schedule
+        status: 'scheduled' as const
       };
       
       const result = await updatePost(postId, safeUpdates);
@@ -594,7 +626,6 @@ export default function ScheduleComponent() {
     }
   };
 
-  // FIXED: Delete function - Remove from dashboard view only
   const handleDeletePost = async (postId: string) => {
     if (!confirm('Are you sure you want to remove this post from the dashboard?')) return;
     
@@ -781,7 +812,7 @@ export default function ScheduleComponent() {
     }
   };
 
-  // Tab configuration
+  // ✅ TAB CONFIGURATION
   const tabs = [
     { 
       id: 'pending', 
@@ -805,16 +836,14 @@ export default function ScheduleComponent() {
       id: 'saved', 
       label: 'Saved Templates', 
       icon: Save,
-      count: savedTemplates.length
+      count: (savedTemplates || []).length
     }
   ];
 
   return (
     <div style={getContainerStyle(isDarkMode)}>
       {/* Header */}
-      <div style={{
-        marginBottom: '32px'
-      }}>
+      <div style={{ marginBottom: '32px' }}>
         <h1 style={{
           fontSize: '28px',
           fontWeight: '700',
@@ -832,7 +861,7 @@ export default function ScheduleComponent() {
         </p>
       </div>
 
-      {/* ✅ ERROR NOTIFICATIONS */}
+      {/* Error Notifications */}
       <div style={{ marginBottom: '16px' }}>
         {postsError && (
           <ErrorNotificationBanner
@@ -871,7 +900,7 @@ export default function ScheduleComponent() {
         ))}
       </div>
 
-      {/* Compact Status Summary */}
+      {/* Quick Stats */}
       <div style={{
         display: 'flex',
         gap: '12px',
@@ -885,41 +914,25 @@ export default function ScheduleComponent() {
         <span style={{ color: theme.textSecondary, fontSize: '14px', fontWeight: '500' }}>Quick Stats:</span>
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{
-              fontSize: '18px',
-              fontWeight: '700',
-              color: theme.primary
-            }}>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: theme.primary }}>
               {pendingPosts.length}
             </div>
             <span style={{ fontSize: '13px', color: theme.textSecondary }}>Pending</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{
-              fontSize: '18px',
-              fontWeight: '700',
-              color: theme.success
-            }}>
-              {scheduledPosts.filter(p => p.status === 'scheduled').length}
+            <div style={{ fontSize: '18px', fontWeight: '700', color: theme.success }}>
+              {(scheduledPosts || []).filter(p => p?.status === 'scheduled').length}
             </div>
             <span style={{ fontSize: '13px', color: theme.textSecondary }}>Scheduled</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{
-              fontSize: '18px',
-              fontWeight: '700',
-              color: theme.success
-            }}>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: theme.success }}>
               {publishedPosts.length}
             </div>
             <span style={{ fontSize: '13px', color: theme.textSecondary }}>Published</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{
-              fontSize: '18px',
-              fontWeight: '700',
-              color: theme.danger
-            }}>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: theme.danger }}>
               {failedPosts.length}
             </div>
             <span style={{ fontSize: '13px', color: theme.textSecondary }}>Failed</span>
@@ -927,7 +940,7 @@ export default function ScheduleComponent() {
         </div>
       </div>
 
-      {/* Tab Navigation - Light Blue Bar Style */}
+      {/* Tab Navigation */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr 1fr 1fr',
@@ -1059,15 +1072,17 @@ export default function ScheduleComponent() {
                             }}>
                               Ready to Schedule
                             </span>
-                            <span style={{
-                              fontSize: '12px',
-                              color: theme.textSecondary,
-                              fontWeight: 'bold'
-                            }}>
-                              Created {new Date(post.created_date).toLocaleDateString('en-GB')}
-                            </span>
+                            {post.created_date && (
+                              <span style={{
+                                fontSize: '12px',
+                                color: theme.textSecondary,
+                                fontWeight: 'bold'
+                              }}>
+                                Created {new Date(post.created_date).toLocaleDateString('en-GB')}
+                              </span>
+                            )}
                             
-                            {/* ✅ RICH CHARACTER PROFILE DISPLAY */}
+                            {/* Character Profile Display */}
                             <div style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -1076,7 +1091,7 @@ export default function ScheduleComponent() {
                               {profileData?.avatar_id && (
                                 <img 
                                   src={profileData.avatar_id} 
-                                  alt={profileData.name}
+                                  alt={profileData.name || 'Profile'}
                                   style={{
                                     width: '20px',
                                     height: '20px',
@@ -1140,7 +1155,7 @@ export default function ScheduleComponent() {
                             fontWeight: 'bold',
                             margin: '0 0 16px 0'
                           }}>
-                            {post.description}
+                            {truncateDescription(post.description)}
                           </p>
                           
                           <div style={{
@@ -1156,7 +1171,7 @@ export default function ScheduleComponent() {
                             }}>
                               <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Platforms:</span>
                               <div style={{ display: 'flex', gap: '4px' }}>
-                                {post.selected_platforms?.map((platformId, idx) => {
+                                {(post.selected_platforms || []).map((platformId, idx) => {
                                   const platform = getPlatformIcon(platformId);
                                   return (
                                     <span
@@ -1252,10 +1267,9 @@ export default function ScheduleComponent() {
             )}
           </div>
         )}
-        
+
         {activeTab === 'calendar' && (
           <div style={{ padding: '24px' }}>
-            {/* Calendar Controls */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -1303,10 +1317,7 @@ export default function ScheduleComponent() {
                 </button>
               </div>
               
-              <div style={{
-                display: 'flex',
-                gap: '8px'
-              }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 {(['day', 'week', 'month'] as const).map(view => (
                   <button
                     key={view}
@@ -1328,7 +1339,6 @@ export default function ScheduleComponent() {
               </div>
             </div>
 
-            {/* Calendar Content */}
             {calendarView === 'month' && (
               <div style={{
                 display: 'grid',
@@ -1338,7 +1348,6 @@ export default function ScheduleComponent() {
                 borderRadius: '8px',
                 overflow: 'hidden'
               }}>
-                {/* Day Headers */}
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                   <div
                     key={day}
@@ -1355,7 +1364,6 @@ export default function ScheduleComponent() {
                   </div>
                 ))}
                 
-                {/* Calendar Days */}
                 {getMonthDates(currentDate).map((date, index) => {
                   const postsForDate = getPostsForDate(date);
                   const isCurrentMonth = date.getMonth() === currentDate.getMonth();
@@ -1368,8 +1376,7 @@ export default function ScheduleComponent() {
                         padding: '8px',
                         backgroundColor: theme.cardBg,
                         minHeight: '80px',
-                        opacity: isCurrentMonth ? 1 : 0.5,
-                        position: 'relative'
+                        opacity: isCurrentMonth ? 1 : 0.5
                       }}
                     >
                       <div style={{
@@ -1387,26 +1394,32 @@ export default function ScheduleComponent() {
                           flexDirection: 'column',
                           gap: '2px'
                         }}>
-                          {postsForDate.slice(0, 3).map((post, idx) => (
-                            <div
-                              key={idx}
-                              style={{
-                                padding: '2px 4px',
-                                backgroundColor: getStatusBorderColor(post.status),
-                                borderRadius: '2px',
-                                fontSize: '10px',
-                                color: 'white',
-                                textOverflow: 'ellipsis',
-                                overflow: 'hidden',
-                                whiteSpace: 'nowrap'
-                              }}
-                            >
-                              {new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })}
-                            </div>
-                          ))}
+                          {postsForDate.slice(0, 3).map((post, idx) => {
+                            const statusStyle = getStatusColor(post.status);
+                            const borderParts = statusStyle.borderLeft.split(' ');
+                            const statusColor = borderParts[2] || theme.primary;
+                            
+                            return (
+                              <div
+                                key={idx}
+                                style={{
+                                  padding: '2px 4px',
+                                  backgroundColor: statusColor,
+                                  borderRadius: '2px',
+                                  fontSize: '10px',
+                                  color: 'white',
+                                  textOverflow: 'ellipsis',
+                                  overflow: 'hidden',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                              </div>
+                            );
+                          })}
                           {postsForDate.length > 3 && (
                             <div style={{
                               fontSize: '10px',
@@ -1479,7 +1492,7 @@ export default function ScheduleComponent() {
                               color: theme.text,
                               marginBottom: '2px'
                             }}>
-                              {new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
+                              {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
                                 hour: '2-digit', 
                                 minute: '2-digit' 
                               })}
@@ -1559,7 +1572,7 @@ export default function ScheduleComponent() {
                               fontWeight: 'bold',
                               color: theme.text
                             }}>
-                              {new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
+                              {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
                                 hour: '2-digit', 
                                 minute: '2-digit' 
                               })}
@@ -1573,9 +1586,7 @@ export default function ScheduleComponent() {
                               {post.status}
                             </span>
                           </div>
-                          <div style={{
-                            color: theme.textSecondary
-                          }}>
+                          <div style={{ color: theme.textSecondary }}>
                             {truncateDescription(post.description, 80)}
                           </div>
                         </div>
@@ -1590,7 +1601,6 @@ export default function ScheduleComponent() {
 
         {activeTab === 'status' && (
           <div style={{ padding: '24px' }}>
-            {/* Status Filter */}
             <div style={{
               display: 'flex',
               gap: '8px',
@@ -1614,17 +1624,16 @@ export default function ScheduleComponent() {
                   {status} 
                   {status !== 'all' && (
                     <span style={{ marginLeft: '4px', opacity: 0.8 }}>
-                      ({scheduledPostsFiltered.filter(p => status === 'all' || p.status === status).length})
+                      ({scheduledPostsFiltered.filter(p => status === 'all' || p?.status === status).length})
                     </span>
                   )}
                 </button>
               ))}
             </div>
 
-            {/* Posts List */}
             <div style={{ display: 'grid', gap: '12px' }}>
               {scheduledPostsFiltered
-                .filter(post => statusFilter === 'all' || post.status === statusFilter)
+                .filter(post => statusFilter === 'all' || post?.status === statusFilter)
                 .map((post) => (
                   <div
                     key={post.id}
@@ -1657,12 +1666,14 @@ export default function ScheduleComponent() {
                           }}>
                             {post.status}
                           </span>
-                          <span style={{
-                            fontSize: '12px',
-                            color: theme.textSecondary
-                          }}>
-                            {new Date(post.scheduled_date).toLocaleString('en-GB')}
-                          </span>
+                          {post.scheduled_date && (
+                            <span style={{
+                              fontSize: '12px',
+                              color: theme.textSecondary
+                            }}>
+                              {new Date(post.scheduled_date).toLocaleString('en-GB')}
+                            </span>
+                          )}
                         </div>
                         
                         <p style={{
@@ -1687,7 +1698,7 @@ export default function ScheduleComponent() {
                           }}>
                             <span style={{ color: theme.textSecondary }}>Platforms:</span>
                             <div style={{ display: 'flex', gap: '4px' }}>
-                              {post.selected_platforms?.map((platformId, idx) => {
+                              {(post.selected_platforms || []).map((platformId, idx) => {
                                 const platform = getPlatformIcon(platformId);
                                 return (
                                   <span
@@ -1790,7 +1801,7 @@ export default function ScheduleComponent() {
                   </div>
                 ))}
               
-              {scheduledPostsFiltered.filter(post => statusFilter === 'all' || post.status === statusFilter).length === 0 && (
+              {scheduledPostsFiltered.filter(post => statusFilter === 'all' || post?.status === statusFilter).length === 0 && (
                 <div style={{
                   backgroundColor: theme.background,
                   border: `1px solid ${theme.border}`,
@@ -1827,7 +1838,7 @@ export default function ScheduleComponent() {
 
         {activeTab === 'saved' && (
           <div style={{ padding: '24px' }}>
-            {savedTemplates.length === 0 ? (
+            {(savedTemplates || []).length === 0 ? (
               <div style={{
                 backgroundColor: theme.background,
                 border: `1px solid ${theme.border}`,
@@ -1859,7 +1870,7 @@ export default function ScheduleComponent() {
               </div>
             ) : (
               <div style={{ display: 'grid', gap: '16px' }}>
-                {savedTemplates.map((template) => (
+                {(savedTemplates || []).map((template) => (
                   <div
                     key={template.id}
                     style={{
@@ -1897,7 +1908,7 @@ export default function ScheduleComponent() {
                             borderRadius: '12px',
                             fontWeight: 'bold'
                           }}>
-                            Used {template.usage_count} times
+                            Used {template.usage_count || 0} times
                           </span>
                           {template.template_type && (
                             <span style={{
@@ -2057,7 +2068,6 @@ export default function ScheduleComponent() {
         />
       )}
 
-      {/* FIXED: Pass isLoading prop to EditModal */}
       {isEditModalOpen && editingPost && (
         <EditModal
           post={editingPost}
@@ -2070,7 +2080,6 @@ export default function ScheduleComponent() {
         />
       )}
 
-      {/* CSS Animations */}
       <style>{getCSSAnimations()}</style>
     </div>
   );
