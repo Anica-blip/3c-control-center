@@ -190,6 +190,97 @@ const EnhancedContentCreationForm = ({
     return codes[value] || 'XX';
   };
 
+  // Platform symbol and color mapping functions
+  const getPlatformSymbol = (platformName: string) => {
+    const name = platformName.toLowerCase();
+    
+    // Telegram detection
+    if (name.includes('telegram')) {
+      return 'TG';
+    }
+    
+    // Standard platforms
+    if (name.includes('instagram')) return 'IG';
+    if (name.includes('facebook')) return 'FB';
+    if (name.includes('linkedin')) return 'LI';
+    if (name.includes('twitter') || name.includes('x.com')) return 'TW';
+    if (name.includes('youtube')) return 'YT';
+    if (name.includes('tiktok')) return 'TK';
+    if (name.includes('pinterest')) return 'PT';
+    if (name.includes('whatsapp')) return 'WA';
+    
+    // Default fallback
+    return platformName.substring(0, 2).toUpperCase();
+  };
+
+  const getPlatformColor = (platformName: string) => {
+    const name = platformName.toLowerCase();
+    
+    // Telegram color detection (channel vs group)
+    if (name.includes('telegram')) {
+      // Check if it's a group (contains 'group' or specific group indicators)
+      if (name.includes('group') || name.includes('chat')) {
+        return '#f97316'; // Orange for groups
+      }
+      return '#3b82f6'; // Blue for channels
+    }
+    
+    // Standard platform colors
+    if (name.includes('instagram')) return '#E4405F';
+    if (name.includes('facebook')) return '#1877F2';
+    if (name.includes('linkedin')) return '#0A66C2';
+    if (name.includes('twitter') || name.includes('x.com')) return '#000000';
+    if (name.includes('youtube')) return '#FF0000';
+    if (name.includes('tiktok')) return '#000000';
+    if (name.includes('pinterest')) return '#BD081C';
+    if (name.includes('whatsapp')) return '#25D366';
+    
+    // Default color
+    return '#6b7280';
+  };
+
+  const getPlatformType = (platformName: string) => {
+    const name = platformName.toLowerCase();
+    
+    if (name.includes('telegram')) {
+      if (name.includes('group') || name.includes('chat')) {
+        return 'telegram_group';
+      }
+      return 'telegram_channel';
+    }
+    
+    // Standard platform types
+    if (name.includes('instagram')) return 'instagram';
+    if (name.includes('facebook')) return 'facebook';
+    if (name.includes('linkedin')) return 'linkedin';
+    if (name.includes('twitter') || name.includes('x.com')) return 'twitter';
+    if (name.includes('youtube')) return 'youtube';
+    if (name.includes('tiktok')) return 'tiktok';
+    if (name.includes('pinterest')) return 'pinterest';
+    if (name.includes('whatsapp')) return 'whatsapp';
+    
+    return 'other';
+  };
+
+  // Create detailed platforms array with full info
+  const createDetailedPlatforms = (selectedPlatformIds: string[]) => {
+    return selectedPlatformIds.map(platformId => {
+      const platform = activePlatforms.find(p => p.id === platformId);
+      if (!platform) return null;
+      
+      return {
+        id: platform.id,
+        name: platform.name,
+        url: platform.url || '',
+        symbol: getPlatformSymbol(platform.name),
+        color: getPlatformColor(platform.name),
+        type: getPlatformType(platform.name),
+        isActive: platform.isActive,
+        isDefault: platform.isDefault
+      };
+    }).filter(Boolean); // Remove null entries
+  };
+
   // Platform configuration functions (inline implementation)
   const getPlatformConfig = (platform: string) => {
     const configs: Record<string, any> = {
@@ -411,9 +502,9 @@ const EnhancedContentCreationForm = ({
         
         if (matchedProfile) {
           matchedCharacterProfileId = matchedProfile.id;
-          console.log('âœ… Found matching character profile:', matchedProfile.name, 'ID:', matchedProfile.id);
+          console.log('✓ Found matching character profile:', matchedProfile.name, 'ID:', matchedProfile.id);
         } else {
-          console.log('âŒ Could not find matching character profile for:', loadedTemplate.character_profile);
+          console.log('✗ Could not find matching character profile for:', loadedTemplate.character_profile);
           console.log('Available profiles:', characterProfiles.map(p => `${p.name} (${p.id})`));
         }
       }
@@ -455,7 +546,7 @@ const EnhancedContentCreationForm = ({
         onTemplateLoaded();
       }
       
-      console.log('âœ… Template loaded successfully into form (text only)');
+      console.log('✓ Template loaded successfully into form (text only)');
       console.log('Selections populated:', {
         characterProfile: matchedCharacterProfileId,
         theme: loadedTemplate.theme,
@@ -681,12 +772,16 @@ const EnhancedContentCreationForm = ({
 
   // UPDATED SAVE HANDLER WITH TEMPLATE INTEGRATION:
   const handleSave = async () => {
+    // Create detailed platforms array with full info
+    const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
+    
     const postData = {
       contentId,
       ...selections,
       ...content,
       mediaFiles,
       selectedPlatforms,
+      detailedPlatforms, // Add detailed platform info
       status: 'pending' as const,
       isFromTemplate: isEditingTemplate, // CHANGED: Use template status
       sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
@@ -707,12 +802,16 @@ const EnhancedContentCreationForm = ({
 
   // UPDATED ADD TO SCHEDULE HANDLER WITH TEMPLATE INTEGRATION:
   const handleAddToSchedule = async () => {
+    // Create detailed platforms array with full info
+    const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
+    
     const postData = {
       contentId,
       ...selections,
       ...content,
       mediaFiles,
       selectedPlatforms,
+      detailedPlatforms, // Add detailed platform info
       status: 'pending_schedule' as const,
       isFromTemplate: isEditingTemplate, // CHANGED: Use template status
       sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
@@ -2212,7 +2311,7 @@ const EnhancedContentCreationForm = ({
                                     fontSize: '48px',
                                     color: '#3b82f6'
                                   }}>
-                                    ðŸ”—
+                                    🌐
                                   </div>
                                 )}
                                 
