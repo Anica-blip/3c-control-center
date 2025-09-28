@@ -107,7 +107,7 @@ export const supabaseAPI = {
       let platformDetails = {
         social_platform: null,
         url: null,
-        channel_group: null,
+        channel_group_id: null,
         thread_id: null
       };
 
@@ -125,7 +125,7 @@ export const supabaseAPI = {
             platformDetails = {
               social_platform: selectedPlatform.name || null,
               url: selectedPlatform.url || null,
-              channel_group: null,
+              channel_group_id: null,
               thread_id: null
             };
           } else {
@@ -134,7 +134,7 @@ export const supabaseAPI = {
               platformDetails = {
                 social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
                 url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
-                channel_group: selectedTelegram.channel_group_id || null,
+                channel_group_id: selectedTelegram.channel_group_id || null,
                 thread_id: selectedTelegram.thread_id || null
               };
             }
@@ -201,7 +201,7 @@ export const supabaseAPI = {
         character_role: characterDetails.character_role,
         social_platform: platformDetails.social_platform,
         url: platformDetails.url,
-        channel_group: platformDetails.channel_group,
+        channel_group_id: platformDetails.channel_group_id,
         thread_id: platformDetails.thread_id
       };
 
@@ -368,7 +368,7 @@ export const supabaseAPI = {
             updatedPlatformDetails = {
               social_platform: selectedPlatform.name || null,
               url: selectedPlatform.url || null,
-              channel_group: null,
+              channel_group_id: null,
               thread_id: null
             };
           } else {
@@ -377,7 +377,7 @@ export const supabaseAPI = {
               updatedPlatformDetails = {
                 social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
                 url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
-                channel_group: selectedTelegram.channel_group_id || null,
+                channel_group_id: selectedTelegram.channel_group_id || null,
                 thread_id: selectedTelegram.thread_id || null
               };
             }
