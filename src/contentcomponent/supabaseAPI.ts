@@ -334,13 +334,13 @@ export const supabaseAPI = {
       }
 
       // Re-extract character profile details if character changed
-      let characterDetails = {};
+      let updatedCharacterDetails = {};
       if (updates.characterProfile) {
         try {
           const characterProfiles = await this.loadCharacterProfiles();
           const selectedProfile = characterProfiles.find(p => p.id === updates.characterProfile);
           if (selectedProfile) {
-            characterDetails = {
+            updatedCharacterDetails = {
               avatar_id: selectedProfile.avatar_id || null,
               name: selectedProfile.name || null,
               username: selectedProfile.username || null,
@@ -353,7 +353,7 @@ export const supabaseAPI = {
       }
 
       // Re-extract platform details if platforms changed
-      let platformDetails = {};
+      let updatedPlatformDetails = {};
       if (updates.selectedPlatforms && updates.selectedPlatforms.length > 0) {
         try {
           const [platforms, telegramChannels] = await Promise.all([
@@ -365,7 +365,7 @@ export const supabaseAPI = {
           let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
           
           if (selectedPlatform) {
-            platformDetails = {
+            updatedPlatformDetails = {
               social_platform: selectedPlatform.name || null,
               url: selectedPlatform.url || null,
               channel_group: null,
@@ -374,7 +374,7 @@ export const supabaseAPI = {
           } else {
             const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
             if (selectedTelegram) {
-              platformDetails = {
+              updatedPlatformDetails = {
                 social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
                 url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
                 channel_group: selectedTelegram.channel_group_id || null,
