@@ -1,4 +1,4 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - FIXED Character Profile Display
+// /src/schedulecomponent/ScheduleComponent.tsx - COMPLETE with Character Profiles + All Tabs
 import React, { useState, useEffect, useCallback } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
@@ -6,7 +6,7 @@ import EditModal from './components/EditModal';
 import { getTabStyle, getTheme, getContainerStyle, getCSSAnimations } from './utils/styleUtils';
 import { Calendar, Clock, Edit3, Trash2, RefreshCw, Eye, AlertCircle, CheckCircle, Play, X, Plus, ChevronLeft, ChevronRight, Save, XCircle, WifiOff } from 'lucide-react';
 import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './types';
-import { supabase } from './config';
+import { supabase } from '../config';
 
 // ✅ ERROR NOTIFICATION COMPONENT
 const ErrorNotificationBanner: React.FC<{
@@ -287,6 +287,14 @@ export default function ScheduleComponent() {
     return operationStates[operation] || false;
   }, [operationStates]);
 
+  // FIXED: Proper filtering - Pending ONLY from content_posts, Calendar ONLY from dashboard_posts
+  const pendingPosts = scheduledPosts.filter(p => p.status === 'scheduled'); // From content_posts
+  const scheduledPostsFiltered = scheduledPosts.filter(p => 
+    ['processing', 'publishing', 'published', 'failed'].includes(p.status) // REMOVED 'scheduled' - only dashboard_posts
+  );
+  const publishedPosts = scheduledPosts.filter(p => p.status === 'published');
+  const failedPosts = scheduledPosts.filter(p => p.status === 'failed');
+
   // ✅ FETCH CHARACTER PROFILES FOR PENDING POSTS
   useEffect(() => {
     pendingPosts.forEach(post => {
@@ -295,132 +303,6 @@ export default function ScheduleComponent() {
       }
     });
   }, [pendingPosts, fetchCharacterProfile]);
-
-  // ✅ NOW CONDITIONAL RETURNS ARE SAFE - ALL HOOKS CALLED
-  if (postsLoading || templatesLoading) {
-    return (
-      <div style={{
-        minHeight: '600px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: theme.background
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          padding: '24px',
-          backgroundColor: theme.cardBg,
-          borderRadius: '12px',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-          border: `1px solid ${theme.border}`
-        }}>
-          <div style={{
-            width: '24px',
-            height: '24px',
-            border: `3px solid ${theme.border}`,
-            borderTop: `3px solid ${theme.primary}`,
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
-          }} />
-          <span style={{ 
-            color: theme.text,
-            fontSize: '16px',
-            fontWeight: '600'
-          }}>
-            Loading Schedule Manager...
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  if (postsError || templatesError) {
-    return (
-      <div style={{
-        minHeight: '600px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: theme.background
-      }}>
-        <div style={{
-          padding: '24px',
-          backgroundColor: theme.dangerBg,
-          borderRadius: '12px',
-          border: `1px solid ${theme.danger}`,
-          textAlign: 'center',
-          maxWidth: '400px'
-        }}>
-          <AlertCircle style={{
-            height: '48px',
-            width: '48px',
-            color: theme.danger,
-            margin: '0 auto 16px auto'
-          }} />
-          <h3 style={{
-            fontSize: '18px',
-            fontWeight: 'bold',
-            color: theme.danger,
-            margin: '0 0 8px 0'
-          }}>
-            Error Loading Schedule Manager
-          </h3>
-          <p style={{
-            color: theme.danger,
-            margin: '0 0 16px 0',
-            fontSize: '14px'
-          }}>
-            {postsError?.message || templatesError?.message}
-          </p>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-            <button
-              onClick={() => {
-                refreshPosts();
-                window.location.reload();
-              }}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: theme.danger,
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '600'
-              }}
-            >
-              Retry
-            </button>
-            <button
-              onClick={() => window.location.reload()}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: theme.textSecondary,
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '600'
-              }}
-            >
-              Reload Page
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // FIXED: Proper filtering - Pending ONLY from content_posts, Calendar ONLY from dashboard_posts
-  const pendingPosts = scheduledPosts.filter(p => p.status === 'scheduled'); // From content_posts
-  const scheduledPostsFiltered = scheduledPosts.filter(p => 
-    ['processing', 'publishing', 'published', 'failed'].includes(p.status) // REMOVED 'scheduled' - only dashboard_posts
-  );
-  const publishedPosts = scheduledPosts.filter(p => p.status === 'published');
-  const failedPosts = scheduledPosts.filter(p => p.status === 'failed');
 
   // Platform configuration
   const platforms = [
@@ -517,7 +399,7 @@ export default function ScheduleComponent() {
     }
   };
 
-  // Calendar helper functions remain the same...
+  // Calendar helper functions
   const getPostsForDate = (date: Date) => {
     return scheduledPostsFiltered.filter(post => {
       const postDate = new Date(post.scheduled_date);
@@ -1178,7 +1060,7 @@ export default function ScheduleComponent() {
                               Created {new Date(post.created_date).toLocaleDateString('en-GB')}
                             </span>
                             
-                            {/* ✅ FIXED CHARACTER PROFILE DISPLAY */}
+                            {/* ✅ RICH CHARACTER PROFILE DISPLAY */}
                             <div style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -1364,7 +1246,796 @@ export default function ScheduleComponent() {
           </div>
         )}
         
-        {/* [All other tab content remains the same] */}
+        {activeTab === 'calendar' && (
+          <div style={{ padding: '24px' }}>
+            {/* Calendar Controls */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '24px'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px'
+              }}>
+                <button
+                  onClick={() => navigateCalendar('prev')}
+                  style={{
+                    padding: '8px',
+                    backgroundColor: theme.background,
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    color: theme.text
+                  }}
+                >
+                  <ChevronLeft style={{ height: '16px', width: '16px' }} />
+                </button>
+                <h3 style={{
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  color: theme.text,
+                  margin: '0'
+                }}>
+                  {formatCalendarTitle()}
+                </h3>
+                <button
+                  onClick={() => navigateCalendar('next')}
+                  style={{
+                    padding: '8px',
+                    backgroundColor: theme.background,
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    color: theme.text
+                  }}
+                >
+                  <ChevronRight style={{ height: '16px', width: '16px' }} />
+                </button>
+              </div>
+              
+              <div style={{
+                display: 'flex',
+                gap: '8px'
+              }}>
+                {(['day', 'week', 'month'] as const).map(view => (
+                  <button
+                    key={view}
+                    onClick={() => setCalendarView(view)}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: calendarView === view ? theme.primary : 'transparent',
+                      color: calendarView === view ? 'white' : theme.text,
+                      border: `1px solid ${theme.border}`,
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      textTransform: 'capitalize'
+                    }}
+                  >
+                    {view}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Calendar Content */}
+            {calendarView === 'month' && (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(7, 1fr)',
+                gap: '1px',
+                backgroundColor: theme.border,
+                borderRadius: '8px',
+                overflow: 'hidden'
+              }}>
+                {/* Day Headers */}
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                  <div
+                    key={day}
+                    style={{
+                      padding: '12px',
+                      backgroundColor: theme.background,
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      color: theme.textSecondary,
+                      textAlign: 'center'
+                    }}
+                  >
+                    {day}
+                  </div>
+                ))}
+                
+                {/* Calendar Days */}
+                {getMonthDates(currentDate).map((date, index) => {
+                  const postsForDate = getPostsForDate(date);
+                  const isCurrentMonth = date.getMonth() === currentDate.getMonth();
+                  const isToday = date.toDateString() === new Date().toDateString();
+                  
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        padding: '8px',
+                        backgroundColor: theme.cardBg,
+                        minHeight: '80px',
+                        opacity: isCurrentMonth ? 1 : 0.5,
+                        position: 'relative'
+                      }}
+                    >
+                      <div style={{
+                        fontSize: '12px',
+                        fontWeight: isToday ? 'bold' : 'normal',
+                        color: isToday ? theme.primary : theme.text,
+                        marginBottom: '4px'
+                      }}>
+                        {date.getDate()}
+                      </div>
+                      
+                      {postsForDate.length > 0 && (
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '2px'
+                        }}>
+                          {postsForDate.slice(0, 3).map((post, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                padding: '2px 4px',
+                                backgroundColor: getStatusColor(post.status).borderLeft.split(' ')[3],
+                                borderRadius: '2px',
+                                fontSize: '10px',
+                                color: 'white',
+                                textOverflow: 'ellipsis',
+                                overflow: 'hidden',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </div>
+                          ))}
+                          {postsForDate.length > 3 && (
+                            <div style={{
+                              fontSize: '10px',
+                              color: theme.textSecondary,
+                              textAlign: 'center'
+                            }}>
+                              +{postsForDate.length - 3} more
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {calendarView === 'week' && (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(7, 1fr)',
+                gap: '8px'
+              }}>
+                {getWeekDates(currentDate).map((date, index) => {
+                  const postsForDate = getPostsForDate(date);
+                  const isToday = date.toDateString() === new Date().toDateString();
+                  
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        padding: '16px',
+                        backgroundColor: theme.cardBg,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: '8px',
+                        minHeight: '200px'
+                      }}
+                    >
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: isToday ? 'bold' : 'normal',
+                        color: isToday ? theme.primary : theme.text,
+                        marginBottom: '12px',
+                        textAlign: 'center'
+                      }}>
+                        {date.toLocaleDateString('en-GB', { 
+                          weekday: 'short',
+                          day: 'numeric' 
+                        })}
+                      </div>
+                      
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px'
+                      }}>
+                        {postsForDate.map((post, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: theme.background,
+                              border: getStatusColor(post.status).borderLeft,
+                              borderRadius: '4px',
+                              fontSize: '11px'
+                            }}
+                          >
+                            <div style={{
+                              fontWeight: 'bold',
+                              color: theme.text,
+                              marginBottom: '2px'
+                            }}>
+                              {new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </div>
+                            <div style={{
+                              color: theme.textSecondary,
+                              textOverflow: 'ellipsis',
+                              overflow: 'hidden',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {truncateDescription(post.description, 40)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {calendarView === 'day' && (
+              <div style={{
+                display: 'grid',
+                gap: '1px',
+                backgroundColor: theme.border,
+                borderRadius: '8px',
+                overflow: 'hidden'
+              }}>
+                {Object.entries(getHourlyPostsForDay(currentDate)).map(([hour, posts]) => (
+                  <div
+                    key={hour}
+                    style={{
+                      display: 'flex',
+                      backgroundColor: theme.cardBg,
+                      minHeight: '60px'
+                    }}
+                  >
+                    <div style={{
+                      width: '60px',
+                      padding: '12px',
+                      backgroundColor: theme.background,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      color: theme.textSecondary
+                    }}>
+                      {String(hour).padStart(2, '0')}:00
+                    </div>
+                    <div style={{
+                      flex: 1,
+                      padding: '8px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px'
+                    }}>
+                      {posts.map((post, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            padding: '8px 12px',
+                            backgroundColor: theme.background,
+                            border: getStatusColor(post.status).borderLeft,
+                            borderRadius: '4px',
+                            fontSize: '12px'
+                          }}
+                        >
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            marginBottom: '4px'
+                          }}>
+                            <span style={{
+                              fontWeight: 'bold',
+                              color: theme.text
+                            }}>
+                              {new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </span>
+                            {getStatusIcon(post.status)}
+                            <span style={{
+                              fontSize: '10px',
+                              color: theme.textSecondary,
+                              textTransform: 'capitalize'
+                            }}>
+                              {post.status}
+                            </span>
+                          </div>
+                          <div style={{
+                            color: theme.textSecondary
+                          }}>
+                            {truncateDescription(post.description, 80)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'status' && (
+          <div style={{ padding: '24px' }}>
+            {/* Status Filter */}
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '24px'
+            }}>
+              {['all', 'scheduled', 'processing', 'published', 'failed'].map(status => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: statusFilter === status ? theme.primary : 'transparent',
+                    color: statusFilter === status ? 'white' : theme.text,
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    textTransform: 'capitalize'
+                  }}
+                >
+                  {status} 
+                  {status !== 'all' && (
+                    <span style={{ marginLeft: '4px', opacity: 0.8 }}>
+                      ({scheduledPostsFiltered.filter(p => status === 'all' || p.status === status).length})
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Posts List */}
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {scheduledPostsFiltered
+                .filter(post => statusFilter === 'all' || post.status === statusFilter)
+                .map((post) => (
+                  <div
+                    key={post.id}
+                    style={{
+                      padding: '16px',
+                      backgroundColor: theme.cardBg,
+                      border: `1px solid ${theme.border}`,
+                      borderRadius: '8px',
+                      ...getStatusColor(post.status)
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          marginBottom: '8px'
+                        }}>
+                          {getStatusIcon(post.status)}
+                          <span style={{
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            color: theme.text,
+                            textTransform: 'uppercase'
+                          }}>
+                            {post.status}
+                          </span>
+                          <span style={{
+                            fontSize: '12px',
+                            color: theme.textSecondary
+                          }}>
+                            {new Date(post.scheduled_date).toLocaleString('en-GB')}
+                          </span>
+                        </div>
+                        
+                        <p style={{
+                          fontSize: '14px',
+                          color: theme.text,
+                          margin: '0 0 8px 0',
+                          lineHeight: '1.4'
+                        }}>
+                          {truncateDescription(post.description)}
+                        </p>
+                        
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '16px',
+                          fontSize: '12px'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}>
+                            <span style={{ color: theme.textSecondary }}>Platforms:</span>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              {post.selected_platforms?.map((platformId, idx) => {
+                                const platform = getPlatformIcon(platformId);
+                                return (
+                                  <span
+                                    key={idx}
+                                    style={{
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      color: 'white',
+                                      fontSize: '10px',
+                                      fontWeight: 'bold',
+                                      backgroundColor: platform.color
+                                    }}
+                                  >
+                                    {platform.icon}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginLeft: '16px'
+                      }}>
+                        {post.status === 'failed' && (
+                          <button
+                            onClick={() => handleCopyToPending(post)}
+                            disabled={isOperationLoading(`copy-${post.id}`)}
+                            style={{
+                              padding: '6px 12px',
+                              backgroundColor: theme.warning,
+                              color: 'white',
+                              fontSize: '12px',
+                              borderRadius: '4px',
+                              fontWeight: 'bold',
+                              border: 'none',
+                              cursor: isOperationLoading(`copy-${post.id}`) ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            {isOperationLoading(`copy-${post.id}`) ? 'Copying...' : 'Retry'}
+                          </button>
+                        )}
+                        
+                        <button
+                          onClick={() => handleEditPost(post)}
+                          disabled={isOperationLoading(`edit-${post.id}`) || post.status === 'published'}
+                          style={{
+                            padding: '6px',
+                            color: theme.textSecondary,
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: (isOperationLoading(`edit-${post.id}`) || post.status === 'published') ? 'not-allowed' : 'pointer',
+                            opacity: (isOperationLoading(`edit-${post.id}`) || post.status === 'published') ? 0.5 : 1
+                          }}
+                          title={post.status === 'published' ? 'Cannot edit published posts' : 'Edit post'}
+                        >
+                          <Edit3 style={{ height: '14px', width: '14px' }} />
+                        </button>
+                        
+                        <button
+                          onClick={() => handleSaveAsTemplate(post)}
+                          disabled={isOperationLoading(`save-template-${post.id}`)}
+                          style={{
+                            padding: '6px',
+                            color: theme.textSecondary,
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: isOperationLoading(`save-template-${post.id}`) ? 'not-allowed' : 'pointer',
+                            opacity: isOperationLoading(`save-template-${post.id}`) ? 0.5 : 1
+                          }}
+                          title="Save as template"
+                        >
+                          <Save style={{ height: '14px', width: '14px' }} />
+                        </button>
+                        
+                        <button
+                          onClick={() => handleDeletePost(post.id)}
+                          disabled={isOperationLoading(`delete-${post.id}`) || post.status === 'processing'}
+                          style={{
+                            padding: '6px',
+                            color: theme.danger,
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: (isOperationLoading(`delete-${post.id}`) || post.status === 'processing') ? 'not-allowed' : 'pointer',
+                            opacity: (isOperationLoading(`delete-${post.id}`) || post.status === 'processing') ? 0.5 : 1
+                          }}
+                          title={post.status === 'processing' ? 'Cannot delete processing posts' : 'Delete post'}
+                        >
+                          <Trash2 style={{ height: '14px', width: '14px' }} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              
+              {scheduledPostsFiltered.filter(post => statusFilter === 'all' || post.status === statusFilter).length === 0 && (
+                <div style={{
+                  backgroundColor: theme.background,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '8px',
+                  padding: '32px',
+                  textAlign: 'center'
+                }}>
+                  <CheckCircle style={{
+                    height: '48px',
+                    width: '48px',
+                    color: theme.textSecondary,
+                    margin: '0 auto 16px auto'
+                  }} />
+                  <h3 style={{
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: theme.textSecondary,
+                    margin: '0 0 8px 0'
+                  }}>
+                    No posts found
+                  </h3>
+                  <p style={{
+                    color: theme.textSecondary,
+                    fontSize: '14px',
+                    margin: '0'
+                  }}>
+                    No posts match the selected status filter
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'saved' && (
+          <div style={{ padding: '24px' }}>
+            {savedTemplates.length === 0 ? (
+              <div style={{
+                backgroundColor: theme.background,
+                border: `1px solid ${theme.border}`,
+                borderRadius: '8px',
+                padding: '32px',
+                textAlign: 'center'
+              }}>
+                <Save style={{
+                  height: '48px',
+                  width: '48px',
+                  color: theme.textSecondary,
+                  margin: '0 auto 16px auto'
+                }} />
+                <h3 style={{
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  color: theme.textSecondary,
+                  margin: '0 0 8px 0'
+                }}>
+                  No Saved Templates
+                </h3>
+                <p style={{
+                  color: theme.textSecondary,
+                  fontSize: '14px',
+                  margin: '0'
+                }}>
+                  Save posts as templates to reuse them quickly
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '16px' }}>
+                {savedTemplates.map((template) => (
+                  <div
+                    key={template.id}
+                    style={{
+                      padding: '20px',
+                      backgroundColor: theme.cardBg,
+                      border: `1px solid ${theme.border}`,
+                      borderRadius: '8px'
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          marginBottom: '12px'
+                        }}>
+                          <h4 style={{
+                            fontSize: '16px',
+                            fontWeight: 'bold',
+                            color: theme.text,
+                            margin: '0'
+                          }}>
+                            {template.template_name}
+                          </h4>
+                          <span style={{
+                            padding: '4px 8px',
+                            fontSize: '11px',
+                            backgroundColor: theme.primaryBg,
+                            color: theme.primary,
+                            borderRadius: '12px',
+                            fontWeight: 'bold'
+                          }}>
+                            Used {template.usage_count} times
+                          </span>
+                          {template.template_type && (
+                            <span style={{
+                              padding: '4px 8px',
+                              fontSize: '11px',
+                              backgroundColor: theme.background,
+                              color: theme.textSecondary,
+                              borderRadius: '12px',
+                              fontWeight: 'bold'
+                            }}>
+                              {template.template_type}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {template.description && (
+                          <p style={{
+                            fontSize: '14px',
+                            color: theme.text,
+                            margin: '0 0 12px 0',
+                            lineHeight: '1.4'
+                          }}>
+                            {truncateDescription(template.description)}
+                          </p>
+                        )}
+                        
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '16px',
+                          fontSize: '12px'
+                        }}>
+                          {template.selected_platforms && template.selected_platforms.length > 0 && (
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}>
+                              <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Platforms:</span>
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                {template.selected_platforms.map((platformId, idx) => {
+                                  const platform = getPlatformIcon(platformId);
+                                  return (
+                                    <span
+                                      key={idx}
+                                      style={{
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        color: 'white',
+                                        fontSize: '10px',
+                                        fontWeight: 'bold',
+                                        backgroundColor: platform.color
+                                      }}
+                                    >
+                                      {platform.icon}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {template.theme && (
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}>
+                              <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Theme:</span>
+                              <span style={{ color: theme.text, fontWeight: 'bold' }}>{template.theme}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginLeft: '16px'
+                      }}>
+                        <button
+                          onClick={() => handleUseTemplate(template)}
+                          disabled={isOperationLoading(`use-template-${template.id}`)}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: isOperationLoading(`use-template-${template.id}`) ? theme.textSecondary : theme.primary,
+                            color: 'white',
+                            fontSize: '12px',
+                            borderRadius: '6px',
+                            fontWeight: 'bold',
+                            border: 'none',
+                            cursor: isOperationLoading(`use-template-${template.id}`) ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          {isOperationLoading(`use-template-${template.id}`) && (
+                            <RefreshCw style={{ height: '12px', width: '12px', animation: 'spin 1s linear infinite' }} />
+                          )}
+                          {isOperationLoading(`use-template-${template.id}`) ? 'Using...' : 'Use Template'}
+                        </button>
+                        
+                        <button
+                          onClick={() => setEditingTemplate(template)}
+                          style={{
+                            padding: '6px',
+                            color: theme.textSecondary,
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                          title="Edit template"
+                        >
+                          <Edit3 style={{ height: '14px', width: '14px' }} />
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this template?')) {
+                              deleteTemplate(template.id);
+                            }
+                          }}
+                          style={{
+                            padding: '6px',
+                            color: theme.danger,
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                          title="Delete template"
+                        >
+                          <Trash2 style={{ height: '14px', width: '14px' }} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Modals */}
