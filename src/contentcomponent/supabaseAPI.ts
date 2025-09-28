@@ -80,7 +80,7 @@ export const supabaseAPI = {
 
       // Extract character profile details for additional columns
       let characterDetails = {
-        character_id: null,
+        character_avatar: null,
         name: null,
         username: null,
         role: null
@@ -92,7 +92,7 @@ export const supabaseAPI = {
           const selectedProfile = characterProfiles.find(p => p.id === postData.characterProfile);
           if (selectedProfile) {
             characterDetails = {
-              character_id: selectedProfile.id || null,
+              character_avatar: selectedProfile.avatar_id || null,
               name: selectedProfile.name || null,
               username: selectedProfile.username || null,
               role: selectedProfile.role || null
@@ -195,7 +195,7 @@ export const supabaseAPI = {
         user_id: userId, // REQUIRED for RLS
         created_by: userId, // REQUIRED for tracking
         is_active: true,
-        character_id: characterDetails.character_id,
+        character_avatar: characterDetails.character_avatar,
         name: characterDetails.name,
         username: characterDetails.username,
         role: characterDetails.role,
@@ -341,7 +341,7 @@ export const supabaseAPI = {
           const selectedProfile = characterProfiles.find(p => p.id === updates.characterProfile);
           if (selectedProfile) {
             updatedCharacterDetails = {
-              character_id: selectedProfile.avatar_id || null,
+              character_avatar: selectedProfile.avatar_id || null,
               name: selectedProfile.name || null,
               username: selectedProfile.username || null,
               role: selectedProfile.role || null
