@@ -80,10 +80,10 @@ export const supabaseAPI = {
 
       // Extract character profile details for additional columns
       let characterDetails = {
-        avatar_id: null,
-        name: null,
-        username: null,
-        role: null
+        character_avatar: null,
+        character_name: null,
+        character_username: null,
+        character_role: null
       };
 
       if (postData.characterProfile) {
@@ -92,10 +92,10 @@ export const supabaseAPI = {
           const selectedProfile = characterProfiles.find(p => p.id === postData.characterProfile);
           if (selectedProfile) {
             characterDetails = {
-              avatar_id: selectedProfile.avatar_id || null,
-              name: selectedProfile.name || null,
-              username: selectedProfile.username || null,
-              role: selectedProfile.role || null
+              character_avatar: selectedProfile.avatar_id || null,
+              character_name: selectedProfile.name || null,
+              character_username: selectedProfile.username || null,
+              character_role: selectedProfile.role || null
             };
           }
         } catch (error) {
@@ -195,10 +195,10 @@ export const supabaseAPI = {
         user_id: userId, // REQUIRED for RLS
         created_by: userId, // REQUIRED for tracking
         is_active: true,
-        avatar_id: characterDetails.avatar_id,
-        name: characterDetails.name,
-        username: characterDetails.username,
-        role: characterDetails.role,
+        character_avatar: characterDetails.character_avatar,
+        character_name: characterDetails.character_name,
+        character_username: characterDetails.character_username,
+        character_role: characterDetails.character_role,
         social_platform: platformDetails.social_platform,
         url: platformDetails.url,
         channel_group: platformDetails.channel_group,
@@ -341,10 +341,10 @@ export const supabaseAPI = {
           const selectedProfile = characterProfiles.find(p => p.id === updates.characterProfile);
           if (selectedProfile) {
             updatedCharacterDetails = {
-              avatar_id: selectedProfile.avatar_id || null,
-              name: selectedProfile.name || null,
-              username: selectedProfile.username || null,
-              role: selectedProfile.role || null
+              character_avatar: selectedProfile.avatar_id || null,
+              character_name: selectedProfile.name || null,
+              character_username: selectedProfile.username || null,
+              character_role: selectedProfile.role || null
             };
           }
         } catch (error) {
@@ -460,7 +460,7 @@ export const supabaseAPI = {
       if (updates.status) updateData.status = updates.status;
       
       // Add individual columns to update data
-      Object.assign(updateData, characterDetails, platformDetails);
+      Object.assign(updateData, updatedCharacterDetails, updatedPlatformDetails);
       
       updateData.updated_at = new Date().toISOString();
 
