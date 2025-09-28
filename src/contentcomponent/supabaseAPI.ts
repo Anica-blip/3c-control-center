@@ -189,6 +189,7 @@ export const supabaseAPI = {
         cta: postData.cta || '',
         media_files: uploadedMediaFiles,
         selected_platforms: postData.selectedPlatforms || [],
+        detailed_platforms: postData.detailedPlatforms || [], // ADD: Rich platform data
         status: postData.status || 'pending',
         is_from_template: postData.isFromTemplate || false,
         source_template_id: postData.sourceTemplateId || null,
@@ -231,6 +232,7 @@ export const supabaseAPI = {
         cta: data.cta || '',
         mediaFiles: uploadedMediaFiles,
         selectedPlatforms: data.selected_platforms || [],
+        detailedPlatforms: data.detailed_platforms || [], // ADD: Rich platform data
         status: data.status || 'pending',
         createdDate: new Date(data.created_at),
         scheduledDate: data.scheduled_date ? new Date(data.scheduled_date) : undefined,
@@ -280,6 +282,7 @@ export const supabaseAPI = {
         cta: record.cta || '',
         mediaFiles: Array.isArray(record.media_files) ? record.media_files : [],
         selectedPlatforms: Array.isArray(record.selected_platforms) ? record.selected_platforms : [],
+        detailedPlatforms: Array.isArray(record.detailed_platforms) ? record.detailed_platforms : [], // ADD: Rich platform data
         status: record.status || 'pending',
         createdDate: new Date(record.created_at),
         scheduledDate: record.scheduled_date ? new Date(record.scheduled_date) : undefined,
@@ -457,6 +460,7 @@ export const supabaseAPI = {
       if (updates.cta !== undefined) updateData.cta = updates.cta;
       if (updatedMediaFiles !== undefined) updateData.media_files = updatedMediaFiles;
       if (updates.selectedPlatforms !== undefined) updateData.selected_platforms = updates.selectedPlatforms;
+      if (updates.detailedPlatforms !== undefined) updateData.detailed_platforms = updates.detailedPlatforms; // ADD: Rich platform data
       if (updates.status) updateData.status = updates.status;
       
       // Add individual columns to update data
@@ -491,6 +495,7 @@ export const supabaseAPI = {
         cta: data.cta || '',
         mediaFiles: data.media_files || [],
         selectedPlatforms: data.selected_platforms || [],
+        detailedPlatforms: data.detailed_platforms || [], // ADD: Rich platform data
         status: data.status || 'pending',
         createdDate: new Date(data.created_at),
         scheduledDate: data.scheduled_date ? new Date(data.scheduled_date) : undefined,
