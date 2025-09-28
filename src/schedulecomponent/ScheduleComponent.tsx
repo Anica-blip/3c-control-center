@@ -1,4 +1,4 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - ENHANCED with error handling + THEME FIXES
+// /src/schedulecomponent/ScheduleComponent.tsx - FIXED Character Profile Display
 import React, { useState, useEffect, useCallback } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
@@ -6,6 +6,7 @@ import EditModal from './components/EditModal';
 import { getTabStyle, getTheme, getContainerStyle, getCSSAnimations } from './utils/styleUtils';
 import { Calendar, Clock, Edit3, Trash2, RefreshCw, Eye, AlertCircle, CheckCircle, Play, X, Plus, ChevronLeft, ChevronRight, Save, XCircle, WifiOff } from 'lucide-react';
 import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './types';
+import { supabase } from './config';
 
 // ✅ ERROR NOTIFICATION COMPONENT
 const ErrorNotificationBanner: React.FC<{
@@ -201,8 +202,44 @@ export default function ScheduleComponent() {
   const [notifications, setNotifications] = useState<ErrorNotification[]>([]);
   const [operationStates, setOperationStates] = useState<Record<string, boolean>>({});
 
+  // ✅ CHARACTER PROFILE STATE
+  const [characterProfiles, setCharacterProfiles] = useState<Record<string, any>>({});
+  const [profilesLoading, setProfilesLoading] = useState<Record<string, boolean>>({});
+
   // ✅ ALL OTHER HOOKS
   const { isDarkMode, theme } = getTheme();
+
+  // ✅ CHARACTER PROFILE FETCHING
+  const isUUID = (str: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  };
+
+  const fetchCharacterProfile = useCallback(async (profileId: string) => {
+    if (!profileId || !isUUID(profileId) || characterProfiles[profileId]) return;
+    
+    try {
+      setProfilesLoading(prev => ({ ...prev, [profileId]: true }));
+      
+      const { data, error } = await supabase
+        .from('character_profiles')
+        .select('avatar_id, name, username, role')
+        .eq('id', profileId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching character profile:', error);
+        setCharacterProfiles(prev => ({ ...prev, [profileId]: null }));
+      } else {
+        setCharacterProfiles(prev => ({ ...prev, [profileId]: data }));
+      }
+    } catch (error) {
+      console.error('Error fetching character profile:', error);
+      setCharacterProfiles(prev => ({ ...prev, [profileId]: null }));
+    } finally {
+      setProfilesLoading(prev => ({ ...prev, [profileId]: false }));
+    }
+  }, [characterProfiles]);
 
   // ✅ NOTIFICATION HELPERS
   const addNotification = useCallback((notification: Omit<ErrorNotification, 'id' | 'timestamp'>) => {
@@ -249,6 +286,15 @@ export default function ScheduleComponent() {
   const isOperationLoading = useCallback((operation: string) => {
     return operationStates[operation] || false;
   }, [operationStates]);
+
+  // ✅ FETCH CHARACTER PROFILES FOR PENDING POSTS
+  useEffect(() => {
+    pendingPosts.forEach(post => {
+      if (post.character_profile && typeof post.character_profile === 'string' && isUUID(post.character_profile)) {
+        fetchCharacterProfile(post.character_profile);
+      }
+    });
+  }, [pendingPosts, fetchCharacterProfile]);
 
   // ✅ NOW CONDITIONAL RETURNS ARE SAFE - ALL HOOKS CALLED
   if (postsLoading || templatesLoading) {
@@ -846,9 +892,6 @@ export default function ScheduleComponent() {
     }
   };
 
-  // [Calendar render functions and other UI code remain the same...]
-  // ... [keeping all the calendar functions, etc - no changes needed]
-
   // Tab configuration
   const tabs = [
     { 
@@ -1094,183 +1137,228 @@ export default function ScheduleComponent() {
               </div>
             ) : (
               <div style={{ display: 'grid', gap: '16px' }}>
-                {pendingPosts.map((post) => (
-                  <div key={post.id} style={{
-                    backgroundColor: theme.cardBg,
-                    border: `1px solid ${theme.border}`,
-                    borderRadius: '8px',
-                    padding: '20px'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'space-between'
+                {pendingPosts.map((post) => {
+                  const profileData = characterProfiles[post.character_profile as string];
+                  const isProfileLoading = profilesLoading[post.character_profile as string];
+                  
+                  return (
+                    <div key={post.id} style={{
+                      backgroundColor: theme.cardBg,
+                      border: `1px solid ${theme.border}`,
+                      borderRadius: '8px',
+                      padding: '20px'
                     }}>
-                      <div style={{ flex: 1 }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            marginBottom: '12px'
+                          }}>
+                            <span style={{
+                              padding: '4px 12px',
+                              fontSize: '11px',
+                              backgroundColor: theme.warningBg,
+                              color: theme.warning,
+                              borderRadius: '12px',
+                              fontWeight: 'bold'
+                            }}>
+                              Ready to Schedule
+                            </span>
+                            <span style={{
+                              fontSize: '12px',
+                              color: theme.textSecondary,
+                              fontWeight: 'bold'
+                            }}>
+                              Created {new Date(post.created_date).toLocaleDateString('en-GB')}
+                            </span>
+                            
+                            {/* ✅ FIXED CHARACTER PROFILE DISPLAY */}
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}>
+                              {profileData?.avatar_id && (
+                                <img 
+                                  src={profileData.avatar_id} 
+                                  alt={profileData.name}
+                                  style={{
+                                    width: '20px',
+                                    height: '20px',
+                                    borderRadius: '50%',
+                                    objectFit: 'cover'
+                                  }}
+                                />
+                              )}
+                              <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '1px'
+                              }}>
+                                {profileData?.name && (
+                                  <span style={{
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                    color: theme.text,
+                                    lineHeight: '1.1'
+                                  }}>
+                                    {profileData.name}
+                                  </span>
+                                )}
+                                {profileData?.username && (
+                                  <span style={{
+                                    fontSize: '11px',
+                                    fontWeight: '500',
+                                    color: theme.primary,
+                                    lineHeight: '1.1'
+                                  }}>
+                                    {profileData.username}
+                                  </span>
+                                )}
+                                {profileData?.role && (
+                                  <span style={{
+                                    fontSize: '10px',
+                                    color: theme.textSecondary,
+                                    lineHeight: '1.1'
+                                  }}>
+                                    {profileData.role}
+                                  </span>
+                                )}
+                              </div>
+                              {isProfileLoading && (
+                                <div style={{
+                                  width: '10px',
+                                  height: '10px',
+                                  border: `1px solid ${theme.border}`,
+                                  borderTop: `1px solid ${theme.primary}`,
+                                  borderRadius: '50%',
+                                  animation: 'spin 1s linear infinite'
+                                }} />
+                              )}
+                            </div>
+                          </div>
+                          
+                          <p style={{
+                            color: theme.text,
+                            fontSize: '14px',
+                            lineHeight: '1.5',
+                            fontWeight: 'bold',
+                            margin: '0 0 16px 0'
+                          }}>
+                            {post.description}
+                          </p>
+                          
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '24px',
+                            fontSize: '12px'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}>
+                              <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Platforms:</span>
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                {post.selected_platforms?.map((platformId, idx) => {
+                                  const platform = getPlatformIcon(platformId);
+                                  return (
+                                    <span
+                                      key={idx}
+                                      style={{
+                                        padding: '4px 6px',
+                                        borderRadius: '4px',
+                                        color: 'white',
+                                        fontSize: '10px',
+                                        fontWeight: 'bold',
+                                        backgroundColor: platform.color
+                                      }}
+                                    >
+                                      {platform.icon}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
                           gap: '12px',
-                          marginBottom: '12px'
+                          marginLeft: '24px'
                         }}>
-                          <span style={{
-                            padding: '4px 12px',
-                            fontSize: '11px',
-                            backgroundColor: theme.warningBg,
-                            color: theme.warning,
-                            borderRadius: '12px',
-                            fontWeight: 'bold'
-                          }}>
-                            Ready to Schedule
-                          </span>
-                          <span style={{
-                            fontSize: '12px',
-                            color: theme.textSecondary,
-                            fontWeight: 'bold'
-                          }}>
-                            Created {new Date(post.created_date).toLocaleDateString('en-GB')}
-                          </span>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                          }}>
-                            {post.character_avatar && (
-                              <img 
-                                src={post.character_avatar} 
-                                alt={post.name}
-                                style={{
-                                  width: '20px',
-                                  height: '20px',
-                                  borderRadius: '50%',
-                                  objectFit: 'cover'
-                                }}
-                              />
-                            )}
-                            <span style={{
+                          <button
+                            onClick={() => handleEditPost(post)}
+                            disabled={isOperationLoading(`edit-${post.id}`)}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: isOperationLoading(`edit-${post.id}`) ? theme.background : theme.textSecondary,
+                              color: 'white',
                               fontSize: '12px',
+                              borderRadius: '6px',
                               fontWeight: 'bold',
-                              color: theme.primary
-                            }}>
-                              {post.character_profile}
-                            </span>
-                          </div>
+                              border: 'none',
+                              cursor: isOperationLoading(`edit-${post.id}`) ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            {isOperationLoading(`edit-${post.id}`) ? 'Loading...' : 'Edit'}
+                          </button>
+                          <button
+                            onClick={() => handleSchedulePost(post)}
+                            disabled={isOperationLoading(`schedule-${post.id}`)}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: isOperationLoading(`schedule-${post.id}`) ? theme.textSecondary : theme.primary,
+                              color: 'white',
+                              borderRadius: '6px',
+                              fontWeight: 'bold',
+                              border: 'none',
+                              cursor: isOperationLoading(`schedule-${post.id}`) ? 'not-allowed' : 'pointer',
+                              fontSize: '14px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            {isOperationLoading(`schedule-${post.id}`) && (
+                              <RefreshCw style={{ height: '14px', width: '14px', animation: 'spin 1s linear infinite' }} />
+                            )}
+                            {isOperationLoading(`schedule-${post.id}`) ? 'Scheduling...' : 'Schedule'}
+                          </button>
+                          <button
+                            onClick={() => handleDeletePost(post.id)}
+                            disabled={isOperationLoading(`delete-${post.id}`)}
+                            style={{
+                              padding: '8px',
+                              color: theme.textSecondary,
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: isOperationLoading(`delete-${post.id}`) ? 'not-allowed' : 'pointer',
+                              opacity: isOperationLoading(`delete-${post.id}`) ? 0.5 : 1
+                            }}
+                            title="Delete"
+                          >
+                            {isOperationLoading(`delete-${post.id}`) ? (
+                              <RefreshCw style={{ height: '16px', width: '16px', animation: 'spin 1s linear infinite' }} />
+                            ) : (
+                              <Trash2 style={{ height: '16px', width: '16px' }} />
+                            )}
+                          </button>
                         </div>
-                        
-                        <p style={{
-                          color: theme.text,
-                          fontSize: '14px',
-                          lineHeight: '1.5',
-                          fontWeight: 'bold',
-                          margin: '0 0 16px 0'
-                        }}>
-                          {post.description}
-                        </p>
-                        
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '24px',
-                          fontSize: '12px'
-                        }}>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                          }}>
-                            <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Platforms:</span>
-                            <div style={{ display: 'flex', gap: '4px' }}>
-                              {post.selected_platforms?.map((platformId, idx) => {
-                                const platform = getPlatformIcon(platformId);
-                                return (
-                                  <span
-                                    key={idx}
-                                    style={{
-                                      padding: '4px 6px',
-                                      borderRadius: '4px',
-                                      color: 'white',
-                                      fontSize: '10px',
-                                      fontWeight: 'bold',
-                                      backgroundColor: platform.color
-                                    }}
-                                  >
-                                    {platform.icon}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        marginLeft: '24px'
-                      }}>
-                        <button
-                          onClick={() => handleEditPost(post)}
-                          disabled={isOperationLoading(`edit-${post.id}`)}
-                          style={{
-                            padding: '8px 16px',
-                            backgroundColor: isOperationLoading(`edit-${post.id}`) ? theme.background : theme.textSecondary,
-                            color: 'white',
-                            fontSize: '12px',
-                            borderRadius: '6px',
-                            fontWeight: 'bold',
-                            border: 'none',
-                            cursor: isOperationLoading(`edit-${post.id}`) ? 'not-allowed' : 'pointer'
-                          }}
-                        >
-                          {isOperationLoading(`edit-${post.id}`) ? 'Loading...' : 'Edit'}
-                        </button>
-                        <button
-                          onClick={() => handleSchedulePost(post)}
-                          disabled={isOperationLoading(`schedule-${post.id}`)}
-                          style={{
-                            padding: '8px 16px',
-                            backgroundColor: isOperationLoading(`schedule-${post.id}`) ? theme.textSecondary : theme.primary,
-                            color: 'white',
-                            borderRadius: '6px',
-                            fontWeight: 'bold',
-                            border: 'none',
-                            cursor: isOperationLoading(`schedule-${post.id}`) ? 'not-allowed' : 'pointer',
-                            fontSize: '14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                          }}
-                        >
-                          {isOperationLoading(`schedule-${post.id}`) && (
-                            <RefreshCw style={{ height: '14px', width: '14px', animation: 'spin 1s linear infinite' }} />
-                          )}
-                          {isOperationLoading(`schedule-${post.id}`) ? 'Scheduling...' : 'Schedule'}
-                        </button>
-                        <button
-                          onClick={() => handleDeletePost(post.id)}
-                          disabled={isOperationLoading(`delete-${post.id}`)}
-                          style={{
-                            padding: '8px',
-                            color: theme.textSecondary,
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: isOperationLoading(`delete-${post.id}`) ? 'not-allowed' : 'pointer',
-                            opacity: isOperationLoading(`delete-${post.id}`) ? 0.5 : 1
-                          }}
-                          title="Delete"
-                        >
-                          {isOperationLoading(`delete-${post.id}`) ? (
-                            <RefreshCw style={{ height: '16px', width: '16px', animation: 'spin 1s linear infinite' }} />
-                          ) : (
-                            <Trash2 style={{ height: '16px', width: '16px' }} />
-                          )}
-                        </button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1291,7 +1379,7 @@ export default function ScheduleComponent() {
         />
       )}
 
-      {/* 🔥 FIXED: Pass isLoading prop to EditModal */}
+      {/* FIXED: Pass isLoading prop to EditModal */}
       {isEditModalOpen && editingPost && (
         <EditModal
           post={editingPost}
