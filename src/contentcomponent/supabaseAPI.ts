@@ -92,7 +92,7 @@ export const supabaseAPI = {
           const selectedProfile = characterProfiles.find(p => p.id === postData.characterProfile);
           if (selectedProfile) {
             characterDetails = {
-              character_id: selectedProfile.avatar_id || null,
+              character_id: selectedProfile.id || null,
               name: selectedProfile.name || null,
               username: selectedProfile.username || null,
               role: selectedProfile.role || null
