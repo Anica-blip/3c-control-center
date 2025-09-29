@@ -770,9 +770,8 @@ const EnhancedContentCreationForm = ({
     console.log('Form reset complete');
   };
 
-  // FIXED: SAVE AS DRAFT HANDLER - Updates existing post or creates new
+  // SAVE AS DRAFT HANDLER - Same pattern as initial save
   const handleSave = async () => {
-    // Create detailed platforms array with full info
     const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
     
     const postData = {
@@ -784,20 +783,17 @@ const EnhancedContentCreationForm = ({
       detailedPlatforms,
       status: 'pending' as const,
       isFromTemplate: isEditingTemplate,
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
+      ...(isEditingPost && editingPost && {
+        supabaseId: editingPost.supabaseId || editingPost.id
+      })
     };
 
     try {
-      if (isEditingPost && editingPost) {
-        // EDITING EXISTING POST - Update it directly via Supabase API
-        const postId = editingPost.supabaseId || editingPost.id;
-        await supabaseAPI.updateContentPost(postId, postData);
-        if (onEditComplete) {
-          onEditComplete();
-        }
+      await onSave(postData);
+      if (isEditingPost && onEditComplete) {
+        onEditComplete();
       } else {
-        // NEW POST - Create via parent component
-        await onSave(postData);
         resetForm();
       }
     } catch (error) {
@@ -806,9 +802,8 @@ const EnhancedContentCreationForm = ({
     }
   };
 
-  // FIXED: SCHEDULE POST HANDLER - Updates existing post or creates new with scheduled status
+  // SCHEDULE POST HANDLER - Same pattern as initial save, different status
   const handleAddToSchedule = async () => {
-    // Create detailed platforms array with full info
     const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
     
     const postData = {
@@ -820,20 +815,17 @@ const EnhancedContentCreationForm = ({
       detailedPlatforms,
       status: 'scheduled' as const,
       isFromTemplate: isEditingTemplate,
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
+      ...(isEditingPost && editingPost && {
+        supabaseId: editingPost.supabaseId || editingPost.id
+      })
     };
 
     try {
-      if (isEditingPost && editingPost) {
-        // EDITING EXISTING POST - Update it directly via Supabase API
-        const postId = editingPost.supabaseId || editingPost.id;
-        await supabaseAPI.updateContentPost(postId, postData);
-        if (onEditComplete) {
-          onEditComplete();
-        }
+      await onAddToSchedule(postData);
+      if (isEditingPost && onEditComplete) {
+        onEditComplete();
       } else {
-        // NEW POST - Create via parent component
-        await onAddToSchedule(postData);
         resetForm();
       }
     } catch (error) {
