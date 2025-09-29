@@ -770,8 +770,9 @@ const EnhancedContentCreationForm = ({
     console.log('Form reset complete');
   };
 
-  // SAVE AS DRAFT HANDLER - Same pattern as initial save
+  // UPDATED SAVE HANDLER WITH TEMPLATE INTEGRATION:
   const handleSave = async () => {
+    // Create detailed platforms array with full info
     const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
     
     const postData = {
@@ -780,12 +781,13 @@ const EnhancedContentCreationForm = ({
       ...content,
       mediaFiles,
       selectedPlatforms,
-      detailedPlatforms,
+      detailedPlatforms, // Add detailed platform info
       status: 'pending' as const,
-      isFromTemplate: isEditingTemplate,
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
-      ...(isEditingPost && editingPost && {
-        supabaseId: editingPost.supabaseId || editingPost.id
+      isFromTemplate: isEditingTemplate, // CHANGED: Use template status
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id, // ADDED
+      // ONLY ADDITION: Include supabaseId when editing to prevent duplicates
+      ...(isEditingPost && editingPost?.supabaseId && {
+        supabaseId: editingPost.supabaseId
       })
     };
 
@@ -802,8 +804,9 @@ const EnhancedContentCreationForm = ({
     }
   };
 
-  // SCHEDULE POST HANDLER - Same pattern as initial save, different status
+  // UPDATED ADD TO SCHEDULE HANDLER WITH TEMPLATE INTEGRATION:
   const handleAddToSchedule = async () => {
+    // Create detailed platforms array with full info
     const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
     
     const postData = {
@@ -812,22 +815,19 @@ const EnhancedContentCreationForm = ({
       ...content,
       mediaFiles,
       selectedPlatforms,
-      detailedPlatforms,
-      status: 'scheduled' as const,
-      isFromTemplate: isEditingTemplate,
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
-      ...(isEditingPost && editingPost && {
-        supabaseId: editingPost.supabaseId || editingPost.id
+      detailedPlatforms, // Add detailed platform info
+      status: 'scheduled' as const, // CHANGED: from 'pending_schedule' to 'scheduled'
+      isFromTemplate: isEditingTemplate, // CHANGED: Use template status
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id, // ADDED
+      // ONLY ADDITION: Include supabaseId when editing to prevent duplicates
+      ...(isEditingPost && editingPost?.supabaseId && {
+        supabaseId: editingPost.supabaseId
       })
     };
 
     try {
       await onAddToSchedule(postData);
-      if (isEditingPost && onEditComplete) {
-        onEditComplete();
-      } else {
-        resetForm();
-      }
+      resetForm();
     } catch (error) {
       console.error('Schedule failed:', error);
       alert('Failed to schedule post. Your content is preserved.');
