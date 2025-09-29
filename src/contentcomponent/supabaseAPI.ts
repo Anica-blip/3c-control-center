@@ -1,53 +1,28 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { ContentPost, MediaFile } from './types';
 
-// Initialize Supabase client - SINGLE INSTANCE with proper typing
+// Initialize Supabase client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-let supabase: SupabaseClient | null = null;
-
+let supabase = null;
 if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
-    }
-  });
-  console.log('Supabase client created successfully (centralized instance)');
+  supabase = createClient(supabaseUrl, supabaseKey);
+  console.log('Supabase client created successfully for Content Manager');
 } else {
-  console.error('Missing Supabase environment variables:', {
-    url: !!supabaseUrl,
-    key: !!supabaseKey,
-    urlValue: supabaseUrl ? 'set' : 'missing',
-    keyValue: supabaseKey ? 'set' : 'missing'
-  });
+  console.warn('Missing Supabase environment variables in Content Manager - running in demo mode');
 }
 
-// Helper function to check if Supabase is configured
-export const isSupabaseConfigured = (): boolean => Boolean(supabase && supabaseUrl && supabaseKey);
-
-// Type-safe helper to get supabase client
-const getSupabaseClient = (): SupabaseClient => {
-  if (!supabase) {
-    throw new Error('Supabase client not initialized');
-  }
-  return supabase;
-};
-
-// FIXED: Export supabaseAPI as named export for other components
 export const supabaseAPI = {
   // Upload media file to content-media bucket
   async uploadMediaFile(file: File, contentId: string, userId: string): Promise<string> {
-    if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
+    if (!supabase) throw new Error('Supabase not configured');
     
     try {
-      const client = getSupabaseClient();
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}/${contentId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-      const { data, error } = await client.storage
+      const { data, error } = await supabase.storage
         .from('content-media')
         .upload(fileName, file, {
           cacheControl: '3600',
@@ -56,7 +31,7 @@ export const supabaseAPI = {
 
       if (error) throw error;
 
-      const { data: { publicUrl } } = client.storage
+      const { data: { publicUrl } } = supabase.storage
         .from('content-media')
         .getPublicUrl(fileName);
 
@@ -69,80 +44,20 @@ export const supabaseAPI = {
 
   // Save content post to content_posts table
   async saveContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase not configured - cannot save to database');
+    if (!supabase) {
+      // Mock implementation for demo mode
+      console.warn('Supabase not configured - using mock data');
+      const mockPost: ContentPost = {
+        id: `mock_${Date.now()}`,
+        createdDate: new Date(),
+        ...postData
+      };
+      return mockPost;
     }
     
     try {
-      const client = getSupabaseClient();
-      const { data: { user } } = await client.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || null;
-
-      // Extract character profile details for additional columns
-      let characterDetails = {
-        character_avatar: null,
-        name: null,
-        username: null,
-        role: null
-      };
-
-      if (postData.characterProfile) {
-        try {
-          const characterProfiles = await this.loadCharacterProfiles();
-          const selectedProfile = characterProfiles.find(p => p.id === postData.characterProfile);
-          if (selectedProfile) {
-            characterDetails = {
-              character_avatar: selectedProfile.avatar_id || null,
-              name: selectedProfile.name || null,
-              username: selectedProfile.username || null,
-              role: selectedProfile.role || null
-            };
-          }
-        } catch (error) {
-          console.error('Error loading character profile details:', error);
-        }
-      }
-
-      // Extract platform details for additional columns
-      let platformDetails = {
-        social_platform: null,
-        url: null,
-        channel_group_id: null,
-        thread_id: null
-      };
-
-      if (postData.selectedPlatforms && postData.selectedPlatforms.length > 0) {
-        try {
-          const [platforms, telegramChannels] = await Promise.all([
-            this.loadPlatforms(),
-            this.loadTelegramChannels()
-          ]);
-
-          const primaryPlatformId = postData.selectedPlatforms[0];
-          let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
-          
-          if (selectedPlatform) {
-            platformDetails = {
-              social_platform: selectedPlatform.name || null,
-              url: selectedPlatform.url || null,
-              channel_group_id: null,
-              thread_id: null
-            };
-          } else {
-            const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
-            if (selectedTelegram) {
-              platformDetails = {
-                social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
-                url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
-                channel_group_id: selectedTelegram.channel_group_id || null,
-                thread_id: selectedTelegram.thread_id || null
-              };
-            }
-          }
-        } catch (error) {
-          console.error('Error loading platform details:', error);
-        }
-      }
 
       // Upload media files first
       const uploadedMediaFiles = await Promise.all(
@@ -170,11 +85,6 @@ export const supabaseAPI = {
         })
       );
 
-      // Use detailedPlatforms if available, otherwise fallback to selectedPlatforms
-      const platformsToStore = postData.detailedPlatforms && postData.detailedPlatforms.length > 0 
-        ? postData.detailedPlatforms 
-        : postData.selectedPlatforms || [];
-
       // Prepare data for database insert
       const insertData = {
         content_id: postData.contentId,
@@ -191,24 +101,16 @@ export const supabaseAPI = {
         keywords: postData.keywords || '',
         cta: postData.cta || '',
         media_files: uploadedMediaFiles,
-        selected_platforms: platformsToStore,
+        selected_platforms: postData.selectedPlatforms || [],
         status: postData.status || 'pending',
         is_from_template: postData.isFromTemplate || false,
         source_template_id: postData.sourceTemplateId || null,
         user_id: userId, // REQUIRED for RLS
         created_by: userId, // REQUIRED for tracking
-        is_active: true,
-        character_avatar: characterDetails.character_avatar,
-        name: characterDetails.name,
-        username: characterDetails.username,
-        role: characterDetails.role,
-        social_platform: platformDetails.social_platform,
-        url: platformDetails.url,
-        channel_group_id: platformDetails.channel_group_id,
-        thread_id: platformDetails.thread_id
+        is_active: true
       };
 
-      const { data, error } = await client
+      const { data, error } = await supabase
         .from('content_posts')
         .insert(insertData)
         .select()
@@ -234,7 +136,6 @@ export const supabaseAPI = {
         cta: data.cta || '',
         mediaFiles: uploadedMediaFiles,
         selectedPlatforms: data.selected_platforms || [],
-        detailedPlatforms: data.selected_platforms || [],
         status: data.status || 'pending',
         createdDate: new Date(data.created_at),
         scheduledDate: data.scheduled_date ? new Date(data.scheduled_date) : undefined,
@@ -252,13 +153,13 @@ export const supabaseAPI = {
 
   // Load content posts from content_posts table
   async loadContentPosts(): Promise<ContentPost[]> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase not configured - cannot load from database');
+    if (!supabase) {
+      console.warn('Supabase not configured - returning empty array');
+      return [];
     }
     
     try {
-      const client = getSupabaseClient();
-      const { data, error } = await client
+      const { data, error } = await supabase
         .from('content_posts')
         .select('*')
         .eq('is_active', true)
@@ -284,7 +185,6 @@ export const supabaseAPI = {
         cta: record.cta || '',
         mediaFiles: Array.isArray(record.media_files) ? record.media_files : [],
         selectedPlatforms: Array.isArray(record.selected_platforms) ? record.selected_platforms : [],
-        detailedPlatforms: Array.isArray(record.selected_platforms) ? record.selected_platforms : [],
         status: record.status || 'pending',
         createdDate: new Date(record.created_at),
         scheduledDate: record.scheduled_date ? new Date(record.scheduled_date) : undefined,
@@ -302,11 +202,10 @@ export const supabaseAPI = {
 
   // Update content post
   async updateContentPost(postId: string, updates: Partial<ContentPost>): Promise<ContentPost> {
-    if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
+    if (!supabase) throw new Error('Supabase not configured');
     
     try {
-      const client = getSupabaseClient();
-      const { data: { user } } = await client.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || null;
       
       // Handle media file updates if needed
@@ -338,121 +237,8 @@ export const supabaseAPI = {
         );
       }
 
-      // Re-extract character profile details if character changed
-      let updatedCharacterDetails = {};
-      if (updates.characterProfile) {
-        try {
-          const characterProfiles = await this.loadCharacterProfiles();
-          const selectedProfile = characterProfiles.find(p => p.id === updates.characterProfile);
-          if (selectedProfile) {
-            updatedCharacterDetails = {
-              character_avatar: selectedProfile.avatar_id || null,
-              name: selectedProfile.name || null,
-              username: selectedProfile.username || null,
-              role: selectedProfile.role || null
-            };
-          }
-        } catch (error) {
-          console.error('Error loading updated character profile details:', error);
-        }
-      }
-
-      // Re-extract platform details if platforms changed
-      let updatedPlatformDetails = {};
-      if (updates.selectedPlatforms && updates.selectedPlatforms.length > 0) {
-        try {
-          const [platforms, telegramChannels] = await Promise.all([
-            this.loadPlatforms(),
-            this.loadTelegramChannels()
-          ]);
-
-          const primaryPlatformId = updates.selectedPlatforms[0];
-          let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
-          
-          if (selectedPlatform) {
-            updatedPlatformDetails = {
-              social_platform: selectedPlatform.name || null,
-              url: selectedPlatform.url || null,
-              channel_group_id: null,
-              thread_id: null
-            };
-          } else {
-            const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
-            if (selectedTelegram) {
-              updatedPlatformDetails = {
-                social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
-                url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
-                channel_group_id: selectedTelegram.channel_group_id || null,
-                thread_id: selectedTelegram.thread_id || null
-              };
-            }
-          }
-        } catch (error) {
-          console.error('Error loading updated platform details:', error);
-        }
-      }
-
-      // Re-extract character profile details if character changed
-      let characterDetails = {};
-      if (updates.characterProfile) {
-        try {
-          const characterProfiles = await this.loadCharacterProfiles();
-          const selectedProfile = characterProfiles.find(p => p.id === updates.characterProfile);
-          if (selectedProfile) {
-            characterDetails = {
-              avatar_id: selectedProfile.avatar_id || null,
-              name: selectedProfile.name || null,
-              username: selectedProfile.username || null,
-              role: selectedProfile.role || null
-            };
-          }
-        } catch (error) {
-          console.error('Error loading updated character profile details:', error);
-        }
-      }
-
-      // Re-extract platform details if platforms changed
-      let platformDetails = {};
-      if (updates.selectedPlatforms && updates.selectedPlatforms.length > 0) {
-        try {
-          const [platforms, telegramChannels] = await Promise.all([
-            this.loadPlatforms(),
-            this.loadTelegramChannels()
-          ]);
-
-          const primaryPlatformId = updates.selectedPlatforms[0];
-          let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
-          
-          if (selectedPlatform) {
-            platformDetails = {
-              social_platform: selectedPlatform.name || null,
-              url: selectedPlatform.url || null,
-              channel_group: null,
-              thread_id: null
-            };
-          } else {
-            const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
-            if (selectedTelegram) {
-              platformDetails = {
-                social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
-                url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
-                channel_group: selectedTelegram.channel_group_id || null,
-                thread_id: selectedTelegram.thread_id || null
-              };
-            }
-          }
-        } catch (error) {
-          console.error('Error loading updated platform details:', error);
-        }
-      }
-
-      // Use detailedPlatforms if available, otherwise fallback to selectedPlatforms
-      const platformsToUpdate = updates.detailedPlatforms && updates.detailedPlatforms.length > 0 
-        ? updates.detailedPlatforms 
-        : updates.selectedPlatforms;
-
       // Prepare update data
-      const updateData: Record<string, any> = {};
+      const updateData: any = {};
       if (updates.characterProfile) updateData.character_profile = updates.characterProfile;
       if (updates.theme) updateData.theme = updates.theme;
       if (updates.audience) updateData.audience = updates.audience;
@@ -466,15 +252,12 @@ export const supabaseAPI = {
       if (updates.keywords !== undefined) updateData.keywords = updates.keywords;
       if (updates.cta !== undefined) updateData.cta = updates.cta;
       if (updatedMediaFiles !== undefined) updateData.media_files = updatedMediaFiles;
-      if (platformsToUpdate !== undefined) updateData.selected_platforms = platformsToUpdate;
+      if (updates.selectedPlatforms !== undefined) updateData.selected_platforms = updates.selectedPlatforms;
       if (updates.status) updateData.status = updates.status;
-      
-      // Add individual columns to update data
-      Object.assign(updateData, updatedCharacterDetails, updatedPlatformDetails);
       
       updateData.updated_at = new Date().toISOString();
 
-      const { data, error } = await client
+      const { data, error } = await supabase
         .from('content_posts')
         .update(updateData)
         .eq('id', parseInt(postId))
@@ -501,7 +284,6 @@ export const supabaseAPI = {
         cta: data.cta || '',
         mediaFiles: data.media_files || [],
         selectedPlatforms: data.selected_platforms || [],
-        detailedPlatforms: data.selected_platforms || [],
         status: data.status || 'pending',
         createdDate: new Date(data.created_at),
         scheduledDate: data.scheduled_date ? new Date(data.scheduled_date) : undefined,
@@ -519,11 +301,10 @@ export const supabaseAPI = {
 
   // Soft delete content post
   async deleteContentPost(postId: string): Promise<void> {
-    if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
+    if (!supabase) throw new Error('Supabase not configured');
     
     try {
-      const client = getSupabaseClient();
-      const { error } = await client
+      const { error } = await supabase
         .from('content_posts')
         .update({ is_active: false, updated_at: new Date().toISOString() })
         .eq('id', parseInt(postId));
@@ -537,13 +318,17 @@ export const supabaseAPI = {
 
   // Load character profiles
   async loadCharacterProfiles(): Promise<any[]> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase not configured - cannot load character profiles');
+    if (!supabase) {
+      console.warn('Supabase not configured - returning mock character profiles');
+      return [
+        { id: 'anica', name: 'Anica', username: '@anica', role: 'Community Manager', description: 'Empathetic and supportive communication style', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
+        { id: 'caelum', name: 'Caelum', username: '@caelum', role: 'Strategist', description: 'Analytical and strategic approach', avatar_id: null, is_active: true, created_at: new Date().toISOString() },
+        { id: 'aurion', name: 'Aurion', username: '@aurion', role: 'Creative Director', description: 'Creative and inspiring messaging', avatar_id: null, is_active: true, created_at: new Date().toISOString() }
+      ];
     }
 
     try {
-      const client = getSupabaseClient();
-      const { data, error } = await client
+      const { data, error } = await supabase
         .from('character_profiles')
         .select('*')
         .eq('is_active', true)
@@ -559,13 +344,23 @@ export const supabaseAPI = {
 
   // Load platforms from social_platforms table
   async loadPlatforms(): Promise<any[]> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase not configured - cannot load platforms');
+    if (!supabase) {
+      console.warn('Supabase not configured - returning mock platforms');
+      return [
+        { id: '1', name: 'Instagram', display_name: 'Instagram', url: 'https://instagram.com', is_active: true, isActive: true, isDefault: true, is_default: true },
+        { id: '2', name: 'Facebook', display_name: 'Facebook', url: 'https://facebook.com', is_active: true, isActive: true, isDefault: false, is_default: false },
+        { id: '3', name: 'LinkedIn', display_name: 'LinkedIn', url: 'https://linkedin.com', is_active: true, isActive: true, isDefault: false, is_default: false },
+        { id: '4', name: 'Twitter', display_name: 'Twitter/X', url: 'https://x.com', is_active: true, isActive: true, isDefault: false, is_default: false },
+        { id: '5', name: 'YouTube', display_name: 'YouTube', url: 'https://youtube.com', is_active: true, isActive: true, isDefault: false, is_default: false },
+        { id: '6', name: 'TikTok', display_name: 'TikTok', url: 'https://tiktok.com', is_active: true, isActive: true, isDefault: false, is_default: false },
+        { id: '7', name: 'Telegram', display_name: 'Telegram', url: 'https://telegram.org', is_active: true, isActive: true, isDefault: false, is_default: false },
+        { id: '8', name: 'Pinterest', display_name: 'Pinterest', url: 'https://pinterest.com', is_active: true, isActive: true, isDefault: false, is_default: false },
+        { id: '9', name: 'WhatsApp', display_name: 'WhatsApp', url: 'https://whatsapp.com', is_active: true, isActive: true, isDefault: false, is_default: false }
+      ];
     }
 
     try {
-      const client = getSupabaseClient();
-      const { data, error } = await client
+      const { data, error } = await supabase
         .from('social_platforms')
         .select('*')
         .eq('is_active', true)
@@ -578,7 +373,7 @@ export const supabaseAPI = {
         ...platform,
         // Ensure both naming conventions are available for compatibility
         isActive: platform.is_active,
-        isDefault: false, // FIXED: Remove default flag completely
+        isDefault: platform.is_default || false,
         displayName: platform.display_name || platform.name
       }));
       
@@ -591,13 +386,13 @@ export const supabaseAPI = {
 
   // Load Telegram configurations
   async loadTelegramChannels(): Promise<any[]> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase not configured - cannot load Telegram channels');
+    if (!supabase) {
+      console.warn('Supabase not configured - returning empty Telegram channels');
+      return [];
     }
 
     try {
-      const client = getSupabaseClient();
-      const { data, error } = await client
+      const { data, error } = await supabase
         .from('telegram_configurations')
         .select('*')
         .eq('is_active', true)
@@ -612,5 +407,4 @@ export const supabaseAPI = {
   }
 };
 
-// FIXED: Export the client safely for TemplateLibrary.tsx
 export { supabase };
