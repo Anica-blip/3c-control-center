@@ -800,7 +800,7 @@ const EnhancedContentCreationForm = ({
     }
   };
 
-  // UPDATED ADD TO SCHEDULE HANDLER WITH TEMPLATE INTEGRATION:
+  // FIXED: ADD TO SCHEDULE HANDLER - Updates existing post instead of creating duplicate
   const handleAddToSchedule = async () => {
     // Create detailed platforms array with full info
     const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
@@ -811,15 +811,23 @@ const EnhancedContentCreationForm = ({
       ...content,
       mediaFiles,
       selectedPlatforms,
-      detailedPlatforms, // Add detailed platform info
-      status: 'pending_schedule' as const,
-      isFromTemplate: isEditingTemplate, // CHANGED: Use template status
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
+      detailedPlatforms,
+      status: 'scheduled' as const, // FIXED: Changed from 'pending_schedule' to 'scheduled'
+      isFromTemplate: isEditingTemplate,
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
+      // FIXED: Include post ID when editing so it updates instead of creating new
+      ...(isEditingPost && editingPost && {
+        id: editingPost.supabaseId || editingPost.id
+      })
     };
 
     try {
       await onAddToSchedule(postData);
-      resetForm();
+      if (isEditingPost && onEditComplete) {
+        onEditComplete();
+      } else {
+        resetForm();
+      }
     } catch (error) {
       console.error('Schedule failed:', error);
       alert('Failed to schedule post. Your content is preserved.');
@@ -2276,7 +2284,6 @@ const EnhancedContentCreationForm = ({
                                 muted
                               />
                             ) : file.size === 0 && file.url ? (
-                              // URL PREVIEW WITH PROPER PLATFORM SIZING - FIXED
                               <div style={{
                                 width: '100%',
                                 height: '100%',
@@ -2286,7 +2293,6 @@ const EnhancedContentCreationForm = ({
                                 position: 'relative',
                                 overflow: 'hidden'
                               }}>
-                                {/* URL Preview Image - Full size with platform aspect ratio */}
                                 {file.urlPreview?.image ? (
                                   <div style={{
                                     flex: 1,
@@ -2301,7 +2307,6 @@ const EnhancedContentCreationForm = ({
                                     left: 0
                                   }} />
                                 ) : (
-                                  // Fallback when no image preview available
                                   <div style={{
                                     flex: 1,
                                     backgroundColor: '#f3f4f6',
@@ -2315,7 +2320,6 @@ const EnhancedContentCreationForm = ({
                                   </div>
                                 )}
                                 
-                                {/* URL Info Overlay - Bottom positioned, not covering image */}
                                 <div style={{
                                   position: 'absolute',
                                   bottom: 0,
@@ -2353,7 +2357,6 @@ const EnhancedContentCreationForm = ({
                                 </div>
                               </div>
                             ) : (
-                              // Fallback for other file types
                               <div style={{
                                 width: '100%',
                                 height: '100%',
@@ -2384,7 +2387,6 @@ const EnhancedContentCreationForm = ({
                               </div>
                             )}
                             
-                            {/* Multiple files indicator */}
                             {mediaFiles.length > 4 && index === 3 && (
                               <div style={{
                                 position: 'absolute',
@@ -2404,7 +2406,6 @@ const EnhancedContentCreationForm = ({
                               </div>
                             )}
 
-                            {/* File type badge */}
                             <div style={{
                               position: 'absolute',
                               top: '8px',
@@ -2423,7 +2424,6 @@ const EnhancedContentCreationForm = ({
                         ))}
                       </div>
 
-                      {/* Platform-specific notes */}
                       {selections.platform && (
                         <div style={{
                           fontSize: '11px',
@@ -2454,7 +2454,6 @@ const EnhancedContentCreationForm = ({
 
             {/* 2. Post Content */}
             <div style={{ padding: '20px', backgroundColor: 'white' }}>
-              {/* a) Character Profile Header */}
               {selections.characterProfile && (
                 <div style={{
                   display: 'flex',
@@ -2529,7 +2528,6 @@ const EnhancedContentCreationForm = ({
                 </div>
               )}
 
-              {/* b) Title/Headline */}
               {content.title && (
                 <h4 style={{
                   fontSize: '18px',
@@ -2542,7 +2540,6 @@ const EnhancedContentCreationForm = ({
                 </h4>
               )}
 
-              {/* c) Post Description */}
               {content.description && (
                 <div style={{
                   fontSize: '15px',
@@ -2555,7 +2552,6 @@ const EnhancedContentCreationForm = ({
                 </div>
               )}
 
-              {/* d) Hashtags */}
               {content.hashtags.length > 0 && (
                 <div style={{
                   display: 'flex',
@@ -2575,7 +2571,6 @@ const EnhancedContentCreationForm = ({
                 </div>
               )}
 
-              {/* e) Call to Action */}
               {content.cta && (
                 <div style={{
                   padding: '12px 16px',
@@ -2593,7 +2588,6 @@ const EnhancedContentCreationForm = ({
             </div>
           </div>
 
-          {/* 3. Platform/Telegram Distribution (Internal Dashboard Use Only) */}
           {selectedPlatforms.length > 0 && (
             <div style={{
               marginTop: '20px',
