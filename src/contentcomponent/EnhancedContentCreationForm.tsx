@@ -770,7 +770,7 @@ const EnhancedContentCreationForm = ({
     console.log('Form reset complete');
   };
 
-  // FIXED: SAVE AS DRAFT HANDLER - Updates existing post instead of creating duplicate
+  // FIXED: SAVE AS DRAFT HANDLER - Updates existing post or creates new
   const handleSave = async () => {
     // Create detailed platforms array with full info
     const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
@@ -782,20 +782,22 @@ const EnhancedContentCreationForm = ({
       mediaFiles,
       selectedPlatforms,
       detailedPlatforms,
-      status: 'pending' as const, // Save as Draft = pending status
+      status: 'pending' as const,
       isFromTemplate: isEditingTemplate,
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
-      // FIXED: Include post ID when editing so it updates instead of creating new
-      ...(isEditingPost && editingPost && {
-        id: editingPost.supabaseId || editingPost.id
-      })
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id
     };
 
     try {
-      await onSave(postData);
-      if (isEditingPost && onEditComplete) {
-        onEditComplete();
+      if (isEditingPost && editingPost) {
+        // EDITING EXISTING POST - Update it directly via Supabase API
+        const postId = editingPost.supabaseId || editingPost.id;
+        await supabaseAPI.updateContentPost(postId, postData);
+        if (onEditComplete) {
+          onEditComplete();
+        }
       } else {
+        // NEW POST - Create via parent component
+        await onSave(postData);
         resetForm();
       }
     } catch (error) {
@@ -804,7 +806,7 @@ const EnhancedContentCreationForm = ({
     }
   };
 
-  // FIXED: ADD TO SCHEDULE HANDLER - Updates existing post instead of creating duplicate
+  // FIXED: SCHEDULE POST HANDLER - Updates existing post or creates new with scheduled status
   const handleAddToSchedule = async () => {
     // Create detailed platforms array with full info
     const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
@@ -816,20 +818,22 @@ const EnhancedContentCreationForm = ({
       mediaFiles,
       selectedPlatforms,
       detailedPlatforms,
-      status: 'scheduled' as const, // FIXED: Changed from 'pending_schedule' to 'scheduled'
+      status: 'scheduled' as const,
       isFromTemplate: isEditingTemplate,
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
-      // FIXED: Include post ID when editing so it updates instead of creating new
-      ...(isEditingPost && editingPost && {
-        id: editingPost.supabaseId || editingPost.id
-      })
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id
     };
 
     try {
-      await onAddToSchedule(postData);
-      if (isEditingPost && onEditComplete) {
-        onEditComplete();
+      if (isEditingPost && editingPost) {
+        // EDITING EXISTING POST - Update it directly via Supabase API
+        const postId = editingPost.supabaseId || editingPost.id;
+        await supabaseAPI.updateContentPost(postId, postData);
+        if (onEditComplete) {
+          onEditComplete();
+        }
       } else {
+        // NEW POST - Create via parent component
+        await onAddToSchedule(postData);
         resetForm();
       }
     } catch (error) {
