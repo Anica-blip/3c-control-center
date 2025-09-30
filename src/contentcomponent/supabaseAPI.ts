@@ -191,6 +191,7 @@ export const supabaseAPI = {
 
       // --- Prepare data for database ---
       const dbData = {
+        content_id: postData.contentId,  // REQUIRED: content_id is NOT NULL in database
         character_profile: postData.characterProfile || null,
         theme: postData.theme || null,
         audience: postData.audience || null,
@@ -227,7 +228,7 @@ export const supabaseAPI = {
 
       let finalData;
 
-      // CRITICAL LOGIC: Check if we have a supabaseId to determine INSERT vs UPDATE
+      // CRITICAL LOGIC: Check if we have a supabaseId OR if a post with this content_id exists
       if (postData.supabaseId) {
         // UPDATE existing post using the Supabase auto-generated ID
         console.log(`UPDATING existing post with Supabase ID: ${postData.supabaseId}`);
@@ -245,31 +246,57 @@ export const supabaseAPI = {
         }
         finalData = data;
       } else {
-        // INSERT new post only when no supabaseId exists
-        console.log('INSERTING new post (no Supabase ID found)');
-        
-        const insertData = {
-          ...dbData,
-          created_at: new Date().toISOString()
-        };
-
-        const { data, error } = await client
+        // Check if a post with this content_id already exists
+        const { data: existingPost, error: checkError } = await client
           .from('content_posts')
-          .insert([insertData])
-          .select()
+          .select('id')
+          .eq('content_id', postData.contentId)
+          .eq('is_active', true)
           .single();
 
-        if (error) {
-          console.error('Insert error:', error);
-          throw error;
+        if (existingPost && !checkError) {
+          // UPDATE existing post found by content_id
+          console.log(`UPDATING existing post found by content_id: ${postData.contentId}, Supabase ID: ${existingPost.id}`);
+          
+          const { data, error } = await client
+            .from('content_posts')
+            .update(dbData)
+            .eq('id', existingPost.id)
+            .select()
+            .single();
+
+          if (error) {
+            console.error('Update error:', error);
+            throw error;
+          }
+          finalData = data;
+        } else {
+          // INSERT new post only when no existing post found
+          console.log(`INSERTING new post with content_id: ${postData.contentId}`);
+          
+          const insertData = {
+            ...dbData,
+            created_at: new Date().toISOString()
+          };
+
+          const { data, error } = await client
+            .from('content_posts')
+            .insert([insertData])
+            .select()
+            .single();
+
+          if (error) {
+            console.error('Insert error:', error);
+            throw error;
+          }
+          finalData = data;
         }
-        finalData = data;
       }
 
       // --- Convert back to ContentPost format ---
       const contentPost: ContentPost = {
         id: finalData.id.toString(),
-        contentId: postData.contentId,  // Frontend display ID
+        contentId: finalData.content_id,  // Use actual content_id from database
         characterProfile: finalData.character_profile || '',
         theme: finalData.theme || '',
         audience: finalData.audience || '',
@@ -322,7 +349,7 @@ export const supabaseAPI = {
       // Convert to ContentPost format
       const contentPosts: ContentPost[] = (data || []).map(record => ({
         id: record.id.toString(),
-        contentId: `content-${record.id}`,  // Generate display ID from database ID
+        contentId: record.content_id || `content-${record.id}`,  // Use actual content_id from database
         characterProfile: record.character_profile || '',
         theme: record.theme || '',
         audience: record.audience || '',
@@ -475,6 +502,7 @@ export const supabaseAPI = {
       };
 
       // Only add fields if they're defined in updates
+      if (updates.contentId !== undefined) updateData.content_id = updates.contentId;  // Include content_id if updating
       if (updates.characterProfile !== undefined) updateData.character_profile = updates.characterProfile;
       if (updates.theme !== undefined) updateData.theme = updates.theme;
       if (updates.audience !== undefined) updateData.audience = updates.audience;
@@ -510,7 +538,7 @@ export const supabaseAPI = {
       // Convert back to ContentPost format
       const contentPost: ContentPost = {
         id: data.id.toString(),
-        contentId: updates.contentId || `content-${data.id}`,
+        contentId: data.content_id || updates.contentId || `content-${data.id}`,  // Use actual content_id from database
         characterProfile: data.character_profile || '',
         theme: data.theme || '',
         audience: data.audience || '',
