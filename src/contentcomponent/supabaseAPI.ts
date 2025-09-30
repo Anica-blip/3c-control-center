@@ -70,7 +70,7 @@ export const supabaseAPI = {
     }
   }, 
 
-  // Save content post to content_posts table
+  // FIXED: Save or Update content post based on supabaseId presence
   async saveContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
     if (!isSupabaseConfigured()) {
       throw new Error('Supabase not configured - cannot save to database');
@@ -89,10 +89,10 @@ export const supabaseAPI = {
 
       // --- Character Profile Details ---
       let characterDetails = {
-        character_avatar: null,
-        name: null,
-        username: null,
-        role: null
+        character_avatar: null as string | null,
+        name: null as string | null,
+        username: null as string | null,
+        role: null as string | null
       };
 
       if (postData.characterProfile) {
@@ -112,36 +112,38 @@ export const supabaseAPI = {
         }
       }
 
-      // --- Platform Details ---
+      // --- Platform Details with platform_id ---
       let platformDetails = {
-        social_platform: null,
-        url: null,
-        channel_group_id: null,
-        thread_id: null
+        platform_id: null as string | null,
+        social_platform: null as string | null,
+        url: null as string | null,
+        channel_group_id: null as string | null,
+        thread_id: null as string | null
       };
 
       let platformsToStore: string[] = [];
-      let detailedPlatforms: any[] = [];
 
-      // Always use detailedPlatforms if present
+      // Determine which platforms to use
       if (postData.detailedPlatforms && postData.detailedPlatforms.length > 0) {
         platformsToStore = postData.detailedPlatforms;
-        detailedPlatforms = postData.detailedPlatforms;
       } else if (postData.selectedPlatforms && postData.selectedPlatforms.length > 0) {
         platformsToStore = postData.selectedPlatforms;
-        detailedPlatforms = postData.selectedPlatforms;
       }
 
+      // Resolve platform details
       if (platformsToStore.length > 0) {
         try {
           const [platforms, telegramChannels] = await Promise.all([
             this.loadPlatforms(),
             this.loadTelegramChannels()
           ]);
+          
           const primaryPlatformId = platformsToStore[0];
-          let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+          const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+          
           if (selectedPlatform) {
             platformDetails = {
+              platform_id: selectedPlatform.id,
               social_platform: selectedPlatform.name || null,
               url: selectedPlatform.url || null,
               channel_group_id: null,
@@ -151,6 +153,7 @@ export const supabaseAPI = {
             const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
             if (selectedTelegram) {
               platformDetails = {
+                platform_id: selectedTelegram.id.toString(),
                 social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
                 url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
                 channel_group_id: selectedTelegram.channel_group_id || null,
@@ -175,25 +178,24 @@ export const supabaseAPI = {
               return {
                 ...mediaFile,
                 supabaseUrl: supabaseUrl,
-                url: supabaseUrl // Update URL to Supabase URL
+                url: supabaseUrl
               };
             } catch (uploadError) {
               console.error('Error uploading media file:', uploadError);
-              return mediaFile; // Keep original if upload fails
+              return mediaFile;
             }
           }
           return mediaFile;
         })
       );
 
-      // --- Prepare data for database insert ---
-      const insertData = {
-        content_id: postData.contentId,
-        character_profile: postData.characterProfile,
-        theme: postData.theme,
-        audience: postData.audience,
-        media_type: postData.mediaType,
-        template_type: postData.templateType,
+      // --- Prepare data for database ---
+      const dbData = {
+        character_profile: postData.characterProfile || null,
+        theme: postData.theme || null,
+        audience: postData.audience || null,
+        media_type: postData.mediaType || null,
+        template_type: postData.templateType || null,
         platform: postData.platform || '',
         voice_style: postData.voiceStyle || '',
         title: postData.title || '',
@@ -206,59 +208,95 @@ export const supabaseAPI = {
         status: postData.status || 'pending',
         is_from_template: postData.isFromTemplate || false,
         source_template_id: postData.sourceTemplateId || null,
-        user_id: userId, // REQUIRED for RLS
-        created_by: userId, // REQUIRED for tracking
+        user_id: userId,
+        created_by: userId,
         is_active: true,
+        // Character details
         character_avatar: characterDetails.character_avatar,
         name: characterDetails.name,
         username: characterDetails.username,
         role: characterDetails.role,
+        // Platform details - ALWAYS include these
+        platform_id: platformDetails.platform_id,
         social_platform: platformDetails.social_platform,
         url: platformDetails.url,
         channel_group_id: platformDetails.channel_group_id,
         thread_id: platformDetails.thread_id,
-        created_at: new Date().toISOString()
+        updated_at: new Date().toISOString()
       };
 
-      // --- Prevent accidental multiple inserts ---
-      const { data, error } = await client
-        .from('content_posts')
-        .insert([insertData], { upsert: false })
-        .select()
-        .single();
+      let finalData;
 
-      if (error) throw error;
+      // CRITICAL LOGIC: Check if we have a supabaseId to determine INSERT vs UPDATE
+      if (postData.supabaseId) {
+        // UPDATE existing post using the Supabase auto-generated ID
+        console.log(`UPDATING existing post with Supabase ID: ${postData.supabaseId}`);
+        
+        const { data, error } = await client
+          .from('content_posts')
+          .update(dbData)
+          .eq('id', parseInt(postData.supabaseId))  // Use the Supabase row ID
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Update error:', error);
+          throw error;
+        }
+        finalData = data;
+      } else {
+        // INSERT new post only when no supabaseId exists
+        console.log('INSERTING new post (no Supabase ID found)');
+        
+        const insertData = {
+          ...dbData,
+          created_at: new Date().toISOString()
+        };
+
+        const { data, error } = await client
+          .from('content_posts')
+          .insert([insertData])
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Insert error:', error);
+          throw error;
+        }
+        finalData = data;
+      }
 
       // --- Convert back to ContentPost format ---
       const contentPost: ContentPost = {
-        id: data.id.toString(),
-        contentId: data.content_id,
-        characterProfile: data.character_profile,
-        theme: data.theme,
-        audience: data.audience,
-        mediaType: data.media_type,
-        templateType: data.template_type,
-        platform: data.platform || '',
-        voiceStyle: data.voice_style || '',
-        title: data.title || '',
-        description: data.description || '',
-        hashtags: data.hashtags || [],
-        keywords: data.keywords || '',
-        cta: data.cta || '',
+        id: finalData.id.toString(),
+        contentId: postData.contentId,  // Frontend display ID
+        characterProfile: finalData.character_profile || '',
+        theme: finalData.theme || '',
+        audience: finalData.audience || '',
+        mediaType: finalData.media_type || '',
+        templateType: finalData.template_type || '',
+        platform: finalData.platform || '',
+        voiceStyle: finalData.voice_style || '',
+        title: finalData.title || '',
+        description: finalData.description || '',
+        hashtags: finalData.hashtags || [],
+        keywords: finalData.keywords || '',
+        cta: finalData.cta || '',
         mediaFiles: uploadedMediaFiles,
-        selectedPlatforms: data.selected_platforms || [],
-        detailedPlatforms: data.selected_platforms || [],
-        status: data.status || 'pending',
-        createdDate: new Date(data.created_at),
-        scheduledDate: data.scheduled_date ? new Date(data.scheduled_date) : undefined,
-        isFromTemplate: data.is_from_template || false,
-        sourceTemplateId: data.source_template_id,
-        supabaseId: data.id.toString()
+        selectedPlatforms: finalData.selected_platforms || [],
+        detailedPlatforms: finalData.selected_platforms || [],
+        status: finalData.status || 'pending',
+        createdDate: new Date(finalData.created_at),
+        scheduledDate: finalData.scheduled_date ? new Date(finalData.scheduled_date) : undefined,
+        isFromTemplate: finalData.is_from_template || false,
+        sourceTemplateId: finalData.source_template_id,
+        supabaseId: finalData.id.toString()  // CRITICAL: Always return the Supabase ID for future updates
       };
 
+      console.log('Post saved/updated successfully. Supabase ID:', contentPost.supabaseId);
       return contentPost;
     } catch (error) {
-      console.error('Error saving content post:', error);
+      console.error('Error saving/updating content post:', error);
       throw error;
     } finally {
       saveInProgress = false;
@@ -284,7 +322,7 @@ export const supabaseAPI = {
       // Convert to ContentPost format
       const contentPosts: ContentPost[] = (data || []).map(record => ({
         id: record.id.toString(),
-        contentId: record.content_id || '',
+        contentId: `content-${record.id}`,  // Generate display ID from database ID
         characterProfile: record.character_profile || '',
         theme: record.theme || '',
         audience: record.audience || '',
@@ -305,7 +343,7 @@ export const supabaseAPI = {
         scheduledDate: record.scheduled_date ? new Date(record.scheduled_date) : undefined,
         isFromTemplate: record.is_from_template || false,
         sourceTemplateId: record.source_template_id || undefined,
-        supabaseId: record.id.toString()
+        supabaseId: record.id.toString()  // CRITICAL: Include Supabase ID
       }));
 
       return contentPosts;
@@ -315,22 +353,23 @@ export const supabaseAPI = {
     }
   },
 
-  // Update content post - GPT-4.1 FIXED VERSION
+  // Update content post - ALWAYS uses UPDATE, never INSERT
   async updateContentPost(postId: string, updates: Partial<ContentPost>): Promise<ContentPost> {
     if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
+    
+    console.log(`Updating post with ID: ${postId}`);
     
     try {
       const client = getSupabaseClient();
       const { data: { user } } = await client.auth.getUser();
       const userId = user?.id || null;
       
-      // Handle media file updates if needed (unchanged)
+      // Handle media file updates
       let updatedMediaFiles = updates.mediaFiles;
       if (updates.mediaFiles) {
         updatedMediaFiles = await Promise.all(
           updates.mediaFiles.map(async (mediaFile) => {
             if (mediaFile.url.startsWith('blob:')) {
-              // Upload new media file
               try {
                 const response = await fetch(mediaFile.url);
                 const blob = await response.blob();
@@ -351,9 +390,9 @@ export const supabaseAPI = {
         );
       }
 
-      // Always resolve character profile details if characterProfile is present
+      // Resolve character profile details if updated
       let updatedCharacterDetails = {};
-      if (updates.characterProfile) {
+      if (updates.characterProfile !== undefined) {
         try {
           const characterProfiles = await this.loadCharacterProfiles();
           const selectedProfile = characterProfiles.find(p => p.id === updates.characterProfile);
@@ -364,98 +403,119 @@ export const supabaseAPI = {
               username: selectedProfile.username || null,
               role: selectedProfile.role || null
             };
+          } else {
+            // Clear character details if no profile selected
+            updatedCharacterDetails = {
+              character_avatar: null,
+              name: null,
+              username: null,
+              role: null
+            };
           }
         } catch (error) {
           console.error('Error loading updated character profile details:', error);
         }
       }
 
-      // --- NEW: Always resolve platform details on update ---
-      let updatedPlatformDetails = {
-        social_platform: null,
-        url: null,
-        channel_group_id: null,
-        thread_id: null
-      };
-      // Prefer updates.selectedPlatforms, else keep DB value unchanged (you may want to fetch current row here for true "no change")
-      let platformsToUpdate = [];
-      if (updates.detailedPlatforms && updates.detailedPlatforms.length > 0) {
-        platformsToUpdate = updates.detailedPlatforms;
-      } else if (updates.selectedPlatforms && updates.selectedPlatforms.length > 0) {
-        platformsToUpdate = updates.selectedPlatforms;
-      }
-      if (platformsToUpdate.length > 0) {
-        try {
-          const [platforms, telegramChannels] = await Promise.all([
-            this.loadPlatforms(),
-            this.loadTelegramChannels()
-          ]);
-          const primaryPlatformId = platformsToUpdate[0];
-          let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
-          if (selectedPlatform) {
-            updatedPlatformDetails = {
-              social_platform: selectedPlatform.name || null,
-              url: selectedPlatform.url || null,
-              channel_group_id: null,
-              thread_id: null
-            };
-          } else {
-            const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
-            if (selectedTelegram) {
+      // Resolve platform details if updated
+      let updatedPlatformDetails = {};
+      let platformsToUpdate = undefined;
+      
+      if (updates.detailedPlatforms !== undefined || updates.selectedPlatforms !== undefined) {
+        platformsToUpdate = updates.detailedPlatforms || updates.selectedPlatforms || [];
+        
+        if (platformsToUpdate.length > 0) {
+          try {
+            const [platforms, telegramChannels] = await Promise.all([
+              this.loadPlatforms(),
+              this.loadTelegramChannels()
+            ]);
+            
+            const primaryPlatformId = platformsToUpdate[0];
+            const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+            
+            if (selectedPlatform) {
               updatedPlatformDetails = {
-                social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
-                url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
-                channel_group_id: selectedTelegram.channel_group_id || null,
-                thread_id: selectedTelegram.thread_id || null
+                platform_id: selectedPlatform.id,
+                social_platform: selectedPlatform.name || null,
+                url: selectedPlatform.url || null,
+                channel_group_id: null,
+                thread_id: null
               };
+            } else {
+              const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
+              if (selectedTelegram) {
+                updatedPlatformDetails = {
+                  platform_id: selectedTelegram.id.toString(),
+                  social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
+                  url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
+                  channel_group_id: selectedTelegram.channel_group_id || null,
+                  thread_id: selectedTelegram.thread_id || null
+                };
+              }
             }
+          } catch (error) {
+            console.error('Error loading updated platform details:', error);
           }
-        } catch (error) {
-          console.error('Error loading updated platform details:', error);
+        } else {
+          // Clear platform details if no platforms selected
+          updatedPlatformDetails = {
+            platform_id: null,
+            social_platform: null,
+            url: null,
+            channel_group_id: null,
+            thread_id: null
+          };
         }
       }
-      // --- END NEW LOGIC ---
 
-      // --- ALWAYS pass all these fields, not just the changed ones ---
+      // Build update data - only include fields that are being updated
       const updateData: Record<string, any> = {
-        character_profile: updates.characterProfile,
-        theme: updates.theme,
-        audience: updates.audience,
-        media_type: updates.mediaType,
-        template_type: updates.templateType,
-        platform: updates.platform,
-        voice_style: updates.voiceStyle,
-        title: updates.title,
-        description: updates.description,
-        hashtags: updates.hashtags,
-        keywords: updates.keywords,
-        cta: updates.cta,
-        media_files: updatedMediaFiles,
-        selected_platforms: platformsToUpdate,
-        status: updates.status,
-        ...updatedCharacterDetails,
-        ...updatedPlatformDetails,
         updated_at: new Date().toISOString()
       };
+
+      // Only add fields if they're defined in updates
+      if (updates.characterProfile !== undefined) updateData.character_profile = updates.characterProfile;
+      if (updates.theme !== undefined) updateData.theme = updates.theme;
+      if (updates.audience !== undefined) updateData.audience = updates.audience;
+      if (updates.mediaType !== undefined) updateData.media_type = updates.mediaType;
+      if (updates.templateType !== undefined) updateData.template_type = updates.templateType;
+      if (updates.platform !== undefined) updateData.platform = updates.platform;
+      if (updates.voiceStyle !== undefined) updateData.voice_style = updates.voiceStyle;
+      if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.hashtags !== undefined) updateData.hashtags = updates.hashtags;
+      if (updates.keywords !== undefined) updateData.keywords = updates.keywords;
+      if (updates.cta !== undefined) updateData.cta = updates.cta;
+      if (updatedMediaFiles !== undefined) updateData.media_files = updatedMediaFiles;
+      if (platformsToUpdate !== undefined) updateData.selected_platforms = platformsToUpdate;
+      if (updates.status !== undefined) updateData.status = updates.status;
+      if (updates.scheduledDate !== undefined) updateData.scheduled_date = updates.scheduledDate?.toISOString() || null;
+      
+      // Add character and platform details if they were updated
+      Object.assign(updateData, updatedCharacterDetails, updatedPlatformDetails);
 
       const { data, error } = await client
         .from('content_posts')
         .update(updateData)
-        .eq('id', parseInt(postId))
+        .eq('id', parseInt(postId))  // Always use the Supabase row ID
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
 
-      // Convert back to ContentPost format (unchanged)
+      // Convert back to ContentPost format
       const contentPost: ContentPost = {
         id: data.id.toString(),
-        contentId: data.content_id,
-        characterProfile: data.character_profile,
-        theme: data.theme,
-        audience: data.audience,
-        mediaType: data.media_type,
-        templateType: data.template_type,
+        contentId: updates.contentId || `content-${data.id}`,
+        characterProfile: data.character_profile || '',
+        theme: data.theme || '',
+        audience: data.audience || '',
+        mediaType: data.media_type || '',
+        templateType: data.template_type || '',
         platform: data.platform || '',
         voiceStyle: data.voice_style || '',
         title: data.title || '',
@@ -471,9 +531,10 @@ export const supabaseAPI = {
         scheduledDate: data.scheduled_date ? new Date(data.scheduled_date) : undefined,
         isFromTemplate: data.is_from_template || false,
         sourceTemplateId: data.source_template_id,
-        supabaseId: data.id.toString()
+        supabaseId: data.id.toString()  // Always return the Supabase ID
       };
 
+      console.log('Post updated successfully. Supabase ID:', contentPost.supabaseId);
       return contentPost;
     } catch (error) {
       console.error('Error updating content post:', error);
@@ -540,9 +601,8 @@ export const supabaseAPI = {
       // Transform data to ensure compatibility with existing components
       const transformedData = (data || []).map(platform => ({
         ...platform,
-        // Ensure both naming conventions are available for compatibility
         isActive: platform.is_active,
-        isDefault: false, // FIXED: Remove default flag completely
+        isDefault: false,
         displayName: platform.display_name || platform.name
       }));
       
@@ -576,5 +636,5 @@ export const supabaseAPI = {
   }
 };
 
-// FIXED: Export the client safely for TemplateLibrary.tsx
+// Export the client safely for TemplateLibrary.tsx
 export { supabase };
