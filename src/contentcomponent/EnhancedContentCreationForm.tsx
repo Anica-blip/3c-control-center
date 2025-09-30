@@ -12,6 +12,21 @@ import {
   getCharacterCode, 
   getVoiceStyleCode 
 } from './utils';
+
+const isTelegramSelected = () => {
+  return selectedPlatforms
+    .map(platformId => activePlatforms.find(p => p.id === platformId))
+    .some(p => p && p.name && p.name.toLowerCase().includes('telegram'));
+};
+
+const getPrimaryTelegramUrl = () => {
+  // Checks detailedPlatforms for a Telegram URL, else checks mediaFiles for a url type
+  const telegramPlatform = selectedPlatforms
+    .map(platformId => activePlatforms.find(p => p.id === platformId))
+    .find(p => p && p.name && p.name.toLowerCase().includes('telegram'));
+  return telegramPlatform?.url || null;
+};
+
 // ADD NEW IMPORT FOR TEMPLATE LIBRARY INTEGRATION
 import { PendingLibraryTemplate, templateEventEmitter } from './TemplateLibrary';
 
@@ -134,6 +149,21 @@ const EnhancedContentCreationForm = ({
   const [urlTitle, setUrlTitle] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // TELEGRAM VALIDATION HELPER FUNCTIONS - ADDED FROM CORRECTED CODE
+  const isTelegramSelected = () => {
+    return selectedPlatforms
+      .map(platformId => activePlatforms.find(p => p.id === platformId))
+      .some(p => p && p.name && p.name.toLowerCase().includes('telegram'));
+  };
+
+  const getPrimaryTelegramUrl = () => {
+    // Checks detailedPlatforms for a Telegram URL, else checks mediaFiles for a url type
+    const telegramPlatform = selectedPlatforms
+      .map(platformId => activePlatforms.find(p => p.id === platformId))
+      .find(p => p && p.name && p.name.toLowerCase().includes('telegram'));
+    return telegramPlatform?.url || null;
+  };
+  
   // Code mapping functions for content ID generation
   const getThemeCodeLocal = (value: string) => {
     const codes: Record<string, string> = {
@@ -770,8 +800,17 @@ const EnhancedContentCreationForm = ({
     console.log('Form reset complete');
   };
 
-  // FIXED: SAVE AS DRAFT HANDLER - Updates existing post instead of creating duplicate
+  // UPDATED SAVE HANDLER WITH TELEGRAM VALIDATION AND TEMPLATE INTEGRATION
   const handleSave = async () => {
+    // TELEGRAM URL VALIDATION - ADDED FROM CORRECTED CODE
+    if (isTelegramSelected()) {
+      const telegramUrl = getPrimaryTelegramUrl();
+      if (!telegramUrl) {
+        alert('A Telegram URL is required for Telegram posts. Please select a Telegram channel/group that has a valid URL.');
+        return;
+      }
+    }
+    
     // Create detailed platforms array with full info
     const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
     
@@ -781,14 +820,10 @@ const EnhancedContentCreationForm = ({
       ...content,
       mediaFiles,
       selectedPlatforms,
-      detailedPlatforms,
-      status: 'pending' as const, // Save as Draft = pending status
-      isFromTemplate: isEditingTemplate,
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
-      // FIXED: Include post ID when editing so it updates instead of creating new
-      ...(isEditingPost && editingPost && {
-        id: editingPost.supabaseId || editingPost.id
-      })
+      detailedPlatforms, // Add detailed platform info
+      status: 'pending' as const,
+      isFromTemplate: isEditingTemplate, // CHANGED: Use template status
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
     };
 
     try {
@@ -804,8 +839,17 @@ const EnhancedContentCreationForm = ({
     }
   };
 
-  // FIXED: ADD TO SCHEDULE HANDLER - Updates existing post instead of creating duplicate
+  // UPDATED ADD TO SCHEDULE HANDLER WITH TELEGRAM VALIDATION AND TEMPLATE INTEGRATION
   const handleAddToSchedule = async () => {
+    // TELEGRAM URL VALIDATION - ADDED FROM CORRECTED CODE
+    if (isTelegramSelected()) {
+      const telegramUrl = getPrimaryTelegramUrl();
+      if (!telegramUrl) {
+        alert('A Telegram URL is required for Telegram posts. Please select a Telegram channel/group that has a valid URL.');
+        return;
+      }
+    }
+    
     // Create detailed platforms array with full info
     const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
     
@@ -815,23 +859,15 @@ const EnhancedContentCreationForm = ({
       ...content,
       mediaFiles,
       selectedPlatforms,
-      detailedPlatforms,
-      status: 'scheduled' as const, // FIXED: Changed from 'pending_schedule' to 'scheduled'
-      isFromTemplate: isEditingTemplate,
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
-      // FIXED: Include post ID when editing so it updates instead of creating new
-      ...(isEditingPost && editingPost && {
-        id: editingPost.supabaseId || editingPost.id
-      })
+      detailedPlatforms, // Add detailed platform info
+      status: 'scheduled' as const,
+      isFromTemplate: isEditingTemplate, // CHANGED: Use template status
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
     };
 
     try {
       await onAddToSchedule(postData);
-      if (isEditingPost && onEditComplete) {
-        onEditComplete();
-      } else {
-        resetForm();
-      }
+      resetForm();
     } catch (error) {
       console.error('Schedule failed:', error);
       alert('Failed to schedule post. Your content is preserved.');
@@ -863,7 +899,6 @@ const EnhancedContentCreationForm = ({
     if (url.length <= maxLength) return url;
     return url.substring(0, maxLength) + '...';
   };
-
   return (
     <div style={{
       backgroundColor: isDarkMode ? '#1e293b' : 'white',
