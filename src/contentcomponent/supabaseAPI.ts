@@ -36,6 +36,9 @@ const getSupabaseClient = (): SupabaseClient => {
   return supabase;
 };
 
+// Internal lock to prevent duplicate saves
+let saveInProgress = false;
+
 // FIXED: Export supabaseAPI as named export for other components
 export const supabaseAPI = {
   // Upload media file to content-media bucket
@@ -72,13 +75,19 @@ export const supabaseAPI = {
     if (!isSupabaseConfigured()) {
       throw new Error('Supabase not configured - cannot save to database');
     }
-    
+
+    // Prevent duplicate saves
+    if (saveInProgress) {
+      throw new Error('Save already in progress. Please wait.');
+    }
+    saveInProgress = true;
+
     try {
       const client = getSupabaseClient();
       const { data: { user } } = await client.auth.getUser();
       const userId = user?.id || null;
 
-      // Extract character profile details for additional columns
+      // --- Character Profile Details ---
       let characterDetails = {
         character_avatar: null,
         name: null,
@@ -103,7 +112,7 @@ export const supabaseAPI = {
         }
       }
 
-      // Extract platform details for additional columns
+      // --- Platform Details ---
       let platformDetails = {
         social_platform: null,
         url: null,
@@ -111,16 +120,26 @@ export const supabaseAPI = {
         thread_id: null
       };
 
-      if (postData.selectedPlatforms && postData.selectedPlatforms.length > 0) {
+      let platformsToStore: string[] = [];
+      let detailedPlatforms: any[] = [];
+
+      // Always use detailedPlatforms if present
+      if (postData.detailedPlatforms && postData.detailedPlatforms.length > 0) {
+        platformsToStore = postData.detailedPlatforms;
+        detailedPlatforms = postData.detailedPlatforms;
+      } else if (postData.selectedPlatforms && postData.selectedPlatforms.length > 0) {
+        platformsToStore = postData.selectedPlatforms;
+        detailedPlatforms = postData.selectedPlatforms;
+      }
+
+      if (platformsToStore.length > 0) {
         try {
           const [platforms, telegramChannels] = await Promise.all([
             this.loadPlatforms(),
             this.loadTelegramChannels()
           ]);
-
-          const primaryPlatformId = postData.selectedPlatforms[0];
+          const primaryPlatformId = platformsToStore[0];
           let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
-          
           if (selectedPlatform) {
             platformDetails = {
               social_platform: selectedPlatform.name || null,
@@ -144,18 +163,15 @@ export const supabaseAPI = {
         }
       }
 
-      // Upload media files first
+      // --- Upload media files ---
       const uploadedMediaFiles = await Promise.all(
         (postData.mediaFiles || []).map(async (mediaFile) => {
           if (mediaFile.url.startsWith('blob:')) {
-            // Convert blob URL to file and upload
             try {
               const response = await fetch(mediaFile.url);
               const blob = await response.blob();
               const file = new File([blob], mediaFile.name, { type: blob.type });
-              
               const supabaseUrl = await this.uploadMediaFile(file, postData.contentId, userId || 'anonymous');
-              
               return {
                 ...mediaFile,
                 supabaseUrl: supabaseUrl,
@@ -170,12 +186,7 @@ export const supabaseAPI = {
         })
       );
 
-      // Use detailedPlatforms if available, otherwise fallback to selectedPlatforms
-      const platformsToStore = postData.detailedPlatforms && postData.detailedPlatforms.length > 0 
-        ? postData.detailedPlatforms 
-        : postData.selectedPlatforms || [];
-
-      // Prepare data for database insert
+      // --- Prepare data for database insert ---
       const insertData = {
         content_id: postData.contentId,
         character_profile: postData.characterProfile,
@@ -205,18 +216,20 @@ export const supabaseAPI = {
         social_platform: platformDetails.social_platform,
         url: platformDetails.url,
         channel_group_id: platformDetails.channel_group_id,
-        thread_id: platformDetails.thread_id
+        thread_id: platformDetails.thread_id,
+        created_at: new Date().toISOString()
       };
 
+      // --- Prevent accidental multiple inserts ---
       const { data, error } = await client
         .from('content_posts')
-        .insert(insertData)
+        .insert([insertData], { upsert: false })
         .select()
         .single();
 
       if (error) throw error;
 
-      // Convert back to ContentPost format
+      // --- Convert back to ContentPost format ---
       const contentPost: ContentPost = {
         id: data.id.toString(),
         contentId: data.content_id,
@@ -247,6 +260,8 @@ export const supabaseAPI = {
     } catch (error) {
       console.error('Error saving content post:', error);
       throw error;
+    } finally {
+      saveInProgress = false;
     }
   },
 
@@ -363,13 +378,19 @@ export const supabaseAPI = {
         thread_id: null
       };
       // Prefer updates.selectedPlatforms, else keep DB value unchanged (you may want to fetch current row here for true "no change")
-      if (updates.selectedPlatforms && updates.selectedPlatforms.length > 0) {
+      let platformsToUpdate = [];
+      if (updates.detailedPlatforms && updates.detailedPlatforms.length > 0) {
+        platformsToUpdate = updates.detailedPlatforms;
+      } else if (updates.selectedPlatforms && updates.selectedPlatforms.length > 0) {
+        platformsToUpdate = updates.selectedPlatforms;
+      }
+      if (platformsToUpdate.length > 0) {
         try {
           const [platforms, telegramChannels] = await Promise.all([
             this.loadPlatforms(),
             this.loadTelegramChannels()
           ]);
-          const primaryPlatformId = updates.selectedPlatforms[0];
+          const primaryPlatformId = platformsToUpdate[0];
           let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
           if (selectedPlatform) {
             updatedPlatformDetails = {
@@ -395,14 +416,8 @@ export const supabaseAPI = {
       }
       // --- END NEW LOGIC ---
 
-      // Use detailedPlatforms if available, otherwise fallback to selectedPlatforms
-      const platformsToUpdate = updates.detailedPlatforms && updates.detailedPlatforms.length > 0 
-        ? updates.detailedPlatforms 
-        : updates.selectedPlatforms;
-
       // --- ALWAYS pass all these fields, not just the changed ones ---
       const updateData: Record<string, any> = {
-        // Always set all possible updatable fields
         character_profile: updates.characterProfile,
         theme: updates.theme,
         audience: updates.audience,
