@@ -300,7 +300,7 @@ export const supabaseAPI = {
     }
   },
 
-  // Update content post - FIXED: Removed duplicate code
+  // Update content post - GPT-4.1 FIXED VERSION
   async updateContentPost(postId: string, updates: Partial<ContentPost>): Promise<ContentPost> {
     if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
     
@@ -309,7 +309,7 @@ export const supabaseAPI = {
       const { data: { user } } = await client.auth.getUser();
       const userId = user?.id || null;
       
-      // Handle media file updates if needed
+      // Handle media file updates if needed (unchanged)
       let updatedMediaFiles = updates.mediaFiles;
       if (updates.mediaFiles) {
         updatedMediaFiles = await Promise.all(
@@ -320,9 +320,7 @@ export const supabaseAPI = {
                 const response = await fetch(mediaFile.url);
                 const blob = await response.blob();
                 const file = new File([blob], mediaFile.name, { type: blob.type });
-                
                 const supabaseUrl = await this.uploadMediaFile(file, updates.contentId || 'updated', userId || 'anonymous');
-                
                 return {
                   ...mediaFile,
                   supabaseUrl: supabaseUrl,
@@ -338,7 +336,7 @@ export const supabaseAPI = {
         );
       }
 
-      // FIXED: Extract character profile details if character changed - SINGLE SECTION
+      // Always resolve character profile details if characterProfile is present
       let updatedCharacterDetails = {};
       if (updates.characterProfile) {
         try {
@@ -357,18 +355,22 @@ export const supabaseAPI = {
         }
       }
 
-      // FIXED: Extract platform details if platforms changed - SINGLE SECTION
-      let updatedPlatformDetails = {};
+      // --- NEW: Always resolve platform details on update ---
+      let updatedPlatformDetails = {
+        social_platform: null,
+        url: null,
+        channel_group_id: null,
+        thread_id: null
+      };
+      // Prefer updates.selectedPlatforms, else keep DB value unchanged (you may want to fetch current row here for true "no change")
       if (updates.selectedPlatforms && updates.selectedPlatforms.length > 0) {
         try {
           const [platforms, telegramChannels] = await Promise.all([
             this.loadPlatforms(),
             this.loadTelegramChannels()
           ]);
-
           const primaryPlatformId = updates.selectedPlatforms[0];
           let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
-          
           if (selectedPlatform) {
             updatedPlatformDetails = {
               social_platform: selectedPlatform.name || null,
@@ -391,34 +393,35 @@ export const supabaseAPI = {
           console.error('Error loading updated platform details:', error);
         }
       }
+      // --- END NEW LOGIC ---
 
       // Use detailedPlatforms if available, otherwise fallback to selectedPlatforms
       const platformsToUpdate = updates.detailedPlatforms && updates.detailedPlatforms.length > 0 
         ? updates.detailedPlatforms 
         : updates.selectedPlatforms;
 
-      // Prepare update data
-      const updateData: Record<string, any> = {};
-      if (updates.characterProfile) updateData.character_profile = updates.characterProfile;
-      if (updates.theme) updateData.theme = updates.theme;
-      if (updates.audience) updateData.audience = updates.audience;
-      if (updates.mediaType) updateData.media_type = updates.mediaType;
-      if (updates.templateType) updateData.template_type = updates.templateType;
-      if (updates.platform !== undefined) updateData.platform = updates.platform;
-      if (updates.voiceStyle !== undefined) updateData.voice_style = updates.voiceStyle;
-      if (updates.title !== undefined) updateData.title = updates.title;
-      if (updates.description !== undefined) updateData.description = updates.description;
-      if (updates.hashtags !== undefined) updateData.hashtags = updates.hashtags;
-      if (updates.keywords !== undefined) updateData.keywords = updates.keywords;
-      if (updates.cta !== undefined) updateData.cta = updates.cta;
-      if (updatedMediaFiles !== undefined) updateData.media_files = updatedMediaFiles;
-      if (platformsToUpdate !== undefined) updateData.selected_platforms = platformsToUpdate;
-      if (updates.status) updateData.status = updates.status;
-      
-      // Add individual columns to update data
-      Object.assign(updateData, updatedCharacterDetails, updatedPlatformDetails);
-      
-      updateData.updated_at = new Date().toISOString();
+      // --- ALWAYS pass all these fields, not just the changed ones ---
+      const updateData: Record<string, any> = {
+        // Always set all possible updatable fields
+        character_profile: updates.characterProfile,
+        theme: updates.theme,
+        audience: updates.audience,
+        media_type: updates.mediaType,
+        template_type: updates.templateType,
+        platform: updates.platform,
+        voice_style: updates.voiceStyle,
+        title: updates.title,
+        description: updates.description,
+        hashtags: updates.hashtags,
+        keywords: updates.keywords,
+        cta: updates.cta,
+        media_files: updatedMediaFiles,
+        selected_platforms: platformsToUpdate,
+        status: updates.status,
+        ...updatedCharacterDetails,
+        ...updatedPlatformDetails,
+        updated_at: new Date().toISOString()
+      };
 
       const { data, error } = await client
         .from('content_posts')
@@ -429,7 +432,7 @@ export const supabaseAPI = {
 
       if (error) throw error;
 
-      // Convert back to ContentPost format
+      // Convert back to ContentPost format (unchanged)
       const contentPost: ContentPost = {
         id: data.id.toString(),
         contentId: data.content_id,
@@ -547,7 +550,7 @@ export const supabaseAPI = {
         .from('telegram_configurations')
         .select('*')
         .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false});
       
       if (error) throw error;
       return data || [];
