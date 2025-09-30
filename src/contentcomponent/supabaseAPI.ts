@@ -612,13 +612,23 @@ export const supabaseAPI = {
 
   // Load platforms from social_platforms table
   async loadPlatforms(): Promise<any[]> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase not configured - cannot load platforms');
+    if (!supabase) {
+      console.warn('Supabase not configured - returning mock platforms');
+      return [
+        { id: '1', name: 'Instagram', display_name: 'Instagram', url: 'https://instagram.com', is_active: true, isActive: true, isDefault: true, is_default: true },
+        { id: '2', name: 'Facebook', display_name: 'Facebook', url: 'https://facebook.com', is_active: true, isActive: true, isDefault: false, is_default: false },
+        { id: '3', name: 'LinkedIn', display_name: 'LinkedIn', url: 'https://linkedin.com', is_active: true, isActive: true, isDefault: false, is_default: false },
+        { id: '4', name: 'Twitter', display_name: 'Twitter/X', url: 'https://x.com', is_active: true, isActive: true, isDefault: false, is_default: false },
+        { id: '5', name: 'YouTube', display_name: 'YouTube', url: 'https://youtube.com', is_active: true, isActive: true, isDefault: false, is_default: false },
+        { id: '6', name: 'TikTok', display_name: 'TikTok', url: 'https://tiktok.com', is_active: true, isActive: true, isDefault: false, is_default: false },
+        { id: '7', name: 'Telegram', display_name: 'Telegram', url: 'https://telegram.org', is_active: true, isActive: true, isDefault: false, is_default: false },
+        { id: '8', name: 'Pinterest', display_name: 'Pinterest', url: 'https://pinterest.com', is_active: true, isActive: true, isDefault: false, is_default: false },
+        { id: '9', name: 'WhatsApp', display_name: 'WhatsApp', url: 'https://whatsapp.com', is_active: true, isActive: true, isDefault: false, is_default: false }
+      ];
     }
 
     try {
-      const client = getSupabaseClient();
-      const { data, error } = await client
+      const { data, error } = await supabase
         .from('social_platforms')
         .select('*')
         .eq('is_active', true)
@@ -629,8 +639,9 @@ export const supabaseAPI = {
       // Transform data to ensure compatibility with existing components
       const transformedData = (data || []).map(platform => ({
         ...platform,
+        // Ensure both naming conventions are available for compatibility
         isActive: platform.is_active,
-        isDefault: false,
+        isDefault: platform.is_default || false,
         displayName: platform.display_name || platform.name
       }));
       
@@ -643,17 +654,17 @@ export const supabaseAPI = {
 
   // Load Telegram configurations
   async loadTelegramChannels(): Promise<any[]> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase not configured - cannot load Telegram channels');
+    if (!supabase) {
+      console.warn('Supabase not configured - returning empty Telegram channels');
+      return [];
     }
 
     try {
-      const client = getSupabaseClient();
-      const { data, error } = await client
+      const { data, error } = await supabase
         .from('telegram_configurations')
         .select('*')
         .eq('is_active', true)
-        .order('created_at', { ascending: false});
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data || [];
@@ -664,5 +675,4 @@ export const supabaseAPI = {
   }
 };
 
-// Export the client safely for TemplateLibrary.tsx
 export { supabase };
