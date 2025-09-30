@@ -1869,7 +1869,7 @@ const EnhancedContentCreationForm = ({
               color: isDarkMode ? '#f8fafc' : '#111827',
               fontFamily: 'inherit'
             }}  
-            />
+          />
               <button
                 onClick={handleAddHashtag}
                 disabled={!hashtagInput.trim()}
