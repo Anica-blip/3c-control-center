@@ -12,21 +12,6 @@ import {
   getCharacterCode, 
   getVoiceStyleCode 
 } from './utils';
-
-const isTelegramSelected = () => {
-  return selectedPlatforms
-    .map(platformId => activePlatforms.find(p => p.id === platformId))
-    .some(p => p && p.name && p.name.toLowerCase().includes('telegram'));
-};
-
-const getPrimaryTelegramUrl = () => {
-  // Checks detailedPlatforms for a Telegram URL, else checks mediaFiles for a url type
-  const telegramPlatform = selectedPlatforms
-    .map(platformId => activePlatforms.find(p => p.id === platformId))
-    .find(p => p && p.name && p.name.toLowerCase().includes('telegram'));
-  return telegramPlatform?.url || null;
-};
-
 // ADD NEW IMPORT FOR TEMPLATE LIBRARY INTEGRATION
 import { PendingLibraryTemplate, templateEventEmitter } from './TemplateLibrary';
 
@@ -1868,23 +1853,23 @@ const EnhancedContentCreationForm = ({
               gap: '8px',
               marginBottom: '12px'
             }}>
-              <input
-                type="text"
-                value={hashtagInput}
-                onChange={(e) => setHashtagInput(e.target.value)}
-                placeholder="Add hashtags (press Enter)"
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddHashtag())}
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  backgroundColor: isDarkMode ? '#1e293b' : 'white',
-                  color: isDarkMode ? '#f8fafc' : '#111827',
-                  fontFamily: 'inherit'
-                }}
-              />
+          <input
+            type="text"
+            value={hashtagInput}
+            onChange={(e) => setHashtagInput(e.target.value)}
+            placeholder="Add hashtags (press Enter)"
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddHashtag())}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: isDarkMode ? '#1e293b' : 'white',
+              color: isDarkMode ? '#f8fafc' : '#111827',
+              fontFamily: 'inherit'
+            }}  
+            />
               <button
                 onClick={handleAddHashtag}
                 disabled={!hashtagInput.trim()}
