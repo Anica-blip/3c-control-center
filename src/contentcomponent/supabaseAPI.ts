@@ -218,7 +218,7 @@ export const supabaseAPI = {
         social_platform: platformDetails.name,
         url: platformDetails.url,
         // Telegram details
-        platform_id: telegramDetails.type,   
+        platform_id: telegramDetails.id,   
         url: telegramDetails.url,
         channel_group_id: telegramDetails.channel_group_id,
         thread_id: telegramDetails.thread_id,
