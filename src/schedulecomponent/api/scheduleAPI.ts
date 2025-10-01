@@ -226,22 +226,33 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
       );
     }
 
-    // Resolve platform details (EXACT copy from supabaseAPI.ts)
+// FIXED: Handle ANY type in selected_platforms array with defensive extraction
+const extractPlatformId = (item: any): string => {
+  if (!item) return '';
+  if (typeof item === 'string') return item;
+  if (typeof item === 'number') return item.toString();
+  if (typeof item === 'object' && item.id) return String(item.id);
+  if (typeof item === 'object' && item.platform_id) return String(item.platform_id);
+  return String(item);
+};
+
+// Resolve platform details (EXACT copy from supabaseAPI.ts)
     let updatedPlatformDetails = {};
     
     if (updates.selected_platforms !== undefined) {
       if (updates.selected_platforms && updates.selected_platforms.length > 0) {
         try {
-          const primaryPlatformId = updates.selected_platforms[0];
-          console.log('Looking up platform with Id:', primaryPlatformId);
+          // DEFENSIVE: Extract ID safely regardless of type
+          const primaryPlatformId = extractPlatformId(updates.selected_platforms[0]);
+          console.log('Looking up platform with Id:', primaryPlatformId, 'Type:', typeof primaryPlatformId);
           
           const [platforms, telegramChannels] = await Promise.all([
             loadPlatforms(),
             loadTelegramChannels()
           ]);
           
-          // Try to find in social_platforms first
-          const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+          // Try to find in social_platforms first - compare both as strings
+          const selectedPlatform = platforms.find(p => String(p.id) === primaryPlatformId);
           
           if (selectedPlatform) {
             console.log('Found social platform:', selectedPlatform.name);
@@ -253,8 +264,8 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
               thread_id: null
             };
           } else {
-            // Try to find in telegram_configurations
-            const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
+            // Try to find in telegram_configurations - compare both as strings
+            const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
             if (selectedTelegram) {
               console.log('Found Telegram channel:', selectedTelegram.name);
               updatedPlatformDetails = {
@@ -362,7 +373,8 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
     if (updates.selected_platforms !== undefined) {
       if (updates.selected_platforms && updates.selected_platforms.length > 0) {
         try {
-          const primaryPlatformId = updates.selected_platforms[0];
+          // DEFENSIVE: Extract ID safely regardless of type
+          const primaryPlatformId = extractPlatformId(updates.selected_platforms[0]);
           console.log('Looking up platform with Id:', primaryPlatformId);
           
           const [platforms, telegramChannels] = await Promise.all([
@@ -370,7 +382,7 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
             loadTelegramChannels()
           ]);
           
-          const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+          const selectedPlatform = platforms.find(p => String(p.id) === primaryPlatformId);
           
           if (selectedPlatform) {
             console.log('Found platform for update:', selectedPlatform.name);
@@ -382,7 +394,7 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
               thread_id: null
             };
           } else {
-            const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
+            const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
             if (selectedTelegram) {
               console.log('Found Telegram for update:', selectedTelegram.name);
               updatedPlatformDetails = {
@@ -508,7 +520,8 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
 
     if (originalPost.selected_platforms && originalPost.selected_platforms.length > 0) {
       try {
-        const primaryPlatformId = originalPost.selected_platforms[0];
+        // DEFENSIVE: Extract ID safely regardless of type
+        const primaryPlatformId = extractPlatformId(originalPost.selected_platforms[0]);
         console.log('Looking up platform with Id:', primaryPlatformId);
         
         const [platforms, telegramChannels] = await Promise.all([
@@ -516,8 +529,8 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
           loadTelegramChannels()
         ]);
         
-        // Try to find in social_platforms first
-        const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+        // Try to find in social_platforms first - compare both as strings
+        const selectedPlatform = platforms.find(p => String(p.id) === primaryPlatformId);
         
         if (selectedPlatform) {
           console.log('Found social platform:', selectedPlatform.name);
@@ -529,8 +542,8 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
             thread_id: null
           };
         } else {
-          // Try to find in telegram_configurations
-          const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
+          // Try to find in telegram_configurations - compare both as strings
+          const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
           if (selectedTelegram) {
             console.log('Found Telegram channel:', selectedTelegram.name);
             platformDetails = {
@@ -728,7 +741,8 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
 
     if (template.selected_platforms && template.selected_platforms.length > 0) {
       try {
-        const primaryPlatformId = template.selected_platforms[0];
+        // DEFENSIVE: Extract ID safely regardless of type
+        const primaryPlatformId = extractPlatformId(template.selected_platforms[0]);
         console.log('Looking up platform with Id:', primaryPlatformId);
         
         const [platforms, telegramChannels] = await Promise.all([
@@ -736,8 +750,8 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
           loadTelegramChannels()
         ]);
         
-        // Try to find in social_platforms first
-        const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+        // Try to find in social_platforms first - compare both as strings
+        const selectedPlatform = platforms.find(p => String(p.id) === primaryPlatformId);
         
         if (selectedPlatform) {
           console.log('Found social platform:', selectedPlatform.name);
@@ -749,8 +763,8 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
             thread_id: null
           };
         } else {
-          // Try to find in telegram_configurations
-          const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
+          // Try to find in telegram_configurations - compare both as strings
+          const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
           if (selectedTelegram) {
             console.log('Found Telegram channel:', selectedTelegram.name);
             platformDetails = {
