@@ -418,33 +418,33 @@ export const supabaseAPI = {
         }
       }
 
-      // FIXED: Resolve platform details using SAME PATTERN as character profile
+      // Platform details using SAME PATTERN as character profile
       let updatedPlatformDetails = {};
       
       if (updates.selectedPlatforms !== undefined) {
         if (updates.selectedPlatforms && updates.selectedPlatforms.length > 0) {
           try {
-            const primaryPlatformId = updates.selectedPlatforms[0]; // First platform ID
-            console.log('Updating platform to ID:', primaryPlatformId);
+            const primaryPlatformUrl = updates.selectedPlatforms[0]; // First platform Url
+            console.log('Updating platform to Url:', primaryPlatformUrl);
             
             const [platforms, telegramChannels] = await Promise.all([
               this.loadPlatforms(),
               this.loadTelegramChannels()
             ]);
             
-            const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+            const selectedPlatform = platforms.find(p => p.id === primaryPlatformUrl);
             
             if (selectedPlatform) {
               console.log('Found platform for update:', selectedPlatform.name);
               updatedPlatformDetails = {
-                platform_id: selectedPlatform.id,
+                platform_id: selectedPlatform.id.toString(),
                 social_platform: selectedPlatform.name || null,
                 url: selectedPlatform.url || null,
                 channel_group_id: null,
                 thread_id: null
               };
             } else {
-              const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
+              const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformUrl);
               if (selectedTelegram) {
                 console.log('Found Telegram for update:', selectedTelegram.name);
                 updatedPlatformDetails = {
@@ -615,7 +615,7 @@ export const supabaseAPI = {
     }
   },
   
-  // Load Telegram configurations
+  // Load Telegram_configurations
   async loadTelegramChannels(): Promise<any[]> {
     if (!isSupabaseConfigured()) {
       throw new Error('Supabase not configured - cannot load Telegram channels');
