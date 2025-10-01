@@ -139,9 +139,11 @@ export const supabaseAPI = {
           if (selectedPlatform) {
             console.log('Found social platform:', selectedPlatform.name);
             platformDetails = {
-              id: selectedPlatform.id, || null,
+              platform_id: selectedPlatform.id,
               social_platform: selectedPlatform.name || null,
               url: selectedPlatform.url || null
+              channel_group_id: null,
+              thread_id: null
             };
           } else {
             // Try to find in telegram_configurations
