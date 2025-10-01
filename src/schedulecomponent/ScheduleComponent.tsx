@@ -1,4 +1,4 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - DEFENSIVE ERROR-FREE VERSION
+// /src/schedulecomponent/ScheduleComponent.tsx - FIXED: Platform badge display using platformDetails
 import React, { useState, useEffect, useCallback } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
@@ -6,9 +6,59 @@ import EditModal from './components/EditModal';
 import { getTheme, getContainerStyle, getCSSAnimations } from './utils/styleUtils';
 import { Calendar, Clock, Edit3, Trash2, RefreshCw, AlertCircle, CheckCircle, Play, X, ChevronLeft, ChevronRight, Save, XCircle, WifiOff } from 'lucide-react';
 import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './types';
-import { supabase } from './config'; // FIXED: Import from centralized config
+import { supabase } from '../contentcomponent/supabaseAPI';
 
-// ✅ ERROR NOTIFICATION COMPONENT
+// FIXED: Platform badge renderer using enriched platformDetails
+const PlatformBadge: React.FC<{ platform: any }> = ({ platform }) => {
+  const getPlatformIcon = (platform: any): string => {
+    const name = platform.name || platform.display_name || '';
+    const nameLower = name.toLowerCase();
+    
+    if (nameLower.includes('telegram') || nameLower === 'tg') return 'TG';
+    if (nameLower.includes('youtube') || nameLower === 'yt') return 'YT';
+    if (nameLower.includes('facebook') || nameLower === 'fb') return 'FB';
+    if (nameLower.includes('twitter') || nameLower === 'tw' || nameLower === 'x') return 'TW';
+    if (nameLower.includes('forum') || nameLower === 'fr') return 'FR';
+    
+    return name.substring(0, 2).toUpperCase() || '??';
+  };
+
+  const getPlatformColor = (platform: any): string => {
+    const name = platform.name || platform.display_name || '';
+    const nameLower = name.toLowerCase();
+    
+    if (nameLower.includes('telegram')) {
+      // Different colors for channel vs group
+      if (platform.channel_group_id && !platform.thread_id) return '#2563eb'; // Channel (darker blue)
+      if (platform.thread_id) return '#3b82f6'; // Group (lighter blue)
+      return '#3b82f6'; // Default Telegram blue
+    }
+    if (nameLower.includes('youtube')) return '#ef4444';
+    if (nameLower.includes('facebook')) return '#2563eb';
+    if (nameLower.includes('twitter') || nameLower === 'x') return '#0ea5e9';
+    if (nameLower.includes('forum')) return '#4b5563';
+    
+    return '#6b7280';
+  };
+
+  return (
+    <span
+      style={{
+        padding: '4px 6px',
+        borderRadius: '4px',
+        color: 'white',
+        fontSize: '10px',
+        fontWeight: 'bold',
+        backgroundColor: getPlatformColor(platform),
+        display: 'inline-block'
+      }}
+      title={platform.name || platform.display_name}
+    >
+      {getPlatformIcon(platform)}
+    </span>
+  );
+};
+
 const ErrorNotificationBanner: React.FC<{
   error: ApiError;
   onDismiss: () => void;
@@ -111,7 +161,6 @@ const ErrorNotificationBanner: React.FC<{
   );
 };
 
-// ✅ SUCCESS NOTIFICATION COMPONENT
 const SuccessNotification: React.FC<{
   message: string;
   onDismiss: () => void;
@@ -166,7 +215,6 @@ const SuccessNotification: React.FC<{
 };
 
 export default function ScheduleComponent() {
-  // ✅ ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY RETURNS
   const {
     posts: scheduledPosts,
     loading: postsLoading,
@@ -187,7 +235,6 @@ export default function ScheduleComponent() {
     incrementUsage
   } = useTemplates();
 
-  // ✅ ALL STATE HOOKS CALLED UNCONDITIONALLY
   const [activeTab, setActiveTab] = useState('pending');
   const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month'>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -198,25 +245,20 @@ export default function ScheduleComponent() {
   const [editingPost, setEditingPost] = useState<ScheduledPost | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<SavedTemplate | null>(null);
   
-  // ✅ ERROR HANDLING STATE
   const [notifications, setNotifications] = useState<ErrorNotification[]>([]);
   const [operationStates, setOperationStates] = useState<Record<string, boolean>>({});
 
-  // ✅ SIMPLIFIED CHARACTER PROFILE STATE - NO LONGER NEEDED
   const [characterProfiles, setCharacterProfiles] = useState<Record<string, any>>({});
   const [profilesLoading, setProfilesLoading] = useState<Record<string, boolean>>({});
 
-  // ✅ THEME HOOK
   const { isDarkMode, theme } = getTheme();
 
-  // ✅ DEFENSIVE UUID CHECK
   const isUUID = (str: string): boolean => {
     if (!str || typeof str !== 'string') return false;
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
   };
 
-  // ✅ SIMPLIFIED CHARACTER PROFILE FETCHING - STILL KEEP FOR ADDITIONAL DATA
   const fetchCharacterProfile = useCallback(async (profileId: string) => {
     if (!profileId || !isUUID(profileId) || characterProfiles[profileId] !== undefined) return;
     
@@ -241,9 +283,8 @@ export default function ScheduleComponent() {
     } finally {
       setProfilesLoading(prev => ({ ...prev, [profileId]: false }));
     }
-  }, []); // Remove characterProfiles dependency to prevent infinite loops
+  }, []);
 
-  // ✅ NOTIFICATION HELPERS
   const addNotification = useCallback((notification: Omit<ErrorNotification, 'id' | 'timestamp'>) => {
     const id = `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const newNotification: ErrorNotification = {
@@ -280,7 +321,6 @@ export default function ScheduleComponent() {
     });
   }, [addNotification]);
 
-  // ✅ OPERATION LOADING STATES
   const setOperationLoading = useCallback((operation: string, loading: boolean) => {
     setOperationStates(prev => ({ ...prev, [operation]: loading }));
   }, []);
@@ -289,7 +329,6 @@ export default function ScheduleComponent() {
     return operationStates[operation] || false;
   }, [operationStates]);
 
-  // ✅ DEFENSIVE POST FILTERING
   const pendingPosts = (scheduledPosts || []).filter(p => p?.status === 'scheduled');
   const scheduledPostsFiltered = (scheduledPosts || []).filter(p => 
     p?.status && ['processing', 'publishing', 'published', 'failed'].includes(p.status)
@@ -297,7 +336,6 @@ export default function ScheduleComponent() {
   const publishedPosts = (scheduledPosts || []).filter(p => p?.status === 'published');
   const failedPosts = (scheduledPosts || []).filter(p => p?.status === 'failed');
 
-  // ✅ SIMPLIFIED CHARACTER PROFILE FETCHING - STILL FETCH FOR NAME/USERNAME/ROLE
   useEffect(() => {
     if (!pendingPosts?.length) return;
     
@@ -306,9 +344,8 @@ export default function ScheduleComponent() {
         fetchCharacterProfile(post.character_profile);
       }
     });
-  }, [pendingPosts.length, fetchCharacterProfile]); // Use length instead of full array
+  }, [pendingPosts.length, fetchCharacterProfile]);
 
-  // ✅ PLATFORM CONFIGURATION
   const platforms = [
     { id: '1', name: 'Telegram', icon: 'TG', color: '#3b82f6' },
     { id: '2', name: 'YouTube', icon: 'YT', color: '#ef4444' },
@@ -317,7 +354,6 @@ export default function ScheduleComponent() {
     { id: '5', name: 'Forum', icon: 'FR', color: '#4b5563' },
   ];
 
-  // ✅ DEFENSIVE DESCRIPTION TRUNCATION
   const truncateDescription = (description: string = '', maxLength: number = 120) => {
     if (!description || description.length <= maxLength) return description;
     
@@ -331,7 +367,6 @@ export default function ScheduleComponent() {
     return truncated + '...';
   };
 
-  // ✅ DEFENSIVE PLATFORM ICON MAPPING
   const getPlatformIcon = (platformId: string | undefined) => {
     if (!platformId) {
       return { id: '', name: 'Unknown', icon: '??', color: theme.textSecondary };
@@ -386,7 +421,6 @@ export default function ScheduleComponent() {
     return platform;
   };
 
-  // ✅ DEFENSIVE STATUS COLOR MAPPING
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
       case 'pending': 
@@ -406,7 +440,6 @@ export default function ScheduleComponent() {
     }
   };
 
-  // ✅ DEFENSIVE STATUS ICON MAPPING
   const getStatusIcon = (status: string | undefined) => {
     const iconStyle = { height: '12px', width: '12px' };
     switch (status) {
@@ -427,7 +460,6 @@ export default function ScheduleComponent() {
     }
   };
 
-  // ✅ DEFENSIVE DATE HELPERS
   const getPostsForDate = (date: Date) => {
     if (!scheduledPostsFiltered?.length) return [];
     return scheduledPostsFiltered.filter(post => {
@@ -526,7 +558,6 @@ export default function ScheduleComponent() {
     }
   };
 
-  // ✅ DEFENSIVE EVENT HANDLERS
   const handleSchedulePost = (post: ScheduledPost) => {
     setSelectedPost(post);
     setIsScheduleModalOpen(true);
@@ -812,7 +843,6 @@ export default function ScheduleComponent() {
     }
   };
 
-  // ✅ TAB CONFIGURATION
   const tabs = [
     { 
       id: 'pending', 
@@ -1082,7 +1112,6 @@ export default function ScheduleComponent() {
                               </span>
                             )}
                             
-                            {/* FIXED: Character Profile Display - Use character_avatar directly */}
                             <div style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -1158,6 +1187,7 @@ export default function ScheduleComponent() {
                             {truncateDescription(post.description)}
                           </p>
                           
+                          {/* FIXED: Platform badges using platformDetails */}
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -1171,24 +1201,15 @@ export default function ScheduleComponent() {
                             }}>
                               <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Platforms:</span>
                               <div style={{ display: 'flex', gap: '4px' }}>
-                                {(post.selected_platforms || []).map((platformId, idx) => {
-                                  const platform = getPlatformIcon(platformId);
-                                  return (
-                                    <span
-                                      key={idx}
-                                      style={{
-                                        padding: '4px 6px',
-                                        borderRadius: '4px',
-                                        color: 'white',
-                                        fontSize: '10px',
-                                        fontWeight: 'bold',
-                                        backgroundColor: platform.color
-                                      }}
-                                    >
-                                      {platform.icon}
-                                    </span>
-                                  );
-                                })}
+                                {(post.platformDetails && post.platformDetails.length > 0) ? (
+                                  post.platformDetails.map((platform, idx) => (
+                                    <PlatformBadge key={idx} platform={platform} />
+                                  ))
+                                ) : (
+                                  <span style={{ color: theme.textSecondary, fontSize: '11px' }}>
+                                    No platforms
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1685,6 +1706,7 @@ export default function ScheduleComponent() {
                           {truncateDescription(post.description)}
                         </p>
                         
+                        {/* FIXED: Platform badges using platformDetails */}
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -1698,24 +1720,15 @@ export default function ScheduleComponent() {
                           }}>
                             <span style={{ color: theme.textSecondary }}>Platforms:</span>
                             <div style={{ display: 'flex', gap: '4px' }}>
-                              {(post.selected_platforms || []).map((platformId, idx) => {
-                                const platform = getPlatformIcon(platformId);
-                                return (
-                                  <span
-                                    key={idx}
-                                    style={{
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
-                                      color: 'white',
-                                      fontSize: '10px',
-                                      fontWeight: 'bold',
-                                      backgroundColor: platform.color
-                                    }}
-                                  >
-                                    {platform.icon}
-                                  </span>
-                                );
-                              })}
+                              {(post.platformDetails && post.platformDetails.length > 0) ? (
+                                post.platformDetails.map((platform, idx) => (
+                                  <PlatformBadge key={idx} platform={platform} />
+                                ))
+                              ) : (
+                                <span style={{ color: theme.textSecondary, fontSize: '11px' }}>
+                                  No platforms
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
