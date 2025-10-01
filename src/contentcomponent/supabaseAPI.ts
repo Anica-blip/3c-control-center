@@ -87,7 +87,7 @@ export const supabaseAPI = {
       const { data: { user } } = await client.auth.getUser();
       const userId = user?.id || null;
 
-      // --- Character Profile Details ---
+      // --- Character Profile Details (WORKING PATTERN) ---
       let characterDetails = {
         character_avatar: null as string | null,
         name: null as string | null,
@@ -112,7 +112,7 @@ export const supabaseAPI = {
         }
       }
 
-      // --- Platform Details with platform_id ---
+      // --- Platform Details (SAME PATTERN AS CHARACTER PROFILE) ---
       let platformDetails = {
         platform_id: null as string | null,
         social_platform: null as string | null,
@@ -121,27 +121,23 @@ export const supabaseAPI = {
         thread_id: null as string | null
       };
 
-      let platformsToStore: string[] = [];
-
-      // Determine which platforms to use
-      if (postData.detailedPlatforms && postData.detailedPlatforms.length > 0) {
-        platformsToStore = postData.detailedPlatforms;
-      } else if (postData.selectedPlatforms && postData.selectedPlatforms.length > 0) {
-        platformsToStore = postData.selectedPlatforms;
-      }
-
-      // Resolve platform details
-      if (platformsToStore.length > 0) {
+      // FIXED: Use selectedPlatforms (array of IDs), get first platform ID
+      if (postData.selectedPlatforms && postData.selectedPlatforms.length > 0) {
         try {
+          const primaryPlatformId = postData.selectedPlatforms[0]; // First platform ID
+          console.log('Looking up platform with ID:', primaryPlatformId);
+          
+          // Load both platforms and telegram
           const [platforms, telegramChannels] = await Promise.all([
             this.loadPlatforms(),
             this.loadTelegramChannels()
           ]);
           
-          const primaryPlatformId = platformsToStore[0];
+          // Try to find in social_platforms first
           const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
           
           if (selectedPlatform) {
+            console.log('Found social platform:', selectedPlatform.name);
             platformDetails = {
               platform_id: selectedPlatform.id,
               social_platform: selectedPlatform.name || null,
@@ -150,12 +146,14 @@ export const supabaseAPI = {
               thread_id: null
             };
           } else {
+            // Try to find in telegram_configurations
             const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
             if (selectedTelegram) {
+              console.log('Found Telegram channel:', selectedTelegram.name);
               platformDetails = {
                 platform_id: selectedTelegram.id.toString(),
-                social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
-                url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
+                social_platform: selectedTelegram.name || 'Telegram',
+                url: selectedTelegram.url || null,
                 channel_group_id: selectedTelegram.channel_group_id || null,
                 thread_id: selectedTelegram.thread_id || null
               };
@@ -191,7 +189,7 @@ export const supabaseAPI = {
 
       // --- Prepare data for database ---
       const dbData = {
-        content_id: postData.contentId,  // REQUIRED: content_id is NOT NULL in database
+        content_id: postData.contentId,
         character_profile: postData.characterProfile || null,
         theme: postData.theme || null,
         audience: postData.audience || null,
@@ -205,7 +203,7 @@ export const supabaseAPI = {
         keywords: postData.keywords || '',
         cta: postData.cta || '',
         media_files: uploadedMediaFiles,
-        selected_platforms: platformsToStore,
+        selected_platforms: postData.selectedPlatforms || [],
         status: postData.status || 'pending',
         is_from_template: postData.isFromTemplate || false,
         source_template_id: postData.sourceTemplateId || null,
@@ -217,7 +215,7 @@ export const supabaseAPI = {
         name: characterDetails.name,
         username: characterDetails.username,
         role: characterDetails.role,
-        // Platform details - ALWAYS include these
+        // Platform details
         platform_id: platformDetails.platform_id,
         social_platform: platformDetails.social_platform,
         url: platformDetails.url,
@@ -230,9 +228,8 @@ export const supabaseAPI = {
 
       let finalData;
 
-      // FIXED: Always use UPSERT on content_id to prevent duplicate rows
+      // Use UPDATE or UPSERT based on whether we have a supabaseId
       if (postData.supabaseId) {
-        // We have a supabaseId, so UPDATE using it directly
         console.log(`UPDATING existing post with Supabase ID: ${postData.supabaseId}`);
         
         const { data, error } = await client
@@ -248,7 +245,6 @@ export const supabaseAPI = {
         }
         finalData = data;
       } else {
-        // No supabaseId - use UPSERT on content_id to prevent duplicate rows
         console.log(`UPSERTING post with content_id: ${postData.contentId}`);
         
         const insertData = {
@@ -256,14 +252,11 @@ export const supabaseAPI = {
           created_at: new Date().toISOString()
         };
 
-        // CRITICAL: This requires a UNIQUE constraint on content_id in the database
-        // Run this SQL in Supabase SQL Editor first:
-        // ALTER TABLE content_posts ADD CONSTRAINT content_posts_content_id_key UNIQUE (content_id);
         const { data, error } = await client
           .from('content_posts')
           .upsert(insertData, { 
-            onConflict: 'content_id',  // Requires UNIQUE constraint on content_id
-            ignoreDuplicates: false     // Update if exists, insert if not
+            onConflict: 'content_id',
+            ignoreDuplicates: false
           })
           .select()
           .single();
@@ -278,7 +271,7 @@ export const supabaseAPI = {
       // --- Convert back to ContentPost format ---
       const contentPost: ContentPost = {
         id: finalData.id.toString(),
-        contentId: finalData.content_id,  // Use actual content_id from database
+        contentId: finalData.content_id,
         characterProfile: finalData.character_profile || '',
         theme: finalData.theme || '',
         audience: finalData.audience || '',
@@ -299,7 +292,7 @@ export const supabaseAPI = {
         scheduledDate: finalData.scheduled_date ? new Date(finalData.scheduled_date) : undefined,
         isFromTemplate: finalData.is_from_template || false,
         sourceTemplateId: finalData.source_template_id,
-        supabaseId: finalData.id.toString()  // CRITICAL: Always return the Supabase ID for future updates
+        supabaseId: finalData.id.toString()
       };
 
       console.log('Post saved/updated successfully. Supabase ID:', contentPost.supabaseId);
@@ -328,7 +321,6 @@ export const supabaseAPI = {
 
       if (error) throw error;
 
-      // Convert to ContentPost format
       const contentPosts: ContentPost[] = (data || []).map(record => ({
         id: record.id.toString(),
         contentId: record.content_id || `content-${record.id}`,
@@ -352,7 +344,7 @@ export const supabaseAPI = {
         scheduledDate: record.scheduled_date ? new Date(record.scheduled_date) : undefined,
         isFromTemplate: record.is_from_template || false,
         sourceTemplateId: record.source_template_id || undefined,
-        supabaseId: record.id.toString()  // CRITICAL: Include Supabase ID
+        supabaseId: record.id.toString()
       }));
 
       return contentPosts;
@@ -414,7 +406,6 @@ export const supabaseAPI = {
               role: selectedProfile.role || null
             };
           } else {
-            // Clear character details if no profile selected
             updatedCharacterDetails = {
               character_avatar: null,
               name: null,
@@ -427,23 +418,19 @@ export const supabaseAPI = {
         }
       }
 
-      // FIXED: Resolve platform details properly
+      // FIXED: Resolve platform details using SAME PATTERN as character profile
       let updatedPlatformDetails = {};
-      let platformsToUpdate = undefined;
       
-      // Use selectedPlatforms (IDs), NOT detailedPlatforms
       if (updates.selectedPlatforms !== undefined) {
-        platformsToUpdate = updates.selectedPlatforms;
-        
-        if (platformsToUpdate && platformsToUpdate.length > 0) {
+        if (updates.selectedPlatforms && updates.selectedPlatforms.length > 0) {
           try {
+            const primaryPlatformId = updates.selectedPlatforms[0]; // First platform ID
+            console.log('Updating platform to ID:', primaryPlatformId);
+            
             const [platforms, telegramChannels] = await Promise.all([
               this.loadPlatforms(),
               this.loadTelegramChannels()
             ]);
-            
-            const primaryPlatformId = platformsToUpdate[0];
-            console.log('Updating platform to ID:', primaryPlatformId);
             
             const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
             
@@ -462,8 +449,8 @@ export const supabaseAPI = {
                 console.log('Found Telegram for update:', selectedTelegram.name);
                 updatedPlatformDetails = {
                   platform_id: selectedTelegram.id.toString(),
-                  social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
-                  url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
+                  social_platform: selectedTelegram.name || 'Telegram',
+                  url: selectedTelegram.url || null,
                   channel_group_id: selectedTelegram.channel_group_id || null,
                   thread_id: selectedTelegram.thread_id || null
                 };
@@ -473,7 +460,7 @@ export const supabaseAPI = {
             console.error('Error loading updated platform details:', error);
           }
         } else {
-          // Clear platform details if no platforms selected
+          // Clear platform details
           updatedPlatformDetails = {
             platform_id: null,
             social_platform: null,
@@ -484,12 +471,11 @@ export const supabaseAPI = {
         }
       }
 
-      // Build update data - only include fields that are being updated
+      // Build update data
       const updateData: Record<string, any> = {
         updated_at: new Date().toISOString()
       };
 
-      // IMPORTANT: Keep the content_id unchanged
       if (updates.contentId !== undefined) updateData.content_id = updates.contentId;
       if (updates.characterProfile !== undefined) updateData.character_profile = updates.characterProfile;
       if (updates.theme !== undefined) updateData.theme = updates.theme;
@@ -504,11 +490,11 @@ export const supabaseAPI = {
       if (updates.keywords !== undefined) updateData.keywords = updates.keywords;
       if (updates.cta !== undefined) updateData.cta = updates.cta;
       if (updatedMediaFiles !== undefined) updateData.media_files = updatedMediaFiles;
-      if (platformsToUpdate !== undefined) updateData.selected_platforms = platformsToUpdate;
+      if (updates.selectedPlatforms !== undefined) updateData.selected_platforms = updates.selectedPlatforms;
       if (updates.status !== undefined) updateData.status = updates.status;
       if (updates.scheduledDate !== undefined) updateData.scheduled_date = updates.scheduledDate?.toISOString() || null;
       
-      // Add character and platform details if they were updated
+      // Add character and platform details
       Object.assign(updateData, updatedCharacterDetails, updatedPlatformDetails);
 
       console.log('Update data being sent:', updateData);
@@ -516,7 +502,7 @@ export const supabaseAPI = {
       const { data, error } = await client
         .from('content_posts')
         .update(updateData)
-        .eq('id', parseInt(postId))  // Always use the Supabase row ID
+        .eq('id', parseInt(postId))
         .select()
         .single();
 
@@ -525,7 +511,6 @@ export const supabaseAPI = {
         throw error;
       }
 
-      // Convert back to ContentPost format
       const contentPost: ContentPost = {
         id: data.id.toString(),
         contentId: data.content_id,
@@ -549,7 +534,7 @@ export const supabaseAPI = {
         scheduledDate: data.scheduled_date ? new Date(data.scheduled_date) : undefined,
         isFromTemplate: data.is_from_template || false,
         sourceTemplateId: data.source_template_id,
-        supabaseId: data.id.toString()  // Always return the Supabase ID
+        supabaseId: data.id.toString()
       };
 
       console.log('Post updated successfully. Supabase ID:', contentPost.supabaseId);
@@ -616,12 +601,10 @@ export const supabaseAPI = {
       
       if (error) throw error;
       
-      // Transform data to ensure compatibility with existing components
       const transformedData = (data || []).map(platform => ({
         ...platform,
-        // Ensure both naming conventions are available for compatibility
         isActive: platform.is_active,
-        isDefault: false, // FIXED: Remove default flag completely
+        isDefault: false,
         displayName: platform.display_name || platform.name
       }));
       
