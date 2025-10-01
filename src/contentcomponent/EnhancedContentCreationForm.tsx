@@ -544,11 +544,6 @@ const EnhancedContentCreationForm = ({
         cta: loadedTemplate.cta || ''
       });
       
-      // POPULATE SELECTED PLATFORMS
-      if (loadedTemplate.selected_platforms && Array.isArray(loadedTemplate.selected_platforms)) {
-        setSelectedPlatforms(loadedTemplate.selected_platforms);
-      }
-      
       // DO NOT LOAD MEDIA FILES - USER SPECIFIED TEXT ONLY
       // setMediaFiles remains empty - user will add media manually if needed
       
