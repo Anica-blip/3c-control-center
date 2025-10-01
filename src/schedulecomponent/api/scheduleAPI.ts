@@ -1,19 +1,19 @@
-// /src/schedulecomponent/api/scheduleAPI.ts - FIXED: Use same Supabase instance
-import { supabase } from '../config'; // FIXED: Import from centralized config
+// /src/schedulecomponent/api/scheduleAPI.ts - UPDATED: Platform details + media uploads
+import { supabase } from '../config';
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
-// Helper function to map content_posts to ScheduledPost interface - FIXED COLUMN NAMES
+// Helper function to map content_posts to ScheduledPost interface
 const mapContentPostToScheduledPost = (data: any): ScheduledPost => {
   return {
     id: data.id,
     content_id: data.content_id || '',
-    character_profile: data.character_profile || '', // FIXED: Use character_profile UUID
-    character_avatar: data.character_avatar || '', // FIXED: Use character_avatar URL from content_posts
+    character_profile: data.character_profile || '',
+    character_avatar: data.character_avatar || '',
     theme: data.theme || '',
     audience: data.audience || '',
     media_type: data.media_type || '',
     template_type: data.template_type || '',
-    platform: data.platform || '', // FIXED: Use platform not social_platform
+    platform: data.platform || '',
     title: data.title || '',
     description: data.description || '',
     hashtags: Array.isArray(data.hashtags) ? data.hashtags : [],
@@ -31,18 +31,18 @@ const mapContentPostToScheduledPost = (data: any): ScheduledPost => {
   };
 };
 
-// Helper function to map dashboard_posts to ScheduledPost interface - FIXED COLUMN NAMES
+// Helper function to map dashboard_posts to ScheduledPost interface
 const mapDashboardPostToScheduledPost = (data: any): ScheduledPost => {
   return {
     id: data.id,
     content_id: data.content_id || '',
-    character_profile: data.character_profile || '', // FIXED: Use character_profile UUID
-    character_avatar: data.character_avatar || '', // FIXED: Use character_avatar URL from dashboard_posts
+    character_profile: data.character_profile || '',
+    character_avatar: data.character_avatar || '',
     theme: data.theme || '',
     audience: data.audience || '',
     media_type: data.media_type || '',
     template_type: data.template_type || '',
-    platform: data.platform || '', // FIXED: Use platform not social_platform
+    platform: data.platform || '',
     title: data.title || '',
     description: data.description || '',
     hashtags: Array.isArray(data.hashtags) ? data.hashtags : [],
@@ -60,6 +60,80 @@ const mapDashboardPostToScheduledPost = (data: any): ScheduledPost => {
     is_from_template: data.is_from_template || false,
     source_template_id: data.source_template_id || ''
   };
+};
+
+// NEW: Load platforms from social_platforms table (mirrored from supabaseAPI.ts)
+const loadPlatforms = async (): Promise<any[]> => {
+  if (!supabase) throw new Error('Supabase client not available');
+
+  try {
+    const { data, error } = await supabase
+      .from('social_platforms')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    const transformedData = (data || []).map(platform => ({
+      ...platform,
+      isActive: platform.is_active,
+      isDefault: false,
+      displayName: platform.display_name || platform.name
+    }));
+    
+    return transformedData;
+  } catch (error) {
+    console.error('Error loading platforms:', error);
+    return [];
+  }
+};
+
+// NEW: Load Telegram channels (mirrored from supabaseAPI.ts)
+const loadTelegramChannels = async (): Promise<any[]> => {
+  if (!supabase) throw new Error('Supabase client not available');
+
+  try {
+    const { data, error } = await supabase
+      .from('telegram_configurations')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error loading Telegram channels:', error);
+    return [];
+  }
+};
+
+// NEW: Upload media file to content-media bucket (mirrored from supabaseAPI.ts)
+const uploadMediaFile = async (file: File, contentId: string, userId: string): Promise<string> => {
+  if (!supabase) throw new Error('Supabase client not available');
+  
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/${contentId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+    const { data, error } = await supabase.storage
+      .from('content-media')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) throw error;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('content-media')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  } catch (error) {
+    console.error('Error uploading media file:', error);
+    throw error;
+  }
 };
 
 // SCHEDULED POSTS - Read from content_posts table where status = 'scheduled'
@@ -99,13 +173,99 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
   }
 };
 
-// CORRECTED: Copy exact logic from supabaseAPI.ts updateContentPost
+// FIXED: Update pending post with platform details and media uploads
 export const updatePendingPost = async (id: string, updates: Partial<ScheduledPost>): Promise<ScheduledPost> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    // Prepare update data - EXACT SAME LOGIC as supabaseAPI.ts
-    const updateData: Record<string, any> = {};
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || null;
+
+    // Handle media file uploads (blob URLs)
+    let updatedMediaFiles = updates.media_files;
+    if (updates.media_files) {
+      updatedMediaFiles = await Promise.all(
+        updates.media_files.map(async (mediaFile) => {
+          if (mediaFile.url.startsWith('blob:')) {
+            try {
+              const response = await fetch(mediaFile.url);
+              const blob = await response.blob();
+              const file = new File([blob], mediaFile.name, { type: blob.type });
+              const supabaseUrl = await uploadMediaFile(file, updates.content_id || id, userId || 'anonymous');
+              return {
+                ...mediaFile,
+                supabaseUrl: supabaseUrl,
+                url: supabaseUrl
+              };
+            } catch (uploadError) {
+              console.error('Error uploading media file:', uploadError);
+              return mediaFile;
+            }
+          }
+          return mediaFile;
+        })
+      );
+    }
+
+    // Resolve platform details (mirrored from supabaseAPI.ts)
+    let updatedPlatformDetails = {};
+    
+    if (updates.selected_platforms !== undefined) {
+      if (updates.selected_platforms && updates.selected_platforms.length > 0) {
+        try {
+          const primaryPlatformId = updates.selected_platforms[0];
+          console.log('Resolving platform with ID:', primaryPlatformId);
+          
+          const [platforms, telegramChannels] = await Promise.all([
+            loadPlatforms(),
+            loadTelegramChannels()
+          ]);
+          
+          // Try social_platforms first
+          const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+          
+          if (selectedPlatform) {
+            console.log('Found social platform:', selectedPlatform.name);
+            updatedPlatformDetails = {
+              platform_id: selectedPlatform.id,
+              social_platform: selectedPlatform.name || null,
+              url: selectedPlatform.url || null,
+              channel_group_id: null,
+              thread_id: null
+            };
+          } else {
+            // Try telegram_configurations
+            const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
+            if (selectedTelegram) {
+              console.log('Found Telegram channel:', selectedTelegram.name);
+              updatedPlatformDetails = {
+                platform_id: selectedTelegram.id,
+                social_platform: selectedTelegram.name || null,
+                url: selectedTelegram.url || null,
+                channel_group_id: selectedTelegram.channel_group_id || null,
+                thread_id: selectedTelegram.thread_id || null
+              };
+            }
+          }
+        } catch (error) {
+          console.error('Error loading platform details:', error);
+        }
+      } else {
+        // Clear platform details
+        updatedPlatformDetails = {
+          platform_id: null,
+          social_platform: null,
+          url: null,
+          channel_group_id: null,
+          thread_id: null
+        };
+      }
+    }
+
+    // Prepare update data
+    const updateData: Record<string, any> = {
+      updated_at: new Date().toISOString()
+    };
     
     if (updates.character_profile) updateData.character_profile = updates.character_profile;
     if (updates.theme) updateData.theme = updates.theme;
@@ -118,13 +278,16 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
     if (updates.hashtags !== undefined) updateData.hashtags = updates.hashtags;
     if (updates.keywords !== undefined) updateData.keywords = updates.keywords;
     if (updates.cta !== undefined) updateData.cta = updates.cta;
-    if (updates.media_files !== undefined) updateData.media_files = updates.media_files;
+    if (updatedMediaFiles !== undefined) updateData.media_files = updatedMediaFiles;
     if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
-    if (updates.status) updateData.status = updates.status; // COPIED FROM supabaseAPI.ts
+    if (updates.status) updateData.status = updates.status;
     
-    updateData.updated_at = new Date().toISOString();
+    // Add platform details
+    Object.assign(updateData, updatedPlatformDetails);
 
-    // Update in content_posts table - SAME TABLE, SAME POST
+    console.log('Update data with platform details:', updateData);
+
+    // Update in content_posts table
     const { data, error } = await supabase
       .from('content_posts')
       .update(updateData)
@@ -140,12 +303,93 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
   }
 };
 
-// LEGACY: SAVE CHANGES TO SCHEDULED POST - Updates content_posts table with CORRECT COLUMN NAMES
+// FIXED: Update scheduled post with platform details and media uploads
 export const updateScheduledPost = async (id: string, updates: Partial<ScheduledPost>): Promise<ScheduledPost> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    // First check if post is in content_posts (scheduled) or dashboard_posts (completed)
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || null;
+
+    // Handle media file uploads
+    let updatedMediaFiles = updates.media_files;
+    if (updates.media_files) {
+      updatedMediaFiles = await Promise.all(
+        updates.media_files.map(async (mediaFile) => {
+          if (mediaFile.url.startsWith('blob:')) {
+            try {
+              const response = await fetch(mediaFile.url);
+              const blob = await response.blob();
+              const file = new File([blob], mediaFile.name, { type: blob.type });
+              const supabaseUrl = await uploadMediaFile(file, updates.content_id || id, userId || 'anonymous');
+              return {
+                ...mediaFile,
+                supabaseUrl: supabaseUrl,
+                url: supabaseUrl
+              };
+            } catch (uploadError) {
+              console.error('Error uploading media file:', uploadError);
+              return mediaFile;
+            }
+          }
+          return mediaFile;
+        })
+      );
+    }
+
+    // Resolve platform details
+    let updatedPlatformDetails = {};
+    
+    if (updates.selected_platforms !== undefined) {
+      if (updates.selected_platforms && updates.selected_platforms.length > 0) {
+        try {
+          const primaryPlatformId = updates.selected_platforms[0];
+          console.log('Resolving platform with ID:', primaryPlatformId);
+          
+          const [platforms, telegramChannels] = await Promise.all([
+            loadPlatforms(),
+            loadTelegramChannels()
+          ]);
+          
+          const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+          
+          if (selectedPlatform) {
+            console.log('Found social platform:', selectedPlatform.name);
+            updatedPlatformDetails = {
+              platform_id: selectedPlatform.id,
+              social_platform: selectedPlatform.name || null,
+              url: selectedPlatform.url || null,
+              channel_group_id: null,
+              thread_id: null
+            };
+          } else {
+            const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
+            if (selectedTelegram) {
+              console.log('Found Telegram channel:', selectedTelegram.name);
+              updatedPlatformDetails = {
+                platform_id: selectedTelegram.id,
+                social_platform: selectedTelegram.name || null,
+                url: selectedTelegram.url || null,
+                channel_group_id: selectedTelegram.channel_group_id || null,
+                thread_id: selectedTelegram.thread_id || null
+              };
+            }
+          }
+        } catch (error) {
+          console.error('Error loading platform details:', error);
+        }
+      } else {
+        updatedPlatformDetails = {
+          platform_id: null,
+          social_platform: null,
+          url: null,
+          channel_group_id: null,
+          thread_id: null
+        };
+      }
+    }
+
+    // Check if post is in content_posts or dashboard_posts
     const { data: contentPost } = await supabase
       .from('content_posts')
       .select('*')
@@ -153,23 +397,28 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       .single();
 
     if (contentPost) {
-      // Post is scheduled - update in content_posts table with CORRECT COLUMNS
-      const updateData: any = {};
+      // Post is in content_posts - update with platform details
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
       
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.description !== undefined) updateData.description = updates.description;
       if (updates.hashtags !== undefined) updateData.hashtags = updates.hashtags;
       if (updates.keywords !== undefined) updateData.keywords = updates.keywords;
       if (updates.cta !== undefined) updateData.cta = updates.cta;
-      if (updates.media_files !== undefined) updateData.media_files = updates.media_files;
+      if (updatedMediaFiles !== undefined) updateData.media_files = updatedMediaFiles;
       if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
-      if (updates.character_profile !== undefined) updateData.character_profile = updates.character_profile; // FIXED: correct column
+      if (updates.character_profile !== undefined) updateData.character_profile = updates.character_profile;
       if (updates.theme !== undefined) updateData.theme = updates.theme;
       if (updates.audience !== undefined) updateData.audience = updates.audience;
       if (updates.media_type !== undefined) updateData.media_type = updates.media_type;
       if (updates.template_type !== undefined) updateData.template_type = updates.template_type;
-      if (updates.platform !== undefined) updateData.platform = updates.platform; // FIXED: correct column
-      if (updates.status) updateData.status = updates.status; // COPIED FROM supabaseAPI.ts
+      if (updates.platform !== undefined) updateData.platform = updates.platform;
+      if (updates.status) updateData.status = updates.status;
+
+      // Add platform details
+      Object.assign(updateData, updatedPlatformDetails);
 
       const { data, error } = await supabase
         .from('content_posts')
@@ -181,13 +430,23 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       if (error) throw error;
       return mapContentPostToScheduledPost(data);
     } else {
-      // Post is completed - update in dashboard_posts table
-      const updateData: any = {};
+      // Post is in dashboard_posts - update with platform details
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
       
       if (updates.scheduled_date !== undefined) updateData.scheduled_date = updates.scheduled_date.toISOString();
       if (updates.status !== undefined) updateData.status = updates.status;
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.hashtags !== undefined) updateData.hashtags = updates.hashtags;
+      if (updates.keywords !== undefined) updateData.keywords = updates.keywords;
+      if (updates.cta !== undefined) updateData.cta = updates.cta;
+      if (updatedMediaFiles !== undefined) updateData.media_files = updatedMediaFiles;
+      if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
+
+      // Add platform details
+      Object.assign(updateData, updatedPlatformDetails);
 
       const { data, error } = await supabase
         .from('dashboard_posts')
@@ -205,12 +464,12 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
   }
 };
 
-// SCHEDULE POST - Move from content_posts to dashboard_posts with date/time
+// FIXED: Create scheduled post with platform details resolution
 export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | 'created_date'>): Promise<ScheduledPost> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    // Get the original post from content_posts using the post ID
+    // Get the original post from content_posts
     const { data: originalPost, error: fetchError } = await supabase
       .from('content_posts')
       .select('*')
@@ -219,15 +478,63 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
 
     if (fetchError) throw fetchError;
 
-    // Create scheduled post in dashboard_posts table with CORRECT COLUMNS
+    // Resolve platform details fresh (don't just copy)
+    let platformDetails = {
+      platform_id: null as string | null,
+      social_platform: null as string | null,
+      url: null as string | null,
+      channel_group_id: null as string | null,
+      thread_id: null as string | null
+    };
+
+    if (originalPost.selected_platforms && originalPost.selected_platforms.length > 0) {
+      try {
+        const primaryPlatformId = originalPost.selected_platforms[0];
+        console.log('Resolving platform for scheduling:', primaryPlatformId);
+        
+        const [platforms, telegramChannels] = await Promise.all([
+          loadPlatforms(),
+          loadTelegramChannels()
+        ]);
+        
+        const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+        
+        if (selectedPlatform) {
+          console.log('Found social platform for scheduling:', selectedPlatform.name);
+          platformDetails = {
+            platform_id: selectedPlatform.id,
+            social_platform: selectedPlatform.name || null,
+            url: selectedPlatform.url || null,
+            channel_group_id: null,
+            thread_id: null
+          };
+        } else {
+          const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
+          if (selectedTelegram) {
+            console.log('Found Telegram for scheduling:', selectedTelegram.name);
+            platformDetails = {
+              platform_id: selectedTelegram.id,
+              social_platform: selectedTelegram.name || null,
+              url: selectedTelegram.url || null,
+              channel_group_id: selectedTelegram.channel_group_id || null,
+              thread_id: selectedTelegram.thread_id || null
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error resolving platform details for scheduling:', error);
+      }
+    }
+
+    // Create scheduled post in dashboard_posts with platform details
     const dashboardPostData = {
       content_id: originalPost.content_id,
-      character_profile: originalPost.character_profile, // FIXED: correct column
+      character_profile: originalPost.character_profile,
       theme: originalPost.theme,
       audience: originalPost.audience,
       media_type: originalPost.media_type,
       template_type: originalPost.template_type,
-      platform: originalPost.platform, // FIXED: correct column
+      platform: originalPost.platform,
       title: originalPost.title,
       description: originalPost.description,
       hashtags: originalPost.hashtags,
@@ -241,8 +548,16 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       source_template_id: originalPost.source_template_id,
       user_id: originalPost.user_id,
       created_by: originalPost.created_by,
-      original_post_id: originalPost.id
+      original_post_id: originalPost.id,
+      // Platform details
+      platform_id: platformDetails.platform_id,
+      social_platform: platformDetails.social_platform,
+      url: platformDetails.url,
+      channel_group_id: platformDetails.channel_group_id,
+      thread_id: platformDetails.thread_id
     };
+
+    console.log('Creating scheduled post with platform details:', platformDetails);
 
     const { data: newScheduledPost, error: insertError } = await supabase
       .from('dashboard_posts')
@@ -259,7 +574,7 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
   }
 };
 
-// DELETE POST - Remove from dashboard view only (not database)
+// DELETE POST - Remove from dashboard view only
 export const deleteScheduledPost = async (id: string): Promise<void> => {
   try {
     console.log('Removing post from dashboard view:', id);
@@ -367,7 +682,7 @@ export const incrementTemplateUsage = async (id: string): Promise<void> => {
   }
 };
 
-// RESCHEDULE TEMPLATE - Send back to content_posts for re-editing with CORRECT COLUMNS
+// FIXED: Reschedule from template with platform details
 export const rescheduleFromTemplate = async (templateId: string, userId: string): Promise<any> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
@@ -381,26 +696,78 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
 
     if (templateError) throw templateError;
 
-    // Create new post in content_posts with template data - USING CORRECT COLUMNS
+    // Resolve platform details from template
+    let platformDetails = {
+      platform_id: null as string | null,
+      social_platform: null as string | null,
+      url: null as string | null,
+      channel_group_id: null as string | null,
+      thread_id: null as string | null
+    };
+
+    if (template.selected_platforms && template.selected_platforms.length > 0) {
+      try {
+        const primaryPlatformId = template.selected_platforms[0];
+        console.log('Resolving platform for template reschedule:', primaryPlatformId);
+        
+        const [platforms, telegramChannels] = await Promise.all([
+          loadPlatforms(),
+          loadTelegramChannels()
+        ]);
+        
+        const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+        
+        if (selectedPlatform) {
+          platformDetails = {
+            platform_id: selectedPlatform.id,
+            social_platform: selectedPlatform.name || null,
+            url: selectedPlatform.url || null,
+            channel_group_id: null,
+            thread_id: null
+          };
+        } else {
+          const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
+          if (selectedTelegram) {
+            platformDetails = {
+              platform_id: selectedTelegram.id,
+              social_platform: selectedTelegram.name || null,
+              url: selectedTelegram.url || null,
+              channel_group_id: selectedTelegram.channel_group_id || null,
+              thread_id: selectedTelegram.thread_id || null
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error resolving platform for template reschedule:', error);
+      }
+    }
+
+    // Create new post in content_posts with template data + platform details
     const newPostData = {
       content_id: `template-${templateId}-${Date.now()}`,
-      character_profile: template.character_profile || '', // FIXED: correct column
+      character_profile: template.character_profile || '',
       theme: template.theme || '',
       audience: template.audience || '',
       media_type: template.media_type || '',
       template_type: template.template_type || '',
-      platform: template.platform || '', // FIXED: correct column
+      platform: template.platform || '',
       title: template.title || '',
       description: template.description || '',
       hashtags: template.hashtags || [],
       keywords: template.keywords || '',
       cta: template.cta || '',
       selected_platforms: template.selected_platforms || [],
-      status: template.status || 'pending', // COPIED FROM supabaseAPI.ts
+      status: template.status || 'pending',
       is_from_template: true,
       source_template_id: templateId,
       user_id: userId,
-      created_by: userId
+      created_by: userId,
+      // Platform details
+      platform_id: platformDetails.platform_id,
+      social_platform: platformDetails.social_platform,
+      url: platformDetails.url,
+      channel_group_id: platformDetails.channel_group_id,
+      thread_id: platformDetails.thread_id
     };
 
     const { data, error } = await supabase
@@ -431,8 +798,8 @@ export const scheduleAPI = {
   fetchScheduledPosts,
   createScheduledPost,
   updateScheduledPost,
-  updatePendingPost, // NEW: Direct logical pending post updates
-  updateContentPost, // LEGACY: For compatibility
+  updatePendingPost,
+  updateContentPost,
   deleteScheduledPost,
   fetchTemplates,
   createTemplate,
