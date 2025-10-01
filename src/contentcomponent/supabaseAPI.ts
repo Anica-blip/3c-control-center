@@ -70,7 +70,7 @@ export const supabaseAPI = {
     }
   }, 
 
-  // FIXED: Save or Update content post - proper UPSERT logic
+// Save content post to content_posts table
   async saveContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
     if (!isSupabaseConfigured()) {
       throw new Error('Supabase not configured - cannot save to database');
