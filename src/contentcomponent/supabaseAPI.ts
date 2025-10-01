@@ -230,9 +230,9 @@ export const supabaseAPI = {
 
       let finalData;
 
-      // FIXED: Use UPSERT with onConflict to handle both INSERT and UPDATE
+      // FIXED: Always use UPSERT on content_id to prevent duplicate rows
       if (postData.supabaseId) {
-        // We have a supabaseId, so UPDATE using it
+        // We have a supabaseId, so UPDATE using it directly
         console.log(`UPDATING existing post with Supabase ID: ${postData.supabaseId}`);
         
         const { data, error } = await client
@@ -248,7 +248,7 @@ export const supabaseAPI = {
         }
         finalData = data;
       } else {
-        // No supabaseId - use UPSERT based on content_id to prevent duplicates
+        // No supabaseId - use UPSERT on content_id to prevent duplicate rows
         console.log(`UPSERTING post with content_id: ${postData.contentId}`);
         
         const insertData = {
@@ -256,11 +256,14 @@ export const supabaseAPI = {
           created_at: new Date().toISOString()
         };
 
+        // CRITICAL: This requires a UNIQUE constraint on content_id in the database
+        // Run this SQL in Supabase SQL Editor first:
+        // ALTER TABLE content_posts ADD CONSTRAINT content_posts_content_id_key UNIQUE (content_id);
         const { data, error } = await client
           .from('content_posts')
           .upsert(insertData, { 
-            onConflict: 'content_id',  // Use content_id as unique constraint
-            ignoreDuplicates: false     // Update if exists
+            onConflict: 'content_id',  // Requires UNIQUE constraint on content_id
+            ignoreDuplicates: false     // Update if exists, insert if not
           })
           .select()
           .single();
