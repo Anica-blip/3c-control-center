@@ -160,13 +160,32 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (dashboardError) throw dashboardError;
 
-    // Combine and map both arrays
+    // Combine and map both arrays with platform details enrichment
     const allPosts = [
       ...(scheduledPosts || []).map(post => mapContentPostToScheduledPost(post)),
       ...(dashboardPosts || []).map(post => mapDashboardPostToScheduledPost(post))
     ];
 
-    return allPosts;
+    // Enrich with platform details for display
+    const enrichedPosts = await Promise.all(
+      allPosts.map(async (post) => {
+        if (post.selected_platforms && post.selected_platforms.length > 0) {
+          try {
+            const platformDetails = await getPlatformDetails(post.selected_platforms);
+            return {
+              ...post,
+              platformDetails // Add resolved platform objects for UI display
+            };
+          } catch (err) {
+            console.error('Error enriching platform details for post:', post.id, err);
+            return post;
+          }
+        }
+        return post;
+      })
+    );
+
+    return enrichedPosts;
   } catch (error) {
     console.error('Error fetching posts:', error);
     throw error;
@@ -799,6 +818,26 @@ export const updateContentPost = async (id: string, updates: Partial<ScheduledPo
   return updatePendingPost(id, updates);
 };
 
+// NEW: Get platform details for display
+export const getPlatformDetails = async (platformIds: string[]): Promise<any[]> => {
+  if (!supabase || !platformIds?.length) return [];
+  
+  try {
+    const [platformsResult, telegramResult] = await Promise.all([
+      supabase.from('social_platforms').select('*').in('id', platformIds),
+      supabase.from('telegram_configurations').select('*').in('id', platformIds)
+    ]);
+    
+    return [
+      ...(platformsResult.data || []),
+      ...(telegramResult.data || [])
+    ];
+  } catch (error) {
+    console.error('Error loading platform details for display:', error);
+    return [];
+  }
+};
+
 // MAIN API OBJECT EXPORT
 export const scheduleAPI = {
   fetchScheduledPosts,
@@ -812,5 +851,6 @@ export const scheduleAPI = {
   updateTemplate,
   deleteTemplate,
   incrementTemplateUsage,
-  rescheduleFromTemplate
+  rescheduleFromTemplate,
+  getPlatformDetails
 };
