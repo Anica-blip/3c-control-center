@@ -112,55 +112,40 @@ export const supabaseAPI = {
         }
       }
 
-      // --- FIXED: Platform Details Resolution ---
+      // Extract platform details for additional columns
       let platformDetails = {
-        platform_id: null as string | null,
-        social_platform: null as string | null,
-        url: null as string | null,
-        channel_group_id: null as string | null,
-        thread_id: null as string | null
+        social_platform: null,
+        url: null,
+        channel_group_id: null,
+        thread_id: null
       };
 
-      // FIXED: Use selectedPlatforms (array of IDs), NOT detailedPlatforms
-      const platformsToStore = postData.selectedPlatforms || [];
-
-      if (platformsToStore.length > 0) {
+      if (postData.selectedPlatforms && postData.selectedPlatforms.length > 0) {
         try {
           const [platforms, telegramChannels] = await Promise.all([
             this.loadPlatforms(),
             this.loadTelegramChannels()
           ]);
-          
-          // Get the first platform ID
-          const primaryPlatformId = platformsToStore[0];
-          console.log('Looking for platform with ID:', primaryPlatformId);
-          
-          // Check regular platforms first
-          const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+
+          const primaryPlatformId = postData.selectedPlatforms[0];
+          let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
           
           if (selectedPlatform) {
-            console.log('Found platform:', selectedPlatform.name);
             platformDetails = {
-              platform_id: selectedPlatform.id,
               social_platform: selectedPlatform.name || null,
               url: selectedPlatform.url || null,
               channel_group_id: null,
               thread_id: null
             };
           } else {
-            // Check Telegram channels
             const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
             if (selectedTelegram) {
-              console.log('Found Telegram channel:', selectedTelegram.name);
               platformDetails = {
-                platform_id: selectedTelegram.id.toString(),
                 social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
                 url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
                 channel_group_id: selectedTelegram.channel_group_id || null,
                 thread_id: selectedTelegram.thread_id || null
               };
-            } else {
-              console.log('Platform not found for ID:', primaryPlatformId);
             }
           }
         } catch (error) {
@@ -618,8 +603,9 @@ export const supabaseAPI = {
       // Transform data to ensure compatibility with existing components
       const transformedData = (data || []).map(platform => ({
         ...platform,
+        // Ensure both naming conventions are available for compatibility
         isActive: platform.is_active,
-        isDefault: false,
+        isDefault: false, // FIXED: Remove default flag completely
         displayName: platform.display_name || platform.name
       }));
       
@@ -629,7 +615,7 @@ export const supabaseAPI = {
       return [];
     }
   },
-
+  
   // Load Telegram configurations
   async loadTelegramChannels(): Promise<any[]> {
     if (!isSupabaseConfigured()) {
