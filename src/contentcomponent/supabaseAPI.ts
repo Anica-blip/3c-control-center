@@ -213,15 +213,12 @@ export const supabaseAPI = {
         name: characterDetails.name,
         username: characterDetails.username,
         role: characterDetails.role,
-        // Platform details
-        platform_id: platformDetails.name,
-        social_platform: platformDetails.name,
+        // Platform or Telegram details
+        platform_id: platformDetails.platform_id,
+        social_platform: platformDetails.social_platform,
         url: platformDetails.url,
-        // Telegram details
-        platform_id: telegramDetails.id,   
-        url: telegramDetails.url,
-        channel_group_id: telegramDetails.channel_group_id,
-        thread_id: telegramDetails.thread_id,
+        channel_group_id: platformDetails.channel_group_id,
+        thread_id: platformDetails.thread_id,
         updated_at: new Date().toISOString()
       };
 
