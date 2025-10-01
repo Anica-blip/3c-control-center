@@ -112,26 +112,38 @@ export const supabaseAPI = {
         }
       }
 
-      // Extract platform details for additional columns
+      // --- Platform Details with platform_id ---
       let platformDetails = {
-        social_platform: null,
-        url: null,
-        channel_group_id: null,
-        thread_id: null
+        platform_id: null as string | null,
+        social_platform: null as string | null,
+        url: null as string | null,
+        channel_group_id: null as string | null,
+        thread_id: null as string | null
       };
 
-      if (postData.selectedPlatforms && postData.selectedPlatforms.length > 0) {
+      let platformsToStore: string[] = [];
+
+      // Determine which platforms to use
+      if (postData.detailedPlatforms && postData.detailedPlatforms.length > 0) {
+        platformsToStore = postData.detailedPlatforms;
+      } else if (postData.selectedPlatforms && postData.selectedPlatforms.length > 0) {
+        platformsToStore = postData.selectedPlatforms;
+      }
+
+      // Resolve platform details
+      if (platformsToStore.length > 0) {
         try {
           const [platforms, telegramChannels] = await Promise.all([
             this.loadPlatforms(),
             this.loadTelegramChannels()
           ]);
-
-          const primaryPlatformId = postData.selectedPlatforms[0];
-          let selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+          
+          const primaryPlatformId = platformsToStore[0];
+          const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
           
           if (selectedPlatform) {
             platformDetails = {
+              platform_id: selectedPlatform.id,
               social_platform: selectedPlatform.name || null,
               url: selectedPlatform.url || null,
               channel_group_id: null,
@@ -141,6 +153,7 @@ export const supabaseAPI = {
             const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
             if (selectedTelegram) {
               platformDetails = {
+                platform_id: selectedTelegram.id.toString(),
                 social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
                 url: selectedTelegram.channel_group_id ? `https://t.me/${selectedTelegram.channel_group_id}` : null,
                 channel_group_id: selectedTelegram.channel_group_id || null,
