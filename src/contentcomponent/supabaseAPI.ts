@@ -139,11 +139,9 @@ export const supabaseAPI = {
           if (selectedPlatform) {
             console.log('Found social platform:', selectedPlatform.name);
             platformDetails = {
-              platform_id: selectedPlatform.id,
+              id: selectedPlatform.id, || null,
               social_platform: selectedPlatform.name || null,
-              url: selectedPlatform.url || null,
-              channel_group_id: null,
-              thread_id: null
+              url: selectedPlatform.url || null
             };
           } else {
             // Try to find in telegram_configurations
@@ -151,8 +149,8 @@ export const supabaseAPI = {
             if (selectedTelegram) {
               console.log('Found Telegram channel:', selectedTelegram.name);
               platformDetails = {
-                platform_id: selectedTelegram.id.toString(),
-                social_platform: selectedTelegram.name || 'Telegram',
+                id: selectedTelegram.id, || null,
+                name: selectedTelegram.name || null,
                 url: selectedTelegram.url || null,
                 channel_group_id: selectedTelegram.channel_group_id || null,
                 thread_id: selectedTelegram.thread_id || null
@@ -160,7 +158,7 @@ export const supabaseAPI = {
             }
           }
         } catch (error) {
-          console.error('Error loading platform details:', error);
+          console.error('Error loading telegramChannels details:', error);
         }
       }
 
