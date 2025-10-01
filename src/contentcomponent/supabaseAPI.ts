@@ -124,8 +124,8 @@ export const supabaseAPI = {
       // FIXED: Use selectedPlatforms (array of IDs), get first platform Url
       if (postData.selectedPlatforms && postData.selectedPlatforms.length > 0) {
         try {
-          const primaryPlatformUrl = postData.selectedPlatforms[0]; // First platform Url
-          console.log('Looking up platform with Url:', primaryPlatformUrl);
+          const primaryPlatformId = postData.selectedPlatforms[0]; // First platform ID
+          console.log('Looking up platform with Id:', primaryPlatformId);
           
           // Load both platforms and telegram
           const [platforms, telegramChannels] = await Promise.all([
@@ -134,7 +134,7 @@ export const supabaseAPI = {
           ]);
           
           // Try to find in social_platforms first
-          const selectedPlatform = platforms.find(p => p.id === primaryPlatformUrl);
+          const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
           
           if (selectedPlatform) {
             console.log('Found social platform:', selectedPlatform.name);
@@ -149,7 +149,7 @@ export const supabaseAPI = {
             if (selectedTelegram) {
               console.log('Found Telegram channel:', selectedTelegram.name);
               platformDetails = {
-                platform_id: selectedTelegram.type,
+                platform_id: selectedTelegram.id,
                 social_platform: selectedTelegram.name || null,
                 url: selectedTelegram.url || null,
                 channel_group_id: selectedTelegram.channel_group_id || null,
