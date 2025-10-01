@@ -1,4 +1,4 @@
-// /src/schedulecomponent/components/ScheduleModal.tsx - FIXED to use centralized getTheme()
+// /src/schedulecomponent/components/ScheduleModal.tsx - FIXED: Display platform names
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, X, Check, AlertCircle } from 'lucide-react';
 import { getTheme } from '../utils/styleUtils';
@@ -199,6 +199,17 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
     setSelectedTime(date.toTimeString().split(' ')[0].slice(0, 5));
   };
 
+  // FIXED: Get platform names from platformDetails
+  const getPlatformDisplay = () => {
+    if (post?.platformDetails && post.platformDetails.length > 0) {
+      return post.platformDetails.map(p => p.name || p.display_name).join(', ');
+    }
+    if (post?.selected_platforms && post.selected_platforms.length > 0) {
+      return `${post.selected_platforms.length} platform(s) selected`;
+    }
+    return 'No platforms selected';
+  };
+
   if (!post) return null;
 
   return (
@@ -266,14 +277,25 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
           </p>
           <div style={{
             display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
+            flexDirection: 'column',
+            gap: '8px',
             fontSize: '12px',
             color: theme.textSecondary
           }}>
-            <span>ID: {post.content_id}</span>
-            <span>Platforms: {post.selected_platforms?.length || 0}</span>
-            <span>Character: {post.character_profile || 'Not set'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontWeight: '600' }}>ID:</span>
+              <span>{post.content_id}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontWeight: '600' }}>Platforms:</span>
+              <span>{getPlatformDisplay()}</span>
+            </div>
+            {post.character_profile && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontWeight: '600' }}>Character:</span>
+                <span>{post.character_profile}</span>
+              </div>
+            )}
           </div>
         </div>
 
