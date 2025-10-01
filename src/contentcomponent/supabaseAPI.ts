@@ -70,7 +70,7 @@ export const supabaseAPI = {
     }
   }, 
 
-  // FIXED: Save or Update content post based on supabaseId presence
+  // FIXED: Save or Update content post - proper UPSERT logic
   async saveContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
     if (!isSupabaseConfigured()) {
       throw new Error('Supabase not configured - cannot save to database');
@@ -112,7 +112,7 @@ export const supabaseAPI = {
         }
       }
 
-      // --- Platform Details with platform_id ---
+      // --- FIXED: Platform Details Resolution ---
       let platformDetails = {
         platform_id: null as string | null,
         social_platform: null as string | null,
@@ -121,16 +121,9 @@ export const supabaseAPI = {
         thread_id: null as string | null
       };
 
-      let platformsToStore: string[] = [];
+      // FIXED: Use selectedPlatforms (array of IDs), NOT detailedPlatforms
+      const platformsToStore = postData.selectedPlatforms || [];
 
-      // Determine which platforms to use
-      if (postData.detailedPlatforms && postData.detailedPlatforms.length > 0) {
-        platformsToStore = postData.detailedPlatforms;
-      } else if (postData.selectedPlatforms && postData.selectedPlatforms.length > 0) {
-        platformsToStore = postData.selectedPlatforms;
-      }
-
-      // Resolve platform details
       if (platformsToStore.length > 0) {
         try {
           const [platforms, telegramChannels] = await Promise.all([
@@ -138,10 +131,15 @@ export const supabaseAPI = {
             this.loadTelegramChannels()
           ]);
           
+          // Get the first platform ID
           const primaryPlatformId = platformsToStore[0];
+          console.log('Looking for platform with ID:', primaryPlatformId);
+          
+          // Check regular platforms first
           const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
           
           if (selectedPlatform) {
+            console.log('Found platform:', selectedPlatform.name);
             platformDetails = {
               platform_id: selectedPlatform.id,
               social_platform: selectedPlatform.name || null,
@@ -150,8 +148,10 @@ export const supabaseAPI = {
               thread_id: null
             };
           } else {
+            // Check Telegram channels
             const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
             if (selectedTelegram) {
+              console.log('Found Telegram channel:', selectedTelegram.name);
               platformDetails = {
                 platform_id: selectedTelegram.id.toString(),
                 social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
@@ -159,6 +159,8 @@ export const supabaseAPI = {
                 channel_group_id: selectedTelegram.channel_group_id || null,
                 thread_id: selectedTelegram.thread_id || null
               };
+            } else {
+              console.log('Platform not found for ID:', primaryPlatformId);
             }
           }
         } catch (error) {
@@ -226,17 +228,19 @@ export const supabaseAPI = {
         updated_at: new Date().toISOString()
       };
 
+      console.log('Platform details to save:', platformDetails);
+
       let finalData;
 
-      // CRITICAL LOGIC: Check if we have a supabaseId OR if a post with this content_id exists
+      // FIXED: Use UPSERT with onConflict to handle both INSERT and UPDATE
       if (postData.supabaseId) {
-        // UPDATE existing post using the Supabase auto-generated ID
+        // We have a supabaseId, so UPDATE using it
         console.log(`UPDATING existing post with Supabase ID: ${postData.supabaseId}`);
         
         const { data, error } = await client
           .from('content_posts')
           .update(dbData)
-          .eq('id', parseInt(postData.supabaseId))  // Use the Supabase row ID
+          .eq('id', parseInt(postData.supabaseId))
           .select()
           .single();
 
@@ -246,51 +250,28 @@ export const supabaseAPI = {
         }
         finalData = data;
       } else {
-        // Check if a post with this content_id already exists
-        const { data: existingPost, error: checkError } = await client
+        // No supabaseId - use UPSERT based on content_id to prevent duplicates
+        console.log(`UPSERTING post with content_id: ${postData.contentId}`);
+        
+        const insertData = {
+          ...dbData,
+          created_at: new Date().toISOString()
+        };
+
+        const { data, error } = await client
           .from('content_posts')
-          .select('id')
-          .eq('content_id', postData.contentId)
-          .eq('is_active', true)
+          .upsert(insertData, { 
+            onConflict: 'content_id',  // Use content_id as unique constraint
+            ignoreDuplicates: false     // Update if exists
+          })
+          .select()
           .single();
 
-        if (existingPost && !checkError) {
-          // UPDATE existing post found by content_id
-          console.log(`UPDATING existing post found by content_id: ${postData.contentId}, Supabase ID: ${existingPost.id}`);
-          
-          const { data, error } = await client
-            .from('content_posts')
-            .update(dbData)
-            .eq('id', existingPost.id)
-            .select()
-            .single();
-
-          if (error) {
-            console.error('Update error:', error);
-            throw error;
-          }
-          finalData = data;
-        } else {
-          // INSERT new post only when no existing post found
-          console.log(`INSERTING new post with content_id: ${postData.contentId}`);
-          
-          const insertData = {
-            ...dbData,
-            created_at: new Date().toISOString()
-          };
-
-          const { data, error } = await client
-            .from('content_posts')
-            .insert([insertData])
-            .select()
-            .single();
-
-          if (error) {
-            console.error('Insert error:', error);
-            throw error;
-          }
-          finalData = data;
+        if (error) {
+          console.error('Upsert error:', error);
+          throw error;
         }
+        finalData = data;
       }
 
       // --- Convert back to ContentPost format ---
@@ -349,7 +330,7 @@ export const supabaseAPI = {
       // Convert to ContentPost format
       const contentPosts: ContentPost[] = (data || []).map(record => ({
         id: record.id.toString(),
-        contentId: record.content_id || `content-${record.id}`,  // Use actual content_id from database
+        contentId: record.content_id || `content-${record.id}`,
         characterProfile: record.character_profile || '',
         theme: record.theme || '',
         audience: record.audience || '',
@@ -385,6 +366,7 @@ export const supabaseAPI = {
     if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
     
     console.log(`Updating post with ID: ${postId}`);
+    console.log('Updates received:', updates);
     
     try {
       const client = getSupabaseClient();
@@ -444,14 +426,15 @@ export const supabaseAPI = {
         }
       }
 
-      // Resolve platform details if updated
+      // FIXED: Resolve platform details properly
       let updatedPlatformDetails = {};
       let platformsToUpdate = undefined;
       
-      if (updates.detailedPlatforms !== undefined || updates.selectedPlatforms !== undefined) {
-        platformsToUpdate = updates.detailedPlatforms || updates.selectedPlatforms || [];
+      // Use selectedPlatforms (IDs), NOT detailedPlatforms
+      if (updates.selectedPlatforms !== undefined) {
+        platformsToUpdate = updates.selectedPlatforms;
         
-        if (platformsToUpdate.length > 0) {
+        if (platformsToUpdate && platformsToUpdate.length > 0) {
           try {
             const [platforms, telegramChannels] = await Promise.all([
               this.loadPlatforms(),
@@ -459,9 +442,12 @@ export const supabaseAPI = {
             ]);
             
             const primaryPlatformId = platformsToUpdate[0];
+            console.log('Updating platform to ID:', primaryPlatformId);
+            
             const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
             
             if (selectedPlatform) {
+              console.log('Found platform for update:', selectedPlatform.name);
               updatedPlatformDetails = {
                 platform_id: selectedPlatform.id,
                 social_platform: selectedPlatform.name || null,
@@ -472,6 +458,7 @@ export const supabaseAPI = {
             } else {
               const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
               if (selectedTelegram) {
+                console.log('Found Telegram for update:', selectedTelegram.name);
                 updatedPlatformDetails = {
                   platform_id: selectedTelegram.id.toString(),
                   social_platform: selectedTelegram.name ? `${selectedTelegram.name} (Telegram)` : 'Telegram',
@@ -501,8 +488,8 @@ export const supabaseAPI = {
         updated_at: new Date().toISOString()
       };
 
-      // Only add fields if they're defined in updates
-      if (updates.contentId !== undefined) updateData.content_id = updates.contentId;  // Include content_id if updating
+      // IMPORTANT: Keep the content_id unchanged
+      if (updates.contentId !== undefined) updateData.content_id = updates.contentId;
       if (updates.characterProfile !== undefined) updateData.character_profile = updates.characterProfile;
       if (updates.theme !== undefined) updateData.theme = updates.theme;
       if (updates.audience !== undefined) updateData.audience = updates.audience;
@@ -523,6 +510,8 @@ export const supabaseAPI = {
       // Add character and platform details if they were updated
       Object.assign(updateData, updatedCharacterDetails, updatedPlatformDetails);
 
+      console.log('Update data being sent:', updateData);
+
       const { data, error } = await client
         .from('content_posts')
         .update(updateData)
@@ -538,7 +527,7 @@ export const supabaseAPI = {
       // Convert back to ContentPost format
       const contentPost: ContentPost = {
         id: data.id.toString(),
-        contentId: data.content_id || updates.contentId || `content-${data.id}`,  // Use actual content_id from database
+        contentId: data.content_id,
         characterProfile: data.character_profile || '',
         theme: data.theme || '',
         audience: data.audience || '',
@@ -612,23 +601,13 @@ export const supabaseAPI = {
 
   // Load platforms from social_platforms table
   async loadPlatforms(): Promise<any[]> {
-    if (!supabase) {
-      console.warn('Supabase not configured - returning mock platforms');
-      return [
-        { id: '1', name: 'Instagram', display_name: 'Instagram', url: 'https://instagram.com', is_active: true, isActive: true, isDefault: true, is_default: true },
-        { id: '2', name: 'Facebook', display_name: 'Facebook', url: 'https://facebook.com', is_active: true, isActive: true, isDefault: false, is_default: false },
-        { id: '3', name: 'LinkedIn', display_name: 'LinkedIn', url: 'https://linkedin.com', is_active: true, isActive: true, isDefault: false, is_default: false },
-        { id: '4', name: 'Twitter', display_name: 'Twitter/X', url: 'https://x.com', is_active: true, isActive: true, isDefault: false, is_default: false },
-        { id: '5', name: 'YouTube', display_name: 'YouTube', url: 'https://youtube.com', is_active: true, isActive: true, isDefault: false, is_default: false },
-        { id: '6', name: 'TikTok', display_name: 'TikTok', url: 'https://tiktok.com', is_active: true, isActive: true, isDefault: false, is_default: false },
-        { id: '7', name: 'Telegram', display_name: 'Telegram', url: 'https://telegram.org', is_active: true, isActive: true, isDefault: false, is_default: false },
-        { id: '8', name: 'Pinterest', display_name: 'Pinterest', url: 'https://pinterest.com', is_active: true, isActive: true, isDefault: false, is_default: false },
-        { id: '9', name: 'WhatsApp', display_name: 'WhatsApp', url: 'https://whatsapp.com', is_active: true, isActive: true, isDefault: false, is_default: false }
-      ];
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase not configured - cannot load platforms');
     }
 
     try {
-      const { data, error } = await supabase
+      const client = getSupabaseClient();
+      const { data, error } = await client
         .from('social_platforms')
         .select('*')
         .eq('is_active', true)
@@ -639,9 +618,8 @@ export const supabaseAPI = {
       // Transform data to ensure compatibility with existing components
       const transformedData = (data || []).map(platform => ({
         ...platform,
-        // Ensure both naming conventions are available for compatibility
         isActive: platform.is_active,
-        isDefault: platform.is_default || false,
+        isDefault: false,
         displayName: platform.display_name || platform.name
       }));
       
@@ -654,17 +632,17 @@ export const supabaseAPI = {
 
   // Load Telegram configurations
   async loadTelegramChannels(): Promise<any[]> {
-    if (!supabase) {
-      console.warn('Supabase not configured - returning empty Telegram channels');
-      return [];
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase not configured - cannot load Telegram channels');
     }
 
     try {
-      const { data, error } = await supabase
+      const client = getSupabaseClient();
+      const { data, error } = await client
         .from('telegram_configurations')
         .select('*')
         .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false});
       
       if (error) throw error;
       return data || [];
@@ -675,4 +653,5 @@ export const supabaseAPI = {
   }
 };
 
+// Export the client safely for TemplateLibrary.tsx
 export { supabase };
