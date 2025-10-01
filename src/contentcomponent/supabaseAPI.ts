@@ -121,11 +121,11 @@ export const supabaseAPI = {
         thread_id: null as string | null
       };
 
-      // FIXED: Use selectedPlatforms (array of IDs), get first platform ID
+      // FIXED: Use selectedPlatforms (array of IDs), get first platform Url
       if (postData.selectedPlatforms && postData.selectedPlatforms.length > 0) {
         try {
-          const primaryPlatformId = postData.selectedPlatforms[0]; // First platform ID
-          console.log('Looking up platform with ID:', primaryPlatformId);
+          const primaryPlatformUrl = postData.selectedPlatforms[0]; // First platform Url
+          console.log('Looking up platform with Url:', primaryPlatformUrl);
           
           // Load both platforms and telegram
           const [platforms, telegramChannels] = await Promise.all([
@@ -134,7 +134,7 @@ export const supabaseAPI = {
           ]);
           
           // Try to find in social_platforms first
-          const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+          const selectedPlatform = platforms.find(p => p.id === primaryPlatformUrl);
           
           if (selectedPlatform) {
             console.log('Found social platform:', selectedPlatform.name);
@@ -142,8 +142,6 @@ export const supabaseAPI = {
               platform_id: selectedPlatform.id,
               social_platform: selectedPlatform.name || null,
               url: selectedPlatform.url || null,
-              channel_group_id: null,
-              thread_id: null
             };
           } else {
             // Try to find in telegram_configurations
@@ -151,7 +149,7 @@ export const supabaseAPI = {
             if (selectedTelegram) {
               console.log('Found Telegram channel:', selectedTelegram.name);
               platformDetails = {
-                platform_id: selectedTelegram.id,
+                platform_id: selectedTelegram.type,
                 social_platform: selectedTelegram.name || null,
                 url: selectedTelegram.url || null,
                 channel_group_id: selectedTelegram.channel_group_id || null,
@@ -216,11 +214,14 @@ export const supabaseAPI = {
         username: characterDetails.username,
         role: characterDetails.role,
         // Platform details
-        platform_id: platformDetails.platform_id,
-        social_platform: platformDetails.social_platform,
+        platform_id: platformDetails.name,
+        social_platform: platformDetails.name,
         url: platformDetails.url,
-        channel_group_id: platformDetails.channel_group_id,
-        thread_id: platformDetails.thread_id,
+        // Telegram details
+        platform_id: telegramDetails.type,   
+        url: telegramDetails.url,
+        channel_group_id: telegramDetails.channel_group_id,
+        thread_id: telegramDetails.thread_id,
         updated_at: new Date().toISOString()
       };
 
