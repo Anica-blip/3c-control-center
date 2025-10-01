@@ -141,7 +141,7 @@ export const supabaseAPI = {
             platformDetails = {
               platform_id: selectedPlatform.id,
               social_platform: selectedPlatform.name || null,
-              url: selectedPlatform.url || null
+              url: selectedPlatform.url || null,
               channel_group_id: null,
               thread_id: null
             };
@@ -151,8 +151,8 @@ export const supabaseAPI = {
             if (selectedTelegram) {
               console.log('Found Telegram channel:', selectedTelegram.name);
               platformDetails = {
-                id: selectedTelegram.id, || null,
-                name: selectedTelegram.name || null,
+                platform_id: selectedTelegram.id,
+                social_platform: selectedTelegram.name || null,
                 url: selectedTelegram.url || null,
                 channel_group_id: selectedTelegram.channel_group_id || null,
                 thread_id: selectedTelegram.thread_id || null
