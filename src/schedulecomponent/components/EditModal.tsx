@@ -1,4 +1,4 @@
-// /src/schedulecomponent/components/EditModal.tsx - FINAL VERSION: Single Character Profile Header
+// /src/schedulecomponent/components/EditModal.tsx - FIXED: UK English attributes added
 import React, { useState, useEffect } from 'react';
 import { Edit3, X, Save, Calendar, Clock, User, Hash, FileText, ExternalLink, Image, Video, Trash2, Plus, MessageCircle, Users } from 'lucide-react';
 import { formatDate, formatTime, isValidDate } from '../utils/dateUtils';
@@ -724,7 +724,7 @@ export default function EditModal({
             </div>
           )}
 
-          {/* 3. TITLE */}
+          {/* 3. TITLE - FIXED: Added lang="en-GB" and spellCheck={true} */}
           <div>
             <label style={{
               display: 'block',
@@ -740,11 +740,13 @@ export default function EditModal({
               value={formData.title || ''}
               onChange={(e) => handleFieldChange('title', e.target.value)}
               placeholder="Enter post title..."
+              lang="en-GB"
+              spellCheck={true}
               style={inputStyle}
             />
           </div>
 
-          {/* 4. DESCRIPTION */}
+          {/* 4. DESCRIPTION - FIXED: Added lang="en-GB" and spellCheck={true} */}
           <div>
             <label style={{
               display: 'block',
@@ -760,6 +762,8 @@ export default function EditModal({
               onChange={(e) => handleFieldChange('description', e.target.value)}
               placeholder="Write your post content..."
               rows={6}
+              lang="en-GB"
+              spellCheck={true}
               style={{
                 ...inputStyle,
                 resize: 'vertical',
@@ -895,6 +899,7 @@ export default function EditModal({
               />
             </div>
 
+            {/* CTA - FIXED: Added lang="en-GB" and spellCheck={true} */}
             <div>
               <label style={{
                 display: 'block',
@@ -910,6 +915,8 @@ export default function EditModal({
                 value={formData.cta || ''}
                 onChange={(e) => handleFieldChange('cta', e.target.value)}
                 placeholder="What action should users take?"
+                lang="en-GB"
+                spellCheck={true}
                 style={inputStyle}
               />
             </div>
