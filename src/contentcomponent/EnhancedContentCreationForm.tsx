@@ -1613,7 +1613,7 @@ const EnhancedContentCreationForm = ({
           </div>
         )}
 
-        {/* Description Field */}
+{/* Description Field */}
         <div>
           <label style={{
             display: 'block',
@@ -1779,6 +1779,8 @@ const EnhancedContentCreationForm = ({
             onChange={(e) => setContent(prev => ({ ...prev, description: e.target.value }))}
             placeholder="Write your post content here... (UK English)"
             maxLength={fieldConfig?.description?.maxLength || 2200}
+            lang="en-GB"
+            spellCheck={true}
             style={{
               width: '100%',
               padding: '12px',
@@ -1979,6 +1981,8 @@ const EnhancedContentCreationForm = ({
             onChange={(e) => setContent(prev => ({ ...prev, cta: e.target.value }))}
             placeholder="What action should users take?"
             maxLength={100}
+            lang="en-GB"
+            spellCheck={true}
             style={{
               width: '100%',
               padding: '12px',
