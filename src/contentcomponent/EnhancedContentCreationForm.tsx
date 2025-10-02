@@ -77,6 +77,8 @@ const EnhancedContentCreationForm = ({
         id: t.id.toString(),
         name: `${t.name} (Telegram)`,
         url: t.channel_group_id ? `https://t.me/${t.channel_group_id}` : '',
+        platform_icon: 'TG', // FIXED: Add platform_icon
+        type: t.thread_id ? 'telegram_group' : 'telegram_channel', // FIXED: Add type
         isActive: true,
         isDefault: false
       }));
@@ -169,10 +171,16 @@ const EnhancedContentCreationForm = ({
     return codes[value] || 'XX';
   };
 
+  // FIXED ISSUE #2: Added no_media option
   const getMediaCodeLocal = (value: string) => {
     const codes: Record<string, string> = {
-      'image': 'IM', 'video': 'VD', 'gifs': 'GF', 'pdf': 'PF',
-      'interactive_media': 'IM', 'url_link': 'UL'
+      'no_media': 'NM', // NEW: No media option
+      'image': 'IM', 
+      'video': 'VD', 
+      'gifs': 'GF', 
+      'pdf': 'PF',
+      'interactive_media': 'IM', 
+      'url_link': 'UL'
     };
     return codes[value] || 'XX';
   };
@@ -205,16 +213,17 @@ const EnhancedContentCreationForm = ({
     return codes[value] || 'XX';
   };
 
-  // Platform symbol and color mapping functions
-  const getPlatformSymbol = (platformName: string) => {
-    const name = platformName.toLowerCase();
-    
-    // Telegram detection
-    if (name.includes('telegram')) {
-      return 'TG';
+  // FIXED ISSUE #3: Platform symbol and colour mapping functions using platform_icon and type
+  const getPlatformSymbol = (platform: any) => {
+    // PRIORITY 1: Use platform_icon column if available
+    if (platform.platform_icon) {
+      return platform.platform_icon;
     }
     
-    // Standard platforms
+    // FALLBACK: Derive from name
+    const name = (platform.name || platform.display_name || '').toLowerCase();
+    
+    if (name.includes('telegram')) return 'TG';
     if (name.includes('instagram')) return 'IG';
     if (name.includes('facebook')) return 'FB';
     if (name.includes('linkedin')) return 'LI';
@@ -225,22 +234,30 @@ const EnhancedContentCreationForm = ({
     if (name.includes('whatsapp')) return 'WA';
     
     // Default fallback
-    return platformName.substring(0, 2).toUpperCase();
+    return (platform.name || platform.display_name || '').substring(0, 2).toUpperCase() || '??';
   };
 
-  const getPlatformColor = (platformName: string) => {
-    const name = platformName.toLowerCase();
+  // FIXED ISSUE #3: Colour detection using type column for Telegram distinction
+  const getPlatformColor = (platform: any) => {
+    const name = (platform.name || platform.display_name || '').toLowerCase();
     
-    // Telegram color detection (channel vs group)
+    // PRIORITY: Use type column for Telegram channel vs group
     if (name.includes('telegram')) {
-      // Check if it's a group (contains 'group' or specific group indicators)
+      if (platform.type === 'telegram_group') {
+        return '#f97316'; // Orange for groups
+      }
+      if (platform.type === 'telegram_channel') {
+        return '#3b82f6'; // Blue for channels
+      }
+      
+      // FALLBACK: Try to detect from name if type is missing
       if (name.includes('group') || name.includes('chat')) {
         return '#f97316'; // Orange for groups
       }
-      return '#3b82f6'; // Blue for channels
+      return '#3b82f6'; // Default blue for channels
     }
     
-    // Standard platform colors
+    // Standard platform colours
     if (name.includes('instagram')) return '#E4405F';
     if (name.includes('facebook')) return '#1877F2';
     if (name.includes('linkedin')) return '#0A66C2';
@@ -250,12 +267,18 @@ const EnhancedContentCreationForm = ({
     if (name.includes('pinterest')) return '#BD081C';
     if (name.includes('whatsapp')) return '#25D366';
     
-    // Default color
+    // Default colour
     return '#6b7280';
   };
 
-  const getPlatformType = (platformName: string) => {
-    const name = platformName.toLowerCase();
+  const getPlatformType = (platform: any) => {
+    // PRIORITY: Use type column if available
+    if (platform.type) {
+      return platform.type;
+    }
+    
+    // FALLBACK: Derive from name
+    const name = (platform.name || platform.display_name || '').toLowerCase();
     
     if (name.includes('telegram')) {
       if (name.includes('group') || name.includes('chat')) {
@@ -277,7 +300,7 @@ const EnhancedContentCreationForm = ({
     return 'other';
   };
 
-  // Create detailed platforms array with full info
+  // Create detailed platforms array with full info including platform_icon and type
   const createDetailedPlatforms = (selectedPlatformIds: string[]) => {
     return selectedPlatformIds.map(platformId => {
       const platform = activePlatforms.find(p => p.id === platformId);
@@ -287,9 +310,10 @@ const EnhancedContentCreationForm = ({
         id: platform.id,
         name: platform.name,
         url: platform.url || '',
-        symbol: getPlatformSymbol(platform.name),
-        color: getPlatformColor(platform.name),
-        type: getPlatformType(platform.name),
+        platform_icon: platform.platform_icon || getPlatformSymbol(platform), // FIXED: Include platform_icon
+        type: platform.type || getPlatformType(platform), // FIXED: Include type
+        symbol: getPlatformSymbol(platform),
+        color: getPlatformColor(platform),
         isActive: platform.isActive,
         isDefault: platform.isDefault
       };
@@ -411,7 +435,7 @@ const EnhancedContentCreationForm = ({
     return `${theme}-${audience}-${media}-${template}-${character}-${voiceStyle}-${String(randomNum).padStart(3, '0')}`;
   };
 
-  // Initialize and update content ID based on selections
+  // Initialise and update content ID based on selections
   useEffect(() => {
     const newId = generateContentId();
     setContentId(newId);
@@ -879,6 +903,7 @@ const EnhancedContentCreationForm = ({
     if (url.length <= maxLength) return url;
     return url.substring(0, maxLength) + '...';
   };
+  
   return (
     <div style={{
       backgroundColor: isDarkMode ? '#1e293b' : 'white',
@@ -911,6 +936,7 @@ const EnhancedContentCreationForm = ({
               fontSize: '14px',
               margin: '0'
             }}>
+              {/* FIXED ISSUE #1: UK English */}
               {isEditingPost ? `Editing post: ${contentId}` :
                isEditingTemplate ? `Working from template` :
                'Design and prepare your social media content for publishing (UK English)'
@@ -982,7 +1008,7 @@ const EnhancedContentCreationForm = ({
               </option>
             ))}
           </select>
-          
+
           {/* Character Profile Preview */}
           {selections.characterProfile && (
             <div style={{
@@ -1118,8 +1144,9 @@ const EnhancedContentCreationForm = ({
             'existing_members', 'new_members', 'persona_falcon', 'persona_panther', 
             'persona_wolf', 'persona_lion', 'general_public'
           ]},
+          // FIXED ISSUE #2: Added no_media to options
           { field: 'mediaType', label: 'Media Type *', options: [
-            'image', 'video', 'gifs', 'pdf', 'interactive_media', 'url_link'
+            'no_media', 'image', 'video', 'gifs', 'pdf', 'interactive_media', 'url_link'
           ]},
           { field: 'templateType', label: 'Template Type *', options: [
             'social_media', 'presentation', 'video_message', 'anica_chat', 'blog_posts', 
@@ -1161,7 +1188,7 @@ const EnhancedContentCreationForm = ({
                 paddingRight: '40px'
               }}
             >
-              <option value="">{field === 'platform' ? 'Generic (no optimization)...' : `Select ${label.toLowerCase().replace(' *', '')}...`}</option>
+              <option value="">{field === 'platform' ? 'Generic (no optimisation)...' : `Select ${label.toLowerCase().replace(' *', '')}...`}</option>
               {options.map(option => (
                 <option key={option} value={option}>
                   {option.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
@@ -1171,7 +1198,8 @@ const EnhancedContentCreationForm = ({
           </div>
         ))}
         
-        {/* Platform Optimization Selector */}
+        {/* FIXED ISSUE #1: UK English - "Optimise" not "Optimize" */}
+        {/* Platform Optimisation Selector */}
         <div>
           <label style={{
             display: 'block',
@@ -1182,7 +1210,7 @@ const EnhancedContentCreationForm = ({
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
           }}>
-            Optimize For Platform
+            Optimise For Platform
           </label>
           <select
             value={selections.platform}
@@ -1204,7 +1232,7 @@ const EnhancedContentCreationForm = ({
               paddingRight: '40px'
             }}
           >
-            <option value="">Generic (no optimization)...</option>
+            <option value="">Generic (no optimisation)...</option>
             <option value="instagram">Instagram</option>
             <option value="facebook">Facebook</option>
             <option value="linkedin">LinkedIn</option>
@@ -1218,6 +1246,7 @@ const EnhancedContentCreationForm = ({
         </div>
       </div>
 
+      {/* FIXED ISSUE #1: UK English - "Optimisation" not "Optimization" */}
       {/* Platform-Specific Field Information */}
       {fieldConfig && (
         <div style={{
@@ -1234,7 +1263,7 @@ const EnhancedContentCreationForm = ({
             color: isDarkMode ? '#60a5fa' : '#1e40af',
             margin: '0 0 8px 0'
           }}>
-            Platform Optimization: {selections.platform?.toUpperCase()}
+            Platform Optimisation: {selections.platform?.toUpperCase()}
           </h4>
           <div style={{
             display: 'grid',
@@ -1529,6 +1558,7 @@ const EnhancedContentCreationForm = ({
         )}
       </div>
 
+      {/* FIXED ISSUE #1: UK English throughout all content fields */}
       {/* Content Fields - Title, Description, Hashtags, Keywords, CTA */}
       <div style={{ 
         display: 'grid', 
@@ -2021,7 +2051,7 @@ const EnhancedContentCreationForm = ({
         </div>
       </div>
 
-      {/* Platform Selection for Publishing */}
+{/* Platform Selection for Publishing */}
       <div style={{ marginBottom: '24px', width: '85%' }}>
         <label style={{
           display: 'block',
@@ -2160,6 +2190,7 @@ const EnhancedContentCreationForm = ({
         </button>
       </div>
       
+      {/* FIXED ISSUE #1 & #3: UK English + Platform icon/type usage in Live Preview */}
       {/* Live Preview Section - Shows Exact Final Post Format */}
       {(selections.characterProfile || content.title || content.description || mediaFiles.length > 0) && (
         <div style={{
@@ -2209,7 +2240,7 @@ const EnhancedContentCreationForm = ({
                 backgroundColor: isDarkMode ? '#f8fafc' : '#f9fafb',
                 borderBottom: `1px solid ${isDarkMode ? '#e5e7eb' : '#e5e7eb'}`
               }}>
-                {/* Platform Preview Info */}
+                {/* FIXED ISSUE #1: UK English - "Optimised" */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -2224,9 +2255,9 @@ const EnhancedContentCreationForm = ({
                 }}>
                   <Eye style={{ height: '14px', width: '14px' }} />
                   {selections.platform ? (
-                    <span>Platform Preview: {selections.platform.toUpperCase()} - Optimized Size</span>
+                    <span>Platform Preview: {selections.platform.toUpperCase()} - Optimised Size</span>
                   ) : (
-                    <span>Generic preview (no platform optimization selected)</span>
+                    <span>Generic preview (no platform optimisation selected)</span>
                   )}
                 </div>
 
@@ -2443,6 +2474,7 @@ const EnhancedContentCreationForm = ({
                         ))}
                       </div>
 
+                      {/* FIXED ISSUE #1: UK English - "optimises", "favours" */}
                       {selections.platform && (
                         <div style={{
                           fontSize: '11px',
@@ -2456,13 +2488,13 @@ const EnhancedContentCreationForm = ({
                           borderRadius: '6px'
                         }}>
                           {selections.platform === 'instagram' && 'Instagram will crop images to square format for feed posts. Stories use 9:16 ratio.'}
-                          {selections.platform === 'tiktok' && 'TikTok optimizes for vertical 9:16 video format for maximum engagement.'}
+                          {selections.platform === 'tiktok' && 'TikTok optimises for vertical 9:16 video format for maximum engagement.'}
                           {selections.platform === 'youtube' && 'YouTube thumbnails work best at 16:9 ratio with bold, readable visuals.'}
                           {selections.platform === 'facebook' && 'Facebook recommends 1.91:1 ratio for optimal feed display and engagement.'}
                           {selections.platform === 'twitter' && 'Twitter displays images best at 16:9 ratio in timeline feeds.'}
                           {selections.platform === 'linkedin' && 'LinkedIn professional posts perform well with 1.91:1 landscape format.'}
                           {selections.platform === 'telegram' && 'Telegram displays media in original dimensions and automatically adjusts for optimal viewing.'}
-                          {selections.platform === 'pinterest' && 'Pinterest favors vertical 2:3 pins for discovery and engagement.'}
+                          {selections.platform === 'pinterest' && 'Pinterest favours vertical 2:3 pins for discovery and engagement.'}
                         </div>
                       )}
                     </div>
@@ -2607,6 +2639,7 @@ const EnhancedContentCreationForm = ({
             </div>
           </div>
 
+          {/* FIXED ISSUE #3: Platform badges using platform_icon and type columns */}
           {selectedPlatforms.length > 0 && (
             <div style={{
               marginTop: '20px',
@@ -2639,16 +2672,32 @@ const EnhancedContentCreationForm = ({
                   const platform = activePlatforms.find(p => p.id === platformId);
                   if (!platform) return null;
                   
+                  // FIXED ISSUE #3: Use platform_icon and type columns for display
+                  const platformSymbol = getPlatformSymbol(platform);
+                  const platformColor = getPlatformColor(platform);
+                  
                   return (
                     <div key={platformId} style={{
                       padding: '6px 12px',
-                      backgroundColor: 'white',
-                      border: `1px solid #d1d5db`,
+                      backgroundColor: platformColor,
+                      border: `1px solid ${platformColor}`,
                       borderRadius: '16px',
                       fontSize: '12px',
-                      fontWeight: '500',
-                      color: '#6b7280'
+                      fontWeight: '600',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
                     }}>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        backgroundColor: 'rgba(255,255,255,0.3)',
+                        padding: '2px 6px',
+                        borderRadius: '4px'
+                      }}>
+                        {platformSymbol}
+                      </span>
                       {platform.name}
                     </div>
                   );
