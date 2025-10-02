@@ -1,4 +1,4 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - FIXED: Platform badge using platform_icon and type columns
+// /src/schedulecomponent/ScheduleComponent.tsx - FIXED: Platform badge display using platformDetails
 import React, { useState, useEffect, useCallback } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
@@ -6,9 +6,9 @@ import EditModal from './components/EditModal';
 import { getTheme, getContainerStyle, getCSSAnimations } from './utils/styleUtils';
 import { Calendar, Clock, Edit3, Trash2, RefreshCw, AlertCircle, CheckCircle, Play, X, ChevronLeft, ChevronRight, Save, XCircle, WifiOff } from 'lucide-react';
 import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './types';
-import { supabase } from './contentcomponent/supabaseAPI';
+import { supabase } from './config';
 
-// FIXED: Platform badge using platform_icon and type columns (no name parsing)
+// FIXED: Platform badge renderer using platform_icon and type columns
 const PlatformBadge: React.FC<{ platform: any }> = ({ platform }) => {
   // FIXED: Use platform_icon column directly (no name parsing)
   const getPlatformIcon = (platform: any): string => {
