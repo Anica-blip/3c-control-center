@@ -1,4 +1,4 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - FIXED: Platform badge display using platformDetails
+// /src/schedulecomponent/ScheduleComponent.tsx - FIXED: Platform badge using platform_icon and type columns
 import React, { useState, useEffect, useCallback } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
@@ -6,37 +6,38 @@ import EditModal from './components/EditModal';
 import { getTheme, getContainerStyle, getCSSAnimations } from './utils/styleUtils';
 import { Calendar, Clock, Edit3, Trash2, RefreshCw, AlertCircle, CheckCircle, Play, X, ChevronLeft, ChevronRight, Save, XCircle, WifiOff } from 'lucide-react';
 import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './types';
-import { supabase } from '../contentcomponent/supabaseAPI';
+import { supabase } from './contentcomponent/supabaseAPI';
 
-// FIXED: Platform badge renderer using enriched platformDetails
+// FIXED: Platform badge using platform_icon and type columns (no name parsing)
 const PlatformBadge: React.FC<{ platform: any }> = ({ platform }) => {
+  // FIXED: Use platform_icon column directly (no name parsing)
   const getPlatformIcon = (platform: any): string => {
-    const name = platform.name || platform.display_name || '';
-    const nameLower = name.toLowerCase();
-    
-    if (nameLower.includes('telegram') || nameLower === 'tg') return 'TG';
-    if (nameLower.includes('youtube') || nameLower === 'yt') return 'YT';
-    if (nameLower.includes('facebook') || nameLower === 'fb') return 'FB';
-    if (nameLower.includes('twitter') || nameLower === 'tw' || nameLower === 'x') return 'TW';
-    if (nameLower.includes('forum') || nameLower === 'fr') return 'FR';
-    
-    return name.substring(0, 2).toUpperCase() || '??';
+    return platform.platform_icon || '??';
   };
 
+  // FIXED: Use type column for Telegram, platform_icon for others
   const getPlatformColor = (platform: any): string => {
-    const name = platform.name || platform.display_name || '';
-    const nameLower = name.toLowerCase();
-    
-    if (nameLower.includes('telegram')) {
-      // Different colors for channel vs group
-      if (platform.channel_group_id && !platform.thread_id) return '#2563eb'; // Channel (darker blue)
-      if (platform.thread_id) return '#3b82f6'; // Group (lighter blue)
-      return '#3b82f6'; // Default Telegram blue
+    // Use type column for Telegram color distinction
+    if (platform.type === 'telegram_group') {
+      return '#f97316'; // Orange for groups
     }
-    if (nameLower.includes('youtube')) return '#ef4444';
-    if (nameLower.includes('facebook')) return '#2563eb';
-    if (nameLower.includes('twitter') || nameLower === 'x') return '#0ea5e9';
-    if (nameLower.includes('forum')) return '#4b5563';
+    if (platform.type === 'telegram_channel') {
+      return '#3b82f6'; // Blue for channels
+    }
+    
+    // Use platform_icon for all other platform colors
+    const icon = platform.platform_icon;
+    if (icon === 'TG') return '#3b82f6';
+    if (icon === 'IG') return '#E4405F';
+    if (icon === 'FB') return '#1877F2';
+    if (icon === 'LI') return '#0A66C2';
+    if (icon === 'TW') return '#000000';
+    if (icon === 'YT') return '#FF0000';
+    if (icon === 'TK') return '#000000';
+    if (icon === 'PT') return '#BD081C';
+    if (icon === 'WA') return '#25D366';
+    if (icon === 'FR') return '#4b5563';
+    if (icon === 'DS') return '#5865F2';
     
     return '#6b7280';
   };
