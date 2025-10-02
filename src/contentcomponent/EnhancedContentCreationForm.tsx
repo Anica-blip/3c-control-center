@@ -213,91 +213,43 @@ const EnhancedContentCreationForm = ({
     return codes[value] || 'XX';
   };
 
-  // FIXED ISSUE #3: Platform symbol and colour mapping functions using platform_icon and type
+  // FIXED ISSUE #3: Platform symbol - DATABASE COLUMN ONLY (no name parsing)
   const getPlatformSymbol = (platform: any) => {
-    // PRIORITY 1: Use platform_icon column if available
-    if (platform.platform_icon) {
-      return platform.platform_icon;
-    }
-    
-    // FALLBACK: Derive from name
-    const name = (platform.name || platform.display_name || '').toLowerCase();
-    
-    if (name.includes('telegram')) return 'TG';
-    if (name.includes('instagram')) return 'IG';
-    if (name.includes('facebook')) return 'FB';
-    if (name.includes('linkedin')) return 'LI';
-    if (name.includes('twitter') || name.includes('x.com')) return 'TW';
-    if (name.includes('youtube')) return 'YT';
-    if (name.includes('tiktok')) return 'TK';
-    if (name.includes('pinterest')) return 'PT';
-    if (name.includes('whatsapp')) return 'WA';
-    
-    // Default fallback
-    return (platform.name || platform.display_name || '').substring(0, 2).toUpperCase() || '??';
+    // Return platform_icon column value ONLY - no fallbacks
+    return platform.platform_icon || '??';
   };
 
-  // FIXED ISSUE #3: Colour detection using type column for Telegram distinction
+  // FIXED ISSUE #3: Colour detection - DATABASE COLUMNS ONLY (platform_icon + type)
   const getPlatformColor = (platform: any) => {
-    const name = (platform.name || platform.display_name || '').toLowerCase();
-    
-    // PRIORITY: Use type column for Telegram channel vs group
-    if (name.includes('telegram')) {
-      if (platform.type === 'telegram_group') {
-        return '#f97316'; // Orange for groups
-      }
-      if (platform.type === 'telegram_channel') {
-        return '#3b82f6'; // Blue for channels
-      }
-      
-      // FALLBACK: Try to detect from name if type is missing
-      if (name.includes('group') || name.includes('chat')) {
-        return '#f97316'; // Orange for groups
-      }
-      return '#3b82f6'; // Default blue for channels
+    // Use type column for Telegram colour distinction
+    if (platform.type === 'telegram_group') {
+      return '#f97316'; // Orange for groups
+    }
+    if (platform.type === 'telegram_channel') {
+      return '#3b82f6'; // Blue for channels
     }
     
-    // Standard platform colours
-    if (name.includes('instagram')) return '#E4405F';
-    if (name.includes('facebook')) return '#1877F2';
-    if (name.includes('linkedin')) return '#0A66C2';
-    if (name.includes('twitter') || name.includes('x.com')) return '#000000';
-    if (name.includes('youtube')) return '#FF0000';
-    if (name.includes('tiktok')) return '#000000';
-    if (name.includes('pinterest')) return '#BD081C';
-    if (name.includes('whatsapp')) return '#25D366';
+    // Use platform_icon for all other platform colours
+    const icon = platform.platform_icon;
+    if (icon === 'TG') return '#3b82f6'; // Telegram default
+    if (icon === 'IG') return '#E4405F'; // Instagram
+    if (icon === 'FB') return '#1877F2'; // Facebook
+    if (icon === 'LI') return '#0A66C2'; // LinkedIn
+    if (icon === 'TW') return '#000000'; // Twitter/X
+    if (icon === 'YT') return '#FF0000'; // YouTube
+    if (icon === 'TK') return '#000000'; // TikTok
+    if (icon === 'PT') return '#BD081C'; // Pinterest
+    if (icon === 'WA') return '#25D366'; // WhatsApp
+    if (icon === 'FR') return '#4b5563'; // Forum
+    if (icon === 'DS') return '#5865F2'; // Discord
     
-    // Default colour
-    return '#6b7280';
+    return '#6b7280'; // Default grey
   };
 
+  // FIXED ISSUE #3: Type detection - DATABASE COLUMN ONLY (no name parsing)
   const getPlatformType = (platform: any) => {
-    // PRIORITY: Use type column if available
-    if (platform.type) {
-      return platform.type;
-    }
-    
-    // FALLBACK: Derive from name
-    const name = (platform.name || platform.display_name || '').toLowerCase();
-    
-    if (name.includes('telegram')) {
-      if (name.includes('group') || name.includes('chat')) {
-        return 'telegram_group';
-      }
-      return 'telegram_channel';
-    }
-    
-    // Standard platform types
-    if (name.includes('instagram')) return 'instagram';
-    if (name.includes('facebook')) return 'facebook';
-    if (name.includes('linkedin')) return 'linkedin';
-    if (name.includes('twitter') || name.includes('x.com')) return 'twitter';
-    if (name.includes('youtube')) return 'youtube';
-    if (name.includes('tiktok')) return 'tiktok';
-    if (name.includes('pinterest')) return 'pinterest';
-    if (name.includes('whatsapp')) return 'whatsapp';
-    
-    return 'other';
+    // Return type column value ONLY - no fallbacks
+    return platform.type || 'other';
   };
 
   // Create detailed platforms array with full info including platform_icon and type
