@@ -1958,9 +1958,10 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
               marginBottom: '30px',
               boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)'
             }}>
-            <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-              {editingColor ? 'Edit Brand Colour' : 'Add New Brand Colour'}
-            </h4>
+              <h4 style={{ color: theme.textPrimary, marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                {editingColor ? 'Edit Brand Colour' : 'Add New Brand Colour'}
+              </h4>
+              
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                 <div>
                   <label style={{
@@ -2064,33 +2065,33 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                 />
               </div>
 
-              {/* Colour preview with always white background for visibility */}
+              {/* Colour preview with transparent background for dark mode compatibility */}
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '16px', 
                 marginBottom: '25px',
                 padding: '20px',
-                backgroundColor: '#fff', // PREVIEW SQUARE ALWAYS WHITE
+                backgroundColor: 'transparent',
                 borderRadius: '8px',
-                border: '2px solid #e5e7eb' // PREVIEW SQUARE ALWAYS LIGHT BORDER
-             }}>
-             <div style={{
-              width: '60px',
-              height: '60px',
-              backgroundColor: newColor.hex,
-              borderRadius: '8px',
-              border: '1px solid #e5e7eb' // always light border
-            }}></div>
-            <div>
-              <div style={{ fontSize: '16px', fontWeight: 'bold', color: theme.textPrimary, marginBottom: '4px' }}>
-                {newColor.name || 'New Colour'}
-            </div>
-            <div style={{ fontSize: '14px', color: theme.textSecondary, fontFamily: 'monospace' }}>
-              {newColor.hex}
-            </div>
-          </div>
-        </div>
+                border: `2px solid ${theme.borderColor}`
+              }}>
+                <div style={{
+                  width: '60px',
+                  height: '60px',
+                  backgroundColor: newColor.hex,
+                  borderRadius: '8px',
+                  border: `2px solid ${theme.borderColor}`
+                }}></div>
+                <div>
+                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: theme.textPrimary, marginBottom: '4px' }}>
+                    {newColor.name || 'New Colour'}
+                  </div>
+                  <div style={{ fontSize: '14px', color: theme.textSecondary, fontFamily: 'monospace' }}>
+                    {newColor.hex}
+                  </div>
+                </div>
+              </div>
 
               {/* Form Actions */}
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
@@ -2187,26 +2188,16 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                   backgroundColor: theme.background,
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-                  <div style={{
-                    width: '64px',
-                    height: '64px',
-                    backgroundColor: '#fff',
-                    borderRadius: '12px',
-                    border: '2px solid #e5e7eb',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
                     <div style={{
-                      width: '48px',
-                      height: '48px',
+                      width: '64px',
+                      height: '64px',
                       backgroundColor: color.hex_code || color.hex,
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb'
-                    }} />
-                   <div>
+                      borderRadius: '12px',
+                      border: '2px solid #ffffff',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
+                    }}></div>
+                    <div>
                       <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
                         {color.name}
                       </h4>
