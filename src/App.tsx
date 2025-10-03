@@ -1371,13 +1371,6 @@ function App() {
               </div>
             </div>
           )}
-          {/* AI Chat Manager section */}
-          {activeSection === 'ai-chat-manager' && <AiChatManagerComponent />}
-        </div>
-      </div>
-    </ThemeContext.Provider>
-  );
-}
 
           {/* NEW: AI Chat Manager section */}
           {activeSection === 'ai-chat-manager' && <AiChatManagerComponent />}
@@ -1387,7 +1380,6 @@ function App() {
   );
 }
 
-// Place this OUTSIDE the App function!
 const AiChatManagerComponent = () => {
   const { isDarkMode } = useTheme();
   
