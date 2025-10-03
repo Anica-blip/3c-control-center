@@ -6,6 +6,7 @@ import ScheduleComponent from './schedulecomponent';
 import MarketingComponent from './marketingcomponent';
 import SettingsComponent from './settingscomponent';
 import AdminComponents from './admincomponents';
+import { useI18n } from './i18n';
 
 // Theme Context
 const ThemeContext = createContext({
@@ -263,7 +264,7 @@ const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) =>
             fontSize: '14px',
             margin: '0'
           }}>
-            Control Center Dashboard
+            Control Centre Dashboard
           </p>
         </div>
 
@@ -340,6 +341,7 @@ const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) =>
 // =============================================================================
 const OverviewComponent = () => {
   const { isDarkMode } = useTheme();
+  const { t } = useI18n();
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -350,19 +352,19 @@ const OverviewComponent = () => {
   }, []);
 
   const quickActions = [
-    { icon: '📄', label: 'Create Content', section: 'content-manager', color: '#3b82f6' },
-    { icon: '📅', label: 'Schedule Posts', section: 'schedule-manager', color: '#10b981' },
-    { icon: '💬', label: 'Manage Chat', section: 'webchat-public', color: '#8b5cf6' },
-    { icon: '📊', label: 'View Analytics', section: 'marketing-center', color: '#f59e0b' },
-    { icon: '⚙️', label: 'Settings', section: 'dashboard-settings', color: '#6b7280' },
-    { icon: '🔧', label: 'Admin Panel', section: 'admin-center', color: '#ef4444' }
+    { icon: '📄', label: t('nav.content'), section: 'content-manager', color: '#3b82f6' },
+    { icon: '📅', label: t('nav.schedule'), section: 'schedule-manager', color: '#10b981' },
+    { icon: '💬', label: t('nav.webchat'), section: 'webchat-public', color: '#8b5cf6' },
+    { icon: '📊', label: t('nav.marketing'), section: 'marketing-center', color: '#f59e0b' },
+    { icon: '⚙️', label: t('nav.settings'), section: 'dashboard-settings', color: '#6b7280' },
+    { icon: '🔧', label: t('nav.admin'), section: 'admin-center', color: '#ef4444' }
   ];
 
   const recentActivity = [
     { icon: '📄', action: 'New content created', time: '2 min ago', status: 'success' },
     { icon: '📤', action: 'Post scheduled for tomorrow', time: '15 min ago', status: 'pending' },
     { icon: '💬', action: 'Chat message received', time: '1 hour ago', status: 'info' },
-    { icon: '🔄', action: 'Settings updated', time: '3 hours ago', status: 'success' },
+    { icon: '📄', action: 'Settings updated', time: '3 hours ago', status: 'success' },
     { icon: '📊', action: 'Weekly report generated', time: '1 day ago', status: 'info' }
   ];
 
@@ -400,7 +402,7 @@ const OverviewComponent = () => {
                 color: isDarkMode ? '#60a5fa' : '#3b82f6',
                 margin: '0 0 8px 0'
               }}>
-                🎯 Overview
+                🎯 {t('nav.overview')}
               </h1>
               <p style={{
                 color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -439,7 +441,7 @@ const OverviewComponent = () => {
                 fontSize: '10px',
                 color: isDarkMode ? '#64748b' : '#9ca3af'
               }}>
-                WEST (UTC+1)
+                {t('dashboard.timezone')}
               </div>
             </div>
           </div>
@@ -526,7 +528,7 @@ const OverviewComponent = () => {
               {quickActions.map((action, index) => (
                 <button
                   key={index}
-                  onClick={() => setActiveSection(action.section)}
+                  onClick={() => (window as any).setActiveSection?.(action.section)}
                   style={{
                     padding: '16px',
                     backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
@@ -682,7 +684,7 @@ const OverviewComponent = () => {
             fontSize: '11px',
             margin: '0'
           }}>
-            🌎 Language: English (UK) • 🕘 Timezone: WEST (UTC+1) • 🎯 3C Control Center v2.0
+            🌎 Language: English (UK) • 🕘 Timezone: WEST (UTC+1) • 🎯 3C Control Centre v2.0
           </p>
         </div>
       </div>
@@ -702,7 +704,7 @@ const ThemedSettingsComponent = withThemeWrapper(SettingsComponent);
 const ThemedAdminComponents = withThemeWrapper(AdminComponents);
 
 // =============================================================================
-// MAIN APP - With Working Patterns Applied
+// MAIN APP - With Working Patterns Applied + I18N
 // =============================================================================
 function App() {
   const [activeSection, setActiveSection] = useState('overview');
@@ -713,6 +715,13 @@ function App() {
   const [githubUser, setGitHubUser] = useState<AuthenticatedUser | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  
+  const { t, setLanguage: setI18nLanguage } = useI18n();
+
+  // Make setActiveSection available globally for overview quick actions
+  useEffect(() => {
+    (window as any).setActiveSection = setActiveSection;
+  }, []);
 
   useEffect(() => {
     document.body.style.backgroundColor = isDarkMode ? '#0f172a' : '#f8fafc';
@@ -754,11 +763,12 @@ function App() {
       }
       setIsDarkMode(darkMode);
       setCurrentLanguage(language);
+      setI18nLanguage(language);
       setIsLoading(false);
     };
 
     checkAuth();
-  }, []);
+  }, [setI18nLanguage]);
 
   const handleLogin = (userData: AuthenticatedUser) => {
     if (userData.login !== AUTHORIZED_USER) {
@@ -788,7 +798,7 @@ function App() {
 
   const changeLanguage = (lang: string) => {
     setCurrentLanguage(lang);
-    localStorage.setItem('3c-language', lang);
+    setI18nLanguage(lang);
     setShowLanguageDropdown(false);
   };
 
@@ -800,13 +810,13 @@ function App() {
   ];
 
   const navigationItems = [
-    { id: 'overview', icon: '🧵', label: 'Overview', available: true },
-    { id: 'content-manager', icon: '📄', label: 'Content Manager', available: true },
-    { id: 'webchat-public', icon: '💬', label: 'WebChat Public', available: true },
-    { id: 'schedule-manager', icon: '📅', label: 'Schedule Manager', available: true },
-    { id: 'marketing-center', icon: '🧠', label: 'Marketing Center', available: true },
-    { id: 'dashboard-settings', icon: '⚙️', label: 'Dashboard Settings', available: true },
-    { id: 'admin-center', icon: '🔧', label: 'Admin Center', available: true }
+    { id: 'overview', icon: '🧵', label: t('nav.overview'), available: true },
+    { id: 'content-manager', icon: '📄', label: t('nav.content'), available: true },
+    { id: 'webchat-public', icon: '💬', label: t('nav.webchat'), available: true },
+    { id: 'schedule-manager', icon: '📅', label: t('nav.schedule'), available: true },
+    { id: 'marketing-center', icon: '🧠', label: t('nav.marketing'), available: true },
+    { id: 'dashboard-settings', icon: '⚙️', label: t('nav.settings'), available: true },
+    { id: 'admin-center', icon: '🔧', label: t('nav.admin'), available: true }
   ];
 
   // Loading screen
@@ -1035,14 +1045,14 @@ function App() {
               fontSize: '20px',
               fontWeight: 'bold'
             }}>
-              3C Thread To Success
+              {t('dashboard.title')}
             </h2>
             <p style={{ 
               margin: '5px 0 0 0', 
               color: isDarkMode ? '#94a3b8' : '#6b7280', 
               fontSize: '14px' 
             }}>
-              Control Center
+              {t('dashboard.subtitle')}
             </p>
           </div>
 
@@ -1107,14 +1117,14 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    📄 Content Manager
+                    📄 {t('nav.content')}
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
                     fontSize: '14px',
                     margin: '0'
                   }}>
-                    Create, manage, and schedule your social media content with ease
+                    {t('content.subtitle')}
                   </p>
                 </div>
                 <div className="content-manager">
@@ -1147,7 +1157,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    💬 Chat Manager - Public
+                    💬 {t('nav.webchat')}
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1187,7 +1197,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    📅 Schedule Manager
+                    📅 {t('nav.schedule')}
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1227,7 +1237,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    🧠 Marketing Center
+                    🧠 {t('nav.marketing')}
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1267,7 +1277,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    ⚙️ Dashboard Settings
+                    ⚙️ {t('nav.settings')}
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1307,7 +1317,7 @@ function App() {
                     color: isDarkMode ? '#60a5fa' : '#3b82f6',
                     margin: '0 0 8px 0'
                   }}>
-                    🔧 Admin Center
+                    🔧 {t('nav.admin')}
                   </h1>
                   <p style={{
                     color: isDarkMode ? '#94a3b8' : '#6b7280',
