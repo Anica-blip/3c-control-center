@@ -823,7 +823,7 @@ function App() {
     id: 'ai-chat-manager', 
     icon: '🤖', 
     label: 'AI Chat Manager', 
-    available: false,
+    available: true, // <-- Set to true!
     note: 'Admin/Brand feature'
   };
   
@@ -1095,13 +1095,45 @@ function App() {
                 <span>{item.label}</span>
               </button>
             ))}
+
+            {/* Render the special bottom nav item */}
+            {bottomNavItem.available && (
+              <button
+                key={bottomNavItem.id}
+                onClick={() => setActiveSection(bottomNavItem.id)}
+                style={{
+                  width: '100%',
+                  padding: '12px 15px',
+                  margin: '30px 0 0 0',
+                  backgroundColor: activeSection === bottomNavItem.id
+                    ? '#3b82f6'
+                    : 'transparent',
+                  color: activeSection === bottomNavItem.id
+                    ? '#ffffff'
+                    : (isDarkMode ? '#f8fafc' : '#374151'),
+                  border: 'none',
+                  borderRadius: '8px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: activeSection === bottomNavItem.id ? 'bold' : 'normal',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  transition: 'all 0.2s'
+                }}
+                title={bottomNavItem.note}
+              >
+                <span style={{ fontSize: '16px' }}>{bottomNavItem.icon}</span>
+                <span>{bottomNavItem.label}</span>
+              </button>
+            )}
           </div>
         </div>
-
+        
         {/* MAIN CONTENT AREA - With Working Pattern Headers & Dark Mode */}
         <div style={{ flex: '1', backgroundColor: isDarkMode ? '#0f172a' : '#ffffff' }}>
           {activeSection === 'overview' && <OverviewComponent />}
-          
           {activeSection === 'content-manager' && (
             <div style={{ 
               minHeight: '100vh',
@@ -1141,7 +1173,6 @@ function App() {
               </div>
             </div>
           )}
-          
           {activeSection === 'webchat-public' && (
             <div style={{ 
               minHeight: '100vh',
@@ -1181,7 +1212,6 @@ function App() {
               </div>
             </div>
           )}
-          
           {activeSection === 'schedule-manager' && (
             <div style={{ 
               minHeight: '100vh',
@@ -1221,7 +1251,6 @@ function App() {
               </div>
             </div>
           )}
-          
           {activeSection === 'marketing-center' && (
             <div style={{ 
               minHeight: '100vh',
@@ -1261,7 +1290,6 @@ function App() {
               </div>
             </div>
           )}
-          
           {activeSection === 'dashboard-settings' && (
             <div style={{ 
               minHeight: '100vh',
@@ -1301,7 +1329,6 @@ function App() {
               </div>
             </div>
           )}
-          
           {activeSection === 'admin-center' && (
             <div style={{ 
               minHeight: '100vh',
@@ -1341,6 +1368,9 @@ function App() {
               </div>
             </div>
           )}
+
+          {/* NEW: AI Chat Manager section */}
+          {activeSection === 'ai-chat-manager' && <AiChatManagerComponent />}
         </div>
       </div>
     </ThemeContext.Provider>
