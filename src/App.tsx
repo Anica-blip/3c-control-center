@@ -402,7 +402,7 @@ const OverviewComponent = () => {
                 color: isDarkMode ? '#60a5fa' : '#3b82f6',
                 margin: '0 0 8px 0'
               }}>
-                💎{t('nav.overview')}
+                💎 {t('nav.overview')}
               </h1>
               <p style={{
                 color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -1347,7 +1347,7 @@ function App() {
   );
 }
 
-// AI Chat Manager Component (Coming Soon)
+// AI Chat Manager Component
 const AiChatManagerComponent = () => {
   const { isDarkMode } = useTheme();
   
