@@ -2064,23 +2064,23 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                 />
               </div>
 
-              {/* Colour preview with transparent background for dark mode compatibility */}
+              {/* Colour preview with always white background for visibility */}
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '16px', 
                 marginBottom: '25px',
                 padding: '20px',
-                backgroundColor: 'transparent',
+                backgroundColor: '#fff', // PREVIEW SQUARE ALWAYS WHITE
                 borderRadius: '8px',
-                border: `2px solid ${isDarkMode ? '#222e3a' : '#e5e7eb'}` // COLOR BORDER FIX
+                border: '2px solid #e5e7eb' // PREVIEW SQUARE ALWAYS LIGHT BORDER
              }}>
              <div style={{
               width: '60px',
               height: '60px',
               backgroundColor: newColor.hex,
               borderRadius: '8px',
-              border: `2px solid ${isDarkMode ? '#222e3a' : '#e5e7eb'}` // COLOR BORDER FIX
+              border: '1px solid #e5e7eb' // always light border
             }}></div>
             <div>
               <div style={{ fontSize: '16px', fontWeight: 'bold', color: theme.textPrimary, marginBottom: '4px' }}>
@@ -2188,13 +2188,41 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                    {/* Outer preview: always white */}                    
                     <div style={{
                       width: '64px',
                       height: '64px',
-                      backgroundColor: color.hex_code || color.hex,
+                      backgroundColor: '#fff', // PREVIEW SQUARE ALWAYS WHITE
                       borderRadius: '12px',
-                      border: `2px solid ${isDarkMode ? '#222e3a' : '#ffffff'}`,
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
+                      border: '2px solid #e5e7eb', // always light border
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {/* Inner: actual color */}
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        backgroundColor: color.hex_code || color.hex,
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb'
+                      }} />
+                    </div>
+                     <div>
+                       <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
+                         {color.name}
+                       </h4>
+                       <div style={{ 
+                         fontSize: '14px', 
+                         color: theme.textSecondary, 
+                         fontFamily: 'monospace', 
+                         fontWeight: 'bold' 
+                       }}>
+                        {color.hex_code || color.hex}
+                       </div>
+                     </div>
+                   </div>
                     }}></div>
                     <div>
                       <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
