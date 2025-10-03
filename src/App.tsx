@@ -264,7 +264,7 @@ const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) =>
             fontSize: '14px',
             margin: '0'
           }}>
-            Control Center Dashboard
+            Control Centre Dashboard
           </p>
         </div>
 
@@ -684,7 +684,7 @@ const OverviewComponent = () => {
             fontSize: '11px',
             margin: '0'
           }}>
-            🌎 Language: English (UK) • 🕘 Timezone: WEST (UTC+1) • 💎 3C Control Center v2.0
+            🌎 Language: English (UK) • 🕘 Timezone: WEST (UTC+1) • 💎 3C Control Centre v2.0
           </p>
         </div>
       </div>
@@ -839,7 +839,7 @@ function App() {
         fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}>
         <div style={{ textAlign: 'center', color: 'white' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🧵</div>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>💎</div>
           <div style={{ fontSize: '18px' }}>Loading 3C Thread To Success...</div>
           <div style={{ fontSize: '14px', marginTop: '8px', opacity: 0.8 }}>Professional Dashboard</div>
         </div>
@@ -1106,10 +1106,10 @@ function App() {
                   padding: '12px 15px',
                   margin: '30px 0 0 0',
                   backgroundColor: activeSection === bottomNavItem.id
-                    ? '#3b82f6'
+                    ? (isDarkMode ? '#1e293b' : '#f8fafc') // subtle bg, not green
                     : 'transparent',
                   color: activeSection === bottomNavItem.id
-                    ? '#ffffff'
+                    ? '#10b981' // green text when active!
                     : (isDarkMode ? '#f8fafc' : '#374151'),
                   border: 'none',
                   borderRadius: '8px',
@@ -1120,16 +1120,17 @@ function App() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '10px',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  borderLeft: activeSection === bottomNavItem.id
+                    ? '6px solid #10b981' // <-- GREEN BAR!
+                    : '6px solid transparent'
                 }}
                 title={bottomNavItem.note}
-              >
+               >
                 <span style={{ fontSize: '16px' }}>{bottomNavItem.icon}</span>
                 <span>{bottomNavItem.label}</span>
-              </button>
-            )}
-          </div>
-        </div>
+               </button>
+             )}
         
         {/* MAIN CONTENT AREA - With Working Pattern Headers & Dark Mode */}
         <div style={{ flex: '1', backgroundColor: isDarkMode ? '#0f172a' : '#ffffff' }}>
