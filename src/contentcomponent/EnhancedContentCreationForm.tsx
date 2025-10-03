@@ -46,17 +46,13 @@ const EnhancedContentCreationForm = ({
   isLoadingProfiles?: boolean;
   editingPost?: ContentPost | null;
   onEditComplete?: () => void;
+  // ADD THESE NEW PROPS FOR TEMPLATE LIBRARY INTEGRATION:
   loadedTemplate?: PendingLibraryTemplate | null;
   onTemplateLoaded?: () => void;
 }) => {
   const { isDarkMode } = useTheme();
   // ADD i18n HOOK
   const { t } = useI18n();
-  // ADD THESE NEW PROPS FOR TEMPLATE LIBRARY INTEGRATION:
-  loadedTemplate?: PendingLibraryTemplate | null;
-  onTemplateLoaded?: () => void;
-}) => {
-  const { isDarkMode } = useTheme();
 
 // Platform state management - separate from props
   const [loadedPlatforms, setLoadedPlatforms] = useState<SocialPlatform[]>([]);
