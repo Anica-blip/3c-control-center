@@ -15,7 +15,7 @@ import {
 // ADD NEW IMPORT FOR TEMPLATE LIBRARY INTEGRATION
 import { PendingLibraryTemplate, templateEventEmitter } from './TemplateLibrary';
 // ADD i18n IMPORT
-import { useI18n } from './i18n';
+import { useI18n } from '../i18n';
 
 // Theme Context (assuming this comes from your App.tsx)
 const ThemeContext = React.createContext({
