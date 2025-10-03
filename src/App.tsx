@@ -264,7 +264,7 @@ const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) =>
             fontSize: '14px',
             margin: '0'
           }}>
-            Control Centre Dashboard
+            Control Center Dashboard
           </p>
         </div>
 
@@ -402,7 +402,7 @@ const OverviewComponent = () => {
                 color: isDarkMode ? '#60a5fa' : '#3b82f6',
                 margin: '0 0 8px 0'
               }}>
-                🎯 {t('nav.overview')}
+                💎{t('nav.overview')}
               </h1>
               <p style={{
                 color: isDarkMode ? '#94a3b8' : '#6b7280',
@@ -684,7 +684,7 @@ const OverviewComponent = () => {
             fontSize: '11px',
             margin: '0'
           }}>
-            🌎 Language: English (UK) • 🕘 Timezone: WEST (UTC+1) • 🎯 3C Control Centre v2.0
+            🌎 Language: English (UK) • 🕘 Timezone: WEST (UTC+1) • 💎 3C Control Center v2.0
           </p>
         </div>
       </div>
@@ -819,6 +819,14 @@ function App() {
     { id: 'admin-center', icon: '🔧', label: t('nav.admin'), available: true }
   ];
 
+  const bottomNavItem = { 
+    id: 'ai-chat-manager', 
+    icon: '🤖', 
+    label: 'AI Chat Manager', 
+    available: false,
+    note: 'Admin/Brand feature'
+  };
+  
   // Loading screen
   if (isLoading) {
     return (
@@ -1338,5 +1346,156 @@ function App() {
     </ThemeContext.Provider>
   );
 }
+
+// AI Chat Manager Component (Coming Soon)
+const AiChatManagerComponent = () => {
+  const { isDarkMode } = useTheme();
+  
+  return (
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+      paddingTop: '80px',
+      padding: '80px 20px 20px 20px'
+    }}>
+      <div style={{
+        maxWidth: '1200px',
+        margin: '0 auto'
+      }}>
+        {/* Header */}
+        <div style={{
+          backgroundColor: isDarkMode ? '#1e293b' : 'white',
+          boxShadow: isDarkMode 
+            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          borderRadius: '8px',
+          padding: '20px',
+          marginBottom: '20px',
+          border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+        }}>
+          <h1 style={{
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: isDarkMode ? '#60a5fa' : '#3b82f6',
+            margin: '0 0 8px 0'
+          }}>
+            🤖 AI Chat Manager
+          </h1>
+          <p style={{
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            fontSize: '14px',
+            margin: '0'
+          }}>
+            Advanced AI conversation management and automation
+          </p>
+        </div>
+
+        {/* Coming Soon Content */}
+        <div style={{
+          backgroundColor: isDarkMode ? '#1e293b' : 'white',
+          borderRadius: '8px',
+          boxShadow: isDarkMode 
+            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          padding: '60px',
+          textAlign: 'center',
+          border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb'
+        }}>
+          <div style={{
+            fontSize: '96px',
+            marginBottom: '24px'
+          }}>
+            🤖
+          </div>
+          <h2 style={{
+            fontSize: '32px',
+            fontWeight: 'bold',
+            color: isDarkMode ? '#60a5fa' : '#3b82f6',
+            marginBottom: '16px',
+            margin: '0 0 16px 0'
+          }}>
+            AI Chat Manager
+          </h2>
+          <h3 style={{
+            fontSize: '20px',
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            marginBottom: '24px',
+            margin: '0 0 24px 0'
+          }}>
+            Coming Soon
+          </h3>
+          <p style={{
+            fontSize: '16px',
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            maxWidth: '600px',
+            margin: '0 auto 32px auto',
+            lineHeight: '1.6'
+          }}>
+            Advanced AI conversation management, automated responses, intelligent routing, 
+            and comprehensive analytics for your customer communications. This feature will 
+            integrate with all your existing chat platforms and provide powerful automation tools.
+          </p>
+          
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '16px',
+            maxWidth: '800px',
+            margin: '0 auto 32px auto'
+          }}>
+            <div style={{
+              padding: '16px',
+              backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
+              borderRadius: '8px',
+              border: isDarkMode ? '1px solid #475569' : '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: '24px', marginBottom: '8px' }}>🧠</div>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: isDarkMode ? '#f8fafc' : '#374151' }}>Smart Routing</div>
+            </div>
+            <div style={{
+              padding: '16px',
+              backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
+              borderRadius: '8px',
+              border: isDarkMode ? '1px solid #475569' : '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚡</div>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: isDarkMode ? '#f8fafc' : '#374151' }}>Auto Responses</div>
+            </div>
+            <div style={{
+              padding: '16px',
+              backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
+              borderRadius: '8px',
+              border: isDarkMode ? '1px solid #475569' : '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: '24px', marginBottom: '8px' }}>📊</div>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: isDarkMode ? '#f8fafc' : '#374151' }}>Analytics</div>
+            </div>
+            <div style={{
+              padding: '16px',
+              backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
+              borderRadius: '8px',
+              border: isDarkMode ? '1px solid #475569' : '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: '24px', marginBottom: '8px' }}>🔗</div>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: isDarkMode ? '#f8fafc' : '#374151' }}>Multi-Platform</div>
+            </div>
+          </div>
+
+          <div style={{
+            display: 'inline-block',
+            padding: '12px 24px',
+            backgroundColor: isDarkMode ? '#3b82f6' + '20' : '#e0e7ff',
+            color: isDarkMode ? '#60a5fa' : '#4338ca',
+            borderRadius: '20px',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}>
+            🚀 Admin/Brand Feature
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default App;
