@@ -6,7 +6,7 @@ import ScheduleComponent from './schedulecomponent';
 import MarketingComponent from './marketingcomponent';
 import SettingsComponent from './settingscomponent';
 import AdminComponents from './admincomponents';
-import { useI18n } from './i18n';
+import { useI18n } from './i18n.tsx';
 
 // Theme Context
 const ThemeContext = createContext({
