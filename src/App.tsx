@@ -823,7 +823,7 @@ function App() {
     id: 'ai-chat-manager', 
     icon: '🤖', 
     label: 'AI Chat Manager', 
-    available: true, // <-- Set to true!
+    available: true, // Show always
     note: 'Admin/Brand feature'
   };
   
@@ -1096,7 +1096,7 @@ function App() {
               </button>
             ))}
 
-            {/* Render the special bottom nav item */}
+            {/* Render the special bottom nav item with green bar */}
             {bottomNavItem.available && (
               <button
                 key={bottomNavItem.id}
@@ -1106,12 +1106,15 @@ function App() {
                   padding: '12px 15px',
                   margin: '30px 0 0 0',
                   backgroundColor: activeSection === bottomNavItem.id
-                    ? (isDarkMode ? '#1e293b' : '#f8fafc') // subtle bg, not green
+                    ? (isDarkMode ? '#1e293b' : '#f8fafc')
                     : 'transparent',
                   color: activeSection === bottomNavItem.id
-                    ? '#10b981' // green text when active!
+                    ? '#10b981'
                     : (isDarkMode ? '#f8fafc' : '#374151'),
                   border: 'none',
+                  borderLeft: activeSection === bottomNavItem.id
+                    ? '6px solid #10b981'
+                    : '6px solid transparent',
                   borderRadius: '8px',
                   textAlign: 'left',
                   cursor: 'pointer',
@@ -1120,17 +1123,16 @@ function App() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '10px',
-                  transition: 'all 0.2s',
-                  borderLeft: activeSection === bottomNavItem.id
-                    ? '6px solid #10b981' // <-- GREEN BAR!
-                    : '6px solid transparent'
+                  transition: 'all 0.2s'
                 }}
                 title={bottomNavItem.note}
-               >
+              >
                 <span style={{ fontSize: '16px' }}>{bottomNavItem.icon}</span>
                 <span>{bottomNavItem.label}</span>
-               </button>
-             )}
+              </button>
+            )}
+          </div>
+        </div>
         
         {/* MAIN CONTENT AREA - With Working Pattern Headers & Dark Mode */}
         <div style={{ flex: '1', backgroundColor: isDarkMode ? '#0f172a' : '#ffffff' }}>
@@ -1369,6 +1371,13 @@ function App() {
               </div>
             </div>
           )}
+          {/* AI Chat Manager section */}
+          {activeSection === 'ai-chat-manager' && <AiChatManagerComponent />}
+        </div>
+      </div>
+    </ThemeContext.Provider>
+  );
+}
 
           {/* NEW: AI Chat Manager section */}
           {activeSection === 'ai-chat-manager' && <AiChatManagerComponent />}
@@ -1378,7 +1387,7 @@ function App() {
   );
 }
 
-// AI Chat Manager Component
+// Place this OUTSIDE the App function!
 const AiChatManagerComponent = () => {
   const { isDarkMode } = useTheme();
   
