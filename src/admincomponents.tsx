@@ -2205,22 +2205,6 @@ function AdminBrandTab({ theme, isDarkMode, supabaseAPI }: { theme: any; isDarkM
                       backgroundColor: color.hex_code || color.hex,
                       borderRadius: '8px',
                       border: '1px solid #e5e7eb'
-                    }} />
-                  </div>
-                  <div>
-                    <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
-                      {color.name}
-                  </h4>
-                  <div style={{
-                    fontSize: '14px',
-                    color: theme.textSecondary,
-                    fontFamily: 'monospace',
-                    fontWeight: 'bold'
-                  }}>
-                    {color.hex_code || color.hex}
-                  </div>
-                </div>
-              </div>
                     }}></div>
                     <div>
                       <h4 style={{ margin: '0 0 6px 0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
