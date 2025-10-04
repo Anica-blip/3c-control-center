@@ -1524,6 +1524,19 @@ return (
                 <span style={{ fontSize: '28px' }}>👥</span>
                 Character Profiles
               </h2>
+              <h2 style={{
+                fontSize: '24px',
+                fontWeight: 'bold',
+                color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                margin: '0 0 24px 0'
+              }}>
+                <span style={{ fontSize: '28px' }}>👥</span>
+                Character Profiles
+              </h2>
               
               <div style={{
                 padding: '24px',
