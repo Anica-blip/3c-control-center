@@ -2337,19 +2337,52 @@ const deleteExternalService = async (id) => {
                             </div>
                           ) : (
                             <>
-                              <div>
-                                <div style={{
-                                  fontWeight: 'bold',
-                                  color: isDarkMode ? '#6ee7b7' : '#047857',
-                                  marginBottom: '4px'
-                                }}>
-                                  {service.name}
-                                </div>
-                                <div style={{
-                                  fontSize: '12px',
-                                  color: isDarkMode ? '#9ca3af' : '#6b7280'
-                                }}>
-                                  {service.url}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1' }}>
+                                <a
+                                  href={service.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
+                                    backgroundColor: '#10b981',
+                                    color: '#ffffff',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    textDecoration: 'none',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    flexShrink: 0
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#059669';
+                                    e.currentTarget.style.transform = 'scale(1.1)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#10b981';
+                                    e.currentTarget.style.transform = 'scale(1)';
+                                  }}
+                                >
+                                  →
+                                </a>
+                                <div>
+                                  <div style={{
+                                    fontWeight: 'bold',
+                                    color: isDarkMode ? '#6ee7b7' : '#047857',
+                                    marginBottom: '4px'
+                                  }}>
+                                    {service.name}
+                                  </div>
+                                  <div style={{
+                                    fontSize: '12px',
+                                    color: isDarkMode ? '#9ca3af' : '#6b7280'
+                                  }}>
+                                    {service.url}
+                                  </div>
                                 </div>
                               </div>
                               <div style={{ display: 'flex', gap: '8px' }}>
@@ -2403,3 +2436,4 @@ const deleteExternalService = async (id) => {
 }            
 
 export default SettingsComponent;
+
