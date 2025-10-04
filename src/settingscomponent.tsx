@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
+// Initialize Supabase client with debugging
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+// Debug environment variables
 console.log('Environment check:', {
   url: !!supabaseUrl,
   key: !!supabaseKey,
@@ -23,6 +25,7 @@ if (supabaseUrl && supabaseKey) {
 function SettingsComponent() {
   const [activeTab, setActiveTab] = useState('platforms');
   
+  // Check for dark mode
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('darkMode') === 'true';
@@ -30,11 +33,13 @@ function SettingsComponent() {
     return false;
   });
   
+  // Social Platforms State
   const [platforms, setPlatforms] = useState([]);
   const [newPlatform, setNewPlatform] = useState({ name: '', url: '' });
   const [editingPlatform, setEditingPlatform] = useState(null);
   const [loading, setLoading] = useState(false);
   
+  // Telegram Channels/Groups State (stored in telegram_configurations table)
   const [telegramChannels, setTelegramChannels] = useState([]);
   const [newTelegram, setNewTelegram] = useState({ 
     name: '', 
@@ -44,6 +49,7 @@ function SettingsComponent() {
   });
   const [editingTelegram, setEditingTelegram] = useState(null);
   
+  // Character Profiles State
   const [characters, setCharacters] = useState([]);
   const [newCharacter, setNewCharacter] = useState({ 
     name: '', 
@@ -57,15 +63,16 @@ function SettingsComponent() {
   const [editingCharacter, setEditingCharacter] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   
-  const [externalServices, setExternalServices] = useState([]);
-  const [newExternalService, setNewExternalService] = useState({ name: '', url: '' });
-  const [editingExternalService, setEditingExternalService] = useState(null);
 
+
+  // =============================================================================
+  // LOAD DATA ON COMPONENT MOUNT
+  // =============================================================================
+  
   useEffect(() => {
     loadPlatforms();
     loadTelegramChannels();
     loadCharacters();
-    loadExternalServices();
   }, []);
 
   const loadPlatforms = async () => {
@@ -146,7 +153,7 @@ function SettingsComponent() {
     }
   };
 
-  const loadExternalServices = async () => {
+    const loadExternalServices = async () => {
     if (!supabase) {
       console.warn('Supabase not configured. Using empty external services list.');
       return;
@@ -166,6 +173,10 @@ function SettingsComponent() {
     }
   };
 
+  // =============================================================================
+  // SOCIAL PLATFORMS FUNCTIONS
+  // =============================================================================
+  
   const addPlatform = async () => {
     if (!newPlatform.name.trim() || !newPlatform.url.trim()) return;
     
@@ -255,6 +266,10 @@ function SettingsComponent() {
     }
   };
 
+  // =============================================================================
+  // TELEGRAM FUNCTIONS
+  // =============================================================================
+  
   const addTelegram = async () => {
     if (!newTelegram.name.trim() || !newTelegram.channel_group.trim()) return;
     
@@ -395,7 +410,229 @@ function SettingsComponent() {
     }
   };
 
-  const addExternalService = async () => {
+  // =============================================================================
+  // AVATAR UPLOAD FUNCTIONS - FIXED
+  // =============================================================================
+  
+  const handleFileSelection = (file, isEditing = false) => {
+    if (!file || !file.type.startsWith('image/')) {
+      alert('Please select a valid image file');
+      return;
+    }
+
+    // Only create preview, don't upload yet
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageDataUrl = e.target.result;
+      if (isEditing) {
+        setEditingCharacter(prev => ({ 
+          ...prev, 
+          image: imageDataUrl,
+          selectedFile: file
+        }));
+      } else {
+        setNewCharacter(prev => ({ 
+          ...prev, 
+          image: imageDataUrl,
+          selectedFile: file
+        }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadImageToStorage = async (file, characterName) => {
+    if (!file || !supabase) {
+      return null;
+    }
+
+    try {
+      const fileName = `${characterName.replace(/[^a-zA-Z0-9]/g, '_')}_avatar_${Date.now()}.png`;
+      
+      console.log('Uploading to storage with filename:', fileName);
+      const { data, error } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (error) {
+        console.error('Storage upload error:', error);
+        throw error;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      console.log('Avatar uploaded successfully:', publicUrl);
+      return publicUrl;
+    } catch (error) {
+      console.error('Upload error:', error);
+      throw error;
+    }
+  };
+
+  // =============================================================================
+  // CHARACTER PROFILES FUNCTIONS - FIXED
+  // =============================================================================
+  
+  const addCharacter = async () => {
+    if (!newCharacter.name.trim() || !newCharacter.username.trim()) return;
+    
+    if (!supabase) {
+      alert('Supabase not configured. Please set up environment variables.');
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      let avatarUrl = null;
+      
+      // Upload image if one was selected
+      if (newCharacter.selectedFile) {
+        setUploadingAvatar(true);
+        avatarUrl = await uploadImageToStorage(newCharacter.selectedFile, newCharacter.name);
+      }
+      
+      const characterData = {
+        name: newCharacter.name.trim(),
+        username: newCharacter.username.trim(),
+        role: newCharacter.role.trim() || null,
+        description: newCharacter.description.trim() || null,
+        avatar_id: avatarUrl,
+        is_active: true,
+        user_id: null
+      };
+      
+      console.log('Saving character with data:', characterData);
+      
+      const { data, error } = await supabase
+        .from('character_profiles')
+        .insert([characterData])
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Database error:', error);
+        alert(`Database error: ${error.message}`);
+        return;
+      }
+      
+      setCharacters(prev => [data, ...prev]);
+      setNewCharacter({ 
+        name: '', 
+        username: '', 
+        role: '', 
+        description: '', 
+        image: null, 
+        avatarUrl: null,
+        selectedFile: null 
+      });
+      alert('Character profile created successfully!');
+      
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error creating character profile. Please try again.');
+    } finally {
+      setLoading(false);
+      setUploadingAvatar(false);
+    }
+  };
+
+  const saveCharacterEdit = async () => {
+    if (!editingCharacter || !editingCharacter.name.trim() || !editingCharacter.username.trim()) return;
+    
+    if (!supabase) {
+      alert('Supabase not configured. Please set up environment variables.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      let avatarUrl = null;
+      
+      // Upload new image if one was selected
+      if (editingCharacter.selectedFile) {
+        setUploadingAvatar(true);
+        avatarUrl = await uploadImageToStorage(editingCharacter.selectedFile, editingCharacter.name);
+      }
+      
+      const updateData = {
+        name: editingCharacter.name.trim(),
+        username: editingCharacter.username.trim(), 
+        role: editingCharacter.role?.trim() || null,
+        description: editingCharacter.description?.trim() || null,
+        // Only update avatar_id if a new avatar was uploaded
+        ...(avatarUrl && { avatar_id: avatarUrl })
+      };
+      
+      console.log('Updating character with ID:', editingCharacter.id, 'Data:', updateData);
+      
+      const { data, error } = await supabase
+        .from('character_profiles')
+        .update(updateData)
+        .eq('id', editingCharacter.id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
+      
+      console.log('Character updated successfully:', data);
+      
+      setCharacters(prev => prev.map(c => 
+        c.id === editingCharacter.id ? data : c
+      ));
+      setEditingCharacter(null);
+      alert('Character profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating character:', error);
+      alert('Error updating character profile. Please try again.');
+    } finally {
+      setLoading(false);
+      setUploadingAvatar(false);
+    }
+  };
+
+  const deleteCharacter = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this character profile?')) return;
+    
+    if (!supabase) {
+      alert('Supabase not configured. Please set up environment variables.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('character_profiles')
+        .update({ is_active: false })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setCharacters(prev => prev.filter(c => c.id !== id));
+      alert('Character profile deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting character:', error);
+      alert('Error deleting character profile. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // =============================================================================
+  // EXTERNAL SERVICES FUNCTIONS
+  // =============================================================================
+  
+    const addExternalService = async () => {
     if (!newExternalService.name.trim() || !newExternalService.url.trim()) return;
     
     if (!supabase) {
@@ -479,211 +716,6 @@ function SettingsComponent() {
     } catch (error) {
       console.error('Error deleting external service:', error);
       alert('Error deleting external service. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFileSelection = (file, isEditing = false) => {
-    if (!file || !file.type.startsWith('image/')) {
-      alert('Please select a valid image file');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageDataUrl = e.target.result;
-      if (isEditing) {
-        setEditingCharacter(prev => ({ 
-          ...prev, 
-          image: imageDataUrl,
-          selectedFile: file
-        }));
-      } else {
-        setNewCharacter(prev => ({ 
-          ...prev, 
-          image: imageDataUrl,
-          selectedFile: file
-        }));
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const uploadImageToStorage = async (file, characterName) => {
-    if (!file || !supabase) {
-      return null;
-    }
-
-    try {
-      const fileName = `${characterName.replace(/[^a-zA-Z0-9]/g, '_')}_avatar_${Date.now()}.png`;
-      
-      console.log('Uploading to storage with filename:', fileName);
-      const { data, error } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-
-      if (error) {
-        console.error('Storage upload error:', error);
-        throw error;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName);
-
-      console.log('Avatar uploaded successfully:', publicUrl);
-      return publicUrl;
-    } catch (error) {
-      console.error('Upload error:', error);
-      throw error;
-    }
-  };
-
-  const addCharacter = async () => {
-    if (!newCharacter.name.trim() || !newCharacter.username.trim()) return;
-    
-    if (!supabase) {
-      alert('Supabase not configured. Please set up environment variables.');
-      return;
-    }
-    
-    setLoading(true);
-    
-    try {
-      let avatarUrl = null;
-      
-      if (newCharacter.selectedFile) {
-        setUploadingAvatar(true);
-        avatarUrl = await uploadImageToStorage(newCharacter.selectedFile, newCharacter.name);
-      }
-      
-      const characterData = {
-        name: newCharacter.name.trim(),
-        username: newCharacter.username.trim(),
-        role: newCharacter.role.trim() || null,
-        description: newCharacter.description.trim() || null,
-        avatar_id: avatarUrl,
-        is_active: true,
-        user_id: null
-      };
-      
-      console.log('Saving character with data:', characterData);
-      
-      const { data, error } = await supabase
-        .from('character_profiles')
-        .insert([characterData])
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Database error:', error);
-        alert(`Database error: ${error.message}`);
-        return;
-      }
-      
-      setCharacters(prev => [data, ...prev]);
-      setNewCharacter({ 
-        name: '', 
-        username: '', 
-        role: '', 
-        description: '', 
-        image: null, 
-        avatarUrl: null,
-        selectedFile: null 
-      });
-      alert('Character profile created successfully!');
-      
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error creating character profile. Please try again.');
-    } finally {
-      setLoading(false);
-      setUploadingAvatar(false);
-    }
-  };
-
-  const saveCharacterEdit = async () => {
-    if (!editingCharacter || !editingCharacter.name.trim() || !editingCharacter.username.trim()) return;
-    
-    if (!supabase) {
-      alert('Supabase not configured. Please set up environment variables.');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      
-      let avatarUrl = null;
-      
-      if (editingCharacter.selectedFile) {
-        setUploadingAvatar(true);
-        avatarUrl = await uploadImageToStorage(editingCharacter.selectedFile, editingCharacter.name);
-      }
-      
-      const updateData = {
-        name: editingCharacter.name.trim(),
-        username: editingCharacter.username.trim(), 
-        role: editingCharacter.role?.trim() || null,
-        description: editingCharacter.description?.trim() || null,
-        ...(avatarUrl && { avatar_id: avatarUrl })
-      };
-      
-      console.log('Updating character with ID:', editingCharacter.id, 'Data:', updateData);
-      
-      const { data, error } = await supabase
-        .from('character_profiles')
-        .update(updateData)
-        .eq('id', editingCharacter.id)
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Update error:', error);
-        throw error;
-      }
-      
-      console.log('Character updated successfully:', data);
-      
-      setCharacters(prev => prev.map(c => 
-        c.id === editingCharacter.id ? data : c
-      ));
-      setEditingCharacter(null);
-      alert('Character profile updated successfully!');
-    } catch (error) {
-      console.error('Error updating character:', error);
-      alert('Error updating character profile. Please try again.');
-    } finally {
-      setLoading(false);
-      setUploadingAvatar(false);
-    }
-  };
-
-  const deleteCharacter = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this character profile?')) return;
-    
-    if (!supabase) {
-      alert('Supabase not configured. Please set up environment variables.');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      const { error } = await supabase
-        .from('character_profiles')
-        .update({ is_active: false })
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      setCharacters(prev => prev.filter(c => c.id !== id));
-      alert('Character profile deleted successfully!');
-    } catch (error) {
-      console.error('Error deleting character:', error);
-      alert('Error deleting character profile. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -2246,132 +2278,6 @@ function SettingsComponent() {
                                 disabled={loading}
                                 style={{
                                   padding: '8px',
-                                  backgroundColor: isDarkMode ? '#374151' : '#ffffff',
-                                  border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
-                                  borderRadius: '4px',
-                                  fontSize: '14px',
-                                  color: isDarkMode ? '#ffffff' : '#111827',
-                                  width: '150px'
-                                }}
-                              />
-                              <input
-                                type="url"
-                                value={editingExternalService.url}
-                                onChange={(e) => setEditingExternalService(prev => ({ ...prev, url: e.target.value }))}
-                                disabled={loading}
-                                style={{
-                                  flex: '1',
-                                  padding: '8px',
-                                  backgroundColor: isDarkMode ? '#374151' : '#ffffff',
-                                  border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
-                                  borderRadius: '4px',
-                                  fontSize: '14px',
-                                  color: isDarkMode ? '#ffffff' : '#111827'
-                                }}
-                              />
-                              <div style={{ display: 'flex', gap: '8px' }}>
-                                <button
-                                  onClick={saveExternalServiceEdit}
-                                  disabled={loading}
-                                  style={{
-                                    padding: '8px 12px',
-                                    backgroundColor: loading ? '#9ca3af' : '#10b981',
-                                    color: '#ffffff',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: loading ? 'not-allowed' : 'pointer',
-                                    fontSize: '12px',
-                                    fontWeight: 'bold'
-                                  }}
-                                >
-                                  💾 {loading ? 'Saving...' : 'Save'}
-                                </button>
-                                <button
-                                  onClick={() => setEditingExternalService(null)}
-                                  disabled={loading}
-                                  style={{
-                                    padding: '8px 12px',
-                                    backgroundColor: '#6b7280',
-                                    color: '#ffffff',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: loading ? 'not-allowed' : 'pointer',
-                                    fontSize: '12px',
-                                    fontWeight: 'bold'
-                                  }}
-                                >
-                                  ❌ Cancel
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <div>
-                                <div style={{
-                                  fontWeight: 'bold',
-                                  color: isDarkMode ? '#6ee7b7' : '#047857',
-                                  marginBottom: '4px'
-                                }}>
-                                  {service.name}
-                                </div>
-                                <div style={{
-                                  fontSize: '12px',
-                                  color: isDarkMode ? '#9ca3af' : '#6b7280'
-                                }}>
-                                  {service.url}
-                                </div>
-                              </div>
-                              <div style={{ display: 'flex', gap: '8px' }}>
-                                <button
-                                  onClick={() => setEditingExternalService(service)}
-                                  disabled={loading}
-                                  style={{
-                                    padding: '8px 12px',
-                                    backgroundColor: loading ? '#9ca3af' : '#f59e0b',
-                                    color: '#ffffff',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: loading ? 'not-allowed' : 'pointer',
-                                    fontSize: '12px',
-                                    fontWeight: 'bold'
-                                  }}
-                                >
-                                  ✏️ Edit
-                                </button>
-                                <button
-                                  onClick={() => deleteExternalService(service.id)}
-                                  disabled={loading}
-                                  style={{
-                                    padding: '8px 12px',
-                                    backgroundColor: loading ? '#9ca3af' : '#ef4444',
-                                    color: '#ffffff',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: loading ? 'not-allowed' : 'pointer',
-                                    fontSize: '12px',
-                                    fontWeight: 'bold'
-                                  }}
-                                >
-                                  🗑️ Delete
-                                </button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default SettingsComponent;: '8px',
                                   backgroundColor: isDarkMode ? '#374151' : '#ffffff',
                                   border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
                                   borderRadius: '4px',
