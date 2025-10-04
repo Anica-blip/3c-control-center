@@ -2091,7 +2091,7 @@ const deleteExternalService = async (id) => {
               </div>
             )}
             
-            {activeTab === 'services' && (
+{activeTab === 'services' && (
               <div style={{
                 padding: '32px',
                 border: '2px solid #10b981',
@@ -2436,4 +2436,3 @@ const deleteExternalService = async (id) => {
 }            
 
 export default SettingsComponent;
-
