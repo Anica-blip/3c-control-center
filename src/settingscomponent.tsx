@@ -739,7 +739,7 @@ const deleteExternalService = async (id) => {
             {[
               { id: 'platforms', icon: '📱', label: 'Social Platforms' },
               { id: 'characters', icon: '👥', label: 'Character Profiles' },
-              { id: 'logs', icon: '📋', label: 'Error Logs' }
+              { id: 'services', icon: '🔗', label: 'External Services' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -2090,316 +2090,316 @@ const deleteExternalService = async (id) => {
                 </div>
               </div>
             )}
-
-          {activeTab === 'services' && (
-            <div style={{
-              padding: '32px',
-              border: '2px solid #10b981',
-              borderRadius: '12px',
-              background: isDarkMode 
-                ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%)'
-                : 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)'
-            }}>
-              <h2 style={{
-                fontSize: '24px',
-                fontWeight: 'bold',
-                color: isDarkMode ? '#6ee7b7' : '#047857',
-                marginBottom: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                margin: '0 0 24px 0'
-              }}>
-                <span style={{ fontSize: '28px' }}>🔗</span>
-                External Services
-              </h2>
-              
+            
+            {activeTab === 'services' && (
               <div style={{
-                padding: '24px',
-                backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.5)' : 'rgba(255, 255, 255, 0.8)',
-                borderRadius: '8px',
-                border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
-                marginBottom: '32px'
+                padding: '32px',
+                border: '2px solid #10b981',
+                borderRadius: '12px',
+                background: isDarkMode 
+                  ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%)'
+                  : 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)'
               }}>
-                <h3 style={{
-                  fontSize: '18px',
+                <h2 style={{
+                  fontSize: '24px',
                   fontWeight: 'bold',
                   color: isDarkMode ? '#6ee7b7' : '#047857',
-                  marginBottom: '16px',
+                  marginBottom: '24px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  margin: '0 0 16px 0'
+                  gap: '12px',
+                  margin: '0 0 24px 0'
                 }}>
-                  <span>➕</span>
-                  Add External Service
-                </h3>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: '1fr 1fr auto', 
-                  gap: '24px', 
-                  alignItems: 'end' 
+                  <span style={{ fontSize: '28px' }}>🔗</span>
+                  External Services
+                </h2>
+                
+                <div style={{
+                  padding: '24px',
+                  backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.5)' : 'rgba(255, 255, 255, 0.8)',
+                  borderRadius: '8px',
+                  border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+                  marginBottom: '32px'
                 }}>
-                  <div>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      color: isDarkMode ? '#6ee7b7' : '#047857',
-                      marginBottom: '8px'
-                    }}>
-                      Service Name
-                    </label>
-                    <input
-                      type="text"
-                      value={newExternalService.name}
-                      onChange={(e) => setNewExternalService(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="e.g., Google Analytics, Stripe Dashboard"
-                      disabled={loading}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        backgroundColor: isDarkMode ? '#374151' : '#ffffff',
-                        border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        color: isDarkMode ? '#ffffff' : '#111827',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      color: isDarkMode ? '#6ee7b7' : '#047857',
-                      marginBottom: '8px'
-                    }}>
-                      Service URL/Link
-                    </label>
-                    <input
-                      type="url"
-                      value={newExternalService.url}
-                      onChange={(e) => setNewExternalService(prev => ({ ...prev, url: e.target.value }))}
-                      placeholder="https://analytics.google.com"
-                      disabled={loading}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        backgroundColor: isDarkMode ? '#374151' : '#ffffff',
-                        border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        color: isDarkMode ? '#ffffff' : '#111827',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                  <button
-                    onClick={addExternalService}
-                    disabled={loading || !newExternalService.name.trim() || !newExternalService.url.trim()}
-                    style={{
-                      padding: '12px 20px',
-                      backgroundColor: (newExternalService.name.trim() && newExternalService.url.trim() && !loading) ? '#10b981' : '#9ca3af',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      cursor: (newExternalService.name.trim() && newExternalService.url.trim() && !loading) ? 'pointer' : 'not-allowed',
-                      transition: 'background-color 0.2s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      minWidth: '100px'
-                    }}
-                  >
-                    {loading ? '⏳' : '💾'}
-                    {loading ? 'Saving...' : 'Save'}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <h3 style={{
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  color: isDarkMode ? '#6ee7b7' : '#047857',
-                  marginBottom: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  margin: '0 0 16px 0'
-                }}>
-                  <span>📋</span>
-                  Your External Services ({externalServices.length})
-                </h3>
-                {externalServices.length === 0 ? (
-                  <div style={{
-                    padding: '48px',
-                    textAlign: 'center',
-                    backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.3)' : 'rgba(255, 255, 255, 0.5)',
-                    borderRadius: '8px',
-                    border: isDarkMode ? '2px dashed #34d399' : '2px dashed #6ee7b7'
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#6ee7b7' : '#047857',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    margin: '0 0 16px 0'
                   }}>
-                    <p style={{ 
-                      color: isDarkMode ? '#d1d5db' : '#6b7280', 
-                      fontSize: '16px', 
-                      marginBottom: '8px',
-                      margin: '0 0 8px 0'
-                    }}>No external services added yet</p>
-                    <p style={{ 
-                      color: isDarkMode ? '#9ca3af' : '#9ca3af', 
-                      fontSize: '14px',
-                      margin: '0'
-                    }}>Use the form above to add your first external service link</p>
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gap: '12px' }}>
-                    {externalServices.map(service => (
-                      <div key={service.id} style={{
-                        padding: '16px',
-                        backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                        borderRadius: '8px',
-                        border: isDarkMode ? '1px solid #374151' : '1px solid #6ee7b7',
+                    <span>➕</span>
+                    Add External Service
+                  </h3>
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: '1fr 1fr auto', 
+                    gap: '24px', 
+                    alignItems: 'end' 
+                  }}>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: isDarkMode ? '#6ee7b7' : '#047857',
+                        marginBottom: '8px'
+                      }}>
+                        Service Name
+                      </label>
+                      <input
+                        type="text"
+                        value={newExternalService.name}
+                        onChange={(e) => setNewExternalService(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g., Google Analytics, Stripe Dashboard"
+                        disabled={loading}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                          border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          color: isDarkMode ? '#ffffff' : '#111827',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: isDarkMode ? '#6ee7b7' : '#047857',
+                        marginBottom: '8px'
+                      }}>
+                        Service URL/Link
+                      </label>
+                      <input
+                        type="url"
+                        value={newExternalService.url}
+                        onChange={(e) => setNewExternalService(prev => ({ ...prev, url: e.target.value }))}
+                        placeholder="https://analytics.google.com"
+                        disabled={loading}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                          border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          color: isDarkMode ? '#ffffff' : '#111827',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <button
+                      onClick={addExternalService}
+                      disabled={loading || !newExternalService.name.trim() || !newExternalService.url.trim()}
+                      style={{
+                        padding: '12px 20px',
+                        backgroundColor: (newExternalService.name.trim() && newExternalService.url.trim() && !loading) ? '#10b981' : '#9ca3af',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        cursor: (newExternalService.name.trim() && newExternalService.url.trim() && !loading) ? 'pointer' : 'not-allowed',
+                        transition: 'background-color 0.2s ease',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'space-between'
-                      }}>
-                        {editingExternalService && editingExternalService.id === service.id ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1' }}>
-                            <input
-                              type="text"
-                              value={editingExternalService.name}
-                              onChange={(e) => setEditingExternalService(prev => ({ ...prev, name: e.target.value }))}
-                              disabled={loading}
-                              style={{
-                                padding: '8px',
-                                backgroundColor: isDarkMode ? '#374151' : '#ffffff',
-                                border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
-                                borderRadius: '4px',
-                                fontSize: '14px',
-                                color: isDarkMode ? '#ffffff' : '#111827',
-                                width: '150px'
-                              }}
-                            />
-                            <input
-                              type="url"
-                              value={editingExternalService.url}
-                              onChange={(e) => setEditingExternalService(prev => ({ ...prev, url: e.target.value }))}
-                              disabled={loading}
-                              style={{
-                                flex: '1',
-                                padding: '8px',
-                                backgroundColor: isDarkMode ? '#374151' : '#ffffff',
-                                border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
-                                borderRadius: '4px',
-                                fontSize: '14px',
-                                color: isDarkMode ? '#ffffff' : '#111827'
-                              }}
-                            />
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <button
-                                onClick={saveExternalServiceEdit}
-                                disabled={loading}
-                                style={{
-                                  padding: '8px 12px',
-                                  backgroundColor: loading ? '#9ca3af' : '#10b981',
-                                  color: '#ffffff',
-                                  border: 'none',
-                                  borderRadius: '4px',
-                                  cursor: loading ? 'not-allowed' : 'pointer',
-                                  fontSize: '12px',
-                                  fontWeight: 'bold'
-                                }}
-                              >
-                                💾 {loading ? 'Saving...' : 'Save'}
-                              </button>
-                              <button
-                                onClick={() => setEditingExternalService(null)}
-                                disabled={loading}
-                                style={{
-                                  padding: '8px 12px',
-                                  backgroundColor: '#6b7280',
-                                  color: '#ffffff',
-                                  border: 'none',
-                                  borderRadius: '4px',
-                                  cursor: loading ? 'not-allowed' : 'pointer',
-                                  fontSize: '12px',
-                                  fontWeight: 'bold'
-                                }}
-                              >
-                                ❌ Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div>
-                              <div style={{
-                                fontWeight: 'bold',
-                                color: isDarkMode ? '#6ee7b7' : '#047857',
-                                marginBottom: '4px'
-                              }}>
-                                {service.name}
-                              </div>
-                              <div style={{
-                                fontSize: '12px',
-                                color: isDarkMode ? '#9ca3af' : '#6b7280'
-                              }}>
-                                {service.url}
-                              </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <button
-                                onClick={() => setEditingExternalService(service)}
-                                disabled={loading}
-                                style={{
-                                  padding: '8px 12px',
-                                  backgroundColor: loading ? '#9ca3af' : '#f59e0b',
-                                  color: '#ffffff',
-                                  border: 'none',
-                                  borderRadius: '4px',
-                                  cursor: loading ? 'not-allowed' : 'pointer',
-                                  fontSize: '12px',
-                                  fontWeight: 'bold'
-                                }}
-                              >
-                                ✏️ Edit
-                              </button>
-                              <button
-                                onClick={() => deleteExternalService(service.id)}
-                                disabled={loading}
-                                style={{
-                                  padding: '8px 12px',
-                                  backgroundColor: loading ? '#9ca3af' : '#ef4444',
-                                  color: '#ffffff',
-                                  border: 'none',
-                                  borderRadius: '4px',
-                                  cursor: loading ? 'not-allowed' : 'pointer',
-                                  fontSize: '12px',
-                                  fontWeight: 'bold'
-                                }}
-                              >
-                                🗑️ Delete
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ))}
+                        justifyContent: 'center',
+                        gap: '8px',
+                        minWidth: '100px'
+                      }}
+                    >
+                      {loading ? '⏳' : '💾'}
+                      {loading ? 'Saving...' : 'Save'}
+                    </button>
                   </div>
-                )}
+                </div>
+
+                <div>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#6ee7b7' : '#047857',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    margin: '0 0 16px 0'
+                  }}>
+                    <span>📋</span>
+                    Your External Services ({externalServices.length})
+                  </h3>
+                  {externalServices.length === 0 ? (
+                    <div style={{
+                      padding: '48px',
+                      textAlign: 'center',
+                      backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.3)' : 'rgba(255, 255, 255, 0.5)',
+                      borderRadius: '8px',
+                      border: isDarkMode ? '2px dashed #34d399' : '2px dashed #6ee7b7'
+                    }}>
+                      <p style={{ 
+                        color: isDarkMode ? '#d1d5db' : '#6b7280', 
+                        fontSize: '16px', 
+                        marginBottom: '8px',
+                        margin: '0 0 8px 0'
+                      }}>No external services added yet</p>
+                      <p style={{ 
+                        color: isDarkMode ? '#9ca3af' : '#9ca3af', 
+                        fontSize: '14px',
+                        margin: '0'
+                      }}>Use the form above to add your first external service link</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                      {externalServices.map(service => (
+                        <div key={service.id} style={{
+                          padding: '16px',
+                          backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                          borderRadius: '8px',
+                          border: isDarkMode ? '1px solid #374151' : '1px solid #6ee7b7',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}>
+                          {editingExternalService && editingExternalService.id === service.id ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1' }}>
+                              <input
+                                type="text"
+                                value={editingExternalService.name}
+                                onChange={(e) => setEditingExternalService(prev => ({ ...prev, name: e.target.value }))}
+                                disabled={loading}
+                                style={{
+                                  padding: '8px',
+                                  backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                  border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
+                                  borderRadius: '4px',
+                                  fontSize: '14px',
+                                  color: isDarkMode ? '#ffffff' : '#111827',
+                                  width: '150px'
+                                }}
+                              />
+                              <input
+                                type="url"
+                                value={editingExternalService.url}
+                                onChange={(e) => setEditingExternalService(prev => ({ ...prev, url: e.target.value }))}
+                                disabled={loading}
+                                style={{
+                                  flex: '1',
+                                  padding: '8px',
+                                  backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                  border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
+                                  borderRadius: '4px',
+                                  fontSize: '14px',
+                                  color: isDarkMode ? '#ffffff' : '#111827'
+                                }}
+                              />
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  onClick={saveExternalServiceEdit}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: loading ? '#9ca3af' : '#10b981',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  💾 {loading ? 'Saving...' : 'Save'}
+                                </button>
+                                <button
+                                  onClick={() => setEditingExternalService(null)}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: '#6b7280',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  ❌ Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div>
+                                <div style={{
+                                  fontWeight: 'bold',
+                                  color: isDarkMode ? '#6ee7b7' : '#047857',
+                                  marginBottom: '4px'
+                                }}>
+                                  {service.name}
+                                </div>
+                                <div style={{
+                                  fontSize: '12px',
+                                  color: isDarkMode ? '#9ca3af' : '#6b7280'
+                                }}>
+                                  {service.url}
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  onClick={() => setEditingExternalService(service)}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: loading ? '#9ca3af' : '#f59e0b',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  ✏️ Edit
+                                </button>
+                                <button
+                                  onClick={() => deleteExternalService(service.id)}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: loading ? '#9ca3af' : '#ef4444',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  🗑️ Delete
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
-}
+  );
+}            
 
 export default SettingsComponent;
