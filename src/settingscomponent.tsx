@@ -1502,7 +1502,7 @@ return (
             </div>
           )}
 
-{activeTab === 'characters' && (
+          {activeTab === 'characters' && (
             <div style={{
               padding: '32px',
               border: '2px solid #8b5cf6',
