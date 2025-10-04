@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client with debugging
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Debug environment variables
 console.log('Environment check:', {
   url: !!supabaseUrl,
   key: !!supabaseKey,
@@ -25,7 +23,6 @@ if (supabaseUrl && supabaseKey) {
 function SettingsComponent() {
   const [activeTab, setActiveTab] = useState('platforms');
   
-  // Check for dark mode
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('darkMode') === 'true';
@@ -33,13 +30,11 @@ function SettingsComponent() {
     return false;
   });
   
-  // Social Platforms State
   const [platforms, setPlatforms] = useState([]);
   const [newPlatform, setNewPlatform] = useState({ name: '', url: '' });
   const [editingPlatform, setEditingPlatform] = useState(null);
   const [loading, setLoading] = useState(false);
   
-  // Telegram Channels/Groups State (stored in telegram_configurations table)
   const [telegramChannels, setTelegramChannels] = useState([]);
   const [newTelegram, setNewTelegram] = useState({ 
     name: '', 
@@ -49,7 +44,6 @@ function SettingsComponent() {
   });
   const [editingTelegram, setEditingTelegram] = useState(null);
   
-  // Character Profiles State
   const [characters, setCharacters] = useState([]);
   const [newCharacter, setNewCharacter] = useState({ 
     name: '', 
@@ -63,17 +57,15 @@ function SettingsComponent() {
   const [editingCharacter, setEditingCharacter] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   
-  // Error Logs State
-  const [errorLogs, setErrorLogs] = useState([]);
+  const [externalServices, setExternalServices] = useState([]);
+  const [newExternalService, setNewExternalService] = useState({ name: '', url: '' });
+  const [editingExternalService, setEditingExternalService] = useState(null);
 
-  // =============================================================================
-  // LOAD DATA ON COMPONENT MOUNT
-  // =============================================================================
-  
   useEffect(() => {
     loadPlatforms();
     loadTelegramChannels();
     loadCharacters();
+    loadExternalServices();
   }, []);
 
   const loadPlatforms = async () => {
@@ -154,10 +146,26 @@ function SettingsComponent() {
     }
   };
 
-  // =============================================================================
-  // SOCIAL PLATFORMS FUNCTIONS
-  // =============================================================================
-  
+  const loadExternalServices = async () => {
+    if (!supabase) {
+      console.warn('Supabase not configured. Using empty external services list.');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('external_services')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setExternalServices(data || []);
+    } catch (error) {
+      console.error('Error loading external services:', error);
+    }
+  };
+
   const addPlatform = async () => {
     if (!newPlatform.name.trim() || !newPlatform.url.trim()) return;
     
@@ -247,10 +255,6 @@ function SettingsComponent() {
     }
   };
 
-  // =============================================================================
-  // TELEGRAM FUNCTIONS
-  // =============================================================================
-  
   const addTelegram = async () => {
     if (!newTelegram.name.trim() || !newTelegram.channel_group.trim()) return;
     
@@ -391,17 +395,101 @@ function SettingsComponent() {
     }
   };
 
-  // =============================================================================
-  // AVATAR UPLOAD FUNCTIONS - FIXED
-  // =============================================================================
-  
+  const addExternalService = async () => {
+    if (!newExternalService.name.trim() || !newExternalService.url.trim()) return;
+    
+    if (!supabase) {
+      alert('Supabase not configured. Please set up environment variables.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const serviceData = {
+        name: newExternalService.name.trim(),
+        url: newExternalService.url.trim(),
+        is_active: true,
+        user_id: null
+      };
+      
+      const { data, error } = await supabase
+        .from('external_services')
+        .insert([serviceData])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      setExternalServices(prev => [data, ...prev]);
+      setNewExternalService({ name: '', url: '' });
+      alert('External service added successfully!');
+    } catch (error) {
+      console.error('Error adding external service:', error);
+      alert('Error adding external service. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveExternalServiceEdit = async () => {
+    if (!editingExternalService || !editingExternalService.name.trim() || !editingExternalService.url.trim()) return;
+    
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('external_services')
+        .update({
+          name: editingExternalService.name.trim(),
+          url: editingExternalService.url.trim(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingExternalService.id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      setExternalServices(prev => prev.map(s => 
+        s.id === editingExternalService.id ? data : s
+      ));
+      setEditingExternalService(null);
+      alert('External service updated successfully!');
+    } catch (error) {
+      console.error('Error updating external service:', error);
+      alert('Error updating external service. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteExternalService = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this external service?')) return;
+    
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('external_services')
+        .update({ is_active: false })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setExternalServices(prev => prev.filter(s => s.id !== id));
+      alert('External service deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting external service:', error);
+      alert('Error deleting external service. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFileSelection = (file, isEditing = false) => {
     if (!file || !file.type.startsWith('image/')) {
       alert('Please select a valid image file');
       return;
     }
 
-    // Only create preview, don't upload yet
     const reader = new FileReader();
     reader.onload = (e) => {
       const imageDataUrl = e.target.result;
@@ -443,7 +531,6 @@ function SettingsComponent() {
         throw error;
       }
 
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(fileName);
@@ -456,10 +543,6 @@ function SettingsComponent() {
     }
   };
 
-  // =============================================================================
-  // CHARACTER PROFILES FUNCTIONS - FIXED
-  // =============================================================================
-  
   const addCharacter = async () => {
     if (!newCharacter.name.trim() || !newCharacter.username.trim()) return;
     
@@ -473,7 +556,6 @@ function SettingsComponent() {
     try {
       let avatarUrl = null;
       
-      // Upload image if one was selected
       if (newCharacter.selectedFile) {
         setUploadingAvatar(true);
         avatarUrl = await uploadImageToStorage(newCharacter.selectedFile, newCharacter.name);
@@ -537,7 +619,6 @@ function SettingsComponent() {
       
       let avatarUrl = null;
       
-      // Upload new image if one was selected
       if (editingCharacter.selectedFile) {
         setUploadingAvatar(true);
         avatarUrl = await uploadImageToStorage(editingCharacter.selectedFile, editingCharacter.name);
@@ -548,7 +629,6 @@ function SettingsComponent() {
         username: editingCharacter.username.trim(), 
         role: editingCharacter.role?.trim() || null,
         description: editingCharacter.description?.trim() || null,
-        // Only update avatar_id if a new avatar was uploaded
         ...(avatarUrl && { avatar_id: avatarUrl })
       };
       
@@ -628,7 +708,7 @@ function SettingsComponent() {
             {[
               { id: 'platforms', icon: '📱', label: 'Social Platforms' },
               { id: 'characters', icon: '👥', label: 'Character Profiles' },
-              { id: 'logs', icon: '📋', label: 'Error Logs' }
+              { id: 'services', icon: '🔗', label: 'External Services' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -1980,30 +2060,434 @@ function SettingsComponent() {
               </div>
             )}
 
-            {activeTab === 'logs' && (
+            {activeTab === 'services' && (
               <div style={{
-                padding: '64px',
-                textAlign: 'center',
-                backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.3)' : 'rgba(255, 255, 255, 0.5)',
-                borderRadius: '8px',
-                border: isDarkMode ? '2px dashed #f87171' : '2px dashed #fca5a5'
+                padding: '32px',
+                border: '2px solid #10b981',
+                borderRadius: '12px',
+                background: isDarkMode 
+                  ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%)'
+                  : 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)'
               }}>
                 <h2 style={{
                   fontSize: '24px',
                   fontWeight: 'bold',
-                  color: isDarkMode ? '#fca5a5' : '#dc2626',
-                  marginBottom: '16px',
-                  margin: '0 0 16px 0'
+                  color: isDarkMode ? '#6ee7b7' : '#047857',
+                  marginBottom: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  margin: '0 0 24px 0'
                 }}>
-                  Error Logs - Coming Later
+                  <span style={{ fontSize: '28px' }}>🔗</span>
+                  External Services
                 </h2>
-                <p style={{ 
-                  color: isDarkMode ? '#9ca3af' : '#9ca3af', 
-                  fontSize: '14px',
-                  margin: '0'
+                
+                <div style={{
+                  padding: '24px',
+                  backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.5)' : 'rgba(255, 255, 255, 0.8)',
+                  borderRadius: '8px',
+                  border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+                  marginBottom: '32px'
                 }}>
-                  Error logging functionality will be added once the core features are complete
-                </p>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#6ee7b7' : '#047857',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    margin: '0 0 16px 0'
+                  }}>
+                    <span>➕</span>
+                    Add External Service
+                  </h3>
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: '1fr 1fr auto', 
+                    gap: '24px', 
+                    alignItems: 'end' 
+                  }}>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: isDarkMode ? '#6ee7b7' : '#047857',
+                        marginBottom: '8px'
+                      }}>
+                        Service Name
+                      </label>
+                      <input
+                        type="text"
+                        value={newExternalService.name}
+                        onChange={(e) => setNewExternalService(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g., Google Analytics, Stripe Dashboard"
+                        disabled={loading}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                          border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          color: isDarkMode ? '#ffffff' : '#111827',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: isDarkMode ? '#6ee7b7' : '#047857',
+                        marginBottom: '8px'
+                      }}>
+                        Service URL/Link
+                      </label>
+                      <input
+                        type="url"
+                        value={newExternalService.url}
+                        onChange={(e) => setNewExternalService(prev => ({ ...prev, url: e.target.value }))}
+                        placeholder="https://analytics.google.com"
+                        disabled={loading}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                          border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          color: isDarkMode ? '#ffffff' : '#111827',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <button
+                      onClick={addExternalService}
+                      disabled={loading || !newExternalService.name.trim() || !newExternalService.url.trim()}
+                      style={{
+                        padding: '12px 20px',
+                        backgroundColor: (newExternalService.name.trim() && newExternalService.url.trim() && !loading) ? '#10b981' : '#9ca3af',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        cursor: (newExternalService.name.trim() && newExternalService.url.trim() && !loading) ? 'pointer' : 'not-allowed',
+                        transition: 'background-color 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        minWidth: '100px'
+                      }}
+                    >
+                      {loading ? '⏳' : '💾'}
+                      {loading ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: isDarkMode ? '#6ee7b7' : '#047857',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    margin: '0 0 16px 0'
+                  }}>
+                    <span>📋</span>
+                    Your External Services ({externalServices.length})
+                  </h3>
+                  {externalServices.length === 0 ? (
+                    <div style={{
+                      padding: '48px',
+                      textAlign: 'center',
+                      backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.3)' : 'rgba(255, 255, 255, 0.5)',
+                      borderRadius: '8px',
+                      border: isDarkMode ? '2px dashed #34d399' : '2px dashed #6ee7b7'
+                    }}>
+                      <p style={{ 
+                        color: isDarkMode ? '#d1d5db' : '#6b7280', 
+                        fontSize: '16px', 
+                        marginBottom: '8px',
+                        margin: '0 0 8px 0'
+                      }}>No external services added yet</p>
+                      <p style={{ 
+                        color: isDarkMode ? '#9ca3af' : '#9ca3af', 
+                        fontSize: '14px',
+                        margin: '0'
+                      }}>Use the form above to add your first external service link</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                      {externalServices.map(service => (
+                        <div key={service.id} style={{
+                          padding: '16px',
+                          backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                          borderRadius: '8px',
+                          border: isDarkMode ? '1px solid #374151' : '1px solid #6ee7b7',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}>
+                          {editingExternalService && editingExternalService.id === service.id ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1' }}>
+                              <input
+                                type="text"
+                                value={editingExternalService.name}
+                                onChange={(e) => setEditingExternalService(prev => ({ ...prev, name: e.target.value }))}
+                                disabled={loading}
+                                style={{
+                                  padding: '8px',
+                                  backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                  border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
+                                  borderRadius: '4px',
+                                  fontSize: '14px',
+                                  color: isDarkMode ? '#ffffff' : '#111827',
+                                  width: '150px'
+                                }}
+                              />
+                              <input
+                                type="url"
+                                value={editingExternalService.url}
+                                onChange={(e) => setEditingExternalService(prev => ({ ...prev, url: e.target.value }))}
+                                disabled={loading}
+                                style={{
+                                  flex: '1',
+                                  padding: '8px',
+                                  backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                  border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
+                                  borderRadius: '4px',
+                                  fontSize: '14px',
+                                  color: isDarkMode ? '#ffffff' : '#111827'
+                                }}
+                              />
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  onClick={saveExternalServiceEdit}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: loading ? '#9ca3af' : '#10b981',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  💾 {loading ? 'Saving...' : 'Save'}
+                                </button>
+                                <button
+                                  onClick={() => setEditingExternalService(null)}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: '#6b7280',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  ❌ Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div>
+                                <div style={{
+                                  fontWeight: 'bold',
+                                  color: isDarkMode ? '#6ee7b7' : '#047857',
+                                  marginBottom: '4px'
+                                }}>
+                                  {service.name}
+                                </div>
+                                <div style={{
+                                  fontSize: '12px',
+                                  color: isDarkMode ? '#9ca3af' : '#6b7280'
+                                }}>
+                                  {service.url}
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  onClick={() => setEditingExternalService(service)}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: loading ? '#9ca3af' : '#f59e0b',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  ✏️ Edit
+                                </button>
+                                <button
+                                  onClick={() => deleteExternalService(service.id)}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: loading ? '#9ca3af' : '#ef4444',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  🗑️ Delete
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default SettingsComponent;: '8px',
+                                  backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                  border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
+                                  borderRadius: '4px',
+                                  fontSize: '14px',
+                                  color: isDarkMode ? '#ffffff' : '#111827',
+                                  width: '150px'
+                                }}
+                              />
+                              <input
+                                type="url"
+                                value={editingExternalService.url}
+                                onChange={(e) => setEditingExternalService(prev => ({ ...prev, url: e.target.value }))}
+                                disabled={loading}
+                                style={{
+                                  flex: '1',
+                                  padding: '8px',
+                                  backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                  border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
+                                  borderRadius: '4px',
+                                  fontSize: '14px',
+                                  color: isDarkMode ? '#ffffff' : '#111827'
+                                }}
+                              />
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  onClick={saveExternalServiceEdit}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: loading ? '#9ca3af' : '#10b981',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  💾 {loading ? 'Saving...' : 'Save'}
+                                </button>
+                                <button
+                                  onClick={() => setEditingExternalService(null)}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: '#6b7280',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  ❌ Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div>
+                                <div style={{
+                                  fontWeight: 'bold',
+                                  color: isDarkMode ? '#6ee7b7' : '#047857',
+                                  marginBottom: '4px'
+                                }}>
+                                  {service.name}
+                                </div>
+                                <div style={{
+                                  fontSize: '12px',
+                                  color: isDarkMode ? '#9ca3af' : '#6b7280'
+                                }}>
+                                  {service.url}
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  onClick={() => setEditingExternalService(service)}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: loading ? '#9ca3af' : '#f59e0b',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  ✏️ Edit
+                                </button>
+                                <button
+                                  onClick={() => deleteExternalService(service.id)}
+                                  disabled={loading}
+                                  style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: loading ? '#9ca3af' : '#ef4444',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  🗑️ Delete
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
