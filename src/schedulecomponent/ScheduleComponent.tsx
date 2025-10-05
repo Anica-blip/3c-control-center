@@ -2121,6 +2121,19 @@ export default function ScheduleComponent() {
         )}
       </div>
 
+
+      {/* Modals */}
+      {isScheduleModalOpen && selectedPost && (
+        <ScheduleModal
+          post={selectedPost}
+          onConfirm={handleConfirmSchedule}
+          onCancel={() => {
+            setIsScheduleModalOpen(false);
+            setSelectedPost(null);
+          }}
+        />
+      )}
+
       {isScheduleModalOpen && selectedPost && (
         <ScheduleModal
           post={selectedPost}
