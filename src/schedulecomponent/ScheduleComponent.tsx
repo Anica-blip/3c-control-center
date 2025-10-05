@@ -1,4 +1,4 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - PHASE 2: Service Integration
+// /src/schedulecomponent/ScheduleComponent.tsx - PHASE 3: JSON Integration
 import React, { useState, useEffect, useCallback } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
@@ -488,12 +488,12 @@ export default function ScheduleComponent() {
     setIsScheduleModalOpen(true);
   };
 
-  // PHASE 2: Updated to accept serviceType parameter
+  // PHASE 3: JSON Structure + Timezone Integration
   const handleConfirmSchedule = async (scheduleData: {
     scheduledDate: string;
     timezone: string;
     repeatOption?: string;
-    serviceType: string; // NEW: Service type from modal
+    serviceType: string;
   }) => {
     if (!selectedPost) return;
     
@@ -501,11 +501,51 @@ export default function ScheduleComponent() {
     setOperationLoading(operationKey, true);
     
     try {
+      // Fetch full character profile data for sender
+      let senderProfile = null;
+      if (selectedPost.character_profile && typeof selectedPost.character_profile === 'string') {
+        const { data: profileData, error: profileError } = await supabase
+          .from('character_profiles')
+          .select('id, avatar_id, name, username, role')
+          .eq('id', selectedPost.character_profile)
+          .single();
+        
+        if (!profileError && profileData) {
+          senderProfile = {
+            profile_id: profileData.id,
+            avatar: profileData.avatar_id,
+            name: profileData.name,
+            username: profileData.username,
+            role: profileData.role
+          };
+        }
+      }
+
+      // Build JSON post_content structure
+      const postContent = {
+        media_files: selectedPost.media_files || [],
+        text_post: {
+          sender_profile: senderProfile,
+          title: selectedPost.title || '',
+          description: selectedPost.description || '',
+          hashtags: selectedPost.hashtags || [],
+          seo_keywords: selectedPost.keywords || '',
+          cta: selectedPost.cta || ''
+        }
+      };
+
+      // Create scheduled post with JSON structure
       const scheduledPostData = {
-        ...selectedPost,
+        content_id: selectedPost.content_id,
+        original_post_id: selectedPost.id,
         scheduled_date: new Date(scheduleData.scheduledDate),
+        timezone: scheduleData.timezone,
+        service_type: scheduleData.serviceType,
+        post_content: postContent,
+        selected_platforms: selectedPost.selected_platforms,
         status: 'scheduled' as const,
-        service_type: scheduleData.serviceType // NEW: Add service type to post data
+        user_id: selectedPost.user_id,
+        created_by: selectedPost.created_by
       };
 
       const result = await createPost(scheduledPostData);
@@ -513,7 +553,7 @@ export default function ScheduleComponent() {
       if (result.success) {
         setIsScheduleModalOpen(false);
         setSelectedPost(null);
-        showSuccess(`Post scheduled successfully via ${scheduleData.serviceType}!`);
+        showSuccess(`Post scheduled successfully via ${scheduleData.serviceType} for ${scheduleData.timezone}!`);
         await refreshPosts();
       } else {
         if (result.validationErrors?.length) {
@@ -788,7 +828,6 @@ export default function ScheduleComponent() {
 
   return (
     <div style={getContainerStyle(isDarkMode)}>
-      {/* Header - keeping only essential parts for brevity */}
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{
           fontSize: '28px',
@@ -807,7 +846,6 @@ export default function ScheduleComponent() {
         </p>
       </div>
 
-      {/* Error Notifications */}
       <div style={{ marginBottom: '16px' }}>
         {postsError && (
           <ErrorNotificationBanner
@@ -846,7 +884,6 @@ export default function ScheduleComponent() {
         ))}
       </div>
 
-      {/* Quick Stats */}
       <div style={{
         display: 'flex',
         gap: '12px',
@@ -886,7 +923,6 @@ export default function ScheduleComponent() {
         </div>
       </div>
 
-      {/* Tab Navigation */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr 1fr 1fr',
@@ -943,7 +979,6 @@ export default function ScheduleComponent() {
         })}
       </div>
 
-      {/* Tab Content */}
       <div style={{
         backgroundColor: theme.cardBg,
         borderRadius: '12px',
@@ -1029,7 +1064,6 @@ export default function ScheduleComponent() {
                               </span>
                             )}
                             
-                            {/* FIXED: Character Profile Display */}
                             {post.character_profile && (
                               <div style={{
                                 display: 'flex',
@@ -1117,7 +1151,6 @@ export default function ScheduleComponent() {
                             {truncateDescription(post.description)}
                           </p>
 
-                          {/* FIXED: Media Files Preview */}
                           {post.media_files && post.media_files.length > 0 && (
                             <div style={{
                               marginBottom: '16px',
@@ -1206,7 +1239,6 @@ export default function ScheduleComponent() {
                             </div>
                           )}
                           
-                          {/* Platform badges */}
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -1307,8 +1339,9 @@ export default function ScheduleComponent() {
             )}
           </div>
         )}
-        
-        {activeTab === 'calendar' && (
+      </div>
+
+              {activeTab === 'calendar' && (
           <div style={{ padding: '24px' }}>
             <div style={{
               display: 'flex',
@@ -2088,7 +2121,6 @@ export default function ScheduleComponent() {
         )}
       </div>
 
-      {/* Modals */}
       {isScheduleModalOpen && selectedPost && (
         <ScheduleModal
           post={selectedPost}
