@@ -1,4 +1,4 @@
-// /src/schedulecomponent/components/EditModal.tsx - FIXED: UK English attributes added
+// /src/schedulecomponent/components/EditModal.tsx - FIXED: Platform pre-selection + save to content_posts
 import React, { useState, useEffect } from 'react';
 import { Edit3, X, Save, Calendar, Clock, User, Hash, FileText, ExternalLink, Image, Video, Trash2, Plus, MessageCircle, Users } from 'lucide-react';
 import { formatDate, formatTime, isValidDate } from '../utils/dateUtils';
@@ -179,16 +179,33 @@ export default function EditModal({
         template_type: post.template_type || '',
         platform: post.platform || ''
       });
-      
-      const postData = post as any;
-      setSelectedSocialPlatforms(
-        Array.isArray(postData.social_platforms) ? postData.social_platforms : []
-      );
-      setSelectedTelegramConfigs(
-        Array.isArray(postData.telegram_configurations) ? postData.telegram_configurations : []
-      );
     }
   }, [post]);
+
+  // FIXED: Pre-select platforms from post's selected_platforms array
+  useEffect(() => {
+    if (post && socialPlatforms.length > 0 && telegramConfigs.length > 0) {
+      const postPlatforms = post.selected_platforms || [];
+      
+      // Separate into social platforms and telegram configs
+      const socialIds: string[] = [];
+      const telegramIds: string[] = [];
+      
+      postPlatforms.forEach(platformId => {
+        const isSocial = socialPlatforms.some(p => p.id === platformId || String(p.id) === String(platformId));
+        const isTelegram = telegramConfigs.some(t => t.id === platformId || String(t.id) === String(platformId));
+        
+        if (isSocial) {
+          socialIds.push(String(platformId));
+        } else if (isTelegram) {
+          telegramIds.push(String(platformId));
+        }
+      });
+      
+      setSelectedSocialPlatforms(socialIds);
+      setSelectedTelegramConfigs(telegramIds);
+    }
+  }, [post, socialPlatforms, telegramConfigs]);
 
   // Fetch platform configurations when modal opens
   useEffect(() => {
@@ -333,7 +350,7 @@ export default function EditModal({
     handleFieldChange('media_files', formData.media_files?.filter(f => f.id !== fileId) || []);
   };
 
-  // FIXED: Simple save to content_posts table
+  // FIXED: Save to content_posts with all platform selections
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
@@ -344,7 +361,10 @@ export default function EditModal({
         return;
       }
 
-      // Simple update object for content_posts table
+      // FIXED: Combine all selected platforms into selected_platforms array
+      const allSelectedPlatforms = [...selectedSocialPlatforms, ...selectedTelegramConfigs];
+
+      // Update object for content_posts table
       const updateData = {
         title: formData.title,
         description: formData.description,
@@ -352,29 +372,13 @@ export default function EditModal({
         keywords: formData.keywords,
         cta: formData.cta,
         media_files: formData.media_files,
-        selected_platforms: formData.selected_platforms,
+        selected_platforms: allSelectedPlatforms, // FIXED: Include all platform selections
         theme: formData.theme,
         audience: formData.audience,
         media_type: formData.media_type,
         template_type: formData.template_type,
         platform: formData.platform
       };
-
-      // Add character profile data if available
-      if (characterProfileData) {
-        updateData.character_avatar = characterProfileData.avatar_id;
-        updateData.name = characterProfileData.name;
-        updateData.username = characterProfileData.username;
-        updateData.role = characterProfileData.role;
-      }
-
-      // Add platform selections
-      if (selectedSocialPlatforms.length > 0) {
-        updateData.social_platforms = selectedSocialPlatforms;
-      }
-      if (selectedTelegramConfigs.length > 0) {
-        updateData.telegram_configurations = selectedTelegramConfigs;
-      }
 
       await onSave(post.id, updateData);
     } catch (err) {
@@ -724,7 +728,7 @@ export default function EditModal({
             </div>
           )}
 
-          {/* 3. TITLE - FIXED: Added lang="en-GB" and spellCheck={true} */}
+          {/* 3. TITLE */}
           <div>
             <label style={{
               display: 'block',
@@ -746,7 +750,7 @@ export default function EditModal({
             />
           </div>
 
-          {/* 4. DESCRIPTION - FIXED: Added lang="en-GB" and spellCheck={true} */}
+          {/* 4. DESCRIPTION */}
           <div>
             <label style={{
               display: 'block',
@@ -899,7 +903,6 @@ export default function EditModal({
               />
             </div>
 
-            {/* CTA - FIXED: Added lang="en-GB" and spellCheck={true} */}
             <div>
               <label style={{
                 display: 'block',
@@ -1085,12 +1088,12 @@ export default function EditModal({
                         alignItems: 'center',
                         gap: '12px',
                         padding: '12px',
-                        border: selectedSocialPlatforms.includes(platform.id)
+                        border: selectedSocialPlatforms.includes(String(platform.id))
                           ? `1px solid ${theme.primary}`
                           : `1px solid ${theme.border}`,
                         borderRadius: '6px',
                         cursor: 'pointer',
-                        backgroundColor: selectedSocialPlatforms.includes(platform.id)
+                        backgroundColor: selectedSocialPlatforms.includes(String(platform.id))
                           ? (isDarkMode ? '#1e3a8a30' : '#dbeafe')
                           : theme.background,
                         transition: 'all 0.2s ease'
@@ -1098,12 +1101,12 @@ export default function EditModal({
                     >
                       <input
                         type="checkbox"
-                        checked={selectedSocialPlatforms.includes(platform.id)}
+                        checked={selectedSocialPlatforms.includes(String(platform.id))}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedSocialPlatforms(prev => [...prev, platform.id]);
+                            setSelectedSocialPlatforms(prev => [...prev, String(platform.id)]);
                           } else {
-                            setSelectedSocialPlatforms(prev => prev.filter(id => id !== platform.id));
+                            setSelectedSocialPlatforms(prev => prev.filter(id => id !== String(platform.id)));
                           }
                         }}
                         style={{
@@ -1203,12 +1206,12 @@ export default function EditModal({
                         alignItems: 'center',
                         gap: '12px',
                         padding: '12px',
-                        border: selectedTelegramConfigs.includes(config.id)
+                        border: selectedTelegramConfigs.includes(String(config.id))
                           ? `1px solid ${theme.primary}`
                           : `1px solid ${theme.border}`,
                         borderRadius: '6px',
                         cursor: 'pointer',
-                        backgroundColor: selectedTelegramConfigs.includes(config.id)
+                        backgroundColor: selectedTelegramConfigs.includes(String(config.id))
                           ? (isDarkMode ? '#1e3a8a30' : '#dbeafe')
                           : theme.background,
                         transition: 'all 0.2s ease'
@@ -1216,12 +1219,12 @@ export default function EditModal({
                     >
                       <input
                         type="checkbox"
-                        checked={selectedTelegramConfigs.includes(config.id)}
+                        checked={selectedTelegramConfigs.includes(String(config.id))}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedTelegramConfigs(prev => [...prev, config.id]);
+                            setSelectedTelegramConfigs(prev => [...prev, String(config.id)]);
                           } else {
-                            setSelectedTelegramConfigs(prev => prev.filter(id => id !== config.id));
+                            setSelectedTelegramConfigs(prev => prev.filter(id => id !== String(config.id)));
                           }
                         }}
                         style={{
