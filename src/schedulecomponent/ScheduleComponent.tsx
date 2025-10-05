@@ -9,9 +9,6 @@ import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './typ
 import { supabase } from './config';
 import { updatePendingPost } from './api/scheduleAPI';
 
-import { Calendar, Clock, X, Check, AlertCircle, FileText, ExternalLink } from 'lucide-react';
-import { supabase } from '../config';
-
 // FIXED: Platform badge using url as primary identifier
 const PlatformBadge: React.FC<{ platform: any }> = ({ platform }) => {
   // FIXED: Extract platform type from URL as primary identifier
