@@ -1,4 +1,4 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - FIXED: Platform badge display using platformDetails
+// /src/schedulecomponent/ScheduleComponent.tsx - FIXED: Updates content_posts table
 import React, { useState, useEffect, useCallback } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
@@ -7,6 +7,7 @@ import { getTheme, getContainerStyle, getCSSAnimations } from './utils/styleUtil
 import { Calendar, Clock, Edit3, Trash2, RefreshCw, AlertCircle, CheckCircle, Play, X, ChevronLeft, ChevronRight, Save, XCircle, WifiOff } from 'lucide-react';
 import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './types';
 import { supabase } from './config';
+import { updatePendingPost } from './api/scheduleAPI';
 
 // FIXED: Platform badge renderer using platform_icon and type columns
 const PlatformBadge: React.FC<{ platform: any }> = ({ platform }) => {
@@ -221,7 +222,6 @@ export default function ScheduleComponent() {
     loading: postsLoading,
     error: postsError,
     createPost,
-    updatePost,
     deletePost,
     refreshPosts
   } = useScheduledPosts();
@@ -617,6 +617,7 @@ export default function ScheduleComponent() {
     setIsEditModalOpen(true);
   };
 
+  // FIXED: Save button now updates content_posts table
   const handleSaveEdit = async (postId: string, updates: Partial<ScheduledPost>) => {
     const operationKey = `edit-${postId}`;
     setOperationLoading(operationKey, true);
@@ -627,24 +628,13 @@ export default function ScheduleComponent() {
         status: 'scheduled' as const
       };
       
-      const result = await updatePost(postId, safeUpdates);
+      // FIXED: Use updatePendingPost which updates content_posts table
+      const result = await updatePendingPost(postId, safeUpdates);
       
-      if (result.success) {
-        setIsEditModalOpen(false);
-        setEditingPost(null);
-        showSuccess('Post updated successfully!');
-        await refreshPosts();
-      } else {
-        if (result.validationErrors?.length) {
-          const errorMsg = result.validationErrors.map(e => e.message).join(', ');
-          showError({ 
-            ...result.error!, 
-            message: `Validation failed: ${errorMsg}` 
-          });
-        } else {
-          showError(result.error!, () => handleSaveEdit(postId, updates));
-        }
-      }
+      setIsEditModalOpen(false);
+      setEditingPost(null);
+      showSuccess('Post updated successfully!');
+      await refreshPosts();
     } catch (error) {
       showError({
         message: 'Failed to update post. Please try again.',
