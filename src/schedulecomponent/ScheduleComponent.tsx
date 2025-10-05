@@ -9,14 +9,58 @@ import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './typ
 import { supabase } from './config';
 import { updatePendingPost } from './api/scheduleAPI';
 
-// FIXED: Platform badge renderer using platform_icon and type columns
+// /src/schedulecomponent/ScheduleComponent.tsx - FIXED: Platform badges using url as primary id
+import React, { useState, useEffect, useCallback } from 'react';
+import { Calendar, Clock, Edit3, Trash2, RefreshCw, AlertCircle, CheckCircle, Play, X, Save, XCircle, WifiOff } from 'lucide-react';
+
+// FIXED: Platform badge using url as primary identifier
 const PlatformBadge: React.FC<{ platform: any }> = ({ platform }) => {
-  // FIXED: Use platform_icon column directly (no name parsing)
-  const getPlatformIcon = (platform: any): string => {
-    return platform.platform_icon || '??';
+  // FIXED: Extract platform type from URL as primary identifier
+  const getPlatformTypeFromUrl = (url: string): string => {
+    if (!url) return '';
+    
+    const lowerUrl = url.toLowerCase();
+    
+    // Match platform patterns in URL
+    if (lowerUrl.includes('t.me') || lowerUrl.includes('telegram')) return 'telegram';
+    if (lowerUrl.includes('instagram.com') || lowerUrl.includes('ig.me')) return 'instagram';
+    if (lowerUrl.includes('facebook.com') || lowerUrl.includes('fb.com')) return 'facebook';
+    if (lowerUrl.includes('linkedin.com')) return 'linkedin';
+    if (lowerUrl.includes('twitter.com') || lowerUrl.includes('x.com')) return 'twitter';
+    if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) return 'youtube';
+    if (lowerUrl.includes('tiktok.com')) return 'tiktok';
+    if (lowerUrl.includes('pinterest.com')) return 'pinterest';
+    if (lowerUrl.includes('whatsapp.com') || lowerUrl.includes('wa.me')) return 'whatsapp';
+    if (lowerUrl.includes('discord.com') || lowerUrl.includes('discord.gg')) return 'discord';
+    
+    return '';
   };
 
-  // FIXED: Use type column for Telegram, platform_icon for others
+  // FIXED: Get platform icon using url first, then platform_icon fallback
+  const getPlatformIcon = (platform: any): string => {
+    // Primary: Extract from url
+    const urlType = getPlatformTypeFromUrl(platform.url || '');
+    
+    if (urlType === 'telegram') return 'TG';
+    if (urlType === 'instagram') return 'IG';
+    if (urlType === 'facebook') return 'FB';
+    if (urlType === 'linkedin') return 'LI';
+    if (urlType === 'twitter') return 'TW';
+    if (urlType === 'youtube') return 'YT';
+    if (urlType === 'tiktok') return 'TK';
+    if (urlType === 'pinterest') return 'PT';
+    if (urlType === 'whatsapp') return 'WA';
+    if (urlType === 'discord') return 'DS';
+    
+    // Secondary: Use platform_icon column directly
+    if (platform.platform_icon) {
+      return platform.platform_icon;
+    }
+    
+    return '??';
+  };
+
+  // FIXED: Get platform color using url first, then type for Telegram, then platform_icon
   const getPlatformColor = (platform: any): string => {
     // Use type column for Telegram color distinction
     if (platform.type === 'telegram_group') {
@@ -26,7 +70,21 @@ const PlatformBadge: React.FC<{ platform: any }> = ({ platform }) => {
       return '#3b82f6'; // Blue for channels
     }
     
-    // Use platform_icon for all other platform colors
+    // Extract platform type from url
+    const urlType = getPlatformTypeFromUrl(platform.url || '');
+    
+    if (urlType === 'telegram') return '#3b82f6';
+    if (urlType === 'instagram') return '#E4405F';
+    if (urlType === 'facebook') return '#1877F2';
+    if (urlType === 'linkedin') return '#0A66C2';
+    if (urlType === 'twitter') return '#000000';
+    if (urlType === 'youtube') return '#FF0000';
+    if (urlType === 'tiktok') return '#000000';
+    if (urlType === 'pinterest') return '#BD081C';
+    if (urlType === 'whatsapp') return '#25D366';
+    if (urlType === 'discord') return '#5865F2';
+    
+    // Fallback to platform_icon
     const icon = platform.platform_icon;
     if (icon === 'TG') return '#3b82f6';
     if (icon === 'IG') return '#E4405F';
@@ -54,114 +112,93 @@ const PlatformBadge: React.FC<{ platform: any }> = ({ platform }) => {
         backgroundColor: getPlatformColor(platform),
         display: 'inline-block'
       }}
-      title={platform.name || platform.display_name}
+      title={platform.name || platform.display_name || platform.url}
     >
       {getPlatformIcon(platform)}
     </span>
   );
 };
 
-const ErrorNotificationBanner: React.FC<{
-  error: ApiError;
-  onDismiss: () => void;
-  onRetry?: () => void;
-}> = ({ error, onDismiss, onRetry }) => {
-  const { theme } = getTheme();
-  
-  const getErrorIcon = () => {
-    switch (error.type) {
-      case 'network': return <WifiOff style={{ height: '16px', width: '16px' }} />;
-      case 'authorization': return <XCircle style={{ height: '16px', width: '16px' }} />;
-      default: return <AlertCircle style={{ height: '16px', width: '16px' }} />;
-    }
-  };
-
-  const getErrorColors = () => {
-    if (error.type === 'network') {
-      return {
-        background: theme.warningBg,
-        border: theme.warning,
-        text: theme.warning
-      };
-    }
-    return {
-      background: theme.dangerBg,
-      border: theme.danger,
-      text: theme.danger
-    };
-  };
-
-  const colors = getErrorColors();
+// Preview Component to Test
+export default function PlatformBadgePreview() {
+  const testPlatforms = [
+    { id: '1', name: 'Telegram Channel', url: 'https://t.me/mychannel', type: 'telegram_channel', platform_icon: 'TG' },
+    { id: '2', name: 'Telegram Group', url: 'https://t.me/mygroup', type: 'telegram_group', platform_icon: 'TG' },
+    { id: '3', name: 'Instagram', url: 'https://instagram.com/mypage', platform_icon: 'IG' },
+    { id: '4', name: 'Facebook', url: 'https://facebook.com/mypage', platform_icon: 'FB' },
+    { id: '5', name: 'Twitter', url: 'https://twitter.com/myhandle', platform_icon: 'TW' },
+    { id: '6', name: 'YouTube', url: 'https://youtube.com/mychannel', platform_icon: 'YT' },
+    { id: '7', name: 'Unknown', url: '', platform_icon: '' }
+  ];
 
   return (
-    <div style={{
-      padding: '12px 16px',
-      backgroundColor: colors.background,
-      border: `1px solid ${colors.border}`,
-      borderRadius: '8px',
-      marginBottom: '16px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between'
+    <div style={{ 
+      padding: '40px', 
+      backgroundColor: '#0f172a',
+      minHeight: '100vh',
+      fontFamily: 'ui-sans-serif, system-ui, sans-serif'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-        <div style={{ color: colors.border }}>
-          {getErrorIcon()}
+      <div style={{
+        backgroundColor: '#1e293b',
+        borderRadius: '12px',
+        padding: '24px',
+        maxWidth: '800px',
+        margin: '0 auto'
+      }}>
+        <h2 style={{ 
+          color: '#f1f5f9', 
+          marginBottom: '24px',
+          fontSize: '20px',
+          fontWeight: '600'
+        }}>
+          Platform Badge Test - Using URL as Primary ID
+        </h2>
+        
+        <div style={{ display: 'grid', gap: '12px' }}>
+          {testPlatforms.map((platform) => (
+            <div 
+              key={platform.id}
+              style={{
+                backgroundColor: '#334155',
+                padding: '16px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}
+            >
+              <PlatformBadge platform={platform} />
+              <div style={{ flex: 1 }}>
+                <div style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: '600' }}>
+                  {platform.name}
+                </div>
+                <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                  URL: {platform.url || 'No URL'}
+                </div>
+                <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                  Type: {platform.type || 'N/A'} | Icon: {platform.platform_icon || 'N/A'}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-        <div>
-          <div style={{
-            fontSize: '14px',
-            fontWeight: 'bold',
-            color: colors.text,
-            marginBottom: '2px'
-          }}>
-            {error.type === 'network' ? 'Connection Issue' : 'Error'}
-          </div>
-          <div style={{
-            fontSize: '13px',
-            color: colors.text,
-            opacity: 0.9
-          }}>
-            {error.message}
-          </div>
+
+        <div style={{
+          marginTop: '24px',
+          padding: '16px',
+          backgroundColor: '#22c55e20',
+          border: '1px solid #22c55e',
+          borderRadius: '8px',
+          color: '#22c55e',
+          fontSize: '13px'
+        }}>
+          <strong>✓ Fix Applied:</strong> Platform badges now use URL as primary identifier, 
+          with platform_icon as fallback. Telegram uses type column for group/channel color distinction.
         </div>
-      </div>
-      
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        {error.retryable && onRetry && (
-          <button
-            onClick={onRetry}
-            style={{
-              padding: '6px 12px',
-              fontSize: '12px',
-              backgroundColor: colors.border,
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            Retry
-          </button>
-        )}
-        <button
-          onClick={onDismiss}
-          style={{
-            padding: '4px',
-            backgroundColor: 'transparent',
-            border: 'none',
-            color: colors.text,
-            cursor: 'pointer',
-            opacity: 0.7
-          }}
-        >
-          <X style={{ height: '14px', width: '14px' }} />
-        </button>
       </div>
     </div>
   );
-};
+}
 
 const SuccessNotification: React.FC<{
   message: string;
