@@ -2134,17 +2134,6 @@ export default function ScheduleComponent() {
         />
       )}
 
-      {isScheduleModalOpen && selectedPost && (
-        <ScheduleModal
-          post={selectedPost}
-          onConfirm={handleConfirmSchedule}
-          onCancel={() => {
-            setIsScheduleModalOpen(false);
-            setSelectedPost(null);
-          }}
-        />
-      )}
-
       {isEditModalOpen && editingPost && (
         <EditModal
           post={editingPost}
