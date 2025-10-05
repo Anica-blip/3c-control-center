@@ -1,11 +1,11 @@
-// /src/schedulecomponent/components/ScheduleModal.tsx - FIXED: Character profile + media preview
+// /src/schedulecomponent/components/ScheduleModal.tsx - PHASE 2: Added Service Dropdown
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, X, Check, AlertCircle, FileText, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, X, Check, AlertCircle, FileText, ExternalLink, Send } from 'lucide-react';
 import { getTheme } from '../utils/styleUtils';
 import { ScheduledPost } from '../types';
 import { supabase } from '../config';
 
-// Local utility functions to avoid import issues
+// Local utility functions
 const formatDate = (date: Date): string => {
   return date.toLocaleDateString('en-GB', {
     day: '2-digit',
@@ -32,12 +32,20 @@ const isValidDate = (date: any): date is Date => {
   return date instanceof Date && !isNaN(date.getTime());
 };
 
+interface ExternalService {
+  id: string;
+  service_type: string;
+  url: string;
+  is_active: boolean;
+}
+
 interface ScheduleModalProps {
   post: ScheduledPost | null;
   onConfirm: (scheduleData: {
     scheduledDate: string;
     timezone: string;
     repeatOption?: string;
+    serviceType: string; // NEW: Service is required
   }) => void;
   onCancel: () => void;
 }
@@ -50,9 +58,14 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   
-  // FIXED: Character profile state
+  // Character profile state
   const [characterProfileData, setCharacterProfileData] = useState<any>(null);
   const [characterProfileLoading, setCharacterProfileLoading] = useState(false);
+
+  // PHASE 2: Service selection state
+  const [externalServices, setExternalServices] = useState<ExternalService[]>([]);
+  const [selectedService, setSelectedService] = useState('');
+  const [servicesLoading, setServicesLoading] = useState(false);
 
   const { isDarkMode, theme } = getTheme();
 
@@ -69,12 +82,11 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
     setTimezone(userTimezone);
   }, []);
 
-  // FIXED: Fetch character profile data
+  // Fetch character profile data
   useEffect(() => {
     const fetchCharacterProfile = async () => {
       if (!post?.character_profile) return;
       
-      // Check if it's a UUID
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
         post.character_profile as string
       );
@@ -104,6 +116,37 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
     
     fetchCharacterProfile();
   }, [post?.character_profile]);
+
+  // PHASE 2: Fetch external services
+  useEffect(() => {
+    const fetchExternalServices = async () => {
+      try {
+        setServicesLoading(true);
+        
+        const { data, error } = await supabase
+          .from('external_services')
+          .select('id, service_type, url, is_active')
+          .eq('is_active', true)
+          .order('service_type', { ascending: true });
+        
+        if (error) {
+          console.error('Error fetching external services:', error);
+          setError('Failed to load services. Please try again.');
+        } else {
+          setExternalServices(data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching external services:', error);
+        setError('Failed to load services. Please try again.');
+      } finally {
+        setServicesLoading(false);
+      }
+    };
+    
+    if (post) {
+      fetchExternalServices();
+    }
+  }, [post]);
 
   const modalOverlayStyle = {
     position: 'fixed' as const,
@@ -162,9 +205,15 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
     fontFamily: 'inherit'
   });
 
+  // PHASE 2: Updated validation to include service check
   const validateDateTime = () => {
     if (!selectedDate || !selectedTime) {
       setError('Please select both date and time');
+      return false;
+    }
+
+    if (!selectedService) {
+      setError('Please select a service to forward this post');
       return false;
     }
 
@@ -181,7 +230,6 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
       return false;
     }
 
-    // Check if scheduling too far in advance (1 year limit)
     const oneYearFromNow = new Date();
     oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
     
@@ -194,6 +242,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
     return true;
   };
 
+  // PHASE 2: Updated submit to include service
   const handleSubmit = async () => {
     if (!validateDateTime()) return;
 
@@ -206,7 +255,8 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
       await onConfirm({
         scheduledDate: scheduledDateTime.toISOString(),
         timezone: timezone,
-        repeatOption: repeatOption !== 'none' ? repeatOption : undefined
+        repeatOption: repeatOption !== 'none' ? repeatOption : undefined,
+        serviceType: selectedService // NEW: Pass selected service
       });
     } catch (err) {
       setError('Failed to schedule post. Please try again.');
@@ -240,7 +290,6 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
     setSelectedTime(date.toTimeString().split(' ')[0].slice(0, 5));
   };
 
-  // FIXED: Get platform names from platformDetails
   const getPlatformDisplay = () => {
     if (post?.platformDetails && post.platformDetails.length > 0) {
       return post.platformDetails.map(p => p.name || p.display_name).join(', ');
@@ -289,7 +338,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
           </button>
         </div>
 
-        {/* FIXED: Post Preview with Character Profile & Media */}
+        {/* Post Preview */}
         <div style={{
           backgroundColor: theme.cardBg,
           border: `1px solid ${theme.border}`,
@@ -404,7 +453,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
             {post.description}
           </p>
 
-          {/* FIXED: Media Files Preview */}
+          {/* Media Files Preview */}
           {post.media_files && post.media_files.length > 0 && (
             <div style={{
               marginBottom: '16px',
@@ -527,6 +576,97 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
               <span style={{ fontWeight: '600' }}>Platforms:</span>
               <span>{getPlatformDisplay()}</span>
             </div>
+          </div>
+        </div>
+
+        {/* PHASE 2: Service Selection - COMPULSORY */}
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: theme.text,
+            marginBottom: '8px'
+          }}>
+            <span style={{ color: theme.danger }}>* </span>
+            Forwarding Service
+          </label>
+          <div style={{
+            backgroundColor: theme.cardBg,
+            border: `1px solid ${selectedService ? theme.primary : theme.border}`,
+            borderRadius: '8px',
+            padding: '12px'
+          }}>
+            {servicesLoading ? (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: theme.textSecondary,
+                fontSize: '14px'
+              }}>
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  border: `2px solid ${theme.border}`,
+                  borderTop: `2px solid ${theme.primary}`,
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                Loading services...
+              </div>
+            ) : externalServices.length === 0 ? (
+              <div style={{
+                padding: '12px',
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffeaa7',
+                borderRadius: '6px',
+                color: '#856404',
+                fontSize: '13px'
+              }}>
+                No active services available. Please configure services first.
+              </div>
+            ) : (
+              <>
+                <select
+                  value={selectedService}
+                  onChange={(e) => setSelectedService(e.target.value)}
+                  style={{
+                    ...inputStyle,
+                    cursor: 'pointer',
+                    fontWeight: selectedService ? '600' : 'normal',
+                    color: selectedService ? theme.primary : theme.textSecondary
+                  }}
+                >
+                  <option value="">-- Select a service to forward post --</option>
+                  {externalServices.map((service) => (
+                    <option key={service.id} value={service.service_type}>
+                      {service.service_type}
+                    </option>
+                  ))}
+                </select>
+                {selectedService && (
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '8px',
+                    backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <Send size={14} style={{ color: theme.primary }} />
+                    <span style={{
+                      fontSize: '12px',
+                      color: theme.primary,
+                      fontWeight: '600'
+                    }}>
+                      Post will be forwarded to: {selectedService}
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 
@@ -750,10 +890,10 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
             onClick={handleSubmit}
             style={{
               ...buttonStyle('primary'),
-              opacity: isSubmitting ? 0.7 : 1,
-              cursor: isSubmitting ? 'not-allowed' : 'pointer'
+              opacity: isSubmitting || !selectedDate || !selectedTime || !selectedService ? 0.7 : 1,
+              cursor: isSubmitting || !selectedDate || !selectedTime || !selectedService ? 'not-allowed' : 'pointer'
             }}
-            disabled={isSubmitting || !selectedDate || !selectedTime}
+            disabled={isSubmitting || !selectedDate || !selectedTime || !selectedService}
           >
             {isSubmitting ? (
               <>
