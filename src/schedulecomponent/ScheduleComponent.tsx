@@ -9,10 +9,6 @@ import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './typ
 import { supabase } from './config';
 import { updatePendingPost } from './api/scheduleAPI';
 
-// /src/schedulecomponent/ScheduleComponent.tsx - FIXED: Platform badges using url as primary id
-import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, Clock, Edit3, Trash2, RefreshCw, AlertCircle, CheckCircle, Play, X, Save, XCircle, WifiOff } from 'lucide-react';
-
 // FIXED: Platform badge using url as primary identifier
 const PlatformBadge: React.FC<{ platform: any }> = ({ platform }) => {
   // FIXED: Extract platform type from URL as primary identifier
@@ -118,87 +114,6 @@ const PlatformBadge: React.FC<{ platform: any }> = ({ platform }) => {
     </span>
   );
 };
-
-// Preview Component to Test
-export default function PlatformBadgePreview() {
-  const testPlatforms = [
-    { id: '1', name: 'Telegram Channel', url: 'https://t.me/mychannel', type: 'telegram_channel', platform_icon: 'TG' },
-    { id: '2', name: 'Telegram Group', url: 'https://t.me/mygroup', type: 'telegram_group', platform_icon: 'TG' },
-    { id: '3', name: 'Instagram', url: 'https://instagram.com/mypage', platform_icon: 'IG' },
-    { id: '4', name: 'Facebook', url: 'https://facebook.com/mypage', platform_icon: 'FB' },
-    { id: '5', name: 'Twitter', url: 'https://twitter.com/myhandle', platform_icon: 'TW' },
-    { id: '6', name: 'YouTube', url: 'https://youtube.com/mychannel', platform_icon: 'YT' },
-    { id: '7', name: 'Unknown', url: '', platform_icon: '' }
-  ];
-
-  return (
-    <div style={{ 
-      padding: '40px', 
-      backgroundColor: '#0f172a',
-      minHeight: '100vh',
-      fontFamily: 'ui-sans-serif, system-ui, sans-serif'
-    }}>
-      <div style={{
-        backgroundColor: '#1e293b',
-        borderRadius: '12px',
-        padding: '24px',
-        maxWidth: '800px',
-        margin: '0 auto'
-      }}>
-        <h2 style={{ 
-          color: '#f1f5f9', 
-          marginBottom: '24px',
-          fontSize: '20px',
-          fontWeight: '600'
-        }}>
-          Platform Badge Test - Using URL as Primary ID
-        </h2>
-        
-        <div style={{ display: 'grid', gap: '12px' }}>
-          {testPlatforms.map((platform) => (
-            <div 
-              key={platform.id}
-              style={{
-                backgroundColor: '#334155',
-                padding: '16px',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}
-            >
-              <PlatformBadge platform={platform} />
-              <div style={{ flex: 1 }}>
-                <div style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: '600' }}>
-                  {platform.name}
-                </div>
-                <div style={{ color: '#94a3b8', fontSize: '12px' }}>
-                  URL: {platform.url || 'No URL'}
-                </div>
-                <div style={{ color: '#94a3b8', fontSize: '12px' }}>
-                  Type: {platform.type || 'N/A'} | Icon: {platform.platform_icon || 'N/A'}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{
-          marginTop: '24px',
-          padding: '16px',
-          backgroundColor: '#22c55e20',
-          border: '1px solid #22c55e',
-          borderRadius: '8px',
-          color: '#22c55e',
-          fontSize: '13px'
-        }}>
-          <strong>✓ Fix Applied:</strong> Platform badges now use URL as primary identifier, 
-          with platform_icon as fallback. Telegram uses type column for group/channel color distinction.
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const SuccessNotification: React.FC<{
   message: string;
