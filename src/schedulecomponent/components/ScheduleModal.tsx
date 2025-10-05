@@ -1,36 +1,18 @@
-// /src/schedulecomponent/components/ScheduleModal.tsx - PHASE 2: Added Service Dropdown
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, X, Check, AlertCircle, FileText, ExternalLink, Send } from 'lucide-react';
-import { getTheme } from '../utils/styleUtils';
+import { X, Calendar, Clock, CheckCircle, Video, FileText, ExternalLink, User } from 'lucide-react';
 import { ScheduledPost } from '../types';
 import { supabase } from '../config';
 
-// Local utility functions
-const formatDate = (date: Date): string => {
-  return date.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: '2-digit', 
-    year: 'numeric'
-  });
-};
-
-const formatTime = (date: Date): string => {
-  return date.toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  });
-};
-
-const addMinutes = (date: Date, minutes: number): Date => {
-  const newDate = new Date(date);
-  newDate.setMinutes(newDate.getMinutes() + minutes);
-  return newDate;
-};
-
-const isValidDate = (date: any): date is Date => {
-  return date instanceof Date && !isNaN(date.getTime());
-};
+interface ScheduleModalProps {
+  post: ScheduledPost;
+  onConfirm: (scheduleData: { 
+    scheduledDate: string; 
+    timezone: string; 
+    repeatOption?: string;
+    serviceType: string;
+  }) => void;
+  onCancel: () => void;
+}
 
 interface ExternalService {
   id: string;
@@ -39,891 +21,697 @@ interface ExternalService {
   is_active: boolean;
 }
 
-interface ScheduleModalProps {
-  post: ScheduledPost | null;
-  onConfirm: (scheduleData: {
-    scheduledDate: string;
-    timezone: string;
-    repeatOption?: string;
-    serviceType: string; // NEW: Service is required
-  }) => void;
-  onCancel: () => void;
-}
-
-export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleModalProps) {
-  const [selectedDate, setSelectedDate] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
+const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel }) => {
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
   const [timezone, setTimezone] = useState('UTC');
   const [repeatOption, setRepeatOption] = useState('none');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  
-  // Character profile state
-  const [characterProfileData, setCharacterProfileData] = useState<any>(null);
-  const [characterProfileLoading, setCharacterProfileLoading] = useState(false);
-
-  // PHASE 2: Service selection state
-  const [externalServices, setExternalServices] = useState<ExternalService[]>([]);
   const [selectedService, setSelectedService] = useState('');
-  const [servicesLoading, setServicesLoading] = useState(false);
+  const [services, setServices] = useState<ExternalService[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(true);
+  const [characterProfile, setCharacterProfile] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
 
-  const { isDarkMode, theme } = getTheme();
+  const isDarkMode = true;
+  const theme = {
+    background: '#0f172a',
+    cardBg: '#1e293b',
+    border: '#334155',
+    text: '#f1f5f9',
+    textSecondary: '#94a3b8',
+    primary: '#3b82f6',
+    primaryBg: '#1e3a8a',
+    success: '#22c55e',
+    successBg: '#14532d'
+  };
 
-  // Initialize with current date/time + 1 hour
   useEffect(() => {
-    const now = new Date();
-    const oneHourLater = addMinutes(now, 60);
-    
-    setSelectedDate(oneHourLater.toISOString().split('T')[0]);
-    setSelectedTime(oneHourLater.toTimeString().split(' ')[0].slice(0, 5));
-    
-    // Detect user timezone
-    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    setTimezone(userTimezone);
-  }, []);
-
-  // Fetch character profile data
-  useEffect(() => {
-    const fetchCharacterProfile = async () => {
-      if (!post?.character_profile) return;
-      
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-        post.character_profile as string
-      );
-      
-      if (!isUUID) return;
-      
-      try {
-        setCharacterProfileLoading(true);
-        
-        const { data, error } = await supabase
-          .from('character_profiles')
-          .select('avatar_id, name, username, role')
-          .eq('id', post.character_profile)
-          .single();
-        
-        if (error) {
-          console.error('Error fetching character profile:', error);
-        } else {
-          setCharacterProfileData(data);
-        }
-      } catch (error) {
-        console.error('Error fetching character profile:', error);
-      } finally {
-        setCharacterProfileLoading(false);
-      }
-    };
-    
-    fetchCharacterProfile();
-  }, [post?.character_profile]);
-
-  // PHASE 2: Fetch external services
-  useEffect(() => {
-    const fetchExternalServices = async () => {
-      try {
-        setServicesLoading(true);
-        
-        const { data, error } = await supabase
-          .from('external_services')
-          .select('id, service_type, url, is_active')
-          .eq('is_active', true)
-          .order('service_type', { ascending: true });
-        
-        if (error) {
-          console.error('Error fetching external services:', error);
-          setError('Failed to load services. Please try again.');
-        } else {
-          setExternalServices(data || []);
-        }
-      } catch (error) {
-        console.error('Error fetching external services:', error);
-        setError('Failed to load services. Please try again.');
-      } finally {
-        setServicesLoading(false);
-      }
-    };
-    
-    if (post) {
-      fetchExternalServices();
+    fetchExternalServices();
+    if (post.character_profile) {
+      fetchCharacterProfile(post.character_profile as string);
     }
-  }, [post]);
+  }, [post.character_profile]);
 
-  const modalOverlayStyle = {
-    position: 'fixed' as const,
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: '20px'
-  };
-
-  const modalStyle = {
-    backgroundColor: theme.background,
-    borderRadius: '12px',
-    padding: '24px',
-    maxWidth: '500px',
-    width: '100%',
-    maxHeight: '90vh',
-    overflow: 'auto' as const,
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-    fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-  };
-
-  const inputStyle = {
-    width: '100%',
-    padding: '12px',
-    border: `1px solid ${theme.border}`,
-    borderRadius: '8px',
-    fontSize: '14px',
-    backgroundColor: theme.cardBg,
-    color: theme.text,
-    fontFamily: 'inherit'
-  };
-
-  const buttonStyle = (variant: 'primary' | 'secondary') => ({
-    padding: '12px 20px',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    transition: 'all 0.2s ease',
-    border: variant === 'primary' ? 'none' : `1px solid ${theme.border}`,
-    backgroundColor: variant === 'primary' 
-      ? theme.primary
-      : 'transparent',
-    color: variant === 'primary' 
-      ? 'white' 
-      : theme.textSecondary,
-    fontFamily: 'inherit'
-  });
-
-  // PHASE 2: Updated validation to include service check
-  const validateDateTime = () => {
-    if (!selectedDate || !selectedTime) {
-      setError('Please select both date and time');
-      return false;
-    }
-
-    if (!selectedService) {
-      setError('Please select a service to forward this post');
-      return false;
-    }
-
-    const scheduledDateTime = new Date(`${selectedDate}T${selectedTime}`);
-    const now = new Date();
-
-    if (!isValidDate(scheduledDateTime)) {
-      setError('Invalid date or time selected');
-      return false;
-    }
-
-    if (scheduledDateTime <= now) {
-      setError('Scheduled time must be in the future');
-      return false;
-    }
-
-    const oneYearFromNow = new Date();
-    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
-    
-    if (scheduledDateTime > oneYearFromNow) {
-      setError('Cannot schedule more than 1 year in advance');
-      return false;
-    }
-
-    setError('');
-    return true;
-  };
-
-  // PHASE 2: Updated submit to include service
-  const handleSubmit = async () => {
-    if (!validateDateTime()) return;
-
-    setIsSubmitting(true);
-    setError('');
-
+  const fetchExternalServices = async () => {
     try {
-      const scheduledDateTime = new Date(`${selectedDate}T${selectedTime}`);
-      
-      await onConfirm({
-        scheduledDate: scheduledDateTime.toISOString(),
-        timezone: timezone,
-        repeatOption: repeatOption !== 'none' ? repeatOption : undefined,
-        serviceType: selectedService // NEW: Pass selected service
-      });
-    } catch (err) {
-      setError('Failed to schedule post. Please try again.');
-      setIsSubmitting(false);
+      const { data, error } = await supabase
+        .from('external_services')
+        .select('id, service_type, url, is_active')
+        .eq('is_active', true)
+        .order('service_type');
+
+      if (error) throw error;
+      setServices(data || []);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    } finally {
+      setServicesLoading(false);
     }
   };
 
-  const getQuickScheduleOptions = () => {
-    const now = new Date();
-    return [
-      { label: 'In 1 hour', value: addMinutes(now, 60) },
-      { label: 'In 2 hours', value: addMinutes(now, 120) },
-      { label: 'Tomorrow 9 AM', value: (() => {
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(9, 0, 0, 0);
-        return tomorrow;
-      })() },
-      { label: 'Next Monday 9 AM', value: (() => {
-        const nextMonday = new Date(now);
-        const daysUntilMonday = (1 + 7 - now.getDay()) % 7 || 7;
-        nextMonday.setDate(now.getDate() + daysUntilMonday);
-        nextMonday.setHours(9, 0, 0, 0);
-        return nextMonday;
-      })() }
-    ];
-  };
+  const fetchCharacterProfile = async (profileId: string) => {
+    try {
+      setProfileLoading(true);
+      const { data, error } = await supabase
+        .from('character_profiles')
+        .select('avatar_id, name, username, role')
+        .eq('id', profileId)
+        .single();
 
-  const handleQuickSchedule = (date: Date) => {
-    setSelectedDate(date.toISOString().split('T')[0]);
-    setSelectedTime(date.toTimeString().split(' ')[0].slice(0, 5));
-  };
-
-  const getPlatformDisplay = () => {
-    if (post?.platformDetails && post.platformDetails.length > 0) {
-      return post.platformDetails.map(p => p.name || p.display_name).join(', ');
+      if (error) throw error;
+      setCharacterProfile(data);
+    } catch (error) {
+      console.error('Error fetching character profile:', error);
+    } finally {
+      setProfileLoading(false);
     }
-    if (post?.selected_platforms && post.selected_platforms.length > 0) {
-      return `${post.selected_platforms.length} platform(s) selected`;
-    }
-    return 'No platforms selected';
   };
 
-  if (!post) return null;
+  const handleConfirm = () => {
+    if (!scheduledDate || !scheduledTime || !selectedService) {
+      alert('Please fill in all required fields including service selection');
+      return;
+    }
+
+    const dateTimeString = `${scheduledDate}T${scheduledTime}:00`;
+    onConfirm({
+      scheduledDate: dateTimeString,
+      timezone,
+      repeatOption: repeatOption !== 'none' ? repeatOption : undefined,
+      serviceType: selectedService
+    });
+  };
+
+  const truncateText = (text: string, maxLength: number = 150) => {
+    if (!text || text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
+  const selectedServiceName = services.find(s => s.service_type === selectedService)?.service_type || selectedService;
 
   return (
-    <div style={modalOverlayStyle} onClick={onCancel}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.75)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '20px'
+    }}>
+      <div style={{
+        backgroundColor: theme.cardBg,
+        borderRadius: '12px',
+        width: '100%',
+        maxWidth: '600px',
+        maxHeight: '90vh',
+        overflow: 'auto',
+        border: `1px solid ${theme.border}`
+      }}>
         {/* Header */}
         <div style={{
+          padding: '20px 24px',
+          borderBottom: `1px solid ${theme.border}`,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '24px'
+          justifyContent: 'space-between'
         }}>
-          <h2 style={{
-            fontSize: '20px',
-            fontWeight: '600',
-            color: theme.primary,
-            margin: '0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <Calendar size={24} />
-            Schedule Post
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Calendar style={{ height: '20px', width: '20px', color: theme.primary }} />
+            <h2 style={{
+              margin: 0,
+              fontSize: '18px',
+              fontWeight: 'bold',
+              color: theme.text
+            }}>
+              Schedule Post
+            </h2>
+          </div>
           <button
             onClick={onCancel}
             style={{
-              background: 'none',
+              padding: '8px',
+              backgroundColor: 'transparent',
               border: 'none',
-              cursor: 'pointer',
               color: theme.textSecondary,
-              padding: '4px'
+              cursor: 'pointer',
+              borderRadius: '6px'
             }}
           >
-            <X size={20} />
+            <X style={{ height: '20px', width: '20px' }} />
           </button>
         </div>
 
-        {/* Post Preview */}
-        <div style={{
-          backgroundColor: theme.cardBg,
-          border: `1px solid ${theme.border}`,
-          borderRadius: '8px',
-          padding: '16px',
-          marginBottom: '24px'
-        }}>
-          {/* Character Profile Header */}
-          {post.character_profile && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              marginBottom: '12px',
-              padding: '12px',
-              backgroundColor: theme.background,
-              borderRadius: '6px',
-              border: `1px solid ${theme.border}`
-            }}>
-              {characterProfileLoading ? (
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  border: `2px solid ${theme.border}`,
-                  borderTop: `2px solid ${theme.primary}`,
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }} />
-              ) : characterProfileData ? (
-                <>
-                  {characterProfileData.avatar_id && (
-                    <img 
-                      src={characterProfileData.avatar_id}
-                      alt={characterProfileData.name}
-                      style={{
-                        width: '48px',
-                        height: '48px',
-                        borderRadius: '50%',
-                        border: `2px solid ${theme.primary}`,
-                        objectFit: 'cover'
-                      }}
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  )}
-                  <div style={{ flex: 1 }}>
-                    {characterProfileData.name && (
-                      <div style={{
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        color: theme.text,
-                        lineHeight: '1.2',
-                        marginBottom: '2px'
-                      }}>
-                        {characterProfileData.name}
-                      </div>
-                    )}
-                    {characterProfileData.username && (
-                      <div style={{
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: theme.primary,
-                        lineHeight: '1.2',
-                        marginBottom: '2px'
-                      }}>
-                        {characterProfileData.username.startsWith('@') 
-                          ? characterProfileData.username 
-                          : `@${characterProfileData.username}`}
-                      </div>
-                    )}
-                    {characterProfileData.role && (
-                      <div style={{
-                        fontSize: '12px',
-                        color: theme.textSecondary,
-                        lineHeight: '1.2'
-                      }}>
-                        {characterProfileData.role}
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div style={{
-                  fontSize: '12px',
-                  color: theme.textSecondary
-                }}>
-                  Character profile not found
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Title & Description */}
-          <h3 style={{
-            fontSize: '16px',
-            fontWeight: '600',
-            color: theme.text,
-            margin: '0 0 8px 0'
+        {/* Content */}
+        <div style={{ padding: '24px' }}>
+          {/* POST PREVIEW SECTION - REORDERED */}
+          <div style={{
+            marginBottom: '24px',
+            padding: '16px',
+            backgroundColor: theme.background,
+            borderRadius: '8px',
+            border: `1px solid ${theme.border}`
           }}>
-            {post.title || 'Untitled Post'}
-          </h3>
-          <p style={{
-            fontSize: '14px',
-            color: theme.textSecondary,
-            margin: '0 0 16px 0',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden'
-          }}>
-            {post.description}
-          </p>
-
-          {/* Media Files Preview */}
-          {post.media_files && post.media_files.length > 0 && (
-            <div style={{
-              marginBottom: '16px',
-              padding: '12px',
-              backgroundColor: theme.background,
-              borderRadius: '6px',
-              border: `1px solid ${theme.border}`
+            <h3 style={{
+              margin: '0 0 16px 0',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              color: theme.textSecondary,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
             }}>
+              Post Preview
+            </h3>
+
+            {/* 1. MEDIA FILES - NOW FIRST */}
+            {post.media_files && post.media_files.length > 0 && (
               <div style={{
-                fontSize: '12px',
-                fontWeight: '600',
-                color: theme.textSecondary,
-                marginBottom: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
+                marginBottom: '16px',
+                padding: '12px',
+                backgroundColor: theme.cardBg,
+                borderRadius: '6px',
+                border: `1px solid ${theme.border}`
               }}>
-                <FileText size={14} />
-                Media Files ({post.media_files.length})
+                <div style={{
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  color: theme.textSecondary,
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  <FileText size={12} />
+                  Media Files ({post.media_files.length})
+                </div>
+                <div style={{ display: 'grid', gap: '6px' }}>
+                  {post.media_files.slice(0, 3).map((file, idx) => (
+                    <div key={idx} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '8px 10px',
+                      backgroundColor: theme.background,
+                      borderRadius: '4px'
+                    }}>
+                      {file.type === 'image' && file.url ? (
+                        <img 
+                          src={file.url}
+                          alt={file.name}
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '4px',
+                            objectFit: 'cover',
+                            border: `1px solid ${theme.border}`
+                          }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '4px',
+                          backgroundColor: theme.primary,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white'
+                        }}>
+                          {file.type === 'video' ? <Video size={16} /> : 
+                           file.type === 'url_link' ? <ExternalLink size={16} /> : 
+                           <FileText size={16} />}
+                        </div>
+                      )}
+                      <span style={{
+                        fontSize: '12px',
+                        color: theme.text,
+                        fontWeight: '500',
+                        flex: 1,
+                        textOverflow: 'ellipsis',
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {file.name}
+                      </span>
+                    </div>
+                  ))}
+                  {post.media_files.length > 3 && (
+                    <div style={{
+                      fontSize: '11px',
+                      color: theme.textSecondary,
+                      textAlign: 'center',
+                      padding: '6px',
+                      fontWeight: '500'
+                    }}>
+                      +{post.media_files.length - 3} more files
+                    </div>
+                  )}
+                </div>
               </div>
-              <div style={{ display: 'grid', gap: '8px' }}>
-                {post.media_files.map((file, idx) => (
-                  <div key={idx} style={{
+            )}
+
+            {/* 2. CHARACTER PROFILE - NOW SECOND (SENDER HEADER) */}
+            {post.character_profile && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '12px',
+                backgroundColor: theme.cardBg,
+                borderRadius: '6px',
+                border: `1px solid ${theme.border}`
+              }}>
+                <div style={{
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  color: theme.textSecondary,
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  <User size={12} />
+                  Post Sender
+                </div>
+                {profileLoading ? (
+                  <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
                     padding: '8px',
-                    backgroundColor: theme.cardBg,
-                    borderRadius: '4px',
-                    border: `1px solid ${theme.border}`
+                    color: theme.textSecondary,
+                    fontSize: '12px'
                   }}>
-                    {file.type === 'image' && file.url && (
+                    <div style={{
+                      width: '12px',
+                      height: '12px',
+                      border: `2px solid ${theme.border}`,
+                      borderTop: `2px solid ${theme.primary}`,
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }} />
+                    Loading profile...
+                  </div>
+                ) : characterProfile ? (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '8px',
+                    backgroundColor: theme.background,
+                    borderRadius: '4px'
+                  }}>
+                    {characterProfile.avatar_id && (
                       <img 
-                        src={file.url}
-                        alt={file.name}
+                        src={characterProfile.avatar_id} 
+                        alt={characterProfile.name || 'Profile'}
                         style={{
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '4px',
-                          objectFit: 'cover'
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: `2px solid ${theme.primary}`
                         }}
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
                         }}
                       />
                     )}
-                    {file.type !== 'image' && (
-                      <div style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '4px',
-                        backgroundColor: theme.primary,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontSize: '10px',
-                        fontWeight: 'bold'
-                      }}>
-                        {file.type === 'video' ? 'VID' : 
-                         file.type === 'pdf' ? 'PDF' : 
-                         file.type === 'url_link' ? 'URL' : 'FILE'}
-                      </div>
-                    )}
                     <div style={{ flex: 1 }}>
-                      <div style={{
-                        fontSize: '13px',
-                        fontWeight: '500',
-                        color: theme.text,
-                        textOverflow: 'ellipsis',
-                        overflow: 'hidden',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {file.name}
-                      </div>
-                      <div style={{
-                        fontSize: '11px',
-                        color: theme.textSecondary
-                      }}>
-                        {file.type} {file.size ? `• ${Math.round(file.size / 1024)} KB` : ''}
-                      </div>
-                    </div>
-                    {file.url && (
-                      <a 
-                        href={file.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
+                      {characterProfile.name && (
+                        <div style={{
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          color: theme.text,
+                          marginBottom: '2px'
+                        }}>
+                          {characterProfile.name}
+                        </div>
+                      )}
+                      {characterProfile.username && (
+                        <div style={{
+                          fontSize: '12px',
+                          fontWeight: '500',
                           color: theme.primary,
+                          marginBottom: '2px'
+                        }}>
+                          {characterProfile.username}
+                        </div>
+                      )}
+                      {characterProfile.role && (
+                        <div style={{
                           fontSize: '11px',
-                          textDecoration: 'none',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        View
-                        <ExternalLink size={10} />
-                      </a>
-                    )}
+                          color: theme.textSecondary
+                        }}>
+                          {characterProfile.role}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ))}
+                ) : (
+                  <div style={{
+                    padding: '8px',
+                    color: theme.textSecondary,
+                    fontSize: '12px'
+                  }}>
+                    Profile not found
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 3. DESCRIPTION SNIPPET - NOW THIRD */}
+            <div style={{
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: theme.cardBg,
+              borderRadius: '6px',
+              border: `1px solid ${theme.border}`
+            }}>
+              <div style={{
+                fontSize: '11px',
+                fontWeight: '600',
+                color: theme.textSecondary,
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                Content Preview
+              </div>
+              <div style={{
+                fontSize: '13px',
+                color: theme.text,
+                lineHeight: '1.5',
+                padding: '8px',
+                backgroundColor: theme.background,
+                borderRadius: '4px'
+              }}>
+                {truncateText(post.description || 'No description')}
               </div>
             </div>
-          )}
 
-          {/* Post Details */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            fontSize: '12px',
-            color: theme.textSecondary
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontWeight: '600' }}>ID:</span>
-              <span>{post.content_id}</span>
+            {/* POST METADATA */}
+            <div style={{
+              padding: '12px',
+              backgroundColor: theme.cardBg,
+              borderRadius: '6px',
+              border: `1px solid ${theme.border}`,
+              fontSize: '11px',
+              color: theme.textSecondary
+            }}>
+              <div style={{ marginBottom: '6px' }}>
+                <strong>Post ID:</strong> {post.content_id}
+              </div>
+              {post.platformDetails && post.platformDetails.length > 0 && (
+                <div>
+                  <strong>Platforms:</strong> {post.platformDetails.map(p => p.name || p.display_name).join(', ')}
+                </div>
+              )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontWeight: '600' }}>Platforms:</span>
-              <span>{getPlatformDisplay()}</span>
-            </div>
-          </div>
-        </div>
 
-        {/* PHASE 2: Service Selection - COMPULSORY */}
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{
-            display: 'block',
-            fontSize: '14px',
-            fontWeight: '600',
-            color: theme.text,
-            marginBottom: '8px'
-          }}>
-            <span style={{ color: theme.danger }}>* </span>
-            Forwarding Service
-          </label>
-          <div style={{
-            backgroundColor: theme.cardBg,
-            border: `1px solid ${selectedService ? theme.primary : theme.border}`,
-            borderRadius: '8px',
-            padding: '12px'
-          }}>
-            {servicesLoading ? (
+            {/* CONFIRMATION MESSAGE */}
+            {selectedService && (
               <div style={{
+                marginTop: '16px',
+                padding: '12px 16px',
+                backgroundColor: theme.successBg,
+                border: `1px solid ${theme.success}`,
+                borderRadius: '6px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                color: theme.textSecondary,
-                fontSize: '14px'
+                gap: '10px'
               }}>
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  border: `2px solid ${theme.border}`,
-                  borderTop: `2px solid ${theme.primary}`,
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
+                <CheckCircle style={{ 
+                  height: '16px', 
+                  width: '16px', 
+                  color: theme.success,
+                  flexShrink: 0
                 }} />
-                Loading services...
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    color: theme.success,
+                    marginBottom: '2px'
+                  }}>
+                    Complete post will be forwarded by: {selectedServiceName}
+                  </div>
+                  <div style={{
+                    fontSize: '11px',
+                    color: theme.success,
+                    opacity: 0.9
+                  }}>
+                    Includes: Media, Sender Profile, Title, Description, Hashtags, Keywords, CTA
+                  </div>
+                </div>
               </div>
-            ) : externalServices.length === 0 ? (
-              <div style={{
-                padding: '12px',
-                backgroundColor: '#fff3cd',
-                border: '1px solid #ffeaa7',
-                borderRadius: '6px',
-                color: '#856404',
-                fontSize: '13px'
+            )}
+          </div>
+
+          {/* SCHEDULING FORM */}
+          <div style={{ display: 'grid', gap: '16px' }}>
+            {/* Date Input */}
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: theme.text
               }}>
-                No active services available. Please configure services first.
-              </div>
-            ) : (
-              <>
+                Schedule Date *
+              </label>
+              <input
+                type="date"
+                value={scheduledDate}
+                onChange={(e) => setScheduledDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  backgroundColor: theme.background,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '6px',
+                  color: theme.text,
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            {/* Time Input */}
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: theme.text
+              }}>
+                Schedule Time *
+              </label>
+              <input
+                type="time"
+                value={scheduledTime}
+                onChange={(e) => setScheduledTime(e.target.value)}
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  backgroundColor: theme.background,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '6px',
+                  color: theme.text,
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            {/* Timezone */}
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: theme.text
+              }}>
+                Timezone
+              </label>
+              <select
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  backgroundColor: theme.background,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '6px',
+                  color: theme.text,
+                  fontSize: '14px'
+                }}
+              >
+                <option value="UTC">UTC</option>
+                <option value="America/New_York">Eastern Time</option>
+                <option value="America/Chicago">Central Time</option>
+                <option value="America/Denver">Mountain Time</option>
+                <option value="America/Los_Angeles">Pacific Time</option>
+                <option value="Europe/London">London</option>
+                <option value="Europe/Paris">Paris</option>
+                <option value="Asia/Tokyo">Tokyo</option>
+              </select>
+            </div>
+
+            {/* Service Selection - COMPULSORY */}
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: theme.text
+              }}>
+                Forwarding Service *
+              </label>
+              {servicesLoading ? (
+                <div style={{
+                  padding: '10px 12px',
+                  backgroundColor: theme.background,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '6px',
+                  color: theme.textSecondary,
+                  fontSize: '14px'
+                }}>
+                  Loading services...
+                </div>
+              ) : (
                 <select
                   value={selectedService}
                   onChange={(e) => setSelectedService(e.target.value)}
+                  required
                   style={{
-                    ...inputStyle,
-                    cursor: 'pointer',
-                    fontWeight: selectedService ? '600' : 'normal',
-                    color: selectedService ? theme.primary : theme.textSecondary
+                    width: '100%',
+                    padding: '10px 12px',
+                    backgroundColor: theme.background,
+                    border: `1px solid ${selectedService ? theme.border : theme.primary}`,
+                    borderRadius: '6px',
+                    color: theme.text,
+                    fontSize: '14px'
                   }}
                 >
                   <option value="">-- Select a service to forward post --</option>
-                  {externalServices.map((service) => (
+                  {services.map((service) => (
                     <option key={service.id} value={service.service_type}>
                       {service.service_type}
                     </option>
                   ))}
                 </select>
-                {selectedService && (
-                  <div style={{
-                    marginTop: '8px',
-                    padding: '8px',
-                    backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
-                    borderRadius: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    <Send size={14} style={{ color: theme.primary }} />
-                    <span style={{
-                      fontSize: '12px',
-                      color: theme.primary,
-                      fontWeight: '600'
-                    }}>
-                      Post will be forwarded to: {selectedService}
-                    </span>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
+              )}
+              {!selectedService && (
+                <div style={{
+                  marginTop: '6px',
+                  fontSize: '11px',
+                  color: theme.primary,
+                  fontWeight: '500'
+                }}>
+                  Service selection is required to schedule post
+                </div>
+              )}
+            </div>
 
-        {/* Quick Schedule Options */}
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{
-            display: 'block',
-            fontSize: '14px',
-            fontWeight: '600',
-            color: theme.text,
-            marginBottom: '12px'
-          }}>
-            Quick Schedule Options
-          </label>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '8px'
-          }}>
-            {getQuickScheduleOptions().map((option, index) => (
-              <button
-                key={index}
-                onClick={() => handleQuickSchedule(option.value)}
+            {/* Repeat Option */}
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: theme.text
+              }}>
+                Repeat (Optional)
+              </label>
+              <select
+                value={repeatOption}
+                onChange={(e) => setRepeatOption(e.target.value)}
                 style={{
-                  padding: '8px 12px',
-                  backgroundColor: theme.cardBg,
+                  width: '100%',
+                  padding: '10px 12px',
+                  backgroundColor: theme.background,
                   border: `1px solid ${theme.border}`,
                   borderRadius: '6px',
-                  fontSize: '12px',
                   color: theme.text,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontFamily: 'inherit'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.primary;
-                  e.currentTarget.style.color = 'white';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.cardBg;
-                  e.currentTarget.style.color = theme.text;
+                  fontSize: '14px'
                 }}
               >
-                {option.label}
-              </button>
-            ))}
+                <option value="none">No Repeat</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Custom Date & Time */}
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{
-            display: 'block',
-            fontSize: '14px',
-            fontWeight: '600',
-            color: theme.text,
-            marginBottom: '12px'
-          }}>
-            Custom Schedule
-          </label>
-          
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '12px',
-            marginBottom: '12px'
-          }}>
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                color: theme.textSecondary,
-                marginBottom: '4px'
-              }}>
-                Date
-              </label>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                style={inputStyle}
-                min={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-            
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                color: theme.textSecondary,
-                marginBottom: '4px'
-              }}>
-                Time
-              </label>
-              <input
-                type="time"
-                value={selectedTime}
-                onChange={(e) => setSelectedTime(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-          </div>
-
-          {/* Timezone */}
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '12px',
-              color: theme.textSecondary,
-              marginBottom: '4px'
-            }}>
-              Timezone
-            </label>
-            <select
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              style={inputStyle}
-            >
-              <option value="UTC">UTC (Coordinated Universal Time)</option>
-              <option value="Europe/London">London (GMT/BST)</option>
-              <option value="Europe/Paris">Paris (CET/CEST)</option>
-              <option value="America/New_York">Eastern Time (EST/EDT)</option>
-              <option value="America/Chicago">Central Time (CST/CDT)</option>
-              <option value="America/Denver">Mountain Time (MST/MDT)</option>
-              <option value="America/Los_Angeles">Pacific Time (PST/PDT)</option>
-              <option value="Asia/Tokyo">Tokyo (JST)</option>
-              <option value="Asia/Shanghai">Shanghai (CST)</option>
-              <option value="Australia/Sydney">Sydney (AEST/AEDT)</option>
-            </select>
-          </div>
-
-          {/* Repeat Options */}
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '12px',
-              color: theme.textSecondary,
-              marginBottom: '4px'
-            }}>
-              Repeat (Optional)
-            </label>
-            <select
-              value={repeatOption}
-              onChange={(e) => setRepeatOption(e.target.value)}
-              style={inputStyle}
-            >
-              <option value="none">No repeat</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Preview Scheduled Time */}
-        {selectedDate && selectedTime && (
-          <div style={{
-            backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
-            border: `1px solid ${theme.primary}`,
-            borderRadius: '8px',
-            padding: '12px',
-            marginBottom: '24px'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              color: theme.primary,
-              fontSize: '14px',
-              fontWeight: '600'
-            }}>
-              <Clock size={16} />
-              Scheduled for: {formatDate(new Date(`${selectedDate}T${selectedTime}`))} at {formatTime(new Date(`${selectedDate}T${selectedTime}`))}
-            </div>
-            <div style={{
-              fontSize: '12px',
-              color: theme.textSecondary,
-              marginTop: '4px'
-            }}>
-              Timezone: {timezone}
-              {repeatOption !== 'none' && ` • Repeats: ${repeatOption}`}
-            </div>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div style={{
-            backgroundColor: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: '8px',
-            padding: '12px',
-            marginBottom: '24px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            color: '#dc2626'
-          }}>
-            <AlertCircle size={16} />
-            {error}
-          </div>
-        )}
-
-        {/* Actions */}
+        {/* Footer Actions */}
         <div style={{
+          padding: '16px 24px',
+          borderTop: `1px solid ${theme.border}`,
           display: 'flex',
-          justifyContent: 'flex-end',
           gap: '12px',
-          paddingTop: '16px',
-          borderTop: `1px solid ${theme.border}`
+          justifyContent: 'flex-end'
         }}>
           <button
             onClick={onCancel}
-            style={buttonStyle('secondary')}
-            disabled={isSubmitting}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: 'transparent',
+              border: `1px solid ${theme.border}`,
+              borderRadius: '6px',
+              color: theme.text,
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
           >
             Cancel
           </button>
-          
           <button
-            onClick={handleSubmit}
+            onClick={handleConfirm}
+            disabled={!scheduledDate || !scheduledTime || !selectedService}
             style={{
-              ...buttonStyle('primary'),
-              opacity: isSubmitting || !selectedDate || !selectedTime || !selectedService ? 0.7 : 1,
-              cursor: isSubmitting || !selectedDate || !selectedTime || !selectedService ? 'not-allowed' : 'pointer'
+              padding: '10px 24px',
+              backgroundColor: (!scheduledDate || !scheduledTime || !selectedService) ? theme.textSecondary : theme.primary,
+              border: 'none',
+              borderRadius: '6px',
+              color: 'white',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              cursor: (!scheduledDate || !scheduledTime || !selectedService) ? 'not-allowed' : 'pointer',
+              opacity: (!scheduledDate || !scheduledTime || !selectedService) ? 0.6 : 1
             }}
-            disabled={isSubmitting || !selectedDate || !selectedTime || !selectedService}
           >
-            {isSubmitting ? (
-              <>
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid transparent',
-                  borderTop: '2px solid white',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }} />
-                Scheduling...
-              </>
-            ) : (
-              <>
-                <Check size={16} />
-                Schedule Post
-              </>
-            )}
+            Confirm Schedule
           </button>
         </div>
-
-        {/* CSS for loading animation */}
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
-}
+};
+
+export default ScheduleModal;
