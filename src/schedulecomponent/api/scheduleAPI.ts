@@ -1,4 +1,4 @@
-// /src/schedulecomponent/api/scheduleAPI.ts - UPDATED: Platform details + media uploads
+// /src/schedulecomponent/api/scheduleAPI.ts - PHASE 3: Complete Database Workflow
 import { supabase } from '../config';
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
@@ -23,6 +23,7 @@ const mapContentPostToScheduledPost = (data: any): ScheduledPost => {
     selected_platforms: Array.isArray(data.selected_platforms) ? data.selected_platforms : [],
     scheduled_date: data.scheduled_date ? new Date(data.scheduled_date) : null,
     status: data.status || 'scheduled',
+    service_type: data.service_type || '', // NEW: Service type
     created_date: new Date(data.created_at),
     user_id: data.user_id || '',
     created_by: data.created_by || '',
@@ -52,6 +53,7 @@ const mapDashboardPostToScheduledPost = (data: any): ScheduledPost => {
     selected_platforms: Array.isArray(data.selected_platforms) ? data.selected_platforms : [],
     scheduled_date: new Date(data.scheduled_date),
     status: data.status || 'scheduled',
+    service_type: data.service_type || '', // NEW: Service type
     failure_reason: data.failure_reason || '',
     retry_count: data.retry_count || 0,
     created_date: new Date(data.created_at),
@@ -62,7 +64,7 @@ const mapDashboardPostToScheduledPost = (data: any): ScheduledPost => {
   };
 };
 
-// NEW: Load platforms from social_platforms table (mirrored from supabaseAPI.ts)
+// Load platforms from social_platforms table
 const loadPlatforms = async (): Promise<any[]> => {
   if (!supabase) throw new Error('Supabase client not available');
 
@@ -89,7 +91,7 @@ const loadPlatforms = async (): Promise<any[]> => {
   }
 };
 
-// NEW: Load Telegram channels (mirrored from supabaseAPI.ts)
+// Load Telegram channels
 const loadTelegramChannels = async (): Promise<any[]> => {
   if (!supabase) throw new Error('Supabase client not available');
 
@@ -108,7 +110,7 @@ const loadTelegramChannels = async (): Promise<any[]> => {
   }
 };
 
-// NEW: Upload media file to content-media bucket (mirrored from supabaseAPI.ts)
+// Upload media file to content-media bucket
 const uploadMediaFile = async (file: File, contentId: string, userId: string): Promise<string> => {
   if (!supabase) throw new Error('Supabase client not available');
   
@@ -132,6 +134,33 @@ const uploadMediaFile = async (file: File, contentId: string, userId: string): P
     return publicUrl;
   } catch (error) {
     console.error('Error uploading media file:', error);
+    throw error;
+  }
+};
+
+// PHASE 3: Create platform assignment for a specific platform
+const createPlatformAssignment = async (
+  scheduledPostId: string,
+  platformId: string,
+  platformName: string
+): Promise<void> => {
+  if (!supabase) throw new Error('Supabase client not available');
+
+  try {
+    const { error } = await supabase
+      .from('dashboard_platform_assignments')
+      .insert({
+        scheduled_post_id: scheduledPostId,
+        platform_id: platformId,
+        platform_name: platformName,
+        delivery_status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error creating platform assignment:', error);
     throw error;
   }
 };
@@ -174,7 +203,7 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
             const platformDetails = await getPlatformDetails(post.selected_platforms);
             return {
               ...post,
-              platformDetails // Add resolved platform objects for UI display
+              platformDetails
             };
           } catch (err) {
             console.error('Error enriching platform details for post:', post.id, err);
@@ -192,7 +221,7 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
   }
 };
 
-// FIXED: Update pending post with platform details and media uploads
+// Update pending post with platform details and media uploads
 export const updatePendingPost = async (id: string, updates: Partial<ScheduledPost>): Promise<ScheduledPost> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
@@ -226,36 +255,31 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
       );
     }
 
-// FIXED: Handle ANY type in selected_platforms array with defensive extraction
-const extractPlatformId = (item: any): string => {
-  if (!item) return '';
-  if (typeof item === 'string') return item;
-  if (typeof item === 'number') return item.toString();
-  if (typeof item === 'object' && item.id) return String(item.id);
-  if (typeof item === 'object' && item.platform_id) return String(item.platform_id);
-  return String(item);
-};
+    const extractPlatformId = (item: any): string => {
+      if (!item) return '';
+      if (typeof item === 'string') return item;
+      if (typeof item === 'number') return item.toString();
+      if (typeof item === 'object' && item.id) return String(item.id);
+      if (typeof item === 'object' && item.platform_id) return String(item.platform_id);
+      return String(item);
+    };
 
-// Resolve platform details (EXACT copy from supabaseAPI.ts)
+    // Resolve platform details
     let updatedPlatformDetails = {};
     
     if (updates.selected_platforms !== undefined) {
       if (updates.selected_platforms && updates.selected_platforms.length > 0) {
         try {
-          // DEFENSIVE: Extract ID safely regardless of type
           const primaryPlatformId = extractPlatformId(updates.selected_platforms[0]);
-          console.log('Looking up platform with Id:', primaryPlatformId, 'Type:', typeof primaryPlatformId);
           
           const [platforms, telegramChannels] = await Promise.all([
             loadPlatforms(),
             loadTelegramChannels()
           ]);
           
-          // Try to find in social_platforms first - compare both as strings
           const selectedPlatform = platforms.find(p => String(p.id) === primaryPlatformId);
           
           if (selectedPlatform) {
-            console.log('Found social platform:', selectedPlatform.name);
             updatedPlatformDetails = {
               platform_id: selectedPlatform.id.toString(),
               social_platform: selectedPlatform.name || null,
@@ -264,10 +288,8 @@ const extractPlatformId = (item: any): string => {
               thread_id: null
             };
           } else {
-            // Try to find in telegram_configurations - compare both as strings
             const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
             if (selectedTelegram) {
-              console.log('Found Telegram channel:', selectedTelegram.name);
               updatedPlatformDetails = {
                 platform_id: selectedTelegram.id.toString(),
                 social_platform: selectedTelegram.name || null,
@@ -281,7 +303,6 @@ const extractPlatformId = (item: any): string => {
           console.error('Error loading platform details:', error);
         }
       } else {
-        // Clear platform details
         updatedPlatformDetails = {
           platform_id: null,
           social_platform: null,
@@ -315,8 +336,6 @@ const extractPlatformId = (item: any): string => {
     // Add platform details
     Object.assign(updateData, updatedPlatformDetails);
 
-    console.log('Update data with platform details:', updateData);
-
     // Update in content_posts table
     const { data, error } = await supabase
       .from('content_posts')
@@ -333,7 +352,178 @@ const extractPlatformId = (item: any): string => {
   }
 };
 
-// FIXED: Update scheduled post with platform details and media uploads
+// PHASE 3: Create scheduled post with complete workflow
+export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | 'created_date'>): Promise<ScheduledPost> => {
+  try {
+    if (!supabase) throw new Error('Supabase client not available');
+
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || null;
+
+    if (!userId) {
+      throw new Error('User must be authenticated to schedule posts');
+    }
+
+    // PHASE 3: Validate service_type is provided
+    if (!postData.service_type) {
+      throw new Error('Service type is required for scheduling');
+    }
+
+    // Get the original post from content_posts
+    const { data: originalPost, error: fetchError } = await supabase
+      .from('content_posts')
+      .select('*')
+      .eq('content_id', postData.content_id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Resolve platform details
+    let platformDetails = {
+      platform_id: null as string | null,
+      social_platform: null as string | null,
+      url: null as string | null,
+      channel_group_id: null as string | null,
+      thread_id: null as string | null
+    };
+
+    const extractPlatformId = (item: any): string => {
+      if (!item) return '';
+      if (typeof item === 'string') return item;
+      if (typeof item === 'number') return item.toString();
+      if (typeof item === 'object' && item.id) return String(item.id);
+      if (typeof item === 'object' && item.platform_id) return String(item.platform_id);
+      return String(item);
+    };
+
+    // Get platform names for assignments
+    const platformAssignmentData: Array<{ id: string; name: string }> = [];
+
+    if (originalPost.selected_platforms && originalPost.selected_platforms.length > 0) {
+      try {
+        const primaryPlatformId = extractPlatformId(originalPost.selected_platforms[0]);
+        
+        const [platforms, telegramChannels] = await Promise.all([
+          loadPlatforms(),
+          loadTelegramChannels()
+        ]);
+        
+        // Get platform details for primary platform
+        const selectedPlatform = platforms.find(p => String(p.id) === primaryPlatformId);
+        
+        if (selectedPlatform) {
+          platformDetails = {
+            platform_id: selectedPlatform.id.toString(),
+            social_platform: selectedPlatform.name || null,
+            url: selectedPlatform.url || null,
+            channel_group_id: null,
+            thread_id: null
+          };
+        } else {
+          const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
+          if (selectedTelegram) {
+            platformDetails = {
+              platform_id: selectedTelegram.id.toString(),
+              social_platform: selectedTelegram.name || null,
+              url: selectedTelegram.url || null,
+              channel_group_id: selectedTelegram.channel_group_id || null,
+              thread_id: selectedTelegram.thread_id || null
+            };
+          }
+        }
+
+        // Collect all platform details for assignments
+        for (const platformId of originalPost.selected_platforms) {
+          const id = extractPlatformId(platformId);
+          const platform = platforms.find(p => String(p.id) === id);
+          const telegram = telegramChannels.find(t => String(t.id) === id);
+          
+          if (platform) {
+            platformAssignmentData.push({
+              id: platform.id.toString(),
+              name: platform.name || platform.display_name || 'Unknown Platform'
+            });
+          } else if (telegram) {
+            platformAssignmentData.push({
+              id: telegram.id.toString(),
+              name: telegram.name || 'Telegram Channel'
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error loading platform details:', error);
+      }
+    }
+
+    // PHASE 3: Create scheduled post in scheduled_posts table
+    const scheduledPostData = {
+      content_id: originalPost.content_id,
+      original_post_id: originalPost.id,
+      character_profile: originalPost.character_profile,
+      theme: originalPost.theme,
+      audience: originalPost.audience,
+      media_type: originalPost.media_type,
+      template_type: originalPost.template_type,
+      platform: originalPost.platform,
+      title: originalPost.title,
+      description: originalPost.description,
+      hashtags: originalPost.hashtags,
+      keywords: originalPost.keywords,
+      cta: originalPost.cta,
+      media_files: originalPost.media_files,
+      selected_platforms: originalPost.selected_platforms,
+      scheduled_date: postData.scheduled_date?.toISOString() || new Date().toISOString(),
+      status: 'pending', // PHASE 3: Start as pending
+      service_type: postData.service_type, // PHASE 3: Store service type
+      retry_count: 0,
+      is_from_template: originalPost.is_from_template,
+      source_template_id: originalPost.source_template_id,
+      user_id: userId,
+      created_by: userId,
+      // Platform details
+      platform_id: platformDetails.platform_id,
+      social_platform: platformDetails.social_platform,
+      url: platformDetails.url,
+      channel_group_id: platformDetails.channel_group_id,
+      thread_id: platformDetails.thread_id
+    };
+
+    console.log('Creating scheduled post with service:', postData.service_type);
+
+    const { data: newScheduledPost, error: insertError } = await supabase
+      .from('scheduled_posts')
+      .insert(scheduledPostData)
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+
+    // PHASE 3: Create platform assignments for each selected platform
+    console.log(`Creating ${platformAssignmentData.length} platform assignments`);
+    
+    for (const platform of platformAssignmentData) {
+      try {
+        await createPlatformAssignment(
+          newScheduledPost.id,
+          platform.id,
+          platform.name
+        );
+      } catch (assignmentError) {
+        console.error('Error creating platform assignment:', assignmentError);
+        // Continue with other assignments even if one fails
+      }
+    }
+
+    console.log('Scheduled post created successfully with platform assignments');
+
+    return mapDashboardPostToScheduledPost(newScheduledPost);
+  } catch (error) {
+    console.error('Error creating scheduled post:', error);
+    throw error;
+  }
+};
+
+// Update scheduled post with platform details and media uploads
 export const updateScheduledPost = async (id: string, updates: Partial<ScheduledPost>): Promise<ScheduledPost> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
@@ -367,15 +557,22 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       );
     }
 
-    // Resolve platform details (EXACT copy from supabaseAPI.ts)
+    const extractPlatformId = (item: any): string => {
+      if (!item) return '';
+      if (typeof item === 'string') return item;
+      if (typeof item === 'number') return item.toString();
+      if (typeof item === 'object' && item.id) return String(item.id);
+      if (typeof item === 'object' && item.platform_id) return String(item.platform_id);
+      return String(item);
+    };
+
+    // Resolve platform details
     let updatedPlatformDetails = {};
     
     if (updates.selected_platforms !== undefined) {
       if (updates.selected_platforms && updates.selected_platforms.length > 0) {
         try {
-          // DEFENSIVE: Extract ID safely regardless of type
           const primaryPlatformId = extractPlatformId(updates.selected_platforms[0]);
-          console.log('Looking up platform with Id:', primaryPlatformId);
           
           const [platforms, telegramChannels] = await Promise.all([
             loadPlatforms(),
@@ -385,7 +582,6 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
           const selectedPlatform = platforms.find(p => String(p.id) === primaryPlatformId);
           
           if (selectedPlatform) {
-            console.log('Found platform for update:', selectedPlatform.name);
             updatedPlatformDetails = {
               platform_id: selectedPlatform.id.toString(),
               social_platform: selectedPlatform.name || null,
@@ -396,7 +592,6 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
           } else {
             const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
             if (selectedTelegram) {
-              console.log('Found Telegram for update:', selectedTelegram.name);
               updatedPlatformDetails = {
                 platform_id: selectedTelegram.id.toString(),
                 social_platform: selectedTelegram.name || 'Telegram',
@@ -420,7 +615,7 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       }
     }
 
-    // Check if post is in content_posts or dashboard_posts
+    // Check if post is in content_posts or scheduled_posts
     const { data: contentPost } = await supabase
       .from('content_posts')
       .select('*')
@@ -448,7 +643,6 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       if (updates.platform !== undefined) updateData.platform = updates.platform;
       if (updates.status) updateData.status = updates.status;
 
-      // Add platform details
       Object.assign(updateData, updatedPlatformDetails);
 
       const { data, error } = await supabase
@@ -461,7 +655,7 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       if (error) throw error;
       return mapContentPostToScheduledPost(data);
     } else {
-      // Post is in dashboard_posts - update with platform details
+      // Post is in scheduled_posts - update with platform details
       const updateData: any = {
         updated_at: new Date().toISOString()
       };
@@ -475,12 +669,12 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       if (updates.cta !== undefined) updateData.cta = updates.cta;
       if (updatedMediaFiles !== undefined) updateData.media_files = updatedMediaFiles;
       if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
+      if (updates.service_type !== undefined) updateData.service_type = updates.service_type;
 
-      // Add platform details
       Object.assign(updateData, updatedPlatformDetails);
 
       const { data, error } = await supabase
-        .from('dashboard_posts')
+        .from('scheduled_posts')
         .update(updateData)
         .eq('id', id)
         .select()
@@ -491,119 +685,6 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
     }
   } catch (error) {
     console.error('Error updating post:', error);
-    throw error;
-  }
-};
-
-// FIXED: Create scheduled post with platform details resolution
-export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | 'created_date'>): Promise<ScheduledPost> => {
-  try {
-    if (!supabase) throw new Error('Supabase client not available');
-
-    // Get the original post from content_posts
-    const { data: originalPost, error: fetchError } = await supabase
-      .from('content_posts')
-      .select('*')
-      .eq('id', postData.id)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    // Resolve platform details fresh (don't just copy)
-    let platformDetails = {
-      platform_id: null as string | null,
-      social_platform: null as string | null,
-      url: null as string | null,
-      channel_group_id: null as string | null,
-      thread_id: null as string | null
-    };
-
-    if (originalPost.selected_platforms && originalPost.selected_platforms.length > 0) {
-      try {
-        // DEFENSIVE: Extract ID safely regardless of type
-        const primaryPlatformId = extractPlatformId(originalPost.selected_platforms[0]);
-        console.log('Looking up platform with Id:', primaryPlatformId);
-        
-        const [platforms, telegramChannels] = await Promise.all([
-          loadPlatforms(),
-          loadTelegramChannels()
-        ]);
-        
-        // Try to find in social_platforms first - compare both as strings
-        const selectedPlatform = platforms.find(p => String(p.id) === primaryPlatformId);
-        
-        if (selectedPlatform) {
-          console.log('Found social platform:', selectedPlatform.name);
-          platformDetails = {
-            platform_id: selectedPlatform.id.toString(),
-            social_platform: selectedPlatform.name || null,
-            url: selectedPlatform.url || null,
-            channel_group_id: null,
-            thread_id: null
-          };
-        } else {
-          // Try to find in telegram_configurations - compare both as strings
-          const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
-          if (selectedTelegram) {
-            console.log('Found Telegram channel:', selectedTelegram.name);
-            platformDetails = {
-              platform_id: selectedTelegram.id.toString(),
-              social_platform: selectedTelegram.name || null,
-              url: selectedTelegram.url || null,
-              channel_group_id: selectedTelegram.channel_group_id || null,
-              thread_id: selectedTelegram.thread_id || null
-            };
-          }
-        }
-      } catch (error) {
-        console.error('Error loading platform details:', error);
-      }
-    }
-
-    // Create scheduled post in dashboard_posts with platform details
-    const dashboardPostData = {
-      content_id: originalPost.content_id,
-      character_profile: originalPost.character_profile,
-      theme: originalPost.theme,
-      audience: originalPost.audience,
-      media_type: originalPost.media_type,
-      template_type: originalPost.template_type,
-      platform: originalPost.platform,
-      title: originalPost.title,
-      description: originalPost.description,
-      hashtags: originalPost.hashtags,
-      keywords: originalPost.keywords,
-      cta: originalPost.cta,
-      media_files: originalPost.media_files,
-      selected_platforms: originalPost.selected_platforms,
-      scheduled_date: postData.scheduled_date.toISOString(),
-      status: 'scheduled',
-      is_from_template: originalPost.is_from_template,
-      source_template_id: originalPost.source_template_id,
-      user_id: originalPost.user_id,
-      created_by: originalPost.created_by,
-      original_post_id: originalPost.id,
-      // Platform details
-      platform_id: platformDetails.platform_id,
-      social_platform: platformDetails.social_platform,
-      url: platformDetails.url,
-      channel_group_id: platformDetails.channel_group_id,
-      thread_id: platformDetails.thread_id
-    };
-
-    console.log('Creating scheduled post with platform details:', platformDetails);
-
-    const { data: newScheduledPost, error: insertError } = await supabase
-      .from('dashboard_posts')
-      .insert(dashboardPostData)
-      .select()
-      .single();
-
-    if (insertError) throw insertError;
-
-    return mapDashboardPostToScheduledPost(newScheduledPost);
-  } catch (error) {
-    console.error('Error creating scheduled post:', error);
     throw error;
   }
 };
@@ -716,12 +797,11 @@ export const incrementTemplateUsage = async (id: string): Promise<void> => {
   }
 };
 
-// FIXED: Reschedule from template with platform details
+// Reschedule from template with platform details
 export const rescheduleFromTemplate = async (templateId: string, userId: string): Promise<any> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    // Get template data
     const { data: template, error: templateError } = await supabase
       .from('dashboard_templates')
       .select('*')
@@ -739,22 +819,27 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
       thread_id: null as string | null
     };
 
+    const extractPlatformId = (item: any): string => {
+      if (!item) return '';
+      if (typeof item === 'string') return item;
+      if (typeof item === 'number') return item.toString();
+      if (typeof item === 'object' && item.id) return String(item.id);
+      if (typeof item === 'object' && item.platform_id) return String(item.platform_id);
+      return String(item);
+    };
+
     if (template.selected_platforms && template.selected_platforms.length > 0) {
       try {
-        // DEFENSIVE: Extract ID safely regardless of type
         const primaryPlatformId = extractPlatformId(template.selected_platforms[0]);
-        console.log('Looking up platform with Id:', primaryPlatformId);
         
         const [platforms, telegramChannels] = await Promise.all([
           loadPlatforms(),
           loadTelegramChannels()
         ]);
         
-        // Try to find in social_platforms first - compare both as strings
         const selectedPlatform = platforms.find(p => String(p.id) === primaryPlatformId);
         
         if (selectedPlatform) {
-          console.log('Found social platform:', selectedPlatform.name);
           platformDetails = {
             platform_id: selectedPlatform.id.toString(),
             social_platform: selectedPlatform.name || null,
@@ -763,10 +848,8 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
             thread_id: null
           };
         } else {
-          // Try to find in telegram_configurations - compare both as strings
           const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
           if (selectedTelegram) {
-            console.log('Found Telegram channel:', selectedTelegram.name);
             platformDetails = {
               platform_id: selectedTelegram.id.toString(),
               social_platform: selectedTelegram.name || null,
@@ -817,7 +900,6 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
 
     if (error) throw error;
 
-    // Increment template usage
     await incrementTemplateUsage(templateId);
 
     return mapContentPostToScheduledPost(data);
@@ -832,7 +914,7 @@ export const updateContentPost = async (id: string, updates: Partial<ScheduledPo
   return updatePendingPost(id, updates);
 };
 
-// NEW: Get platform details for display
+// Get platform details for display
 export const getPlatformDetails = async (platformIds: string[]): Promise<any[]> => {
   if (!supabase || !platformIds?.length) return [];
   
