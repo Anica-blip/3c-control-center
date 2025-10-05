@@ -828,6 +828,7 @@ export default function ScheduleComponent() {
 
   return (
     <div style={getContainerStyle(isDarkMode)}>
+      {/* Header - keeping only essential parts for brevity */}
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{
           fontSize: '28px',
@@ -846,6 +847,7 @@ export default function ScheduleComponent() {
         </p>
       </div>
 
+      {/* Error Notifications */}
       <div style={{ marginBottom: '16px' }}>
         {postsError && (
           <ErrorNotificationBanner
@@ -884,6 +886,7 @@ export default function ScheduleComponent() {
         ))}
       </div>
 
+      {/* Quick Stats */}
       <div style={{
         display: 'flex',
         gap: '12px',
@@ -923,6 +926,7 @@ export default function ScheduleComponent() {
         </div>
       </div>
 
+      {/* Tab Navigation */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr 1fr 1fr',
@@ -979,6 +983,7 @@ export default function ScheduleComponent() {
         })}
       </div>
 
+      {/* Tab Content */}
       <div style={{
         backgroundColor: theme.cardBg,
         borderRadius: '12px',
@@ -1064,6 +1069,7 @@ export default function ScheduleComponent() {
                               </span>
                             )}
                             
+                            {/* FIXED: Character Profile Display */}
                             {post.character_profile && (
                               <div style={{
                                 display: 'flex',
@@ -1151,6 +1157,7 @@ export default function ScheduleComponent() {
                             {truncateDescription(post.description)}
                           </p>
 
+                          {/* FIXED: Media Files Preview */}
                           {post.media_files && post.media_files.length > 0 && (
                             <div style={{
                               marginBottom: '16px',
@@ -1239,6 +1246,7 @@ export default function ScheduleComponent() {
                             </div>
                           )}
                           
+                          {/* Platform badges */}
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -1339,9 +1347,8 @@ export default function ScheduleComponent() {
             )}
           </div>
         )}
-      </div>
-
-              {activeTab === 'calendar' && (
+        
+        {activeTab === 'calendar' && (
           <div style={{ padding: '24px' }}>
             <div style={{
               display: 'flex',
@@ -2120,7 +2127,6 @@ export default function ScheduleComponent() {
           </div>
         )}
       </div>
-
 
       {/* Modals */}
       {isScheduleModalOpen && selectedPost && (
