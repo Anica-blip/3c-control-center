@@ -168,6 +168,85 @@ const SuccessNotification: React.FC<{
   );
 };
 
+const ErrorNotificationBanner: React.FC<{
+  error: ApiError;
+  onDismiss: () => void;
+  onRetry?: () => void;
+}> = ({ error, onDismiss, onRetry }) => {
+  const { theme } = getTheme();
+
+  return (
+    <div style={{
+      padding: '12px 16px',
+      backgroundColor: theme.dangerBg,
+      border: `1px solid ${theme.danger}`,
+      borderRadius: '8px',
+      marginBottom: '16px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+        <AlertCircle style={{ 
+          height: '16px', 
+          width: '16px', 
+          color: theme.danger,
+          flexShrink: 0,
+          marginTop: '2px'
+        }} />
+        <div style={{ flex: 1 }}>
+          <div style={{
+            fontSize: '14px',
+            fontWeight: 'bold',
+            color: theme.danger,
+            marginBottom: '4px'
+          }}>
+            {error.message}
+          </div>
+          {error.code && (
+            <div style={{
+              fontSize: '12px',
+              color: theme.danger,
+              opacity: 0.8
+            }}>
+              Error Code: {error.code}
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {onRetry && error.retryable && (
+            <button
+              onClick={onRetry}
+              style={{
+                padding: '4px 8px',
+                backgroundColor: theme.danger,
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: 'pointer',
+                fontWeight: '600'
+              }}
+            >
+              Retry
+            </button>
+          )}
+          <button
+            onClick={onDismiss}
+            style={{
+              padding: '4px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              color: theme.danger,
+              cursor: 'pointer',
+              opacity: 0.7
+            }}
+          >
+            <X style={{ height: '14px', width: '14px' }} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function ScheduleComponent() {
   const {
     posts: scheduledPosts,
@@ -201,6 +280,7 @@ export default function ScheduleComponent() {
   const [notifications, setNotifications] = useState<ErrorNotification[]>([]);
   const [operationStates, setOperationStates] = useState<Record<string, boolean>>({});
 
+  // FIXED: Character profile state
   const [characterProfiles, setCharacterProfiles] = useState<Record<string, any>>({});
   const [profilesLoading, setProfilesLoading] = useState<Record<string, boolean>>({});
 
@@ -212,6 +292,7 @@ export default function ScheduleComponent() {
     return uuidRegex.test(str);
   };
 
+  // FIXED: Fetch character profile
   const fetchCharacterProfile = useCallback(async (profileId: string) => {
     if (!profileId || !isUUID(profileId) || characterProfiles[profileId] !== undefined) return;
     
@@ -236,7 +317,7 @@ export default function ScheduleComponent() {
     } finally {
       setProfilesLoading(prev => ({ ...prev, [profileId]: false }));
     }
-  }, []);
+  }, [characterProfiles]);
 
   const addNotification = useCallback((notification: Omit<ErrorNotification, 'id' | 'timestamp'>) => {
     const id = `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -289,6 +370,7 @@ export default function ScheduleComponent() {
   const publishedPosts = (scheduledPosts || []).filter(p => p?.status === 'published');
   const failedPosts = (scheduledPosts || []).filter(p => p?.status === 'failed');
 
+  // FIXED: Fetch character profiles when pending posts load
   useEffect(() => {
     if (!pendingPosts?.length) return;
     
@@ -569,7 +651,6 @@ export default function ScheduleComponent() {
     setIsEditModalOpen(true);
   };
 
-  // FIXED: Save button now updates content_posts table
   const handleSaveEdit = async (postId: string, updates: Partial<ScheduledPost>) => {
     const operationKey = `edit-${postId}`;
     setOperationLoading(operationKey, true);
@@ -580,7 +661,6 @@ export default function ScheduleComponent() {
         status: 'scheduled' as const
       };
       
-      // FIXED: Use updatePendingPost which updates content_posts table
       const result = await updatePendingPost(postId, safeUpdates);
       
       setIsEditModalOpen(false);
@@ -1033,7 +1113,8 @@ export default function ScheduleComponent() {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '12px',
-                            marginBottom: '12px'
+                            marginBottom: '12px',
+                            flexWrap: 'wrap'
                           }}>
                             <span style={{
                               padding: '4px 12px',
@@ -1055,69 +1136,82 @@ export default function ScheduleComponent() {
                               </span>
                             )}
                             
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px'
-                            }}>
-                              {post.character_avatar && (
-                                <img 
-                                  src={post.character_avatar} 
-                                  alt={profileData?.name || 'Profile'}
-                                  style={{
-                                    width: '20px',
-                                    height: '20px',
-                                    borderRadius: '50%',
-                                    objectFit: 'cover'
-                                  }}
-                                />
-                              )}
+                            {/* FIXED: Character Profile Display */}
+                            {post.character_profile && (
                               <div style={{
                                 display: 'flex',
-                                flexDirection: 'column',
-                                gap: '1px'
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '6px 12px',
+                                backgroundColor: theme.background,
+                                borderRadius: '6px',
+                                border: `1px solid ${theme.border}`
                               }}>
-                                {profileData?.name && (
-                                  <span style={{
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    color: theme.text,
-                                    lineHeight: '1.1'
-                                  }}>
-                                    {profileData.name}
-                                  </span>
-                                )}
-                                {profileData?.username && (
-                                  <span style={{
-                                    fontSize: '11px',
-                                    fontWeight: '500',
-                                    color: theme.primary,
-                                    lineHeight: '1.1'
-                                  }}>
-                                    {profileData.username}
-                                  </span>
-                                )}
-                                {profileData?.role && (
-                                  <span style={{
-                                    fontSize: '10px',
-                                    color: theme.textSecondary,
-                                    lineHeight: '1.1'
-                                  }}>
-                                    {profileData.role}
-                                  </span>
-                                )}
+                                {isProfileLoading ? (
+                                  <div style={{
+                                    width: '10px',
+                                    height: '10px',
+                                    border: `1px solid ${theme.border}`,
+                                    borderTop: `1px solid ${theme.primary}`,
+                                    borderRadius: '50%',
+                                    animation: 'spin 1s linear infinite'
+                                  }} />
+                                ) : profileData ? (
+                                  <>
+                                    {profileData.avatar_id && (
+                                      <img 
+                                        src={profileData.avatar_id} 
+                                        alt={profileData.name || 'Profile'}
+                                        style={{
+                                          width: '20px',
+                                          height: '20px',
+                                          borderRadius: '50%',
+                                          objectFit: 'cover'
+                                        }}
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                        }}
+                                      />
+                                    )}
+                                    <div style={{
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '1px'
+                                    }}>
+                                      {profileData.name && (
+                                        <span style={{
+                                          fontSize: '12px',
+                                          fontWeight: 'bold',
+                                          color: theme.text,
+                                          lineHeight: '1.1'
+                                        }}>
+                                          {profileData.name}
+                                        </span>
+                                      )}
+                                      {profileData.username && (
+                                        <span style={{
+                                          fontSize: '11px',
+                                          fontWeight: '500',
+                                          color: theme.primary,
+                                          lineHeight: '1.1'
+                                        }}>
+                                          {profileData.username}
+                                        </span>
+                                      )}
+                                      {profileData.role && (
+                                        <span style={{
+                                          fontSize: '10px',
+                                          color: theme.textSecondary,
+                                          lineHeight: '1.1'
+                                        }}>
+                                          {profileData.role}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </>
+                                ) : null}
                               </div>
-                              {isProfileLoading && (
-                                <div style={{
-                                  width: '10px',
-                                  height: '10px',
-                                  border: `1px solid ${theme.border}`,
-                                  borderTop: `1px solid ${theme.primary}`,
-                                  borderRadius: '50%',
-                                  animation: 'spin 1s linear infinite'
-                                }} />
-                              )}
-                            </div>
+                            )}
                           </div>
                           
                           <p style={{
@@ -1129,8 +1223,97 @@ export default function ScheduleComponent() {
                           }}>
                             {truncateDescription(post.description)}
                           </p>
+
+                          {/* FIXED: Media Files Preview */}
+                          {post.media_files && post.media_files.length > 0 && (
+                            <div style={{
+                              marginBottom: '16px',
+                              padding: '12px',
+                              backgroundColor: theme.background,
+                              borderRadius: '6px',
+                              border: `1px solid ${theme.border}`
+                            }}>
+                              <div style={{
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                color: theme.textSecondary,
+                                marginBottom: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}>
+                                <FileText size={14} />
+                                Media Files ({post.media_files.length})
+                              </div>
+                              <div style={{ display: 'grid', gap: '6px' }}>
+                                {post.media_files.slice(0, 3).map((file, idx) => (
+                                  <div key={idx} style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '6px 8px',
+                                    backgroundColor: theme.cardBg,
+                                    borderRadius: '4px'
+                                  }}>
+                                    {file.type === 'image' && file.url ? (
+                                      <img 
+                                        src={file.url}
+                                        alt={file.name}
+                                        style={{
+                                          width: '24px',
+                                          height: '24px',
+                                          borderRadius: '3px',
+                                          objectFit: 'cover'
+                                        }}
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                        }}
+                                      />
+                                    ) : (
+                                      <div style={{
+                                        width: '24px',
+                                        height: '24px',
+                                        borderRadius: '3px',
+                                        backgroundColor: theme.primary,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: 'white',
+                                        fontSize: '8px',
+                                        fontWeight: 'bold'
+                                      }}>
+                                        {file.type === 'video' ? <Video size={12} /> : 
+                                         file.type === 'url_link' ? <ExternalLink size={12} /> : 
+                                         <FileText size={12} />}
+                                      </div>
+                                    )}
+                                    <span style={{
+                                      fontSize: '11px',
+                                      color: theme.text,
+                                      flex: 1,
+                                      textOverflow: 'ellipsis',
+                                      overflow: 'hidden',
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      {file.name}
+                                    </span>
+                                  </div>
+                                ))}
+                                {post.media_files.length > 3 && (
+                                  <div style={{
+                                    fontSize: '10px',
+                                    color: theme.textSecondary,
+                                    textAlign: 'center',
+                                    padding: '4px'
+                                  }}>
+                                    +{post.media_files.length - 3} more files
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                           
-                          {/* FIXED: Platform badges using platformDetails */}
+                          {/* Platform badges */}
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -1231,7 +1414,7 @@ export default function ScheduleComponent() {
             )}
           </div>
         )}
-
+        
         {activeTab === 'calendar' && (
           <div style={{ padding: '24px' }}>
             <div style={{
