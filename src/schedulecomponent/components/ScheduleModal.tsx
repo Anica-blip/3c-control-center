@@ -1,8 +1,9 @@
-// /src/schedulecomponent/components/ScheduleModal.tsx - FIXED: Display platform names
+// /src/schedulecomponent/components/ScheduleModal.tsx - FIXED: Character profile + media preview
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, X, Check, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, X, Check, AlertCircle, FileText, ExternalLink } from 'lucide-react';
 import { getTheme } from '../utils/styleUtils';
 import { ScheduledPost } from '../types';
+import { supabase } from '../config';
 
 // Local utility functions to avoid import issues
 const formatDate = (date: Date): string => {
@@ -48,6 +49,10 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
   const [repeatOption, setRepeatOption] = useState('none');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  
+  // FIXED: Character profile state
+  const [characterProfileData, setCharacterProfileData] = useState<any>(null);
+  const [characterProfileLoading, setCharacterProfileLoading] = useState(false);
 
   const { isDarkMode, theme } = getTheme();
 
@@ -63,6 +68,42 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
     const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     setTimezone(userTimezone);
   }, []);
+
+  // FIXED: Fetch character profile data
+  useEffect(() => {
+    const fetchCharacterProfile = async () => {
+      if (!post?.character_profile) return;
+      
+      // Check if it's a UUID
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        post.character_profile as string
+      );
+      
+      if (!isUUID) return;
+      
+      try {
+        setCharacterProfileLoading(true);
+        
+        const { data, error } = await supabase
+          .from('character_profiles')
+          .select('avatar_id, name, username, role')
+          .eq('id', post.character_profile)
+          .single();
+        
+        if (error) {
+          console.error('Error fetching character profile:', error);
+        } else {
+          setCharacterProfileData(data);
+        }
+      } catch (error) {
+        console.error('Error fetching character profile:', error);
+      } finally {
+        setCharacterProfileLoading(false);
+      }
+    };
+    
+    fetchCharacterProfile();
+  }, [post?.character_profile]);
 
   const modalOverlayStyle = {
     position: 'fixed' as const,
@@ -248,7 +289,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
           </button>
         </div>
 
-        {/* Post Preview */}
+        {/* FIXED: Post Preview with Character Profile & Media */}
         <div style={{
           backgroundColor: theme.cardBg,
           border: `1px solid ${theme.border}`,
@@ -256,6 +297,93 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
           padding: '16px',
           marginBottom: '24px'
         }}>
+          {/* Character Profile Header */}
+          {post.character_profile && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '12px',
+              padding: '12px',
+              backgroundColor: theme.background,
+              borderRadius: '6px',
+              border: `1px solid ${theme.border}`
+            }}>
+              {characterProfileLoading ? (
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  border: `2px solid ${theme.border}`,
+                  borderTop: `2px solid ${theme.primary}`,
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+              ) : characterProfileData ? (
+                <>
+                  {characterProfileData.avatar_id && (
+                    <img 
+                      src={characterProfileData.avatar_id}
+                      alt={characterProfileData.name}
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        border: `2px solid ${theme.primary}`,
+                        objectFit: 'cover'
+                      }}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  )}
+                  <div style={{ flex: 1 }}>
+                    {characterProfileData.name && (
+                      <div style={{
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        color: theme.text,
+                        lineHeight: '1.2',
+                        marginBottom: '2px'
+                      }}>
+                        {characterProfileData.name}
+                      </div>
+                    )}
+                    {characterProfileData.username && (
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: theme.primary,
+                        lineHeight: '1.2',
+                        marginBottom: '2px'
+                      }}>
+                        {characterProfileData.username.startsWith('@') 
+                          ? characterProfileData.username 
+                          : `@${characterProfileData.username}`}
+                      </div>
+                    )}
+                    {characterProfileData.role && (
+                      <div style={{
+                        fontSize: '12px',
+                        color: theme.textSecondary,
+                        lineHeight: '1.2'
+                      }}>
+                        {characterProfileData.role}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div style={{
+                  fontSize: '12px',
+                  color: theme.textSecondary
+                }}>
+                  Character profile not found
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Title & Description */}
           <h3 style={{
             fontSize: '16px',
             fontWeight: '600',
@@ -267,7 +395,7 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
           <p style={{
             fontSize: '14px',
             color: theme.textSecondary,
-            margin: '0 0 12px 0',
+            margin: '0 0 16px 0',
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
@@ -275,6 +403,115 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
           }}>
             {post.description}
           </p>
+
+          {/* FIXED: Media Files Preview */}
+          {post.media_files && post.media_files.length > 0 && (
+            <div style={{
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: theme.background,
+              borderRadius: '6px',
+              border: `1px solid ${theme.border}`
+            }}>
+              <div style={{
+                fontSize: '12px',
+                fontWeight: '600',
+                color: theme.textSecondary,
+                marginBottom: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                <FileText size={14} />
+                Media Files ({post.media_files.length})
+              </div>
+              <div style={{ display: 'grid', gap: '8px' }}>
+                {post.media_files.map((file, idx) => (
+                  <div key={idx} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px',
+                    backgroundColor: theme.cardBg,
+                    borderRadius: '4px',
+                    border: `1px solid ${theme.border}`
+                  }}>
+                    {file.type === 'image' && file.url && (
+                      <img 
+                        src={file.url}
+                        alt={file.name}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '4px',
+                          objectFit: 'cover'
+                        }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    )}
+                    {file.type !== 'image' && (
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '4px',
+                        backgroundColor: theme.primary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '10px',
+                        fontWeight: 'bold'
+                      }}>
+                        {file.type === 'video' ? 'VID' : 
+                         file.type === 'pdf' ? 'PDF' : 
+                         file.type === 'url_link' ? 'URL' : 'FILE'}
+                      </div>
+                    )}
+                    <div style={{ flex: 1 }}>
+                      <div style={{
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: theme.text,
+                        textOverflow: 'ellipsis',
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {file.name}
+                      </div>
+                      <div style={{
+                        fontSize: '11px',
+                        color: theme.textSecondary
+                      }}>
+                        {file.type} {file.size ? `• ${Math.round(file.size / 1024)} KB` : ''}
+                      </div>
+                    </div>
+                    {file.url && (
+                      <a 
+                        href={file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: theme.primary,
+                          fontSize: '11px',
+                          textDecoration: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        View
+                        <ExternalLink size={10} />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Post Details */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
@@ -290,12 +527,6 @@ export default function ScheduleModal({ post, onConfirm, onCancel }: ScheduleMod
               <span style={{ fontWeight: '600' }}>Platforms:</span>
               <span>{getPlatformDisplay()}</span>
             </div>
-            {post.character_profile && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontWeight: '600' }}>Character:</span>
-                <span>{post.character_profile}</span>
-              </div>
-            )}
           </div>
         </div>
 
