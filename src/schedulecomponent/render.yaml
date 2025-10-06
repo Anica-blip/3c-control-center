@@ -1,0 +1,7 @@
+services:
+  - type: cron
+    name: scheduled-posts-processor
+    env: node
+    schedule: "* * * * *"
+    buildCommand: npm install
+    startCommand: node dist/cronHandler.js
