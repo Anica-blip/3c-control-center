@@ -934,6 +934,25 @@ export const getPlatformDetails = async (platformIds: string[]): Promise<any[]> 
   }
 };
 
+// Fetch external services for scheduling
+export const fetchExternalServices = async (): Promise<any[]> => {
+  if (!supabase) throw new Error('Supabase client not available');
+  
+  try {
+    const { data, error } = await supabase
+      .from('external_services')
+      .select('id, service_type, url, is_active')
+      .eq('is_active', true)
+      .order('service_type');
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching external services:', error);
+    throw error;
+  }
+};
+
 // MAIN API OBJECT EXPORT
 export const scheduleAPI = {
   fetchScheduledPosts,
@@ -948,5 +967,6 @@ export const scheduleAPI = {
   deleteTemplate,
   incrementTemplateUsage,
   rescheduleFromTemplate,
-  getPlatformDetails
+  getPlatformDetails,
+  fetchExternalServices
 };
