@@ -114,8 +114,27 @@ export interface PendingPost {
 }
 
 export interface ScheduledPost extends Omit<PendingPost, 'status'> {
-  scheduled_date: Date;
-  status: 'pending' | 'processing' | 'complete' | 'failed' | 'resending';
+  scheduled_date: Date | null;
+  timezone?: string;
+  service_type?: string;
+  post_content?: {
+    media_files: MediaFile[];
+    text_post: {
+      sender_profile: {
+        profile_id: string;
+        avatar: string;
+        name: string;
+        username: string;
+        role: string;
+      } | null;
+      title: string;
+      description: string;
+      hashtags: string[];
+      seo_keywords: string;
+      cta: string;
+    };
+  };
+  status: 'scheduled' | 'pending' | 'processing' | 'publishing' | 'published' | 'complete' | 'failed' | 'resending';
   failure_reason?: string;
   last_attempt?: Date;
   retry_count?: number;
@@ -124,6 +143,7 @@ export interface ScheduledPost extends Omit<PendingPost, 'status'> {
   persona_target?: string;
   audience_segment?: string;
   campaign_id?: string;
+  platformDetails?: any[];
 }
 
 export interface SavedTemplate {
@@ -201,4 +221,28 @@ export interface OperationResult<T = any> {
   data?: T;
   error?: ApiError;
   validationErrors?: ValidationError[];
+}
+
+// External Service for cron job forwarding
+export interface ExternalService {
+  id: string;
+  service_type: string;
+  url: string;
+  is_active: boolean;
+  api_key?: string;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+// Platform Assignment for tracking delivery status
+export interface DashboardPlatformAssignment {
+  id: string;
+  scheduled_post_id: string;
+  platform_id: string;
+  platform_name: string;
+  delivery_status: 'pending' | 'sent' | 'failed';
+  sent_at?: Date;
+  error_message?: string;
+  created_at: Date;
+  updated_at: Date;
 }
