@@ -1,0 +1,53 @@
+{
+  "post_id": "uuid-of-scheduled-post",
+  "scheduled_date": "2025-10-06T15:30:00Z",
+  "timezone": "America/New_York",
+  "platforms": [
+    {
+      "platform_id": "telegram-channel-id",
+      "platform_name": "My Telegram Channel",
+      "platform_type": "telegram_channel"
+    },
+    {
+      "platform_id": "instagram-id",
+      "platform_name": "My Instagram",
+      "platform_type": "instagram"
+    }
+  ],
+  "post_content": {
+    "media_files": [
+      {
+        "id": "media-1",
+        "name": "image.jpg",
+        "type": "image",
+        "size": 245678,
+        "url": "https://supabase-storage-url.com/image.jpg"
+      },
+      {
+        "id": "media-2",
+        "name": "video.mp4",
+        "type": "video",
+        "size": 5245678,
+        "url": "https://supabase-storage-url.com/video.mp4"
+      }
+    ],
+    "text_post": {
+      "sender_profile": {
+        "profile_id": "character-uuid",
+        "avatar": "https://avatar-url.com/avatar.jpg",
+        "name": "John Doe",
+        "username": "@johndoe",
+        "role": "Content Creator"
+      },
+      "title": "Amazing Post Title",
+      "description": "This is the full post description with all the details about the content. It can be quite long and include multiple paragraphs.\n\nSecond paragraph here.",
+      "hashtags": [
+        "#marketing",
+        "#socialmedia",
+        "#contentcreation"
+      ],
+      "seo_keywords": "marketing, social media, content strategy",
+      "cta": "Visit our website for more info!"
+    }
+  }
+}
