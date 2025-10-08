@@ -93,6 +93,7 @@ export interface PendingPost {
   id: string;
   content_id: string;
   character_profile: string;
+  character_avatar?: string;
   theme: string;
   audience: string;
   media_type: string;
@@ -150,6 +151,7 @@ export interface SavedTemplate {
   id: string;
   template_name: string;
   character_profile: string;
+  character_avatar?: string;
   theme: string;
   audience: string;
   media_type: string;
