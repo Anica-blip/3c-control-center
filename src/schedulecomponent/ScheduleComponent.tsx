@@ -1,4 +1,62 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - PHASE 3: JSON Integration
+                            gap: '6px'
+                          }}
+                        >
+                          {isOperationLoading(`use-template-${template.id}`) && (
+                            <RefreshCw style={{ height: '12px', width: '12px', animation: 'spin 1s linear infinite' }} />
+                          )}
+                          {isOperationLoading(`use-template-${template.id}`) ? 'Using...' : 'Use Template'}
+                        </button>
+                        
+                        <button
+                          onClick={() => setEditingTemplate(template)}
+                          style={{
+                            padding: '6px',
+                            color: theme.textSecondary,
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                          title="Edit template"
+                        >
+                          <Edit3 style={{ height: '14px', width: '14px' }} />
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this template?')) {
+                              deleteTemplate(template.id);
+                            }
+                          }}
+                          style={{
+                            padding: '6px',
+                            color: theme.danger,
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                          title="Delete template"
+                        >
+                          <Trash2 style={{ height: '14px', width: '14px' }} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      {isScheduleModalOpen && selectedPost && (
+        <ScheduleModal
+          post={selectedPost}
+          onConfirm={handleConfirmSchedule}
+          onCancel={() => {
+            setIsSche// /src/schedulecomponent/ScheduleComponent.tsx - PHASE 3: JSON Integration
 import React, { useState, useEffect, useCallback } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
@@ -545,7 +603,11 @@ export default function ScheduleComponent() {
         selected_platforms: selectedPost.selected_platforms,
         status: 'scheduled' as const,
         user_id: selectedPost.user_id,
-        created_by: selectedPost.created_by
+        created_by: selectedPost.created_by,
+        // Include these fields to pass validation - they'll be fetched from DB anyway
+        description: selectedPost.description || '',
+        character_profile: selectedPost.character_profile || '',
+        character_avatar: selectedPost.character_avatar || ''
       };
 
       const result = await createPost(scheduledPostData);
@@ -649,6 +711,7 @@ export default function ScheduleComponent() {
       const templateData = {
         template_name: post.title || 'Saved Template',
         character_profile: post.character_profile,
+        character_avatar: post.character_avatar || '',
         theme: post.theme || '',
         audience: post.audience || '',
         media_type: post.media_type || '',
@@ -703,6 +766,7 @@ export default function ScheduleComponent() {
       const pendingPostData = {
         content_id: `template-${template.id}-${Date.now()}`,
         character_profile: template.character_profile,
+        character_avatar: template.character_avatar || '',
         theme: template.theme,
         audience: template.audience,
         media_type: template.media_type,
@@ -761,6 +825,7 @@ export default function ScheduleComponent() {
       const pendingPostData = {
         content_id: `copy-${post.id}-${Date.now()}`,
         character_profile: post.character_profile,
+        character_avatar: post.character_avatar || '',
         theme: post.theme || '',
         audience: post.audience || '',
         media_type: post.media_type || '',
@@ -797,6 +862,85 @@ export default function ScheduleComponent() {
     } finally {
       setOperationLoading(operationKey, false);
     }
+  };
+
+  // Calendar helper functions
+  const navigateCalendar = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentDate);
+    if (calendarView === 'day') {
+      newDate.setDate(currentDate.getDate() + (direction === 'next' ? 1 : -1));
+    } else if (calendarView === 'week') {
+      newDate.setDate(currentDate.getDate() + (direction === 'next' ? 7 : -7));
+    } else {
+      newDate.setMonth(currentDate.getMonth() + (direction === 'next' ? 1 : -1));
+    }
+    setCurrentDate(newDate);
+  };
+
+  const formatCalendarTitle = () => {
+    if (calendarView === 'day') {
+      return currentDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    } else if (calendarView === 'week') {
+      const weekStart = getWeekDates(currentDate)[0];
+      const weekEnd = getWeekDates(currentDate)[6];
+      return `${weekStart.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    } else {
+      return currentDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'long' });
+    }
+  };
+
+  const getMonthDates = (date: Date): Date[] => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
+    
+    const dates: Date[] = [];
+    for (let i = 0; i < 42; i++) {
+      dates.push(new Date(startDate));
+      startDate.setDate(startDate.getDate() + 1);
+    }
+    return dates;
+  };
+
+  const getWeekDates = (date: Date): Date[] => {
+    const dates: Date[] = [];
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(date.getDate() - date.getDay());
+    
+    for (let i = 0; i < 7; i++) {
+      dates.push(new Date(startOfWeek));
+      startOfWeek.setDate(startOfWeek.getDate() + 1);
+    }
+    return dates;
+  };
+
+  const getPostsForDate = (date: Date): ScheduledPost[] => {
+    return scheduledPostsFiltered.filter(post => {
+      if (!post.scheduled_date) return false;
+      const postDate = new Date(post.scheduled_date);
+      return postDate.toDateString() === date.toDateString();
+    });
+  };
+
+  const getHourlyPostsForDay = (date: Date): Record<number, ScheduledPost[]> => {
+    const hourlyPosts: Record<number, ScheduledPost[]> = {};
+    for (let i = 0; i < 24; i++) {
+      hourlyPosts[i] = [];
+    }
+    
+    scheduledPostsFiltered.forEach(post => {
+      if (!post.scheduled_date) return;
+      const postDate = new Date(post.scheduled_date);
+      if (postDate.toDateString() === date.toDateString()) {
+        const hour = postDate.getHours();
+        hourlyPosts[hour].push(post);
+      }
+    });
+    
+    return hourlyPosts;
   };
 
   const tabs = [
@@ -2076,65 +2220,7 @@ export default function ScheduleComponent() {
                             cursor: isOperationLoading(`use-template-${template.id}`) ? 'not-allowed' : 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px'
-                          }}
-                        >
-                          {isOperationLoading(`use-template-${template.id}`) && (
-                            <RefreshCw style={{ height: '12px', width: '12px', animation: 'spin 1s linear infinite' }} />
-                          )}
-                          {isOperationLoading(`use-template-${template.id}`) ? 'Using...' : 'Use Template'}
-                        </button>
-                        
-                        <button
-                          onClick={() => setEditingTemplate(template)}
-                          style={{
-                            padding: '6px',
-                            color: theme.textSecondary,
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                          title="Edit template"
-                        >
-                          <Edit3 style={{ height: '14px', width: '14px' }} />
-                        </button>
-                        
-                        <button
-                          onClick={() => {
-                            if (confirm('Are you sure you want to delete this template?')) {
-                              deleteTemplate(template.id);
-                            }
-                          }}
-                          style={{
-                            padding: '6px',
-                            color: theme.danger,
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                          title="Delete template"
-                        >
-                          <Trash2 style={{ height: '14px', width: '14px' }} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Modals */}
-      {isScheduleModalOpen && selectedPost && (
-        <ScheduleModal
-          post={selectedPost}
-          onConfirm={handleConfirmSchedule}
-          onCancel={() => {
-            setIsScheduleModalOpen(false);
+duleModalOpen(false);
             setSelectedPost(null);
           }}
         />
