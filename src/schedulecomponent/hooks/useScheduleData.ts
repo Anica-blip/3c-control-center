@@ -207,17 +207,20 @@ export const useScheduledPosts = () => {
     try {
       setError(null);
       
-      // Check if this is a scheduling operation (has scheduled_date and existing post data)
-      const isSchedulingOperation = 'scheduled_date' in postData && postData.scheduled_date && 'id' in postData;
+      // Check if this is a scheduling operation (has scheduled_date and content_id/original_post_id)
+      const isSchedulingOperation = 'scheduled_date' in postData && 
+                                    postData.scheduled_date && 
+                                    ('content_id' in postData || 'original_post_id' in postData);
       
       if (isSchedulingOperation) {
-        // This is scheduling an existing post - move from content_posts to dashboard_posts
+        // This is scheduling an existing post - move from content_posts to scheduled_posts
+        // NO VALIDATION NEEDED - data will be fetched from database by createScheduledPost
         const scheduledPostData = postData as ScheduledPost;
         const newPost = await withRetry(() => scheduleAPI.createScheduledPost(scheduledPostData));
         
         // Update local state - remove from pending, add to scheduled list
         setPosts(prev => {
-          const filtered = prev.filter(p => p.id !== scheduledPostData.id);
+          const filtered = prev.filter(p => p.id !== scheduledPostData.id && p.content_id !== scheduledPostData.content_id);
           return [newPost, ...filtered];
         });
         
