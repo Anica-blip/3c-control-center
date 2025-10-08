@@ -7,7 +7,7 @@
   ],
 {
   "crons": [{
-    "path": "/api/cron",
+    "/api/cron/process-scheduled-posts",
     "schedule": "0 10 * * *"
   }]
 }
