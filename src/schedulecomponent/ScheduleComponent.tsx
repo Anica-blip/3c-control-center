@@ -1,62 +1,4 @@
-                            gap: '6px'
-                          }}
-                        >
-                          {isOperationLoading(`use-template-${template.id}`) && (
-                            <RefreshCw style={{ height: '12px', width: '12px', animation: 'spin 1s linear infinite' }} />
-                          )}
-                          {isOperationLoading(`use-template-${template.id}`) ? 'Using...' : 'Use Template'}
-                        </button>
-                        
-                        <button
-                          onClick={() => setEditingTemplate(template)}
-                          style={{
-                            padding: '6px',
-                            color: theme.textSecondary,
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                          title="Edit template"
-                        >
-                          <Edit3 style={{ height: '14px', width: '14px' }} />
-                        </button>
-                        
-                        <button
-                          onClick={() => {
-                            if (confirm('Are you sure you want to delete this template?')) {
-                              deleteTemplate(template.id);
-                            }
-                          }}
-                          style={{
-                            padding: '6px',
-                            color: theme.danger,
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                          title="Delete template"
-                        >
-                          <Trash2 style={{ height: '14px', width: '14px' }} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Modals */}
-      {isScheduleModalOpen && selectedPost && (
-        <ScheduleModal
-          post={selectedPost}
-          onConfirm={handleConfirmSchedule}
-          onCancel={() => {
-            setIsSche// /src/schedulecomponent/ScheduleComponent.tsx - PHASE 3: JSON Integration
+// /src/schedulecomponent/ScheduleComponent.tsx - PHASE 3: JSON Integration
 import React, { useState, useEffect, useCallback } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
@@ -2220,7 +2162,65 @@ export default function ScheduleComponent() {
                             cursor: isOperationLoading(`use-template-${template.id}`) ? 'not-allowed' : 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-duleModalOpen(false);
+                            gap: '6px'
+                          }}
+                        >
+                          {isOperationLoading(`use-template-${template.id}`) && (
+                            <RefreshCw style={{ height: '12px', width: '12px', animation: 'spin 1s linear infinite' }} />
+                          )}
+                          {isOperationLoading(`use-template-${template.id}`) ? 'Using...' : 'Use Template'}
+                        </button>
+                        
+                        <button
+                          onClick={() => setEditingTemplate(template)}
+                          style={{
+                            padding: '6px',
+                            color: theme.textSecondary,
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                          title="Edit template"
+                        >
+                          <Edit3 style={{ height: '14px', width: '14px' }} />
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this template?')) {
+                              deleteTemplate(template.id);
+                            }
+                          }}
+                          style={{
+                            padding: '6px',
+                            color: theme.danger,
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                          title="Delete template"
+                        >
+                          <Trash2 style={{ height: '14px', width: '14px' }} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      {isScheduleModalOpen && selectedPost && (
+        <ScheduleModal
+          post={selectedPost}
+          onConfirm={handleConfirmSchedule}
+          onCancel={() => {
+            setIsScheduleModalOpen(false);
             setSelectedPost(null);
           }}
         />
