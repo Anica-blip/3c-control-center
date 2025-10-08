@@ -545,10 +545,7 @@ export default function ScheduleComponent() {
         selected_platforms: selectedPost.selected_platforms,
         status: 'scheduled' as const,
         user_id: selectedPost.user_id,
-        created_by: selectedPost.created_by,
-        // Include these fields to pass validation - they'll be fetched from DB anyway
-        description: selectedPost.description || '',
-        character_profile: selectedPost.character_profile || ''
+        created_by: selectedPost.created_by
       };
 
       const result = await createPost(scheduledPostData);
@@ -2159,4 +2156,3 @@ export default function ScheduleComponent() {
     </div>
   );
 }
-
