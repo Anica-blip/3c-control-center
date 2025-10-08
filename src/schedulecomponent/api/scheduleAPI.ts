@@ -378,6 +378,15 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
 
     if (fetchError) throw fetchError;
 
+    // Validate required fields from the original post
+    if (!originalPost.description || !originalPost.description.trim()) {
+      throw new Error('Post description is required but missing from the original post');
+    }
+
+    if (!originalPost.character_profile || !originalPost.character_profile.trim()) {
+      throw new Error('Character profile is required but missing from the original post');
+    }
+
     // Resolve platform details
     let platformDetails = {
       platform_id: null as string | null,
@@ -460,6 +469,7 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       content_id: originalPost.content_id,
       original_post_id: originalPost.id,
       character_profile: originalPost.character_profile,
+      character_profile_id: originalPost.character_profile, // Database expects character_profile_id
       theme: originalPost.theme,
       audience: originalPost.audience,
       media_type: originalPost.media_type,
@@ -467,6 +477,7 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       platform: originalPost.platform,
       title: originalPost.title,
       description: originalPost.description,
+      post_description: originalPost.description, // Database expects post_description
       hashtags: originalPost.hashtags,
       keywords: originalPost.keywords,
       cta: originalPost.cta,
