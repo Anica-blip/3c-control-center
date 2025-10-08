@@ -468,16 +468,15 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
     const scheduledPostData = {
       content_id: originalPost.content_id,
       original_post_id: originalPost.id,
-      character_profile: originalPost.character_profile,
-      character_profile_id: originalPost.character_profile, // Database expects character_profile_id
+      character_profile: originalPost.character_profile, // Profile ID
+      character_avatar: originalPost.character_avatar, // Avatar URL
       theme: originalPost.theme,
       audience: originalPost.audience,
       media_type: originalPost.media_type,
       template_type: originalPost.template_type,
       platform: originalPost.platform,
       title: originalPost.title,
-      description: originalPost.description,
-      post_description: originalPost.description, // Database expects post_description
+      description: originalPost.description, // Post description
       hashtags: originalPost.hashtags,
       keywords: originalPost.keywords,
       cta: originalPost.cta,
