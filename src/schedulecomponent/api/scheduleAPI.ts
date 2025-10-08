@@ -379,11 +379,11 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
     if (fetchError) throw fetchError;
 
     // Validate required fields from the original post
-    if (!originalPost.description || !originalPost.description.trim()) {
+    if (!originalPost.description || (typeof originalPost.description === 'string' && originalPost.description.trim() === '')) {
       throw new Error('Post description is required but missing from the original post');
     }
 
-    if (!originalPost.character_profile || !originalPost.character_profile.trim()) {
+    if (!originalPost.character_profile) {
       throw new Error('Character profile is required but missing from the original post');
     }
 
