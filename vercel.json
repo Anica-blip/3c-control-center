@@ -6,11 +6,3 @@
     }
   ],
 {
-  "crons": [
-    {
-      "path": "/api/cron/process-scheduled-posts",
-      "schedule": "0 11,19 * * *"
-    }
-  ]
-}
-
