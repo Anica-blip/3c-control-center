@@ -1,0 +1,49 @@
+name: Process Scheduled Posts
+
+on:
+  # Schedule using cron syntax
+  # You can add multiple schedules here
+  schedule:
+    # Runs at 11:00 UTC daily
+    - cron: '0 11 * * *'
+    # Runs at 19:00 UTC daily
+    - cron: '0 19 * * *'
+    # Add more schedules as needed:
+    # - cron: '0 14 * * *'  # 2 PM UTC
+    # - cron: '30 9 * * *'  # 9:30 AM UTC
+    # - cron: '0 */6 * * *' # Every 6 hours
+  
+  # Allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  process-posts:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Call Supabase Edge Function
+        run: |
+          response=$(curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -w "\nHTTP_STATUS:%{http_code}" \
+            "${{ secrets.SUPABASE_FUNCTION_URL }}")
+          
+          http_status=$(echo "$response" | grep "HTTP_STATUS:" | cut -d: -f2)
+          body=$(echo "$response" | sed '/HTTP_STATUS:/d')
+          
+          echo "Response: $body"
+          echo "HTTP Status: $http_status"
+          
+          if [ "$http_status" != "200" ]; then
+            echo "Error: Function returned status $http_status"
+            exit 1
+          fi
+      
+      - name: Log completion
+        if: success()
+        run: echo "Successfully processed scheduled posts at $(date)"
+      
+      - name: Log failure
+        if: failure()
+        run: echo "Failed to process scheduled posts at $(date)"
