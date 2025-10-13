@@ -1,4 +1,3 @@
-  # Schedule using cron syntax
 on:
   schedule:
 - cron: "0 8 * * 1-5"
@@ -20,7 +19,7 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
             -w "\nHTTP_STATUS:%{http_code}" \
-            "${{ secrets.SUPABASE_FUNCTION_URL }}")
+            "${{ secrets.SUPABASE_SCHEDULED_POSTS }}")
           
           http_status=$(echo "$response" | grep "HTTP_STATUS:" | cut -d: -f2)
           body=$(echo "$response" | sed '/HTTP_STATUS:/d')
