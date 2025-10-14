@@ -275,6 +275,13 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
       return String(item);
     };
 
+    // ✅ Helper to check if string is valid UUID
+    const isValidUUID = (str: string): boolean => {
+      if (!str || typeof str !== 'string') return false;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      return uuidRegex.test(str);
+    };
+
     // Resolve platform details
     let updatedPlatformDetails = {};
     
@@ -292,7 +299,7 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
           
           if (selectedPlatform) {
             updatedPlatformDetails = {
-              platform_id: selectedPlatform.id.toString(),
+              platform_id: isValidUUID(String(selectedPlatform.id)) ? String(selectedPlatform.id) : null, // ✅ Only set if valid UUID
               social_platform: selectedPlatform.name || null,
               url: selectedPlatform.url || null,
               channel_group_id: null,
@@ -302,7 +309,7 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
             const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
             if (selectedTelegram) {
               updatedPlatformDetails = {
-                platform_id: selectedTelegram.id.toString(),
+                platform_id: isValidUUID(String(selectedTelegram.id)) ? String(selectedTelegram.id) : null, // ✅ Only set if valid UUID
                 social_platform: selectedTelegram.name || null,
                 url: selectedTelegram.url || null,
                 channel_group_id: selectedTelegram.channel_group_id || null,
@@ -376,7 +383,7 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
     //   throw new Error('User must be authenticated to schedule posts');
     // }
 
-    // PHASE 3: Validate service_type is provided
+    // PHASE 3: Validate service_types is provided
     if (!postData.service_type) {
       throw new Error('Service type is required for scheduling');
     }
@@ -417,6 +424,13 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       return String(item);
     };
 
+    // ✅ Helper to check if string is valid UUID
+    const isValidUUID = (str: string): boolean => {
+      if (!str || typeof str !== 'string') return false;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      return uuidRegex.test(str);
+    };
+
     // Get platform names for assignments
     const platformAssignmentData: Array<{ id: string; name: string }> = [];
 
@@ -434,7 +448,7 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
         
         if (selectedPlatform) {
           platformDetails = {
-            platform_id: selectedPlatform.id.toString(),
+            platform_id: isValidUUID(String(selectedPlatform.id)) ? String(selectedPlatform.id) : null, // ✅ Only set if valid UUID
             social_platform: selectedPlatform.name || null,
             url: selectedPlatform.url || null,
             channel_group_id: null,
@@ -444,7 +458,7 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
           const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
           if (selectedTelegram) {
             platformDetails = {
-              platform_id: selectedTelegram.id.toString(),
+              platform_id: isValidUUID(String(selectedTelegram.id)) ? String(selectedTelegram.id) : null, // ✅ Only set if valid UUID
               social_platform: selectedTelegram.name || null,
               url: selectedTelegram.url || null,
               channel_group_id: selectedTelegram.channel_group_id || null,
@@ -588,6 +602,13 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       return String(item);
     };
 
+    // ✅ Helper to check if string is valid UUID
+    const isValidUUID = (str: string): boolean => {
+      if (!str || typeof str !== 'string') return false;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      return uuidRegex.test(str);
+    };
+
     // Resolve platform details
     let updatedPlatformDetails = {};
     
@@ -605,7 +626,7 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
           
           if (selectedPlatform) {
             updatedPlatformDetails = {
-              platform_id: selectedPlatform.id.toString(),
+              platform_id: isValidUUID(String(selectedPlatform.id)) ? String(selectedPlatform.id) : null, // ✅ Only set if valid UUID
               social_platform: selectedPlatform.name || null,
               url: selectedPlatform.url || null,
               channel_group_id: null,
@@ -615,7 +636,7 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
             const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
             if (selectedTelegram) {
               updatedPlatformDetails = {
-                platform_id: selectedTelegram.id.toString(),
+                platform_id: isValidUUID(String(selectedTelegram.id)) ? String(selectedTelegram.id) : null, // ✅ Only set if valid UUID
                 social_platform: selectedTelegram.name || 'Telegram',
                 url: selectedTelegram.url || null,
                 channel_group_id: selectedTelegram.channel_group_id || null,
@@ -850,6 +871,13 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
       return String(item);
     };
 
+    // ✅ Helper to check if string is valid UUID
+    const isValidUUID = (str: string): boolean => {
+      if (!str || typeof str !== 'string') return false;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      return uuidRegex.test(str);
+    };
+
     if (template.selected_platforms && template.selected_platforms.length > 0) {
       try {
         const primaryPlatformId = extractPlatformId(template.selected_platforms[0]);
@@ -863,7 +891,7 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
         
         if (selectedPlatform) {
           platformDetails = {
-            platform_id: selectedPlatform.id.toString(),
+            platform_id: isValidUUID(String(selectedPlatform.id)) ? String(selectedPlatform.id) : null, // ✅ Only set if valid UUID
             social_platform: selectedPlatform.name || null,
             url: selectedPlatform.url || null,
             channel_group_id: null,
@@ -873,7 +901,7 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
           const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
           if (selectedTelegram) {
             platformDetails = {
-              platform_id: selectedTelegram.id.toString(),
+              platform_id: isValidUUID(String(selectedTelegram.id)) ? String(selectedTelegram.id) : null, // ✅ Only set if valid UUID
               social_platform: selectedTelegram.name || null,
               url: selectedTelegram.url || null,
               channel_group_id: selectedTelegram.channel_group_id || null,
