@@ -138,7 +138,7 @@ const uploadMediaFile = async (file: File, contentId: string, userId: string): P
   }
 };
 
-// PHASE 3: Create platform assignment for a specific platform
+// ✅ FIXED: Create platform assignment with UUID validation
 const createPlatformAssignment = async (
   scheduledPostId: string,
   platformId: string,
@@ -146,12 +146,20 @@ const createPlatformAssignment = async (
 ): Promise<void> => {
   if (!supabase) throw new Error('Supabase client not available');
 
+  // ✅ Helper to check if string is valid UUID
+  const isValidUUID = (str: string): boolean => {
+    if (!str || typeof str !== 'string') return false;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  };
+
   try {
+    // ✅ Only insert if platform_id is a valid UUID, otherwise use NULL
     const { error } = await supabase
       .from('dashboard_platform_assignments')
       .insert({
         scheduled_post_id: scheduledPostId,
-        platform_id: platformId,
+        platform_id: isValidUUID(platformId) ? platformId : null, // ✅ Validate before insert
         platform_name: platformName,
         delivery_status: 'pending',
         created_at: new Date().toISOString(),
@@ -539,13 +547,15 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
     
     for (const platform of platformAssignmentData) {
       try {
+        console.log(`Creating assignment for platform:`, platform); // ✅ Debug log
         await createPlatformAssignment(
           newScheduledPost.id,
           platform.id,
           platform.name
         );
+        console.log(`✅ Platform assignment created for: ${platform.name} (ID: ${platform.id})`); // ✅ Success log
       } catch (assignmentError) {
-        console.error('Error creating platform assignment:', assignmentError);
+        console.error(`❌ Error creating platform assignment for ${platform.name}:`, assignmentError);
         // Continue with other assignments even if one fails
       }
     }
