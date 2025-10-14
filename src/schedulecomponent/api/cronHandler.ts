@@ -1,4 +1,4 @@
-// Cron job handler for scheduled posts - PRODUCTION READY
+// Cron job handler for scheduled posts - SERVICE-SPECIFIC ROUTING
 import { supabase } from '../config';
 
 // ✅ TYPE DEFINITIONS
@@ -8,13 +8,15 @@ interface ProcessResult {
   failed: number;
   errors: string[];
   timestamp: string;
+  serviceType?: string;
 }
 
 interface ScheduledPost {
   id: string;
-  service_type: string;
+  service_type: string; // ✅ SINGULAR - matches database column
   post_content: any;
   retry_count: number;
+  scheduled_date: string;
   [key: string]: any;
 }
 
@@ -58,14 +60,17 @@ const getErrorMessage = (error: unknown): string => {
   return 'Unknown error occurred';
 };
 
-// ✅ MAIN CRON HANDLER
-export async function processScheduledPosts(): Promise<ProcessResult> {
+// ✅ MAIN CRON HANDLER - SERVICE-SPECIFIC
+export async function processScheduledPosts(requestedServiceType?: string): Promise<ProcessResult> {
   const startTime = new Date();
   const errors: string[] = [];
   let succeeded = 0;
   let failed = 0;
 
   console.log(`[${startTime.toISOString()}] Starting scheduled posts processing...`);
+  if (requestedServiceType) {
+    console.log(`Filtering for service_type: ${requestedServiceType}`);
+  }
 
   try {
     // ✅ Validate Supabase connection
@@ -77,18 +82,26 @@ export async function processScheduledPosts(): Promise<ProcessResult> {
         succeeded: 0,
         failed: 0,
         errors: [errorMsg],
-        timestamp: startTime.toISOString()
+        timestamp: startTime.toISOString(),
+        serviceType: requestedServiceType
       };
     }
 
-    // ✅ Fetch pending scheduled posts
-    const { data: posts, error: fetchError } = await supabase
+    // ✅ Build query with service_type filter
+    let query = supabase
       .from('scheduled_posts')
       .select('*')
       .eq('status', 'pending')
       .lte('scheduled_date', startTime.toISOString())
       .order('scheduled_date', { ascending: true })
       .limit(50);
+
+    // ✅ CRITICAL: Filter by service_type if specified
+    if (requestedServiceType) {
+      query = query.eq('service_type', requestedServiceType);
+    }
+
+    const { data: posts, error: fetchError } = await query;
 
     if (fetchError) {
       const errorMsg = `Failed to fetch scheduled posts: ${getErrorMessage(fetchError)}`;
@@ -98,27 +111,29 @@ export async function processScheduledPosts(): Promise<ProcessResult> {
         succeeded: 0,
         failed: 0,
         errors: [errorMsg],
-        timestamp: startTime.toISOString()
+        timestamp: startTime.toISOString(),
+        serviceType: requestedServiceType
       };
     }
 
     if (!posts || posts.length === 0) {
-      console.log('No pending posts to process');
+      console.log(`No pending posts to process${requestedServiceType ? ` for service: ${requestedServiceType}` : ''}`);
       return {
         processed: 0,
         succeeded: 0,
         failed: 0,
         errors: [],
-        timestamp: startTime.toISOString()
+        timestamp: startTime.toISOString(),
+        serviceType: requestedServiceType
       };
     }
 
-    console.log(`Found ${posts.length} posts to process`);
+    console.log(`Found ${posts.length} posts to process${requestedServiceType ? ` for service: ${requestedServiceType}` : ''}`);
 
     // ✅ Process each post
     for (const post of posts as ScheduledPost[]) {
       try {
-        console.log(`Processing post ${post.id} with service type: ${post.service_type}`);
+        console.log(`Processing post ${post.id} with service_type: ${post.service_type}`);
 
         // ✅ Validate post data
         if (!post.service_type) {
@@ -129,7 +144,13 @@ export async function processScheduledPosts(): Promise<ProcessResult> {
           throw new Error('Post missing post_content');
         }
 
-        // ✅ Get external service configuration
+        // ✅ Verify service_type matches requested (double-check)
+        if (requestedServiceType && post.service_type !== requestedServiceType) {
+          console.warn(`Skipping post ${post.id} - service_type mismatch: ${post.service_type} !== ${requestedServiceType}`);
+          continue;
+        }
+
+        // ✅ Get external service configuration using service_type
         const { data: service, error: serviceError } = await supabase
           .from('external_services')
           .select('*')
@@ -169,7 +190,7 @@ export async function processScheduledPosts(): Promise<ProcessResult> {
           throw new Error(`Service returned status ${response.status}: ${responseText}`);
         }
 
-        console.log(`Successfully forwarded post ${post.id}`);
+        console.log(`Successfully forwarded post ${post.id} to ${post.service_type}`);
 
         // ✅ Update platform assignments to 'sent'
         const { error: assignmentError } = await supabase
@@ -199,7 +220,7 @@ export async function processScheduledPosts(): Promise<ProcessResult> {
         }
 
         succeeded++;
-        console.log(`Post ${post.id} processed successfully`);
+        console.log(`Post ${post.id} processed successfully via ${post.service_type}`);
 
       } catch (postError) {
         failed++;
@@ -246,14 +267,15 @@ export async function processScheduledPosts(): Promise<ProcessResult> {
     const endTime = new Date();
     const duration = endTime.getTime() - startTime.getTime();
 
-    console.log(`Processing complete: ${succeeded} succeeded, ${failed} failed in ${duration}ms`);
+    console.log(`Processing complete for ${requestedServiceType || 'all services'}: ${succeeded} succeeded, ${failed} failed in ${duration}ms`);
 
     return {
       processed: posts.length,
       succeeded,
       failed,
       errors,
-      timestamp: startTime.toISOString()
+      timestamp: startTime.toISOString(),
+      serviceType: requestedServiceType
     };
 
   } catch (error) {
@@ -265,7 +287,8 @@ export async function processScheduledPosts(): Promise<ProcessResult> {
       succeeded,
       failed,
       errors: [errorMessage, ...errors],
-      timestamp: startTime.toISOString()
+      timestamp: startTime.toISOString(),
+      serviceType: requestedServiceType
     };
   }
 }
