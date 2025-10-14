@@ -1,4 +1,4 @@
-// /src/schedulecomponent/hooks/useScheduleData.ts - LOGICAL FIXES FOR PENDING POST EDITING
+// /src/schedulecomponent/hooks/useScheduleData.ts - FIXED FOR GITHUB
 
 import { useState, useEffect, useCallback } from 'react';
 import { scheduleAPI } from '../api/scheduleAPI';
@@ -6,43 +6,60 @@ import { ScheduledPost, SavedTemplate, ApiError, OperationResult, ValidationErro
 
 // ✅ USER CONTEXT HELPER - Gets current user ID from app context/session
 const getCurrentUserId = (): string => {
-  // Check localStorage for user session (following established patterns)
-  const userSession = localStorage.getItem('user_session');
-  if (userSession) {
-    try {
+  // Safe localStorage access with fallback
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return 'system-user';
+  }
+
+  try {
+    // Check localStorage for user session
+    const userSession = localStorage.getItem('user_session');
+    if (userSession) {
       const session = JSON.parse(userSession);
-      return session.user?.id || session.userId;
-    } catch (e) {
-      console.warn('Invalid user session format');
+      if (session.user?.id) return session.user.id;
+      if (session.userId) return session.userId;
     }
-  }
-  
-  // Fallback to app state or context
-  const appState = localStorage.getItem('app_state');
-  if (appState) {
-    try {
+    
+    // Fallback to app state
+    const appState = localStorage.getItem('app_state');
+    if (appState) {
       const state = JSON.parse(appState);
-      return state.currentUser?.id || state.userId;
-    } catch (e) {
-      console.warn('Invalid app state format');
+      if (state.currentUser?.id) return state.currentUser.id;
+      if (state.userId) return state.userId;
     }
+    
+    // Generate session user ID if none exists
+    let sessionUserId = localStorage.getItem('session_user_id');
+    if (!sessionUserId) {
+      sessionUserId = generateUUID();
+      localStorage.setItem('session_user_id', sessionUserId);
+    }
+    
+    return sessionUserId;
+  } catch (e) {
+    console.warn('Error accessing localStorage:', e);
+    return 'fallback-user';
   }
-  
-  // Generate session user ID if none exists (for component operation)
-  let sessionUserId = localStorage.getItem('session_user_id');
-  if (!sessionUserId) {
-    sessionUserId = crypto.randomUUID();
-    localStorage.setItem('session_user_id', sessionUserId);
+};
+
+// ✅ CROSS-PLATFORM UUID GENERATOR
+const generateUUID = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
   }
-  
-  return sessionUserId;
+  // Fallback UUID v4 generator
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 };
 
 // ✅ ERROR UTILITIES
 const createApiError = (error: any, operation: string): ApiError => {
   const timestamp = new Date();
   
-  if (!navigator.onLine) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
     return {
       message: 'No internet connection. Please check your network and try again.',
       code: 'NETWORK_OFFLINE',
@@ -122,7 +139,7 @@ const withRetry = async <T>(
   throw lastError;
 };
 
-// FIXED: Validation only for COMPLETE posts, not partial updates
+// ✅ VALIDATION - Only for COMPLETE posts
 const validateCompletePost = (postData: ScheduledPost): ValidationError[] => {
   const errors: ValidationError[] = [];
   
@@ -185,7 +202,6 @@ export const useScheduledPosts = () => {
       setLoading(true);
       setError(null);
       
-      // ✅ RLS COMPLIANT - use proper user ID for database queries
       const userId = getCurrentUserId();
       const data = await withRetry(() => scheduleAPI.fetchScheduledPosts(userId));
       setPosts(data);
@@ -200,33 +216,36 @@ export const useScheduledPosts = () => {
     }
   }, []);
 
-  // FIXED: createPost now handles scheduling workflow correctly
+  // ✅ FIXED: createPost handles scheduling workflow correctly
   const createPost = useCallback(async (
     postData: Omit<ScheduledPost, 'id' | 'created_date'> | ScheduledPost
   ): Promise<OperationResult<ScheduledPost>> => {
     try {
       setError(null);
       
-      // Check if this is a scheduling operation (has scheduled_date and content_id/original_post_id)
+      // Check if this is a scheduling operation
       const isSchedulingOperation = 'scheduled_date' in postData && 
                                     postData.scheduled_date && 
                                     ('content_id' in postData || 'original_post_id' in postData);
       
       if (isSchedulingOperation) {
-        // This is scheduling an existing post - move from content_posts to scheduled_posts
-        // NO VALIDATION NEEDED - data will be fetched from database by createScheduledPost
-        const scheduledPostData = postData as ScheduledPost;
+        // Scheduling existing post - move from content_posts to scheduled_posts
+        const scheduledPostData = postData as Omit<ScheduledPost, 'id' | 'created_date'>;
         const newPost = await withRetry(() => scheduleAPI.createScheduledPost(scheduledPostData));
         
-        // Update local state - remove from pending, add to scheduled list
+        // Update local state
         setPosts(prev => {
-          const filtered = prev.filter(p => p.id !== scheduledPostData.id && p.content_id !== scheduledPostData.content_id);
+          const filtered = prev.filter(p => {
+            if ('id' in postData && p.id === postData.id) return false;
+            if (p.content_id === scheduledPostData.content_id) return false;
+            return true;
+          });
           return [newPost, ...filtered];
         });
         
         return { success: true, data: newPost };
       } else {
-        // This is creating a new post from template/copy - add to content_posts
+        // Creating new post from template/copy
         const validationErrors = validateCompletePost(postData as ScheduledPost);
         if (validationErrors.length > 0) {
           return { 
@@ -239,13 +258,12 @@ export const useScheduledPosts = () => {
           };
         }
         
-        // For new posts, use rescheduleFromTemplate or create new content_post
-        // This is handled by the template system, so just add to local state
-        const newPostData = {
-          id: crypto.randomUUID(),
+        // Create new post in local state only (will be persisted when scheduled)
+        const newPostData: ScheduledPost = {
+          id: generateUUID(),
           ...postData,
           created_date: new Date(),
-          scheduled_date: null // New posts don't have scheduled_date yet
+          scheduled_date: null
         } as ScheduledPost;
         
         setPosts(prev => [newPostData, ...prev]);
@@ -258,7 +276,7 @@ export const useScheduledPosts = () => {
     }
   }, []);
 
-  // LOGICAL FIX: Direct pending post updates - no dependency bloat, no over-engineering
+  // ✅ FIXED: Direct pending post updates
   const updatePost = useCallback(async (
     id: string, 
     updates: Partial<ScheduledPost>
@@ -270,11 +288,10 @@ export const useScheduledPosts = () => {
         throw new Error('Post ID is required');
       }
       
-      // LOGICAL APPROACH: For pending posts, use direct updatePendingPost
-      // This keeps status='scheduled' and stays in content_posts table
+      // Use direct updatePendingPost for pending posts
       const updatedPost = await withRetry(() => scheduleAPI.updatePendingPost(id, updates));
       
-      // Update local state with the updated post
+      // Update local state
       setPosts(prev => prev.map(p => p.id === id ? updatedPost : p));
       
       return { success: true, data: updatedPost };
@@ -283,7 +300,7 @@ export const useScheduledPosts = () => {
       setError(apiError);
       return { success: false, error: apiError };
     }
-  }, []); // ✅ NO DEPENDENCY BLOAT - no [posts] array needed
+  }, []);
 
   const deletePost = useCallback(async (id: string): Promise<OperationResult> => {
     try {
@@ -293,10 +310,10 @@ export const useScheduledPosts = () => {
         throw new Error('Post ID is required');
       }
       
-      // Remove from dashboard view only (no database deletion)
+      // Remove from dashboard view only
       await withRetry(() => scheduleAPI.deleteScheduledPost(id));
       
-      // Update local state to remove from display
+      // Update local state
       setPosts(prev => prev.filter(p => p.id !== id));
       
       return { success: true };
@@ -332,7 +349,6 @@ export const useTemplates = () => {
       setLoading(true);
       setError(null);
       
-      // ✅ RLS COMPLIANT - use proper user ID for database queries
       const userId = getCurrentUserId();
       const data = await withRetry(() => scheduleAPI.fetchTemplates(userId));
       setTemplates(data);
@@ -353,7 +369,6 @@ export const useTemplates = () => {
     try {
       setError(null);
       
-      // ✅ VALIDATION
       const validationErrors = validateTemplate(templateData);
       if (validationErrors.length > 0) {
         return { 
@@ -432,7 +447,6 @@ export const useTemplates = () => {
       return { success: true };
     } catch (err) {
       const apiError = createApiError(err, 'increment template usage');
-      // Don't set error state for non-critical operations
       console.error('Failed to increment template usage:', apiError);
       return { success: false, error: apiError };
     }
@@ -453,4 +467,3 @@ export const useTemplates = () => {
     incrementUsage
   };
 };
-
