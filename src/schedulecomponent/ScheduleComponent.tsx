@@ -1,4 +1,4 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - PHASE 3: JSON Integration
+// /src/schedulecomponent/ScheduleComponent.tsx - PHASE 3: JSON Integration (NO AUTH)
 import React, { useState, useEffect, useCallback } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
@@ -282,8 +282,15 @@ export default function ScheduleComponent() {
     return uuidRegex.test(str);
   };
 
+  // ✅ FIXED: Safe character profile fetch (no auth required)
   const fetchCharacterProfile = useCallback(async (profileId: string) => {
     if (!profileId || !isUUID(profileId) || characterProfiles[profileId] !== undefined) return;
+    
+    // ✅ Safety check for supabase
+    if (!supabase) {
+      console.warn('Supabase client not available');
+      return;
+    }
     
     try {
       setProfilesLoading(prev => ({ ...prev, [profileId]: true }));
@@ -488,7 +495,7 @@ export default function ScheduleComponent() {
     setIsScheduleModalOpen(true);
   };
 
-  // PHASE 3: JSON Structure + Timezone Integration
+  // ✅ PHASE 3: JSON Structure + Timezone Integration (NO AUTH)
   const handleConfirmSchedule = async (scheduleData: {
     scheduledDate: string;
     timezone: string;
@@ -501,23 +508,27 @@ export default function ScheduleComponent() {
     setOperationLoading(operationKey, true);
     
     try {
-      // Fetch full character profile data for sender
+      // ✅ SAFE: Fetch character profile without requiring auth
       let senderProfile = null;
-      if (selectedPost.character_profile && typeof selectedPost.character_profile === 'string') {
-        const { data: profileData, error: profileError } = await supabase
-          .from('character_profiles')
-          .select('id, avatar_id, name, username, role')
-          .eq('id', selectedPost.character_profile)
-          .single();
-        
-        if (!profileError && profileData) {
-          senderProfile = {
-            profile_id: profileData.id,
-            avatar: profileData.avatar_id,
-            name: profileData.name,
-            username: profileData.username,
-            role: profileData.role
-          };
+      if (selectedPost.character_profile && typeof selectedPost.character_profile === 'string' && supabase) {
+        try {
+          const { data: profileData, error: profileError } = await supabase
+            .from('character_profiles')
+            .select('id, avatar_id, name, username, role')
+            .eq('id', selectedPost.character_profile)
+            .single();
+          
+          if (!profileError && profileData) {
+            senderProfile = {
+              profile_id: profileData.id,
+              avatar: profileData.avatar_id,
+              name: profileData.name,
+              username: profileData.username,
+              role: profileData.role
+            };
+          }
+        } catch (profileFetchError) {
+          console.warn('Could not fetch character profile, continuing without it');
         }
       }
 
@@ -534,7 +545,7 @@ export default function ScheduleComponent() {
         }
       };
 
-      // Create scheduled post with JSON structure
+      // Create scheduled post with JSON structure (NO AUTH REQUIRED)
       const scheduledPostData = {
         content_id: selectedPost.content_id,
         original_post_id: selectedPost.id,
@@ -832,6 +843,102 @@ export default function ScheduleComponent() {
       count: (savedTemplates || []).length
     }
   ];
+
+  // Calendar helper functions
+  const navigateCalendar = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentDate);
+    
+    if (calendarView === 'month') {
+      newDate.setMonth(direction === 'next' ? currentDate.getMonth() + 1 : currentDate.getMonth() - 1);
+    } else if (calendarView === 'week') {
+      newDate.setDate(direction === 'next' ? currentDate.getDate() + 7 : currentDate.getDate() - 7);
+    } else {
+      newDate.setDate(direction === 'next' ? currentDate.getDate() + 1 : currentDate.getDate() - 1);
+    }
+    
+    setCurrentDate(newDate);
+  };
+
+  const formatCalendarTitle = () => {
+    if (calendarView === 'month') {
+      return currentDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    } else if (calendarView === 'week') {
+      const weekStart = new Date(currentDate);
+      weekStart.setDate(currentDate.getDate() - currentDate.getDay());
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      
+      return `${weekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - ${weekEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    } else {
+      return currentDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+  };
+
+  const getMonthDates = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - startDate.getDay());
+    
+    const endDate = new Date(lastDay);
+    endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+    
+    const dates: Date[] = [];
+    const current = new Date(startDate);
+    
+    while (current <= endDate) {
+      dates.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+    
+    return dates;
+  };
+
+  const getWeekDates = (date: Date) => {
+    const dates: Date[] = [];
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(date.getDate() - date.getDay());
+    
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      dates.push(day);
+    }
+    
+    return dates;
+  };
+
+  const getPostsForDate = (date: Date): ScheduledPost[] => {
+    return scheduledPostsFiltered.filter(post => {
+      if (!post.scheduled_date) return false;
+      const postDate = new Date(post.scheduled_date);
+      return postDate.toDateString() === date.toDateString();
+    });
+  };
+
+  const getHourlyPostsForDay = (date: Date): Record<number, ScheduledPost[]> => {
+    const hourlyPosts: Record<number, ScheduledPost[]> = {};
+    
+    for (let hour = 0; hour < 24; hour++) {
+      hourlyPosts[hour] = [];
+    }
+    
+    const postsForDay = getPostsForDate(date);
+    
+    postsForDay.forEach(post => {
+      if (post.scheduled_date) {
+        const postDate = new Date(post.scheduled_date);
+        const hour = postDate.getHours();
+        hourlyPosts[hour].push(post);
+      }
+    });
+    
+    return hourlyPosts;
+  };
 
   return (
     <div style={getContainerStyle(isDarkMode)}>
@@ -2163,4 +2270,3 @@ export default function ScheduleComponent() {
     </div>
   );
 }
-
