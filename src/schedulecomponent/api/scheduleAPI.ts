@@ -2,6 +2,13 @@
 import { supabase } from '../config';
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
+// ✅ SHARED: UUID validation helper
+const isValidUUID = (str: string): boolean => {
+  if (!str || typeof str !== 'string') return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
 // Helper function to map content_posts to ScheduledPost interface
 const mapContentPostToScheduledPost = (data: any): ScheduledPost => {
   return {
@@ -146,13 +153,6 @@ const createPlatformAssignment = async (
 ): Promise<void> => {
   if (!supabase) throw new Error('Supabase client not available');
 
-  // ✅ Helper to check if string is valid UUID
-  const isValidUUID = (str: string): boolean => {
-    if (!str || typeof str !== 'string') return false;
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(str);
-  };
-
   try {
     // ✅ Only insert if platform_id is a valid UUID, otherwise use NULL
     const { error } = await supabase
@@ -283,13 +283,6 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
       return String(item);
     };
 
-    // ✅ Helper to check if string is valid UUID
-    const isValidUUID = (str: string): boolean => {
-      if (!str || typeof str !== 'string') return false;
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      return uuidRegex.test(str);
-    };
-
     // Resolve platform details
     let updatedPlatformDetails = {};
     
@@ -359,8 +352,18 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
     if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
     if (updates.status) updateData.status = updates.status;
     
-    // Add platform details
-    Object.assign(updateData, updatedPlatformDetails);
+    // ✅ Add platform details - only include platform_id if valid UUID
+    if (Object.keys(updatedPlatformDetails).length > 0) {
+      const details = updatedPlatformDetails as any;
+      if (details.social_platform !== undefined) updateData.social_platform = details.social_platform;
+      if (details.url !== undefined) updateData.url = details.url;
+      if (details.channel_group_id !== undefined) updateData.channel_group_id = details.channel_group_id;
+      if (details.thread_id !== undefined) updateData.thread_id = details.thread_id;
+      // Only add platform_id if it's a valid UUID
+      if (details.platform_id && isValidUUID(details.platform_id)) {
+        updateData.platform_id = details.platform_id;
+      }
+    }
 
     // Update in content_posts table
     const { data, error } = await supabase
@@ -430,13 +433,6 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       if (typeof item === 'object' && item.id) return String(item.id);
       if (typeof item === 'object' && item.platform_id) return String(item.platform_id);
       return String(item);
-    };
-
-    // ✅ Helper to check if string is valid UUID
-    const isValidUUID = (str: string): boolean => {
-      if (!str || typeof str !== 'string') return false;
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      return uuidRegex.test(str);
     };
 
     // Get platform names for assignments
@@ -612,13 +608,6 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       return String(item);
     };
 
-    // ✅ Helper to check if string is valid UUID
-    const isValidUUID = (str: string): boolean => {
-      if (!str || typeof str !== 'string') return false;
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      return uuidRegex.test(str);
-    };
-
     // Resolve platform details
     let updatedPlatformDetails = {};
     
@@ -696,7 +685,18 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       if (updates.platform !== undefined) updateData.platform = updates.platform;
       if (updates.status) updateData.status = updates.status;
 
-      Object.assign(updateData, updatedPlatformDetails);
+      // ✅ Add platform details - only include platform_id if valid UUID
+      if (Object.keys(updatedPlatformDetails).length > 0) {
+        const details = updatedPlatformDetails as any;
+        if (details.social_platform !== undefined) updateData.social_platform = details.social_platform;
+        if (details.url !== undefined) updateData.url = details.url;
+        if (details.channel_group_id !== undefined) updateData.channel_group_id = details.channel_group_id;
+        if (details.thread_id !== undefined) updateData.thread_id = details.thread_id;
+        // Only add platform_id if it's a valid UUID
+        if (details.platform_id && isValidUUID(details.platform_id)) {
+          updateData.platform_id = details.platform_id;
+        }
+      }
 
       const { data, error } = await supabase
         .from('content_posts')
@@ -724,7 +724,18 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
       if (updates.service_type !== undefined) updateData.service_type = updates.service_type;
 
-      Object.assign(updateData, updatedPlatformDetails);
+      // ✅ Add platform details - only include platform_id if valid UUID
+      if (Object.keys(updatedPlatformDetails).length > 0) {
+        const details = updatedPlatformDetails as any;
+        if (details.social_platform !== undefined) updateData.social_platform = details.social_platform;
+        if (details.url !== undefined) updateData.url = details.url;
+        if (details.channel_group_id !== undefined) updateData.channel_group_id = details.channel_group_id;
+        if (details.thread_id !== undefined) updateData.thread_id = details.thread_id;
+        // Only add platform_id if it's a valid UUID
+        if (details.platform_id && isValidUUID(details.platform_id)) {
+          updateData.platform_id = details.platform_id;
+        }
+      }
 
       const { data, error } = await supabase
         .from('scheduled_posts')
@@ -881,13 +892,6 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
       return String(item);
     };
 
-    // ✅ Helper to check if string is valid UUID
-    const isValidUUID = (str: string): boolean => {
-      if (!str || typeof str !== 'string') return false;
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      return uuidRegex.test(str);
-    };
-
     if (template.selected_platforms && template.selected_platforms.length > 0) {
       try {
         const primaryPlatformId = extractPlatformId(template.selected_platforms[0]);
@@ -925,7 +929,7 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
     }
 
     // Create new post in content_posts with template data + platform details
-    const newPostData = {
+    const newPostData: any = {
       content_id: `template-${templateId}-${Date.now()}`,
       character_profile: template.character_profile || '',
       theme: template.theme || '',
@@ -944,13 +948,17 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
       source_template_id: templateId,
       user_id: userId,
       created_by: userId,
-      // Platform details
-      platform_id: platformDetails.platform_id,
+      // Platform details - only include platform_id if valid UUID
       social_platform: platformDetails.social_platform,
       url: platformDetails.url,
       channel_group_id: platformDetails.channel_group_id,
       thread_id: platformDetails.thread_id
     };
+
+    // ✅ Only include platform_id if it's a valid UUID
+    if (platformDetails.platform_id && isValidUUID(platformDetails.platform_id)) {
+      newPostData.platform_id = platformDetails.platform_id;
+    }
 
     const { data, error } = await supabase
       .from('content_posts')
