@@ -114,7 +114,23 @@ export interface PendingPost {
   source_template_id?: string;
 }
 
-export interface ScheduledPost extends Omit<PendingPost, 'status'> {
+export interface ScheduledPost {
+  id: string;
+  content_id: string;
+  character_profile: string;
+  character_avatar?: string;
+  theme: string;
+  audience: string;
+  media_type: string;
+  template_type: string;
+  platform: string;
+  title: string;
+  description: string;
+  hashtags: string[];
+  keywords: string;
+  cta: string;
+  media_files: MediaFile[];
+  selected_platforms: string[];
   scheduled_date: Date | null;
   timezone?: string;
   service_type?: string;
@@ -145,6 +161,11 @@ export interface ScheduledPost extends Omit<PendingPost, 'status'> {
   audience_segment?: string;
   campaign_id?: string;
   platformDetails?: any[];
+  created_date: Date;
+  user_id: string;
+  created_by: string;
+  is_from_template?: boolean;
+  source_template_id?: string;
 }
 
 export interface SavedTemplate {
@@ -182,7 +203,7 @@ export interface Platform {
   color: string;
 }
 
-// ✅ NEW ERROR HANDLING TYPES
+// Error handling types
 export interface ApiError {
   message: string;
   code: string;
