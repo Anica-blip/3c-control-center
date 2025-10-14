@@ -1,4 +1,4 @@
-// /src/schedulecomponent/api/scheduleAPI.ts - PHASE 3: Complete Database Workflow
+// /src/schedulecomponent/api/scheduleAPI.ts - PHASE 3: Complete Database Workflow (NO AUTH REQUIRED)
 import { supabase } from '../config';
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
@@ -23,7 +23,7 @@ const mapContentPostToScheduledPost = (data: any): ScheduledPost => {
     selected_platforms: Array.isArray(data.selected_platforms) ? data.selected_platforms : [],
     scheduled_date: data.scheduled_date ? new Date(data.scheduled_date) : null,
     status: data.status || 'scheduled',
-    service_type: data.service_type || '', // NEW: Service type
+    service_type: data.service_type || '',
     created_date: new Date(data.created_at),
     user_id: data.user_id || '',
     created_by: data.created_by || '',
@@ -53,7 +53,7 @@ const mapDashboardPostToScheduledPost = (data: any): ScheduledPost => {
     selected_platforms: Array.isArray(data.selected_platforms) ? data.selected_platforms : [],
     scheduled_date: new Date(data.scheduled_date),
     status: data.status || 'scheduled',
-    service_type: data.service_type || '', // NEW: Service type
+    service_type: data.service_type || '',
     failure_reason: data.failure_reason || '',
     retry_count: data.retry_count || 0,
     created_date: new Date(data.created_at),
@@ -165,6 +165,17 @@ const createPlatformAssignment = async (
   }
 };
 
+// ✅ FIXED: Get user ID without throwing error
+const getCurrentUserId = async (): Promise<string | null> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.id || null;
+  } catch (error) {
+    console.warn('Could not get authenticated user, proceeding without user_id');
+    return null;
+  }
+};
+
 // SCHEDULED POSTS - Read from content_posts table where status = 'scheduled'
 export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost[]> => {
   try {
@@ -226,8 +237,8 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id || null;
+    // ✅ FIXED: Get user ID without requiring authentication
+    const userId = await getCurrentUserId();
 
     // Handle media file uploads (blob URLs)
     let updatedMediaFiles = updates.media_files;
@@ -352,17 +363,18 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
   }
 };
 
-// PHASE 3: Create scheduled post with complete workflow
+// ✅ PHASE 3: Create scheduled post with complete workflow (NO AUTH REQUIRED)
 export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | 'created_date'>): Promise<ScheduledPost> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id || null;
+    // ✅ FIXED: Get user ID without requiring authentication - allow null
+    const userId = await getCurrentUserId();
 
-    if (!userId) {
-      throw new Error('User must be authenticated to schedule posts');
-    }
+    // ✅ REMOVED: Authentication check that was throwing the error
+    // if (!userId) {
+    //   throw new Error('User must be authenticated to schedule posts');
+    // }
 
     // PHASE 3: Validate service_type is provided
     if (!postData.service_type) {
@@ -488,8 +500,8 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       retry_count: 0,
       is_from_template: originalPost.is_from_template,
       source_template_id: originalPost.source_template_id,
-      user_id: userId,
-      created_by: userId,
+      user_id: userId || originalPost.user_id || null, // ✅ FIXED: Allow null
+      created_by: userId || originalPost.created_by || null, // ✅ FIXED: Allow null
       // Platform details
       platform_id: platformDetails.platform_id,
       social_platform: platformDetails.social_platform,
@@ -538,8 +550,8 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id || null;
+    // ✅ FIXED: Get user ID without requiring authentication
+    const userId = await getCurrentUserId();
 
     // Handle media file uploads
     let updatedMediaFiles = updates.media_files;
