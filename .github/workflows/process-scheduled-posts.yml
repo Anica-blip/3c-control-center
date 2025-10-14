@@ -1,9 +1,9 @@
 on:
   schedule:
-- cron: "0 8 * * 1-5"
-- cron: "0 11 * * 1-5"
-- cron: "0 16 * * 1-5"
-- cron: "0 19 * * 1-5"
+    - cron: "0 8 * * 1-5"   # 08:00 UTC - Monday to Friday
+    - cron: "0 11 * * 1-5"  # 11:00 UTC - Monday to Friday
+    - cron: "0 16 * * 1-5"  # 16:00 UTC - Monday to Friday
+    - cron: "0 19 * * 1-5"  # 19:00 UTC - Monday to Friday
   
   # Allow manual trigger from GitHub Actions UI
   workflow_dispatch:
