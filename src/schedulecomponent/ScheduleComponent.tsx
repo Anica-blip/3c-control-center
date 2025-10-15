@@ -1611,27 +1611,63 @@ export default function ScheduleComponent() {
                             const statusStyle = getStatusColor(post.status);
                             const borderParts = statusStyle.borderLeft.split(' ');
                             const statusColor = borderParts[2] || theme.primary;
+                            const profileData = characterProfiles[post.character_profile as string];
                             
                             return (
                               <div
                                 key={idx}
                                 style={{
-                                  padding: '2px 4px',
+                                  padding: '3px 5px',
                                   backgroundColor: statusColor,
-                                  borderRadius: '2px',
-                                  fontSize: '10px',
+                                  borderRadius: '3px',
+                                  fontSize: '9px',
                                   color: 'white',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '2px'
+                                }}
+                                title={`${post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${profileData?.name || 'No profile'} - ${post.title || truncateDescription(post.description, 30)}`}
+                              >
+                                <div style={{ fontWeight: 'bold', fontSize: '10px' }}>
+                                  {profileData?.name || 'No profile'}
+                                </div>
+                                <div style={{ 
                                   textOverflow: 'ellipsis',
                                   overflow: 'hidden',
-                                  whiteSpace: 'nowrap',
-                                  cursor: 'pointer'
-                                }}
-                                title={`${post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${truncateDescription(post.description, 50)}`}
-                              >
-                                {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
-                                  hour: '2-digit', 
-                                  minute: '2-digit' 
-                                })}
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  {post.title || truncateDescription(post.description, 20)}
+                                </div>
+                                <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap' }}>
+                                  {(post.platformDetails && post.platformDetails.length > 0) ? (
+                                    post.platformDetails.slice(0, 3).map((platform, pIdx) => {
+                                      // Extract icon from platform object
+                                      const getIconFromPlatform = (plat: any): string => {
+                                        if (plat.platform_icon) return plat.platform_icon;
+                                        const url = (plat.url || '').toLowerCase();
+                                        if (url.includes('telegram') || url.includes('t.me')) return 'TG';
+                                        if (url.includes('instagram')) return 'IG';
+                                        if (url.includes('facebook')) return 'FB';
+                                        if (url.includes('linkedin')) return 'LI';
+                                        if (url.includes('twitter') || url.includes('x.com')) return 'TW';
+                                        if (url.includes('youtube')) return 'YT';
+                                        return '??';
+                                      };
+                                      return (
+                                        <span key={pIdx} style={{
+                                          fontSize: '8px',
+                                          fontWeight: 'bold',
+                                          backgroundColor: 'rgba(255,255,255,0.3)',
+                                          padding: '1px 3px',
+                                          borderRadius: '2px'
+                                        }}>
+                                          {getIconFromPlatform(platform)}
+                                        </span>
+                                      );
+                                    })
+                                  ) : null}
+                                </div>
                               </div>
                             );
                           })}
@@ -1691,40 +1727,93 @@ export default function ScheduleComponent() {
                         flexDirection: 'column',
                         gap: '4px'
                       }}>
-                        {postsForDate.map((post, idx) => (
-                          <div
-                            key={idx}
-                            style={{
-                              padding: '4px 8px',
-                              backgroundColor: theme.background,
-                              border: getStatusColor(post.status).borderLeft,
-                              borderRadius: '4px',
-                              fontSize: '11px',
-                              cursor: 'pointer'
-                            }}
-                            onClick={() => handleEditPost(post)}
-                            title="Click to edit"
-                          >
-                            <div style={{
-                              fontWeight: 'bold',
-                              color: theme.text,
-                              marginBottom: '2px'
-                            }}>
-                              {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })}
+                        {postsForDate.map((post, idx) => {
+                          const profileData = characterProfiles[post.character_profile as string];
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                padding: '6px 8px',
+                                backgroundColor: theme.background,
+                                border: getStatusColor(post.status).borderLeft,
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => handleEditPost(post)}
+                              title="Click to edit"
+                            >
+                              <div style={{
+                                fontWeight: 'bold',
+                                color: theme.text,
+                                marginBottom: '3px',
+                                fontSize: '12px'
+                              }}>
+                                {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                              </div>
+                              <div style={{
+                                color: theme.primary,
+                                fontWeight: '600',
+                                marginBottom: '2px',
+                                fontSize: '10px'
+                              }}>
+                                {profileData?.name || 'No profile'}
+                              </div>
+                              <div style={{
+                                color: theme.text,
+                                marginBottom: '3px',
+                                fontWeight: '500'
+                              }}>
+                                {post.title || truncateDescription(post.description, 30)}
+                              </div>
+                              <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+                                {(post.platformDetails && post.platformDetails.length > 0) ? (
+                                  post.platformDetails.map((platform, pIdx) => {
+                                    // Extract icon and color from platform object
+                                    const getIconFromPlatform = (plat: any): string => {
+                                      if (plat.platform_icon) return plat.platform_icon;
+                                      const url = (plat.url || '').toLowerCase();
+                                      if (url.includes('telegram') || url.includes('t.me')) return 'TG';
+                                      if (url.includes('instagram')) return 'IG';
+                                      if (url.includes('facebook')) return 'FB';
+                                      if (url.includes('linkedin')) return 'LI';
+                                      if (url.includes('twitter') || url.includes('x.com')) return 'TW';
+                                      if (url.includes('youtube')) return 'YT';
+                                      return '??';
+                                    };
+                                    const getColorFromPlatform = (plat: any): string => {
+                                      const url = (plat.url || '').toLowerCase();
+                                      if (url.includes('telegram') || url.includes('t.me')) return '#3b82f6';
+                                      if (url.includes('instagram')) return '#E4405F';
+                                      if (url.includes('facebook')) return '#1877F2';
+                                      if (url.includes('linkedin')) return '#0A66C2';
+                                      if (url.includes('twitter') || url.includes('x.com')) return '#000000';
+                                      if (url.includes('youtube')) return '#FF0000';
+                                      return '#6b7280';
+                                    };
+                                    return (
+                                      <span key={pIdx} style={{
+                                        fontSize: '9px',
+                                        fontWeight: 'bold',
+                                        backgroundColor: getColorFromPlatform(platform),
+                                        color: 'white',
+                                        padding: '2px 4px',
+                                        borderRadius: '3px'
+                                      }}>
+                                        {getIconFromPlatform(platform)}
+                                      </span>
+                                    );
+                                  })
+                                ) : (
+                                  <span style={{ color: theme.textSecondary, fontSize: '9px' }}>No platforms</span>
+                                )}
+                              </div>
                             </div>
-                            <div style={{
-                              color: theme.textSecondary,
-                              textOverflow: 'ellipsis',
-                              overflow: 'hidden',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              {truncateDescription(post.description, 40)}
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -1769,49 +1858,107 @@ export default function ScheduleComponent() {
                       flexDirection: 'column',
                       gap: '4px'
                     }}>
-                      {posts.map((post, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            padding: '8px 12px',
-                            backgroundColor: theme.background,
-                            border: getStatusColor(post.status).borderLeft,
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                          }}
-                          onClick={() => handleEditPost(post)}
-                          title="Click to edit"
-                        >
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            marginBottom: '4px'
-                          }}>
-                            <span style={{
-                              fontWeight: 'bold',
-                              color: theme.text
+                      {posts.map((post, idx) => {
+                        const profileData = characterProfiles[post.character_profile as string];
+                        return (
+                          <div
+                            key={idx}
+                            style={{
+                              padding: '10px 12px',
+                              backgroundColor: theme.background,
+                              border: getStatusColor(post.status).borderLeft,
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => handleEditPost(post)}
+                            title="Click to edit"
+                          >
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              marginBottom: '6px'
                             }}>
-                              {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })}
-                            </span>
-                            {getStatusIcon(post.status)}
-                            <span style={{
-                              fontSize: '10px',
-                              color: theme.textSecondary,
-                              textTransform: 'capitalize'
+                              <span style={{
+                                fontWeight: 'bold',
+                                color: theme.text,
+                                fontSize: '13px'
+                              }}>
+                                {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                              </span>
+                              {getStatusIcon(post.status)}
+                              <span style={{
+                                fontSize: '10px',
+                                color: theme.textSecondary,
+                                textTransform: 'capitalize'
+                              }}>
+                                {post.status}
+                              </span>
+                            </div>
+                            <div style={{
+                              color: theme.primary,
+                              fontWeight: '600',
+                              marginBottom: '4px',
+                              fontSize: '11px'
                             }}>
-                              {post.status}
-                            </span>
+                              {profileData?.name || 'No profile'}
+                            </div>
+                            <div style={{
+                              color: theme.text,
+                              marginBottom: '6px',
+                              fontWeight: '500'
+                            }}>
+                              {post.title || truncateDescription(post.description, 60)}
+                            </div>
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                              {(post.platformDetails && post.platformDetails.length > 0) ? (
+                                post.platformDetails.map((platform, pIdx) => {
+                                  // Extract icon and color from platform object
+                                  const getIconFromPlatform = (plat: any): string => {
+                                    if (plat.platform_icon) return plat.platform_icon;
+                                    const url = (plat.url || '').toLowerCase();
+                                    if (url.includes('telegram') || url.includes('t.me')) return 'TG';
+                                    if (url.includes('instagram')) return 'IG';
+                                    if (url.includes('facebook')) return 'FB';
+                                    if (url.includes('linkedin')) return 'LI';
+                                    if (url.includes('twitter') || url.includes('x.com')) return 'TW';
+                                    if (url.includes('youtube')) return 'YT';
+                                    return '??';
+                                  };
+                                  const getColorFromPlatform = (plat: any): string => {
+                                    const url = (plat.url || '').toLowerCase();
+                                    if (url.includes('telegram') || url.includes('t.me')) return '#3b82f6';
+                                    if (url.includes('instagram')) return '#E4405F';
+                                    if (url.includes('facebook')) return '#1877F2';
+                                    if (url.includes('linkedin')) return '#0A66C2';
+                                    if (url.includes('twitter') || url.includes('x.com')) return '#000000';
+                                    if (url.includes('youtube')) return '#FF0000';
+                                    return '#6b7280';
+                                  };
+                                  return (
+                                    <span key={pIdx} style={{
+                                      fontSize: '10px',
+                                      fontWeight: 'bold',
+                                      backgroundColor: getColorFromPlatform(platform),
+                                      color: 'white',
+                                      padding: '2px 5px',
+                                      borderRadius: '3px'
+                                    }}>
+                                      {getIconFromPlatform(platform)}
+                                    </span>
+                                  );
+                                })
+                              ) : (
+                                <span style={{ color: theme.textSecondary, fontSize: '10px' }}>No platforms</span>
+                              )}
+                            </div>
                           </div>
-                          <div style={{ color: theme.textSecondary }}>
-                            {truncateDescription(post.description, 80)}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -1953,27 +2100,28 @@ export default function ScheduleComponent() {
                           </div>
                           
                           <p style={{
-                            fontSize: '14px',
+                            fontSize: '13px',
                             color: theme.text,
-                            margin: '0 0 8px 0',
+                            margin: '0 0 10px 0',
                             lineHeight: '1.4'
                           }}>
-                            {truncateDescription(post.description)}
+                            {truncateDescription(post.description, 100)}
                           </p>
                           
-                          {/* Platform badges */}
+                          {/* Platform badges and service_type */}
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: '16px',
-                            fontSize: '12px'
+                            fontSize: '12px',
+                            flexWrap: 'wrap'
                           }}>
                             <div style={{
                               display: 'flex',
                               alignItems: 'center',
                               gap: '6px'
                             }}>
-                              <span style={{ color: theme.textSecondary }}>Platforms:</span>
+                              <span style={{ color: theme.textSecondary, fontWeight: '600' }}>Platforms:</span>
                               <div style={{ display: 'flex', gap: '4px' }}>
                                 {(post.platformDetails && post.platformDetails.length > 0) ? (
                                   post.platformDetails.map((platform, idx) => (
@@ -1986,6 +2134,26 @@ export default function ScheduleComponent() {
                                 )}
                               </div>
                             </div>
+                            
+                            {post.service_type && (
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}>
+                                <span style={{ color: theme.textSecondary, fontWeight: '600' }}>Service:</span>
+                                <span style={{
+                                  padding: '3px 8px',
+                                  fontSize: '11px',
+                                  backgroundColor: theme.primaryBg,
+                                  color: theme.primary,
+                                  borderRadius: '4px',
+                                  fontWeight: 'bold'
+                                }}>
+                                  {post.service_type}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                         
