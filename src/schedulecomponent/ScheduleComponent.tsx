@@ -1,5 +1,5 @@
-// /src/schedulecomponent/ScheduleComponent.tsx - PHASE 3: JSON Integration (NO AUTH)
-import React, { useState, useEffect, useCallback } from 'react';
+// /src/schedulecomponent/ScheduleComponent.tsx - PHASE 3: JSON Integration + Calendar & Status Views
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
 import EditModal from './components/EditModal';
@@ -282,15 +282,8 @@ export default function ScheduleComponent() {
     return uuidRegex.test(str);
   };
 
-  // ✅ FIXED: Safe character profile fetch (no auth required)
   const fetchCharacterProfile = useCallback(async (profileId: string) => {
     if (!profileId || !isUUID(profileId) || characterProfiles[profileId] !== undefined) return;
-    
-    // ✅ Safety check for supabase
-    if (!supabase) {
-      console.warn('Supabase client not available');
-      return;
-    }
     
     try {
       setProfilesLoading(prev => ({ ...prev, [profileId]: true }));
@@ -359,12 +352,127 @@ export default function ScheduleComponent() {
     return operationStates[operation] || false;
   }, [operationStates]);
 
-  const pendingPosts = (scheduledPosts || []).filter(p => p?.status === 'scheduled');
-  const scheduledPostsFiltered = (scheduledPosts || []).filter(p => 
-    p?.status && ['processing', 'publishing', 'published', 'failed'].includes(p.status)
+  // Filter posts by status - UPDATED to include 'scheduled' status in calendar/status views
+  const pendingPosts = useMemo(() => 
+    (scheduledPosts || []).filter(p => p?.status === 'pending' || p?.status === 'pending_schedule'),
+    [scheduledPosts]
   );
-  const publishedPosts = (scheduledPosts || []).filter(p => p?.status === 'published');
-  const failedPosts = (scheduledPosts || []).filter(p => p?.status === 'failed');
+
+  const scheduledPostsFiltered = useMemo(() => 
+    (scheduledPosts || []).filter(p => 
+      p?.status && ['scheduled', 'processing', 'publishing', 'published', 'failed'].includes(p.status)
+    ),
+    [scheduledPosts]
+  );
+
+  const publishedPosts = useMemo(() => 
+    (scheduledPosts || []).filter(p => p?.status === 'published'),
+    [scheduledPosts]
+  );
+
+  const failedPosts = useMemo(() => 
+    (scheduledPosts || []).filter(p => p?.status === 'failed'),
+    [scheduledPosts]
+  );
+
+  // CALENDAR UTILITY FUNCTIONS
+  const getMonthDates = useCallback((date: Date): Date[] => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    
+    const startDate = new Date(firstDay);
+    const dayOfWeek = firstDay.getDay();
+    startDate.setDate(firstDay.getDate() - dayOfWeek);
+    
+    const dates: Date[] = [];
+    const current = new Date(startDate);
+    
+    for (let i = 0; i < 42; i++) {
+      dates.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+    
+    return dates;
+  }, []);
+
+  const getWeekDates = useCallback((date: Date): Date[] => {
+    const dayOfWeek = date.getDay();
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(date.getDate() - dayOfWeek);
+    
+    const dates: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      const current = new Date(startOfWeek);
+      current.setDate(startOfWeek.getDate() + i);
+      dates.push(current);
+    }
+    
+    return dates;
+  }, []);
+
+  const getPostsForDate = useCallback((date: Date): ScheduledPost[] => {
+    if (!scheduledPostsFiltered) return [];
+    
+    return scheduledPostsFiltered.filter(post => {
+      if (!post.scheduled_date) return false;
+      
+      const postDate = new Date(post.scheduled_date);
+      return (
+        postDate.getFullYear() === date.getFullYear() &&
+        postDate.getMonth() === date.getMonth() &&
+        postDate.getDate() === date.getDate()
+      );
+    }).sort((a, b) => {
+      const dateA = new Date(a.scheduled_date);
+      const dateB = new Date(b.scheduled_date);
+      return dateA.getTime() - dateB.getTime();
+    });
+  }, [scheduledPostsFiltered]);
+
+  const getHourlyPostsForDay = useCallback((date: Date): Record<number, ScheduledPost[]> => {
+    const postsForDay = getPostsForDate(date);
+    const hourlyPosts: Record<number, ScheduledPost[]> = {};
+    
+    for (let hour = 0; hour < 24; hour++) {
+      hourlyPosts[hour] = postsForDay.filter(post => {
+        const postDate = new Date(post.scheduled_date);
+        return postDate.getHours() === hour;
+      });
+    }
+    
+    return hourlyPosts;
+  }, [getPostsForDate]);
+
+  const navigateCalendar = useCallback((direction: 'prev' | 'next') => {
+    setCurrentDate(prevDate => {
+      const newDate = new Date(prevDate);
+      
+      if (calendarView === 'month') {
+        newDate.setMonth(prevDate.getMonth() + (direction === 'next' ? 1 : -1));
+      } else if (calendarView === 'week') {
+        newDate.setDate(prevDate.getDate() + (direction === 'next' ? 7 : -7));
+      } else if (calendarView === 'day') {
+        newDate.setDate(prevDate.getDate() + (direction === 'next' ? 1 : -1));
+      }
+      
+      return newDate;
+    });
+  }, [calendarView]);
+
+  const formatCalendarTitle = useCallback((): string => {
+    if (calendarView === 'month') {
+      return currentDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    } else if (calendarView === 'week') {
+      const weekStart = getWeekDates(currentDate)[0];
+      const weekEnd = getWeekDates(currentDate)[6];
+      return `${weekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - ${weekEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    } else {
+      return currentDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+  }, [calendarView, currentDate, getWeekDates]);
 
   useEffect(() => {
     if (!pendingPosts?.length) return;
@@ -375,6 +483,16 @@ export default function ScheduleComponent() {
       }
     });
   }, [pendingPosts.length, fetchCharacterProfile]);
+
+  useEffect(() => {
+    if (!scheduledPostsFiltered?.length) return;
+    
+    scheduledPostsFiltered.forEach(post => {
+      if (post?.character_profile && typeof post.character_profile === 'string' && isUUID(post.character_profile)) {
+        fetchCharacterProfile(post.character_profile);
+      }
+    });
+  }, [scheduledPostsFiltered.length, fetchCharacterProfile]);
 
   const platforms = [
     { id: '1', name: 'Telegram', icon: 'TG', color: '#3b82f6' },
@@ -454,6 +572,7 @@ export default function ScheduleComponent() {
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
       case 'pending': 
+      case 'pending_schedule':
       case 'scheduled': 
         return { borderLeft: `4px solid ${theme.warning}`, backgroundColor: theme.warningBg };
       case 'processing': 
@@ -474,6 +593,7 @@ export default function ScheduleComponent() {
     const iconStyle = { height: '12px', width: '12px' };
     switch (status) {
       case 'pending':
+      case 'pending_schedule':
       case 'scheduled': 
         return <Clock style={{...iconStyle, color: theme.warning}} />;
       case 'processing': 
@@ -495,7 +615,7 @@ export default function ScheduleComponent() {
     setIsScheduleModalOpen(true);
   };
 
-  // ✅ PHASE 3: JSON Structure + Timezone Integration (NO AUTH)
+  // PHASE 3: JSON Structure + Timezone Integration
   const handleConfirmSchedule = async (scheduleData: {
     scheduledDate: string;
     timezone: string;
@@ -508,27 +628,23 @@ export default function ScheduleComponent() {
     setOperationLoading(operationKey, true);
     
     try {
-      // ✅ SAFE: Fetch character profile without requiring auth
+      // Fetch full character profile data for sender
       let senderProfile = null;
-      if (selectedPost.character_profile && typeof selectedPost.character_profile === 'string' && supabase) {
-        try {
-          const { data: profileData, error: profileError } = await supabase
-            .from('character_profiles')
-            .select('id, avatar_id, name, username, role')
-            .eq('id', selectedPost.character_profile)
-            .single();
-          
-          if (!profileError && profileData) {
-            senderProfile = {
-              profile_id: profileData.id,
-              avatar: profileData.avatar_id,
-              name: profileData.name,
-              username: profileData.username,
-              role: profileData.role
-            };
-          }
-        } catch (profileFetchError) {
-          console.warn('Could not fetch character profile, continuing without it');
+      if (selectedPost.character_profile && typeof selectedPost.character_profile === 'string') {
+        const { data: profileData, error: profileError } = await supabase
+          .from('character_profiles')
+          .select('id, avatar_id, name, username, role')
+          .eq('id', selectedPost.character_profile)
+          .single();
+        
+        if (!profileError && profileData) {
+          senderProfile = {
+            profile_id: profileData.id,
+            avatar: profileData.avatar_id,
+            name: profileData.name,
+            username: profileData.username,
+            role: profileData.role
+          };
         }
       }
 
@@ -545,7 +661,7 @@ export default function ScheduleComponent() {
         }
       };
 
-      // Create scheduled post with JSON structure (NO AUTH REQUIRED)
+      // Create scheduled post with JSON structure
       const scheduledPostData = {
         content_id: selectedPost.content_id,
         original_post_id: selectedPost.id,
@@ -557,7 +673,6 @@ export default function ScheduleComponent() {
         status: 'scheduled' as const,
         user_id: selectedPost.user_id,
         created_by: selectedPost.created_by,
-        // Include these fields to pass validation - they'll be fetched from DB anyway
         description: selectedPost.description || '',
         character_profile: selectedPost.character_profile || '',
         character_avatar: selectedPost.character_avatar || ''
@@ -606,7 +721,7 @@ export default function ScheduleComponent() {
     try {
       const safeUpdates = {
         ...updates,
-        status: 'scheduled' as const
+        status: updates.status || 'scheduled' as const
       };
       
       const result = await updatePendingPost(postId, safeUpdates);
@@ -732,7 +847,7 @@ export default function ScheduleComponent() {
         cta: template.cta,
         media_files: [],
         selected_platforms: template.selected_platforms,
-        status: 'scheduled' as const,
+        status: 'pending' as const,
         user_id: template.user_id,
         created_by: template.created_by,
         is_from_template: true,
@@ -791,7 +906,7 @@ export default function ScheduleComponent() {
         cta: post.cta || '',
         media_files: post.media_files || [],
         selected_platforms: post.selected_platforms,
-        status: 'scheduled' as const,
+        status: 'pending' as const,
         user_id: post.user_id || '',
         created_by: post.created_by || ''
       };
@@ -844,105 +959,9 @@ export default function ScheduleComponent() {
     }
   ];
 
-  // Calendar helper functions
-  const navigateCalendar = (direction: 'prev' | 'next') => {
-    const newDate = new Date(currentDate);
-    
-    if (calendarView === 'month') {
-      newDate.setMonth(direction === 'next' ? currentDate.getMonth() + 1 : currentDate.getMonth() - 1);
-    } else if (calendarView === 'week') {
-      newDate.setDate(direction === 'next' ? currentDate.getDate() + 7 : currentDate.getDate() - 7);
-    } else {
-      newDate.setDate(direction === 'next' ? currentDate.getDate() + 1 : currentDate.getDate() - 1);
-    }
-    
-    setCurrentDate(newDate);
-  };
-
-  const formatCalendarTitle = () => {
-    if (calendarView === 'month') {
-      return currentDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-    } else if (calendarView === 'week') {
-      const weekStart = new Date(currentDate);
-      weekStart.setDate(currentDate.getDate() - currentDate.getDay());
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      
-      return `${weekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - ${weekEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-    } else {
-      return currentDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    }
-  };
-
-  const getMonthDates = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - startDate.getDay());
-    
-    const endDate = new Date(lastDay);
-    endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
-    
-    const dates: Date[] = [];
-    const current = new Date(startDate);
-    
-    while (current <= endDate) {
-      dates.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-    }
-    
-    return dates;
-  };
-
-  const getWeekDates = (date: Date) => {
-    const dates: Date[] = [];
-    const startOfWeek = new Date(date);
-    startOfWeek.setDate(date.getDate() - date.getDay());
-    
-    for (let i = 0; i < 7; i++) {
-      const day = new Date(startOfWeek);
-      day.setDate(startOfWeek.getDate() + i);
-      dates.push(day);
-    }
-    
-    return dates;
-  };
-
-  const getPostsForDate = (date: Date): ScheduledPost[] => {
-    return scheduledPostsFiltered.filter(post => {
-      if (!post.scheduled_date) return false;
-      const postDate = new Date(post.scheduled_date);
-      return postDate.toDateString() === date.toDateString();
-    });
-  };
-
-  const getHourlyPostsForDay = (date: Date): Record<number, ScheduledPost[]> => {
-    const hourlyPosts: Record<number, ScheduledPost[]> = {};
-    
-    for (let hour = 0; hour < 24; hour++) {
-      hourlyPosts[hour] = [];
-    }
-    
-    const postsForDay = getPostsForDate(date);
-    
-    postsForDay.forEach(post => {
-      if (post.scheduled_date) {
-        const postDate = new Date(post.scheduled_date);
-        const hour = postDate.getHours();
-        hourlyPosts[hour].push(post);
-      }
-    });
-    
-    return hourlyPosts;
-  };
-
   return (
     <div style={getContainerStyle(isDarkMode)}>
-      {/* Header - keeping only essential parts for brevity */}
+      {/* Header */}
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{
           fontSize: '28px',
@@ -1183,7 +1202,7 @@ export default function ScheduleComponent() {
                               </span>
                             )}
                             
-                            {/* FIXED: Character Profile Display */}
+                            {/* Character Profile Display */}
                             {post.character_profile && (
                               <div style={{
                                 display: 'flex',
@@ -1271,7 +1290,7 @@ export default function ScheduleComponent() {
                             {truncateDescription(post.description)}
                           </p>
 
-                          {/* FIXED: Media Files Preview */}
+                          {/* Media Files Preview */}
                           {post.media_files && post.media_files.length > 0 && (
                             <div style={{
                               marginBottom: '16px',
@@ -1604,8 +1623,10 @@ export default function ScheduleComponent() {
                                   color: 'white',
                                   textOverflow: 'ellipsis',
                                   overflow: 'hidden',
-                                  whiteSpace: 'nowrap'
+                                  whiteSpace: 'nowrap',
+                                  cursor: 'pointer'
                                 }}
+                                title={`${post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${truncateDescription(post.description, 50)}`}
                               >
                                 {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
                                   hour: '2-digit', 
@@ -1678,8 +1699,11 @@ export default function ScheduleComponent() {
                               backgroundColor: theme.background,
                               border: getStatusColor(post.status).borderLeft,
                               borderRadius: '4px',
-                              fontSize: '11px'
+                              fontSize: '11px',
+                              cursor: 'pointer'
                             }}
+                            onClick={() => handleEditPost(post)}
+                            title="Click to edit"
                           >
                             <div style={{
                               fontWeight: 'bold',
@@ -1753,8 +1777,11 @@ export default function ScheduleComponent() {
                             backgroundColor: theme.background,
                             border: getStatusColor(post.status).borderLeft,
                             borderRadius: '4px',
-                            fontSize: '12px'
+                            fontSize: '12px',
+                            cursor: 'pointer'
                           }}
+                          onClick={() => handleEditPost(post)}
+                          title="Click to edit"
                         >
                           <div style={{
                             display: 'flex',
@@ -1798,7 +1825,8 @@ export default function ScheduleComponent() {
             <div style={{
               display: 'flex',
               gap: '8px',
-              marginBottom: '24px'
+              marginBottom: '24px',
+              flexWrap: 'wrap'
             }}>
               {['all', 'scheduled', 'processing', 'published', 'failed'].map(status => (
                 <button
@@ -1828,164 +1856,219 @@ export default function ScheduleComponent() {
             <div style={{ display: 'grid', gap: '12px' }}>
               {scheduledPostsFiltered
                 .filter(post => statusFilter === 'all' || post?.status === statusFilter)
-                .map((post) => (
-                  <div
-                    key={post.id}
-                    style={{
-                      padding: '16px',
-                      backgroundColor: theme.cardBg,
-                      border: `1px solid ${theme.border}`,
-                      borderRadius: '8px',
-                      ...getStatusColor(post.status)
-                    }}
-                  >
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'space-between'
-                    }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          marginBottom: '8px'
-                        }}>
-                          {getStatusIcon(post.status)}
-                          <span style={{
-                            fontSize: '12px',
-                            fontWeight: 'bold',
-                            color: theme.text,
-                            textTransform: 'uppercase'
-                          }}>
-                            {post.status}
-                          </span>
-                          {post.scheduled_date && (
-                            <span style={{
-                              fontSize: '12px',
-                              color: theme.textSecondary
-                            }}>
-                              {new Date(post.scheduled_date).toLocaleString('en-GB')}
-                            </span>
-                          )}
-                        </div>
-                        
-                        <p style={{
-                          fontSize: '14px',
-                          color: theme.text,
-                          margin: '0 0 8px 0',
-                          lineHeight: '1.4'
-                        }}>
-                          {truncateDescription(post.description)}
-                        </p>
-                        
-                        {/* FIXED: Platform badges using platformDetails */}
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '16px',
-                          fontSize: '12px'
-                        }}>
+                .map((post) => {
+                  const profileData = characterProfiles[post.character_profile as string];
+                  const isProfileLoading = profilesLoading[post.character_profile as string];
+                  
+                  return (
+                    <div
+                      key={post.id}
+                      style={{
+                        padding: '16px',
+                        backgroundColor: theme.cardBg,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: '8px',
+                        ...getStatusColor(post.status)
+                      }}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between'
+                      }}>
+                        <div style={{ flex: 1 }}>
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px'
+                            gap: '12px',
+                            marginBottom: '8px',
+                            flexWrap: 'wrap'
                           }}>
-                            <span style={{ color: theme.textSecondary }}>Platforms:</span>
-                            <div style={{ display: 'flex', gap: '4px' }}>
-                              {(post.platformDetails && post.platformDetails.length > 0) ? (
-                                post.platformDetails.map((platform, idx) => (
-                                  <PlatformBadge key={idx} platform={platform} />
-                                ))
-                              ) : (
-                                <span style={{ color: theme.textSecondary, fontSize: '11px' }}>
-                                  No platforms
-                                </span>
-                              )}
+                            {getStatusIcon(post.status)}
+                            <span style={{
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                              color: theme.text,
+                              textTransform: 'uppercase'
+                            }}>
+                              {post.status}
+                            </span>
+                            {post.scheduled_date && (
+                              <span style={{
+                                fontSize: '12px',
+                                color: theme.textSecondary
+                              }}>
+                                {new Date(post.scheduled_date).toLocaleString('en-GB')}
+                              </span>
+                            )}
+                            
+                            {/* Character Profile Display */}
+                            {post.character_profile && (
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '4px 8px',
+                                backgroundColor: theme.background,
+                                borderRadius: '4px',
+                                border: `1px solid ${theme.border}`
+                              }}>
+                                {isProfileLoading ? (
+                                  <div style={{
+                                    width: '8px',
+                                    height: '8px',
+                                    border: `1px solid ${theme.border}`,
+                                    borderTop: `1px solid ${theme.primary}`,
+                                    borderRadius: '50%',
+                                    animation: 'spin 1s linear infinite'
+                                  }} />
+                                ) : profileData ? (
+                                  <>
+                                    {profileData.avatar_id && (
+                                      <img 
+                                        src={profileData.avatar_id} 
+                                        alt={profileData.name || 'Profile'}
+                                        style={{
+                                          width: '16px',
+                                          height: '16px',
+                                          borderRadius: '50%',
+                                          objectFit: 'cover'
+                                        }}
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                        }}
+                                      />
+                                    )}
+                                    <span style={{
+                                      fontSize: '11px',
+                                      fontWeight: '600',
+                                      color: theme.text
+                                    }}>
+                                      {profileData.name || profileData.username}
+                                    </span>
+                                  </>
+                                ) : null}
+                              </div>
+                            )}
+                          </div>
+                          
+                          <p style={{
+                            fontSize: '14px',
+                            color: theme.text,
+                            margin: '0 0 8px 0',
+                            lineHeight: '1.4'
+                          }}>
+                            {truncateDescription(post.description)}
+                          </p>
+                          
+                          {/* Platform badges */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px',
+                            fontSize: '12px'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}>
+                              <span style={{ color: theme.textSecondary }}>Platforms:</span>
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                {(post.platformDetails && post.platformDetails.length > 0) ? (
+                                  post.platformDetails.map((platform, idx) => (
+                                    <PlatformBadge key={idx} platform={platform} />
+                                  ))
+                                ) : (
+                                  <span style={{ color: theme.textSecondary, fontSize: '11px' }}>
+                                    No platforms
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                      
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        marginLeft: '16px'
-                      }}>
-                        {post.status === 'failed' && (
+                        
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          marginLeft: '16px'
+                        }}>
+                          {post.status === 'failed' && (
+                            <button
+                              onClick={() => handleCopyToPending(post)}
+                              disabled={isOperationLoading(`copy-${post.id}`)}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: theme.warning,
+                                color: 'white',
+                                fontSize: '12px',
+                                borderRadius: '4px',
+                                fontWeight: 'bold',
+                                border: 'none',
+                                cursor: isOperationLoading(`copy-${post.id}`) ? 'not-allowed' : 'pointer'
+                              }}
+                            >
+                              {isOperationLoading(`copy-${post.id}`) ? 'Copying...' : 'Retry'}
+                            </button>
+                          )}
+                          
                           <button
-                            onClick={() => handleCopyToPending(post)}
-                            disabled={isOperationLoading(`copy-${post.id}`)}
+                            onClick={() => handleEditPost(post)}
+                            disabled={isOperationLoading(`edit-${post.id}`) || post.status === 'published'}
                             style={{
-                              padding: '6px 12px',
-                              backgroundColor: theme.warning,
-                              color: 'white',
-                              fontSize: '12px',
-                              borderRadius: '4px',
-                              fontWeight: 'bold',
+                              padding: '6px',
+                              color: theme.textSecondary,
+                              backgroundColor: 'transparent',
                               border: 'none',
-                              cursor: isOperationLoading(`copy-${post.id}`) ? 'not-allowed' : 'pointer'
+                              borderRadius: '4px',
+                              cursor: (isOperationLoading(`edit-${post.id}`) || post.status === 'published') ? 'not-allowed' : 'pointer',
+                              opacity: (isOperationLoading(`edit-${post.id}`) || post.status === 'published') ? 0.5 : 1
                             }}
+                            title={post.status === 'published' ? 'Cannot edit published posts' : 'Edit post'}
                           >
-                            {isOperationLoading(`copy-${post.id}`) ? 'Copying...' : 'Retry'}
+                            <Edit3 style={{ height: '14px', width: '14px' }} />
                           </button>
-                        )}
-                        
-                        <button
-                          onClick={() => handleEditPost(post)}
-                          disabled={isOperationLoading(`edit-${post.id}`) || post.status === 'published'}
-                          style={{
-                            padding: '6px',
-                            color: theme.textSecondary,
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: (isOperationLoading(`edit-${post.id}`) || post.status === 'published') ? 'not-allowed' : 'pointer',
-                            opacity: (isOperationLoading(`edit-${post.id}`) || post.status === 'published') ? 0.5 : 1
-                          }}
-                          title={post.status === 'published' ? 'Cannot edit published posts' : 'Edit post'}
-                        >
-                          <Edit3 style={{ height: '14px', width: '14px' }} />
-                        </button>
-                        
-                        <button
-                          onClick={() => handleSaveAsTemplate(post)}
-                          disabled={isOperationLoading(`save-template-${post.id}`)}
-                          style={{
-                            padding: '6px',
-                            color: theme.textSecondary,
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: isOperationLoading(`save-template-${post.id}`) ? 'not-allowed' : 'pointer',
-                            opacity: isOperationLoading(`save-template-${post.id}`) ? 0.5 : 1
-                          }}
-                          title="Save as template"
-                        >
-                          <Save style={{ height: '14px', width: '14px' }} />
-                        </button>
-                        
-                        <button
-                          onClick={() => handleDeletePost(post.id)}
-                          disabled={isOperationLoading(`delete-${post.id}`) || post.status === 'processing'}
-                          style={{
-                            padding: '6px',
-                            color: theme.danger,
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: (isOperationLoading(`delete-${post.id}`) || post.status === 'processing') ? 'not-allowed' : 'pointer',
-                            opacity: (isOperationLoading(`delete-${post.id}`) || post.status === 'processing') ? 0.5 : 1
-                          }}
-                          title={post.status === 'processing' ? 'Cannot delete processing posts' : 'Delete post'}
-                        >
-                          <Trash2 style={{ height: '14px', width: '14px' }} />
-                        </button>
+                          
+                          <button
+                            onClick={() => handleSaveAsTemplate(post)}
+                            disabled={isOperationLoading(`save-template-${post.id}`)}
+                            style={{
+                              padding: '6px',
+                              color: theme.textSecondary,
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: isOperationLoading(`save-template-${post.id}`) ? 'not-allowed' : 'pointer',
+                              opacity: isOperationLoading(`save-template-${post.id}`) ? 0.5 : 1
+                            }}
+                            title="Save as template"
+                          >
+                            <Save style={{ height: '14px', width: '14px' }} />
+                          </button>
+                          
+                          <button
+                            onClick={() => handleDeletePost(post.id)}
+                            disabled={isOperationLoading(`delete-${post.id}`) || post.status === 'processing'}
+                            style={{
+                              padding: '6px',
+                              color: theme.danger,
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: (isOperationLoading(`delete-${post.id}`) || post.status === 'processing') ? 'not-allowed' : 'pointer',
+                              opacity: (isOperationLoading(`delete-${post.id}`) || post.status === 'processing') ? 0.5 : 1
+                            }}
+                            title={post.status === 'processing' ? 'Cannot delete processing posts' : 'Delete post'}
+                          >
+                            <Trash2 style={{ height: '14px', width: '14px' }} />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               
               {scheduledPostsFiltered.filter(post => statusFilter === 'all' || post?.status === statusFilter).length === 0 && (
                 <div style={{
