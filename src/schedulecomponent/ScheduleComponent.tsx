@@ -352,15 +352,19 @@ export default function ScheduleComponent() {
     return operationStates[operation] || false;
   }, [operationStates]);
 
-  // Filter posts by status - UPDATED to include 'scheduled' status in calendar/status views
+  // Filter posts by whether they have been scheduled (have date + time + service_type)
   const pendingPosts = useMemo(() => 
-    (scheduledPosts || []).filter(p => p?.status === 'pending' || p?.status === 'pending_schedule'),
+    (scheduledPosts || []).filter(p => 
+      // Posts WITHOUT scheduled_date, timezone, or service_type are pending
+      !p?.scheduled_date || !p?.timezone || !p?.service_type
+    ),
     [scheduledPosts]
   );
 
   const scheduledPostsFiltered = useMemo(() => 
     (scheduledPosts || []).filter(p => 
-      p?.status && ['scheduled', 'processing', 'publishing', 'published', 'failed'].includes(p.status)
+      // Posts WITH scheduled_date, timezone, AND service_type go to calendar/status
+      p?.scheduled_date && p?.timezone && p?.service_type
     ),
     [scheduledPosts]
   );
@@ -1040,7 +1044,7 @@ export default function ScheduleComponent() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{ fontSize: '18px', fontWeight: '700', color: theme.success }}>
-              {(scheduledPosts || []).filter(p => p?.status === 'scheduled').length}
+              {scheduledPostsFiltered.length}
             </div>
             <span style={{ fontSize: '13px', color: theme.textSecondary }}>Scheduled</span>
           </div>
