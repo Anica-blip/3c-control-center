@@ -1,11 +1,11 @@
-// /src/schedulecomponent/api/scheduleAPI.ts - PHASE 3: Complete Database Workflow (NO AUTH REQUIRED)
+// /src/schedulecomponent/api/scheduleAPI.ts - PHASE 3: Complete Database Workflow
 import { supabase } from '../config';
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
-// ✅ SHARED: UUID validation helper
-const isValidUUID = (str: string): boolean => {
-  if (!str || typeof str !== 'string') return false;
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// Helper function to validate UUID format
+const isValidUUID = (str: string | null | undefined): boolean => {
+  if (!str) return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(str);
 };
 
@@ -145,7 +145,7 @@ const uploadMediaFile = async (file: File, contentId: string, userId: string): P
   }
 };
 
-// ✅ FIXED: Create platform assignment WITHOUT platform_id
+// PHASE 3: Create platform assignment for a specific platform
 const createPlatformAssignment = async (
   scheduledPostId: string,
   platformId: string,
@@ -154,12 +154,11 @@ const createPlatformAssignment = async (
   if (!supabase) throw new Error('Supabase client not available');
 
   try {
-    // ✅ DON'T include platform_id at all - it's numeric, database expects UUID
     const { error } = await supabase
       .from('dashboard_platform_assignments')
       .insert({
         scheduled_post_id: scheduledPostId,
-        // platform_id: OMITTED - numeric value "78" would cause UUID error
+        platform_id: platformId,
         platform_name: platformName,
         delivery_status: 'pending',
         created_at: new Date().toISOString(),
@@ -170,17 +169,6 @@ const createPlatformAssignment = async (
   } catch (error) {
     console.error('Error creating platform assignment:', error);
     throw error;
-  }
-};
-
-// ✅ FIXED: Get user ID without throwing error
-const getCurrentUserId = async (): Promise<string | null> => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user?.id || null;
-  } catch (error) {
-    console.warn('Could not get authenticated user, proceeding without user_id');
-    return null;
   }
 };
 
@@ -245,8 +233,8 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    // ✅ FIXED: Get user ID without requiring authentication
-    const userId = await getCurrentUserId();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || null;
 
     // Handle media file uploads (blob URLs)
     let updatedMediaFiles = updates.media_files;
@@ -300,7 +288,7 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
           
           if (selectedPlatform) {
             updatedPlatformDetails = {
-              platform_id: isValidUUID(String(selectedPlatform.id)) ? String(selectedPlatform.id) : null, // ✅ Only set if valid UUID
+              platform_id: selectedPlatform.id.toString(),
               social_platform: selectedPlatform.name || null,
               url: selectedPlatform.url || null,
               channel_group_id: null,
@@ -310,7 +298,7 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
             const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
             if (selectedTelegram) {
               updatedPlatformDetails = {
-                platform_id: isValidUUID(String(selectedTelegram.id)) ? String(selectedTelegram.id) : null, // ✅ Only set if valid UUID
+                platform_id: selectedTelegram.id.toString(),
                 social_platform: selectedTelegram.name || null,
                 url: selectedTelegram.url || null,
                 channel_group_id: selectedTelegram.channel_group_id || null,
@@ -352,18 +340,8 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
     if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
     if (updates.status) updateData.status = updates.status;
     
-    // ✅ Add platform details - only include platform_id if valid UUID
-    if (Object.keys(updatedPlatformDetails).length > 0) {
-      const details = updatedPlatformDetails as any;
-      if (details.social_platform !== undefined) updateData.social_platform = details.social_platform;
-      if (details.url !== undefined) updateData.url = details.url;
-      if (details.channel_group_id !== undefined) updateData.channel_group_id = details.channel_group_id;
-      if (details.thread_id !== undefined) updateData.thread_id = details.thread_id;
-      // Only add platform_id if it's a valid UUID
-      if (details.platform_id && isValidUUID(details.platform_id)) {
-        updateData.platform_id = details.platform_id;
-      }
-    }
+    // Add platform details
+    Object.assign(updateData, updatedPlatformDetails);
 
     // Update in content_posts table
     const { data, error } = await supabase
@@ -381,20 +359,19 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
   }
 };
 
-// ✅ PHASE 3: Create scheduled post with complete workflow (NO AUTH REQUIRED)
+// PHASE 3: Create scheduled post with complete workflow
 export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | 'created_date'>): Promise<ScheduledPost> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    // ✅ FIXED: Get user ID without requiring authentication - allow null
-    const userId = await getCurrentUserId();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || null;
 
-    // ✅ REMOVED: Authentication check that was throwing the error
-    // if (!userId) {
-    //   throw new Error('User must be authenticated to schedule posts');
-    // }
+    if (!userId) {
+      throw new Error('User must be authenticated to schedule posts');
+    }
 
-    // PHASE 3: Validate service_types is provided
+    // PHASE 3: Validate service_type is provided
     if (!postData.service_type) {
       throw new Error('Service type is required for scheduling');
     }
@@ -417,8 +394,9 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       throw new Error('Character profile is required but missing from the original post');
     }
 
-    // Resolve platform details - ONLY names and URLs, NO IDs
+    // Resolve platform details
     let platformDetails = {
+      platform_id: null as string | null,
       social_platform: null as string | null,
       url: null as string | null,
       channel_group_id: null as string | null,
@@ -446,11 +424,12 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
           loadTelegramChannels()
         ]);
         
-        // Get platform details for primary platform - ONLY name and URL
+        // Get platform details for primary platform
         const selectedPlatform = platforms.find(p => String(p.id) === primaryPlatformId);
         
         if (selectedPlatform) {
           platformDetails = {
+            platform_id: selectedPlatform.id.toString(),
             social_platform: selectedPlatform.name || null,
             url: selectedPlatform.url || null,
             channel_group_id: null,
@@ -460,6 +439,7 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
           const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
           if (selectedTelegram) {
             platformDetails = {
+              platform_id: selectedTelegram.id.toString(),
               social_platform: selectedTelegram.name || null,
               url: selectedTelegram.url || null,
               channel_group_id: selectedTelegram.channel_group_id || null,
@@ -491,7 +471,7 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       }
     }
 
-    // PHASE 3: Create scheduled post in scheduled_posts table
+    // PHASE 3: Create scheduled post in scheduled_posts table - MIRROR from content_posts
     const scheduledPostData = {
       content_id: originalPost.content_id,
       original_post_id: originalPost.id,
@@ -510,14 +490,13 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       media_files: originalPost.media_files,
       selected_platforms: originalPost.selected_platforms,
       scheduled_date: postData.scheduled_date?.toISOString() || new Date().toISOString(),
-      status: 'pending', // PHASE 3: Start as pending
-      service_type: postData.service_type, // PHASE 3: Store service type
+      status: 'pending',
+      service_type: postData.service_type,
       retry_count: 0,
       is_from_template: originalPost.is_from_template,
       source_template_id: originalPost.source_template_id,
-      user_id: userId || originalPost.user_id || null, // ✅ FIXED: Allow null
-      created_by: userId || originalPost.created_by || null, // ✅ FIXED: Allow null
-      // Platform details
+      user_id: userId,
+      created_by: userId,
       platform_id: platformDetails.platform_id,
       social_platform: platformDetails.social_platform,
       url: platformDetails.url,
@@ -540,16 +519,13 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
     
     for (const platform of platformAssignmentData) {
       try {
-        console.log(`Creating assignment for platform:`, platform); // ✅ Debug log
         await createPlatformAssignment(
           newScheduledPost.id,
           platform.id,
           platform.name
         );
-        console.log(`✅ Platform assignment created for: ${platform.name} (ID: ${platform.id})`); // ✅ Success log
       } catch (assignmentError) {
-        console.error(`❌ Error creating platform assignment for ${platform.name}:`, assignmentError);
-        // Continue with other assignments even if one fails
+        console.error('Error creating platform assignment:', assignmentError);
       }
     }
 
@@ -567,8 +543,8 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    // ✅ FIXED: Get user ID without requiring authentication
-    const userId = await getCurrentUserId();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || null;
 
     // Handle media file uploads
     let updatedMediaFiles = updates.media_files;
@@ -622,7 +598,7 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
           
           if (selectedPlatform) {
             updatedPlatformDetails = {
-              platform_id: isValidUUID(String(selectedPlatform.id)) ? String(selectedPlatform.id) : null, // ✅ Only set if valid UUID
+              platform_id: selectedPlatform.id.toString(),
               social_platform: selectedPlatform.name || null,
               url: selectedPlatform.url || null,
               channel_group_id: null,
@@ -632,7 +608,7 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
             const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
             if (selectedTelegram) {
               updatedPlatformDetails = {
-                platform_id: isValidUUID(String(selectedTelegram.id)) ? String(selectedTelegram.id) : null, // ✅ Only set if valid UUID
+                platform_id: selectedTelegram.id.toString(),
                 social_platform: selectedTelegram.name || 'Telegram',
                 url: selectedTelegram.url || null,
                 channel_group_id: selectedTelegram.channel_group_id || null,
@@ -682,18 +658,7 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       if (updates.platform !== undefined) updateData.platform = updates.platform;
       if (updates.status) updateData.status = updates.status;
 
-      // ✅ Add platform details - only include platform_id if valid UUID
-      if (Object.keys(updatedPlatformDetails).length > 0) {
-        const details = updatedPlatformDetails as any;
-        if (details.social_platform !== undefined) updateData.social_platform = details.social_platform;
-        if (details.url !== undefined) updateData.url = details.url;
-        if (details.channel_group_id !== undefined) updateData.channel_group_id = details.channel_group_id;
-        if (details.thread_id !== undefined) updateData.thread_id = details.thread_id;
-        // Only add platform_id if it's a valid UUID
-        if (details.platform_id && isValidUUID(details.platform_id)) {
-          updateData.platform_id = details.platform_id;
-        }
-      }
+      Object.assign(updateData, updatedPlatformDetails);
 
       const { data, error } = await supabase
         .from('content_posts')
@@ -721,18 +686,7 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
       if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
       if (updates.service_type !== undefined) updateData.service_type = updates.service_type;
 
-      // ✅ Add platform details - only include platform_id if valid UUID
-      if (Object.keys(updatedPlatformDetails).length > 0) {
-        const details = updatedPlatformDetails as any;
-        if (details.social_platform !== undefined) updateData.social_platform = details.social_platform;
-        if (details.url !== undefined) updateData.url = details.url;
-        if (details.channel_group_id !== undefined) updateData.channel_group_id = details.channel_group_id;
-        if (details.thread_id !== undefined) updateData.thread_id = details.thread_id;
-        // Only add platform_id if it's a valid UUID
-        if (details.platform_id && isValidUUID(details.platform_id)) {
-          updateData.platform_id = details.platform_id;
-        }
-      }
+      Object.assign(updateData, updatedPlatformDetails);
 
       const { data, error } = await supabase
         .from('scheduled_posts')
@@ -902,7 +856,7 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
         
         if (selectedPlatform) {
           platformDetails = {
-            platform_id: isValidUUID(String(selectedPlatform.id)) ? String(selectedPlatform.id) : null, // ✅ Only set if valid UUID
+            platform_id: selectedPlatform.id.toString(),
             social_platform: selectedPlatform.name || null,
             url: selectedPlatform.url || null,
             channel_group_id: null,
@@ -912,7 +866,7 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
           const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
           if (selectedTelegram) {
             platformDetails = {
-              platform_id: isValidUUID(String(selectedTelegram.id)) ? String(selectedTelegram.id) : null, // ✅ Only set if valid UUID
+              platform_id: selectedTelegram.id.toString(),
               social_platform: selectedTelegram.name || null,
               url: selectedTelegram.url || null,
               channel_group_id: selectedTelegram.channel_group_id || null,
@@ -926,7 +880,7 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
     }
 
     // Create new post in content_posts with template data + platform details
-    const newPostData: any = {
+    const newPostData = {
       content_id: `template-${templateId}-${Date.now()}`,
       character_profile: template.character_profile || '',
       theme: template.theme || '',
@@ -945,17 +899,12 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
       source_template_id: templateId,
       user_id: userId,
       created_by: userId,
-      // Platform details - only include platform_id if valid UUID
+      platform_id: platformDetails.platform_id,
       social_platform: platformDetails.social_platform,
       url: platformDetails.url,
       channel_group_id: platformDetails.channel_group_id,
       thread_id: platformDetails.thread_id
     };
-
-    // ✅ Only include platform_id if it's a valid UUID
-    if (platformDetails.platform_id && isValidUUID(platformDetails.platform_id)) {
-      newPostData.platform_id = platformDetails.platform_id;
-    }
 
     const { data, error } = await supabase
       .from('content_posts')
