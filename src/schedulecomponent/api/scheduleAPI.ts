@@ -172,20 +172,20 @@ const createPlatformAssignment = async (
   }
 };
 
-// SCHEDULED POSTS - Read from content_posts table where status = 'scheduled'
+// SCHEDULED POSTS - Read from all three tables
 export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost[]> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
     // Get scheduled posts from content_posts table
-    const { data: scheduledPosts, error: scheduledError } = await supabase
+    const { data: contentPosts, error: contentError } = await supabase
       .from('content_posts')
       .select('*')
       .eq('status', 'scheduled')
       .or(`user_id.eq.${userId},user_id.is.null`)
       .order('created_at', { ascending: false });
     
-    if (scheduledError) throw scheduledError;
+    if (contentError) throw contentError;
 
     // Get completed posts from dashboard_posts table  
     const { data: dashboardPosts, error: dashboardError } = await supabase
@@ -196,10 +196,20 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (dashboardError) throw dashboardError;
 
-    // Combine and map both arrays with platform details enrichment
+    // Get scheduled posts from scheduled_posts table
+    const { data: scheduledPosts, error: scheduledError } = await supabase
+      .from('scheduled_posts')
+      .select('*')
+      .or(`user_id.eq.${userId},user_id.is.null`)
+      .order('created_at', { ascending: false });
+    
+    if (scheduledError) throw scheduledError;
+
+    // Combine and map all three arrays with platform details enrichment
     const allPosts = [
-      ...(scheduledPosts || []).map(post => mapContentPostToScheduledPost(post)),
-      ...(dashboardPosts || []).map(post => mapDashboardPostToScheduledPost(post))
+      ...(contentPosts || []).map(post => mapContentPostToScheduledPost(post)),
+      ...(dashboardPosts || []).map(post => mapDashboardPostToScheduledPost(post)),
+      ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post))
     ];
 
     // Enrich with platform details for display
