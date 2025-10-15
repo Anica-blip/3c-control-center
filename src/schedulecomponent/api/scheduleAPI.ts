@@ -145,7 +145,7 @@ const uploadMediaFile = async (file: File, contentId: string, userId: string): P
   }
 };
 
-// ✅ FIXED: Create platform assignment with UUID validation
+// ✅ FIXED: Create platform assignment WITHOUT platform_id
 const createPlatformAssignment = async (
   scheduledPostId: string,
   platformId: string,
@@ -154,12 +154,12 @@ const createPlatformAssignment = async (
   if (!supabase) throw new Error('Supabase client not available');
 
   try {
-    // ✅ Only insert if platform_id is a valid UUID, otherwise use NULL
+    // ✅ DON'T include platform_id at all - it's numeric, database expects UUID
     const { error } = await supabase
       .from('dashboard_platform_assignments')
       .insert({
         scheduled_post_id: scheduledPostId,
-        platform_id: isValidUUID(platformId) ? platformId : null, // ✅ Validate before insert
+        // platform_id: OMITTED - numeric value "78" would cause UUID error
         platform_name: platformName,
         delivery_status: 'pending',
         created_at: new Date().toISOString(),
@@ -417,9 +417,8 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       throw new Error('Character profile is required but missing from the original post');
     }
 
-    // Resolve platform details
+    // Resolve platform details - ONLY names and URLs, NO IDs
     let platformDetails = {
-      platform_id: null as string | null,
       social_platform: null as string | null,
       url: null as string | null,
       channel_group_id: null as string | null,
@@ -447,12 +446,11 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
           loadTelegramChannels()
         ]);
         
-        // Get platform details for primary platform
+        // Get platform details for primary platform - ONLY name and URL
         const selectedPlatform = platforms.find(p => String(p.id) === primaryPlatformId);
         
         if (selectedPlatform) {
           platformDetails = {
-            platform_id: isValidUUID(String(selectedPlatform.id)) ? String(selectedPlatform.id) : null, // ✅ Only set if valid UUID
             social_platform: selectedPlatform.name || null,
             url: selectedPlatform.url || null,
             channel_group_id: null,
@@ -462,7 +460,6 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
           const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
           if (selectedTelegram) {
             platformDetails = {
-              platform_id: isValidUUID(String(selectedTelegram.id)) ? String(selectedTelegram.id) : null, // ✅ Only set if valid UUID
               social_platform: selectedTelegram.name || null,
               url: selectedTelegram.url || null,
               channel_group_id: selectedTelegram.channel_group_id || null,
