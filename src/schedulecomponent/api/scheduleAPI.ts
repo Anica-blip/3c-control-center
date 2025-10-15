@@ -367,10 +367,6 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id || null;
 
-    if (!userId) {
-      throw new Error('User must be authenticated to schedule posts');
-    }
-
     // PHASE 3: Validate service_type is provided
     if (!postData.service_type) {
       throw new Error('Service type is required for scheduling');
@@ -472,9 +468,15 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
     }
 
     // PHASE 3: Create scheduled post in scheduled_posts table - MIRROR from content_posts
+    // Defensively handle UUID columns - if not UUID format, set to null
+    const isUUID = (val: any): boolean => {
+      if (!val || typeof val !== 'string') return false;
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+    };
+
     const scheduledPostData = {
       content_id: originalPost.content_id,
-      original_post_id: originalPost.id,
+      original_post_id: isUUID(originalPost.id) ? originalPost.id : null,
       character_profile: originalPost.character_profile,
       character_avatar: originalPost.character_avatar,
       theme: originalPost.theme,
@@ -494,10 +496,10 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       service_type: postData.service_type,
       retry_count: 0,
       is_from_template: originalPost.is_from_template,
-      source_template_id: originalPost.source_template_id,
+      source_template_id: isUUID(originalPost.source_template_id) ? originalPost.source_template_id : null,
       user_id: userId,
       created_by: userId,
-      platform_id: platformDetails.platform_id,
+      platform_id: isUUID(platformDetails.platform_id) ? platformDetails.platform_id : null,
       social_platform: platformDetails.social_platform,
       url: platformDetails.url,
       channel_group_id: platformDetails.channel_group_id,
@@ -880,6 +882,12 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
     }
 
     // Create new post in content_posts with template data + platform details
+    // Defensively handle UUID columns
+    const isUUID = (val: any): boolean => {
+      if (!val || typeof val !== 'string') return false;
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+    };
+
     const newPostData = {
       content_id: `template-${templateId}-${Date.now()}`,
       character_profile: template.character_profile || '',
@@ -896,10 +904,10 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
       selected_platforms: template.selected_platforms || [],
       status: template.status || 'pending',
       is_from_template: true,
-      source_template_id: templateId,
+      source_template_id: isUUID(templateId) ? templateId : null,
       user_id: userId,
       created_by: userId,
-      platform_id: platformDetails.platform_id,
+      platform_id: isUUID(platformDetails.platform_id) ? platformDetails.platform_id : null,
       social_platform: platformDetails.social_platform,
       url: platformDetails.url,
       channel_group_id: platformDetails.channel_group_id,
