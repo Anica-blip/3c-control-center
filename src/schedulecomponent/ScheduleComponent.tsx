@@ -273,6 +273,62 @@ export default function ScheduleComponent() {
 
   const [characterProfiles, setCharacterProfiles] = useState<Record<string, any>>({});
   const [profilesLoading, setProfilesLoading] = useState<Record<string, boolean>>({});
+  
+  // Fetch posts directly from scheduled_posts table
+  const [scheduledPostsFromDB, setScheduledPostsFromDB] = useState<ScheduledPost[]>([]);
+  const [loadingScheduledPosts, setLoadingScheduledPosts] = useState(false);
+
+  const fetchScheduledPostsFromDB = useCallback(async () => {
+    setLoadingScheduledPosts(true);
+    try {
+      const { data, error } = await supabase
+        .from('scheduled_posts')
+        .select('*')
+        .order('scheduled_date', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching scheduled posts:', error);
+      } else {
+        // Fetch platform details for each post
+        const postsWithPlatforms = await Promise.all((data || []).map(async (post) => {
+          if (post.selected_platforms && Array.isArray(post.selected_platforms)) {
+            const platformIds = post.selected_platforms;
+            const { data: platformsData, error: platformsError } = await supabase
+              .from('platforms')
+              .select('*')
+              .in('id', platformIds);
+            
+            if (!platformsError && platformsData) {
+              return { ...post, platformDetails: platformsData };
+            }
+          }
+          return { ...post, platformDetails: [] };
+        }));
+        
+        setScheduledPostsFromDB(postsWithPlatforms);
+      }
+    } catch (error) {
+      console.error('Error fetching scheduled posts:', error);
+    } finally {
+      setLoadingScheduledPosts(false);
+    }
+  }, []);
+
+  // Fetch scheduled posts on mount
+  useEffect(() => {
+    fetchScheduledPostsFromDB();
+  }, [fetchScheduledPostsFromDB]);
+
+  // Combined refresh function
+  const refreshAllPosts = useCallback(async () => {
+    await refreshPosts();
+    await fetchScheduledPostsFromDB();
+  }, [refreshPosts, fetchScheduledPostsFromDB]);
+
+  // Combine posts from both sources
+  const allPosts = useMemo(() => {
+    return [...(scheduledPosts || []), ...scheduledPostsFromDB];
+  }, [scheduledPosts, scheduledPostsFromDB]);
 
   const { isDarkMode, theme } = getTheme();
 
@@ -354,29 +410,29 @@ export default function ScheduleComponent() {
 
   // Filter posts by whether they have been scheduled (have date + time + service_type)
   const pendingPosts = useMemo(() => 
-    (scheduledPosts || []).filter(p => 
+    allPosts.filter(p => 
       // Posts WITHOUT scheduled_date, timezone, or service_type are pending
       !p?.scheduled_date || !p?.timezone || !p?.service_type
     ),
-    [scheduledPosts]
+    [allPosts]
   );
 
   const scheduledPostsFiltered = useMemo(() => 
-    (scheduledPosts || []).filter(p => 
+    allPosts.filter(p => 
       // Posts WITH scheduled_date, timezone, AND service_type go to calendar/status
       p?.scheduled_date && p?.timezone && p?.service_type
     ),
-    [scheduledPosts]
+    [allPosts]
   );
 
   const publishedPosts = useMemo(() => 
-    (scheduledPosts || []).filter(p => p?.status === 'published'),
-    [scheduledPosts]
+    allPosts.filter(p => p?.status === 'published'),
+    [allPosts]
   );
 
   const failedPosts = useMemo(() => 
-    (scheduledPosts || []).filter(p => p?.status === 'failed'),
-    [scheduledPosts]
+    allPosts.filter(p => p?.status === 'failed'),
+    [allPosts]
   );
 
   // CALENDAR UTILITY FUNCTIONS
@@ -688,7 +744,7 @@ export default function ScheduleComponent() {
         setIsScheduleModalOpen(false);
         setSelectedPost(null);
         showSuccess(`Post scheduled successfully via ${scheduleData.serviceType} for ${scheduleData.timezone}!`);
-        await refreshPosts();
+        await refreshAllPosts();
       } else {
         if (result.validationErrors?.length) {
           const errorMsg = result.validationErrors.map(e => e.message).join(', ');
@@ -733,7 +789,7 @@ export default function ScheduleComponent() {
       setIsEditModalOpen(false);
       setEditingPost(null);
       showSuccess('Post updated successfully!');
-      await refreshPosts();
+      await refreshAllPosts();
     } catch (error) {
       showError({
         message: 'Failed to update post. Please try again.',
@@ -758,7 +814,7 @@ export default function ScheduleComponent() {
       
       if (result.success) {
         showSuccess('Post removed from dashboard successfully!');
-        await refreshPosts();
+        await refreshAllPosts();
       } else {
         showError(result.error!, () => handleDeletePost(postId));
       }
@@ -863,7 +919,7 @@ export default function ScheduleComponent() {
       if (result.success) {
         await incrementUsage(template.id);
         setActiveTab('pending');
-        await refreshPosts();
+        await refreshAllPosts();
         showSuccess('Template added to Pending Schedules!');
       } else {
         if (result.validationErrors?.length) {
@@ -918,7 +974,7 @@ export default function ScheduleComponent() {
       const result = await createPost(pendingPostData);
       
       if (result.success) {
-        await refreshPosts();
+        await refreshAllPosts();
         showSuccess('Post copied to Pending Scheduling for modification!');
       } else {
         showError(result.error!, () => handleCopyToPending(post));
@@ -990,7 +1046,7 @@ export default function ScheduleComponent() {
           <ErrorNotificationBanner
             error={postsError}
             onDismiss={() => {}}
-            onRetry={refreshPosts}
+            onRetry={refreshAllPosts}
           />
         )}
         {templatesError && (
