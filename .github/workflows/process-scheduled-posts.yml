@@ -16,7 +16,7 @@ jobs:
       - name: Call Supabase Edge Function
         run: |
           response=$(curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "Content-Type: application/json" \
             -w "\nHTTP_STATUS:%{http_code}" \
             "${{ secrets.SUPABASE_SCHEDULED_POSTS }}")
