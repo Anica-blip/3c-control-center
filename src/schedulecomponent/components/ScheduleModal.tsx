@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, CheckCircle, Video, FileText, ExternalLink, User } from 'lucide-react';
+import { X, Calendar, Clock, CheckCircle, Video, FileText, ExternalLink, User, Loader } from 'lucide-react';
 import { ScheduledPost } from '../types';
 import { supabase } from '../config';
 
@@ -10,7 +10,7 @@ interface ScheduleModalProps {
     timezone: string; 
     repeatOption?: string;
     serviceType: string;
-  }) => void;
+  }) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -31,6 +31,9 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
   const [servicesLoading, setServicesLoading] = useState(true);
   const [characterProfile, setCharacterProfile] = useState<any>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const isDarkMode = true;
   const theme = {
@@ -87,19 +90,50 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
     }
   };
 
-  const handleConfirm = () => {
+  const formatDateTime = (dateStr: string, timeStr: string) => {
+    const date = new Date(`${dateStr}T${timeStr}`);
+    return date.toLocaleString('en-GB', { 
+      day: '2-digit',
+      month: 'short', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  };
+
+  const handleConfirm = async () => {
     if (!scheduledDate || !scheduledTime || !selectedService) {
       alert('Please fill in all required fields including service selection');
       return;
     }
 
-    const dateTimeString = `${scheduledDate}T${scheduledTime}:00`;
-    onConfirm({
-      scheduledDate: dateTimeString,
-      timezone,
-      repeatOption: repeatOption !== 'none' ? repeatOption : undefined,
-      serviceType: selectedService
-    });
+    try {
+      setIsSubmitting(true);
+      const dateTimeString = `${scheduledDate}T${scheduledTime}:00`;
+      
+      await onConfirm({
+        scheduledDate: dateTimeString,
+        timezone,
+        repeatOption: repeatOption !== 'none' ? repeatOption : undefined,
+        serviceType: selectedService
+      });
+
+      // Show success message
+      const formattedDateTime = formatDateTime(scheduledDate, scheduledTime);
+      setSuccessMessage(`Post scheduled successfully for ${formattedDateTime}`);
+      setShowSuccess(true);
+
+      // Auto-close after 2.5 seconds
+      setTimeout(() => {
+        onCancel();
+      }, 2500);
+
+    } catch (error) {
+      console.error('Failed to schedule post:', error);
+      alert('Failed to schedule post. Please try again.');
+      setIsSubmitting(false);
+    }
   };
 
   const truncateText = (text: string, maxLength: number = 150) => {
@@ -123,6 +157,41 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
       zIndex: 1000,
       padding: '20px'
     }}>
+      {/* SUCCESS TOAST */}
+      {showSuccess && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          backgroundColor: theme.success,
+          color: 'white',
+          padding: '16px 20px',
+          borderRadius: '8px',
+          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          minWidth: '300px',
+          maxWidth: '500px',
+          zIndex: 2000,
+          animation: 'slideInRight 0.3s ease-out'
+        }}>
+          <CheckCircle size={24} style={{ flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ 
+              fontWeight: 'bold', 
+              fontSize: '14px',
+              marginBottom: '4px'
+            }}>
+              Success!
+            </div>
+            <div style={{ fontSize: '13px', opacity: 0.95 }}>
+              {successMessage}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{
         backgroundColor: theme.cardBg,
         borderRadius: '12px',
@@ -130,7 +199,9 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
         maxWidth: '600px',
         maxHeight: '90vh',
         overflow: 'auto',
-        border: `1px solid ${theme.border}`
+        border: `1px solid ${theme.border}`,
+        opacity: showSuccess ? 0.95 : 1,
+        pointerEvents: isSubmitting || showSuccess ? 'none' : 'auto'
       }}>
         {/* Header */}
         <div style={{
@@ -153,13 +224,15 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
           </div>
           <button
             onClick={onCancel}
+            disabled={isSubmitting}
             style={{
               padding: '8px',
               backgroundColor: 'transparent',
               border: 'none',
               color: theme.textSecondary,
-              cursor: 'pointer',
-              borderRadius: '6px'
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              borderRadius: '6px',
+              opacity: isSubmitting ? 0.5 : 1
             }}
           >
             <X style={{ height: '20px', width: '20px' }} />
@@ -168,7 +241,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
 
         {/* Content */}
         <div style={{ padding: '24px' }}>
-          {/* POST PREVIEW SECTION - REORDERED */}
+          {/* POST PREVIEW SECTION */}
           <div style={{
             marginBottom: '24px',
             padding: '16px',
@@ -187,7 +260,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
               Post Preview
             </h3>
 
-            {/* 1. MEDIA FILES - NOW FIRST */}
+            {/* MEDIA FILES */}
             {post.media_files && post.media_files.length > 0 && (
               <div style={{
                 marginBottom: '16px',
@@ -279,7 +352,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
               </div>
             )}
 
-            {/* 2. CHARACTER PROFILE - NOW SECOND (SENDER HEADER) */}
+            {/* CHARACTER PROFILE */}
             {post.character_profile && (
               <div style={{
                 marginBottom: '16px',
@@ -389,7 +462,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
               </div>
             )}
 
-            {/* 3. DESCRIPTION SNIPPET - NOW THIRD */}
+            {/* DESCRIPTION SNIPPET */}
             <div style={{
               marginBottom: '16px',
               padding: '12px',
@@ -495,6 +568,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
                 value={scheduledDate}
                 onChange={(e) => setScheduledDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
+                disabled={isSubmitting}
                 required
                 style={{
                   width: '100%',
@@ -503,7 +577,8 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
                   border: `1px solid ${theme.border}`,
                   borderRadius: '6px',
                   color: theme.text,
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  opacity: isSubmitting ? 0.6 : 1
                 }}
               />
             </div>
@@ -523,6 +598,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
                 type="time"
                 value={scheduledTime}
                 onChange={(e) => setScheduledTime(e.target.value)}
+                disabled={isSubmitting}
                 required
                 style={{
                   width: '100%',
@@ -531,7 +607,8 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
                   border: `1px solid ${theme.border}`,
                   borderRadius: '6px',
                   color: theme.text,
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  opacity: isSubmitting ? 0.6 : 1
                 }}
               />
             </div>
@@ -550,6 +627,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
               <select
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
+                disabled={isSubmitting}
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -557,7 +635,8 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
                   border: `1px solid ${theme.border}`,
                   borderRadius: '6px',
                   color: theme.text,
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  opacity: isSubmitting ? 0.6 : 1
                 }}
               >
                 <option value="UTC">UTC</option>
@@ -571,7 +650,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
               </select>
             </div>
 
-            {/* Service Selection - COMPULSORY */}
+            {/* Service Selection */}
             <div>
               <label style={{
                 display: 'block',
@@ -597,6 +676,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
                 <select
                   value={selectedService}
                   onChange={(e) => setSelectedService(e.target.value)}
+                  disabled={isSubmitting}
                   required
                   style={{
                     width: '100%',
@@ -605,7 +685,8 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
                     border: `1px solid ${selectedService ? theme.border : theme.primary}`,
                     borderRadius: '6px',
                     color: theme.text,
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    opacity: isSubmitting ? 0.6 : 1
                   }}
                 >
                   <option value="">-- Select a service to forward post --</option>
@@ -642,6 +723,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
               <select
                 value={repeatOption}
                 onChange={(e) => setRepeatOption(e.target.value)}
+                disabled={isSubmitting}
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -649,7 +731,8 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
                   border: `1px solid ${theme.border}`,
                   borderRadius: '6px',
                   color: theme.text,
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  opacity: isSubmitting ? 0.6 : 1
                 }}
               >
                 <option value="none">No Repeat</option>
@@ -671,6 +754,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
         }}>
           <button
             onClick={onCancel}
+            disabled={isSubmitting}
             style={{
               padding: '10px 20px',
               backgroundColor: 'transparent',
@@ -679,27 +763,43 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
               color: theme.text,
               fontSize: '14px',
               fontWeight: '600',
-              cursor: 'pointer'
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              opacity: isSubmitting ? 0.5 : 1
             }}
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!scheduledDate || !scheduledTime || !selectedService}
+            disabled={!scheduledDate || !scheduledTime || !selectedService || isSubmitting}
             style={{
               padding: '10px 24px',
-              backgroundColor: (!scheduledDate || !scheduledTime || !selectedService) ? theme.textSecondary : theme.primary,
+              backgroundColor: (!scheduledDate || !scheduledTime || !selectedService || isSubmitting) 
+                ? theme.textSecondary 
+                : theme.primary,
               border: 'none',
               borderRadius: '6px',
               color: 'white',
               fontSize: '14px',
               fontWeight: 'bold',
-              cursor: (!scheduledDate || !scheduledTime || !selectedService) ? 'not-allowed' : 'pointer',
-              opacity: (!scheduledDate || !scheduledTime || !selectedService) ? 0.6 : 1
+              cursor: (!scheduledDate || !scheduledTime || !selectedService || isSubmitting) 
+                ? 'not-allowed' 
+                : 'pointer',
+              opacity: (!scheduledDate || !scheduledTime || !selectedService || isSubmitting) ? 0.6 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              justifyContent: 'center'
             }}
           >
-            Confirm Schedule
+            {isSubmitting ? (
+              <>
+                <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                Scheduling...
+              </>
+            ) : (
+              'Confirm Schedule'
+            )}
           </button>
         </div>
       </div>
@@ -708,6 +808,16 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ post, onConfirm, onCancel
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
         }
       `}</style>
     </div>
