@@ -2,13 +2,6 @@
 import { supabase } from '../config';
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
-// Helper function to validate UUID format
-const isValidUUID = (str: string | null | undefined): boolean => {
-  if (!str) return false;
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(str);
-};
-
 // Helper function to map content_posts to ScheduledPost interface
 const mapContentPostToScheduledPost = (data: any): ScheduledPost => {
   return {
@@ -477,16 +470,20 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       }
     }
 
-    // PHASE 3: Create scheduled post in scheduled_posts table - MIRROR from content_posts
-    // Defensively handle UUID columns - if not UUID format, set to null
+    // PHASE 3: Create scheduled post in scheduled_posts table - COMPLETE FOR CRON JOBS
     const isUUID = (val: any): boolean => {
       if (!val || typeof val !== 'string') return false;
       return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
     };
 
+    const scheduledDateTime = postData.scheduled_date ? new Date(postData.scheduled_date) : new Date();
+
     const scheduledPostData = {
+      // Core identifiers
       content_id: originalPost.content_id,
       original_post_id: isUUID(originalPost.id) ? originalPost.id : null,
+      
+      // ALL content_posts fields
       character_profile: originalPost.character_profile,
       character_avatar: originalPost.character_avatar,
       theme: originalPost.theme,
@@ -501,22 +498,59 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       cta: originalPost.cta,
       media_files: originalPost.media_files,
       selected_platforms: originalPost.selected_platforms,
-      scheduled_date: postData.scheduled_date?.toISOString() || new Date().toISOString(),
+      
+      // ✅ CRITICAL COLUMNS FOR CRON JOBS
+      scheduled_date: scheduledDateTime.toISOString(),
+      scheduled_time: scheduledDateTime.toISOString(),
+      timezone: 'WEST (UTC+1)',
       status: 'pending',
       service_type: postData.service_type,
       retry_count: 0,
+      
+      // Template tracking
       is_from_template: originalPost.is_from_template,
       source_template_id: isUUID(originalPost.source_template_id) ? originalPost.source_template_id : null,
+      
+      // User tracking
       user_id: userId,
       created_by: userId,
+      
+      // Platform details
       platform_id: isUUID(platformDetails.platform_id) ? platformDetails.platform_id : null,
       social_platform: platformDetails.social_platform,
       url: platformDetails.url,
       channel_group_id: platformDetails.channel_group_id,
-      thread_id: platformDetails.thread_id
+      thread_id: platformDetails.thread_id,
+      
+      // ✅ COMPLETE POST DATA FOR CRON JOB (column name: post_content)
+      post_content: {
+        content_id: originalPost.content_id,
+        title: originalPost.title,
+        description: originalPost.description,
+        hashtags: originalPost.hashtags,
+        keywords: originalPost.keywords,
+        cta: originalPost.cta,
+        media_files: originalPost.media_files,
+        character_profile: originalPost.character_profile,
+        character_avatar: originalPost.character_avatar,
+        theme: originalPost.theme,
+        audience: originalPost.audience,
+        media_type: originalPost.media_type,
+        template_type: originalPost.template_type,
+        selected_platforms: originalPost.selected_platforms,
+        platform_details: {
+          platform_id: platformDetails.platform_id,
+          social_platform: platformDetails.social_platform,
+          url: platformDetails.url,
+          channel_group_id: platformDetails.channel_group_id,
+          thread_id: platformDetails.thread_id
+        }
+      }
     };
 
-    console.log('Creating scheduled post with service:', postData.service_type);
+    console.log('✅ INSERTING TO scheduled_posts TABLE');
+    console.log('Columns:', Object.keys(scheduledPostData));
+    console.log('Service:', postData.service_type);
 
     const { data: newScheduledPost, error: insertError } = await supabase
       .from('scheduled_posts')
@@ -524,9 +558,24 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       .select()
       .single();
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      console.error('❌ SUPABASE INSERT FAILED:', {
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint
+      });
+      throw new Error(`Failed to save scheduled post: ${insertError.message}`);
+    }
 
-    // PHASE 3: Create platform assignments for each selected platform
+    if (!newScheduledPost) {
+      console.error('❌ NO DATA RETURNED FROM INSERT');
+      throw new Error('Failed to save scheduled post: No data returned');
+    }
+
+    console.log('✅ POST SAVED SUCCESSFULLY:', newScheduledPost.id);
+
+    // PHASE 3: Create platform assignments
     console.log(`Creating ${platformAssignmentData.length} platform assignments`);
     
     for (const platform of platformAssignmentData) {
@@ -541,11 +590,9 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       }
     }
 
-    console.log('Scheduled post created successfully with platform assignments');
-
     return mapDashboardPostToScheduledPost(newScheduledPost);
   } catch (error) {
-    console.error('Error creating scheduled post:', error);
+    console.error('❌ ERROR IN createScheduledPost:', error);
     throw error;
   }
 };
@@ -892,12 +939,6 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
     }
 
     // Create new post in content_posts with template data + platform details
-    // Defensively handle UUID columns
-    const isUUID = (val: any): boolean => {
-      if (!val || typeof val !== 'string') return false;
-      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
-    };
-
     const newPostData = {
       content_id: `template-${templateId}-${Date.now()}`,
       character_profile: template.character_profile || '',
@@ -914,10 +955,10 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
       selected_platforms: template.selected_platforms || [],
       status: template.status || 'pending',
       is_from_template: true,
-      source_template_id: isUUID(templateId) ? templateId : null,
+      source_template_id: templateId,
       user_id: userId,
       created_by: userId,
-      platform_id: isUUID(platformDetails.platform_id) ? platformDetails.platform_id : null,
+      platform_id: platformDetails.platform_id,
       social_platform: platformDetails.social_platform,
       url: platformDetails.url,
       channel_group_id: platformDetails.channel_group_id,
