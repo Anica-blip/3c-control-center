@@ -8,15 +8,20 @@ interface ProcessResult {
   failed: number;
   errors: string[];
   timestamp: string;
+  timezone: string;
   serviceType?: string;
 }
 
 interface ScheduledPost {
   id: string;
-  service_type: string; // ✅ SINGULAR - matches database column
+  service_type: string;
   post_content: any;
   retry_count: number;
   scheduled_date: string;
+  scheduled_time: string;
+  platform: string;
+  channel_group_id: string;
+  thread_id: string;
   [key: string]: any;
 }
 
@@ -62,12 +67,17 @@ const getErrorMessage = (error: unknown): string => {
 
 // ✅ MAIN CRON HANDLER - SERVICE-SPECIFIC
 export async function processScheduledPosts(requestedServiceType?: string): Promise<ProcessResult> {
-  const startTime = new Date();
+  // Get current time in WEST (UTC+1)
+  const now = new Date();
+  const westTime = new Date(now.getTime() + (1 * 60 * 60 * 1000));
+  const currentDate = westTime.toISOString().split('T')[0]; // YYYY-MM-DD
+  const currentTime = westTime.toTimeString().split(' ')[0]; // HH:MM:SS
+  
   const errors: string[] = [];
   let succeeded = 0;
   let failed = 0;
 
-  console.log(`[${startTime.toISOString()}] Starting scheduled posts processing...`);
+  console.log(`[${westTime.toISOString()}] Starting scheduled posts processing (WEST UTC+1)...`);
   if (requestedServiceType) {
     console.log(`Filtering for service_type: ${requestedServiceType}`);
   }
@@ -82,17 +92,18 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
         succeeded: 0,
         failed: 0,
         errors: [errorMsg],
-        timestamp: startTime.toISOString(),
+        timestamp: westTime.toISOString(),
+        timezone: 'WEST (UTC+1)',
         serviceType: requestedServiceType
       };
     }
 
-    // ✅ Build query with service_type filter
+    // ✅ Build query with service_type filter and date+time check
     let query = supabase
       .from('scheduled_posts')
       .select('*')
       .eq('status', 'pending')
-      .lte('scheduled_date', startTime.toISOString())
+      .or(`scheduled_date.lt.${currentDate},and(scheduled_date.eq.${currentDate},scheduled_time.lte.${currentTime})`)
       .order('scheduled_date', { ascending: true })
       .limit(50);
 
@@ -111,7 +122,8 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
         succeeded: 0,
         failed: 0,
         errors: [errorMsg],
-        timestamp: startTime.toISOString(),
+        timestamp: westTime.toISOString(),
+        timezone: 'WEST (UTC+1)',
         serviceType: requestedServiceType
       };
     }
@@ -123,7 +135,8 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
         succeeded: 0,
         failed: 0,
         errors: [],
-        timestamp: startTime.toISOString(),
+        timestamp: westTime.toISOString(),
+        timezone: 'WEST (UTC+1)',
         serviceType: requestedServiceType
       };
     }
@@ -166,6 +179,14 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
 
         console.log(`Forwarding to service: ${serviceConfig.url}`);
 
+        // ✅ Prepare payload with post content and destination info (same as Edge Function)
+        const payload = {
+          ...post.post_content,
+          platform: post.platform,
+          channel_group_id: post.channel_group_id,
+          thread_id: post.thread_id
+        };
+
         // ✅ Forward to external service with timeout
         const headers: Record<string, string> = {
           'Content-Type': 'application/json'
@@ -180,7 +201,7 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
           {
             method: 'POST',
             headers,
-            body: JSON.stringify(post.post_content)
+            body: JSON.stringify(payload)
           },
           30000 // 30 second timeout
         );
@@ -197,7 +218,7 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
           .from('dashboard_platform_assignments')
           .update({
             delivery_status: 'sent',
-            sent_at: new Date().toISOString()
+            sent_at: westTime.toISOString()
           })
           .eq('scheduled_post_id', post.id);
 
@@ -210,7 +231,7 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
           .from('scheduled_posts')
           .update({
             status: 'published',
-            updated_at: new Date().toISOString()
+            updated_at: westTime.toISOString()
           })
           .eq('id', post.id);
 
@@ -239,7 +260,7 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
               status: newRetryCount >= maxRetries ? 'failed' : 'pending',
               failure_reason: errorMessage,
               retry_count: newRetryCount,
-              updated_at: new Date().toISOString()
+              updated_at: westTime.toISOString()
             })
             .eq('id', post.id);
 
@@ -264,8 +285,8 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
       }
     }
 
-    const endTime = new Date();
-    const duration = endTime.getTime() - startTime.getTime();
+    const endTime = new Date(new Date().getTime() + (1 * 60 * 60 * 1000));
+    const duration = endTime.getTime() - westTime.getTime();
 
     console.log(`Processing complete for ${requestedServiceType || 'all services'}: ${succeeded} succeeded, ${failed} failed in ${duration}ms`);
 
@@ -274,7 +295,8 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
       succeeded,
       failed,
       errors,
-      timestamp: startTime.toISOString(),
+      timestamp: westTime.toISOString(),
+      timezone: 'WEST (UTC+1)',
       serviceType: requestedServiceType
     };
 
@@ -287,7 +309,8 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
       succeeded,
       failed,
       errors: [errorMessage, ...errors],
-      timestamp: startTime.toISOString(),
+      timestamp: westTime.toISOString(),
+      timezone: 'WEST (UTC+1)',
       serviceType: requestedServiceType
     };
   }
