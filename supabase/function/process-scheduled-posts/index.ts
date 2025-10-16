@@ -31,11 +31,10 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Get current time in WEST (UTC+1)
+    // Get current time in UTC (database stores in UTC)
     const now = new Date()
-    const westTime = new Date(now.getTime() + (1 * 60 * 60 * 1000)) // Add 1 hour for UTC+1
-    const currentDate = westTime.toISOString().split('T')[0] // YYYY-MM-DD
-    const currentTime = westTime.toTimeString().split(' ')[0] // HH:MM:SS
+    const currentDate = now.toISOString().split('T')[0] // YYYY-MM-DD
+    const currentTime = now.toTimeString().split(' ')[0] // HH:MM:SS
     
     // Get pending scheduled posts that are due
     const { data: posts, error } = await supabase
@@ -56,8 +55,7 @@ Deno.serve(async (req) => {
           message: 'No posts to process',
           processed: 0,
           succeeded: 0,
-          timestamp: westTime.toISOString(),
-          timezone: 'WEST (UTC+1)'
+          timestamp: now.toISOString()
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -103,7 +101,7 @@ Deno.serve(async (req) => {
           .from('dashboard_platform_assignments')
           .update({ 
             delivery_status: 'sent', 
-            sent_at: westTime.toISOString()
+            sent_at: new Date().toISOString()
           })
           .eq('scheduled_post_id', post.id)
 
@@ -133,8 +131,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        timestamp: westTime.toISOString(),
-        timezone: 'WEST (UTC+1)',
+        timestamp: new Date().toISOString(),
         processed: posts.length,
         succeeded,
         failed: posts.length - succeeded,
