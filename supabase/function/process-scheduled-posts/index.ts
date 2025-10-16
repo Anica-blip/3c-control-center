@@ -31,14 +31,18 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+    // Get current time in WEST (UTC+1)
     const now = new Date()
+    const westTime = new Date(now.getTime() + (1 * 60 * 60 * 1000)) // Add 1 hour for UTC+1
+    const currentDate = westTime.toISOString().split('T')[0] // YYYY-MM-DD
+    const currentTime = westTime.toTimeString().split(' ')[0] // HH:MM:SS
     
-    // Get pending scheduled posts
+    // Get pending scheduled posts that are due
     const { data: posts, error } = await supabase
       .from('scheduled_posts')
       .select('*')
       .eq('status', 'pending')
-      .lte('scheduled_date', now.toISOString())
+      .or(`scheduled_date.lt.${currentDate},and(scheduled_date.eq.${currentDate},scheduled_time.lte.${currentTime})`)
       .limit(50)
 
     if (error) {
@@ -52,7 +56,8 @@ Deno.serve(async (req) => {
           message: 'No posts to process',
           processed: 0,
           succeeded: 0,
-          timestamp: new Date().toISOString()
+          timestamp: westTime.toISOString(),
+          timezone: 'WEST (UTC+1)'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -74,11 +79,19 @@ Deno.serve(async (req) => {
           throw new Error('Service not found')
         }
 
+        // Prepare payload with post content and destination info
+        const payload = {
+          ...post.post_content,
+          platform: post.platform,
+          channel_group_id: post.channel_group_id,
+          thread_id: post.thread_id
+        }
+
         // Forward to external service
         const response = await fetch(service.url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(post.post_content)
+          body: JSON.stringify(payload)
         })
 
         if (!response.ok) {
@@ -90,7 +103,7 @@ Deno.serve(async (req) => {
           .from('dashboard_platform_assignments')
           .update({ 
             delivery_status: 'sent', 
-            sent_at: new Date().toISOString() 
+            sent_at: westTime.toISOString()
           })
           .eq('scheduled_post_id', post.id)
 
@@ -120,7 +133,8 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        timestamp: new Date().toISOString(),
+        timestamp: westTime.toISOString(),
+        timezone: 'WEST (UTC+1)',
         processed: posts.length,
         succeeded,
         failed: posts.length - succeeded,
