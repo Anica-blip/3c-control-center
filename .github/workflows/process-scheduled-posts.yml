@@ -16,10 +16,10 @@ jobs:
       - name: Call Supabase Edge Function
         run: |
           response=$(curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
             -w "\nHTTP_STATUS:%{http_code}" \
-            "${{ secrets.SUPABASE_SCHEDULED_POSTS }}")
+            "${{ secrets.SUPABASE_FUNCTIONS }}")
           
           http_status=$(echo "$response" | grep "HTTP_STATUS:" | cut -d: -f2)
           body=$(echo "$response" | sed '/HTTP_STATUS:/d')
