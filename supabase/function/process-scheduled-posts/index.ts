@@ -81,6 +81,7 @@ Deno.serve(async (req) => {
         const payload = {
           ...post.post_content,
           platform: post.platform,
+          url: post.url,
           channel_group_id: post.channel_group_id,
           thread_id: post.thread_id
         }
