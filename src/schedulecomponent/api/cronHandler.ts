@@ -20,6 +20,7 @@ interface ScheduledPost {
   scheduled_date: string;
   scheduled_time: string;
   platform: string;
+  url: string;
   channel_group_id: string;
   thread_id: string;
   [key: string]: any;
@@ -182,6 +183,7 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
         const payload = {
           ...post.post_content,
           platform: post.platform,
+          url: post.url,
           channel_group_id: post.channel_group_id,
           thread_id: post.thread_id
         };
@@ -308,8 +310,8 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
       succeeded,
       failed,
       errors: [errorMessage, ...errors],
-      timestamp: westTime.toISOString(),
-      timezone: 'WEST (UTC+1)',
+      timestamp: now.toISOString(),
+      timezone: 'UTC',
       serviceType: requestedServiceType
     };
   }
