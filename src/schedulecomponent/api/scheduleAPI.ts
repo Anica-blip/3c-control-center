@@ -478,6 +478,10 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
 
     const scheduledDateTime = postData.scheduled_date ? new Date(postData.scheduled_date) : new Date();
 
+    // ✅ FIX: Split datetime into separate DATE and TIME
+    const scheduledDateOnly = scheduledDateTime.toISOString().split('T')[0]; // "2025-10-19"
+    const scheduledTimeOnly = scheduledDateTime.toISOString().split('T')[1].slice(0, 8); // "11:00:00"
+
     const scheduledPostData = {
       // Core identifiers
       content_id: originalPost.content_id,
@@ -499,11 +503,11 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       media_files: originalPost.media_files,
       selected_platforms: originalPost.selected_platforms,
       
-      // ✅ CRITICAL COLUMNS FOR CRON JOBS
-      scheduled_date: scheduledDateTime.toISOString(),
-      scheduled_time: scheduledDateTime.toISOString(),
-      timezone: 'WEST (UTC+1)',
-      status: 'pending',
+      // ✅ CRITICAL COLUMNS FOR CRON JOBS - NOW PROPERLY SPLIT
+      scheduled_date: scheduledDateOnly, // DATE type: "2025-10-19"
+      scheduled_time: scheduledTimeOnly, // TIME type: "11:00:00"
+      timezone: postData.timezone || 'UTC',
+      status: 'scheduled',
       service_type: postData.service_type,
       retry_count: 0,
       
@@ -549,7 +553,8 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
     };
 
     console.log('✅ INSERTING TO scheduled_posts TABLE');
-    console.log('Columns:', Object.keys(scheduledPostData));
+    console.log('Date:', scheduledDateOnly, 'Time:', scheduledTimeOnly);
+    console.log('Timezone:', postData.timezone || 'UTC');
     console.log('Service:', postData.service_type);
 
     const { data: newScheduledPost, error: insertError } = await supabase
@@ -734,7 +739,13 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
         updated_at: new Date().toISOString()
       };
       
-      if (updates.scheduled_date !== undefined) updateData.scheduled_date = updates.scheduled_date.toISOString();
+      // ✅ FIX: Split scheduled_date if provided
+      if (updates.scheduled_date !== undefined) {
+        const scheduledDateTime = new Date(updates.scheduled_date);
+        updateData.scheduled_date = scheduledDateTime.toISOString().split('T')[0]; // "2025-10-19"
+        updateData.scheduled_time = scheduledDateTime.toISOString().split('T')[1].slice(0, 8); // "11:00:00"
+      }
+      
       if (updates.status !== undefined) updateData.status = updates.status;
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.description !== undefined) updateData.description = updates.description;
