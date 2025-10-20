@@ -1541,179 +1541,430 @@ export default function ScheduleComponent() {
           </div>
         )}
         
-        {activeTab === 'calendar' && (
-          <div style={{ padding: '24px' }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '24px'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px'
-              }}>
-                <button
-                  onClick={() => navigateCalendar('prev')}
-                  style={{
-                    padding: '8px',
-                    backgroundColor: theme.background,
-                    border: `1px solid ${theme.border}`,
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    color: theme.text
-                  }}
-                >
-                  <ChevronLeft style={{ height: '16px', width: '16px' }} />
-                </button>
-                <h3 style={{
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  color: theme.text,
-                  margin: '0'
-                }}>
-                  {formatCalendarTitle()}
-                </h3>
-                <button
-                  onClick={() => navigateCalendar('next')}
-                  style={{
-                    padding: '8px',
-                    backgroundColor: theme.background,
-                    border: `1px solid ${theme.border}`,
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    color: theme.text
-                  }}
-                >
-                  <ChevronRight style={{ height: '16px', width: '16px' }} />
-                </button>
-              </div>
-              
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {(['day', 'week', 'month'] as const).map(view => (
-                  <button
-                    key={view}
-                    onClick={() => setCalendarView(view)}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: calendarView === view ? theme.primary : 'transparent',
-                      color: calendarView === view ? 'white' : theme.text,
-                      border: `1px solid ${theme.border}`,
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      textTransform: 'capitalize'
-                    }}
-                  >
-                    {view}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-{/* ============ MONTH VIEW ============ */}
-{calendarView === 'month' && (
-  <div style={{
-    display: 'grid',
-    gridTemplateColumns: 'repeat(7, 1fr)',
-    gap: '1px',
-    backgroundColor: theme.border,
-    borderRadius: '8px',
-    overflow: 'hidden'
-  }}>
-    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-      <div
-        key={day}
-        style={{
-          padding: '12px',
-          backgroundColor: theme.background,
-          fontSize: '12px',
-          fontWeight: 'bold',
-          color: theme.textSecondary,
-          textAlign: 'center'
-        }}
-      >
-        {day}
-      </div>
-    ))}
-    
-    {getMonthDates(currentDate).map((date, index) => {
-      const postsForDate = getPostsForDate(date);
-      const isCurrentMonth = date.getMonth() === currentDate.getMonth();
-      const isToday = date.toDateString() === new Date().toDateString();
-      
-      return (
-        <div
-          key={index}
+{activeTab === 'calendar' && (
+  <div style={{ padding: '24px' }}>
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: '24px'
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px'
+      }}>
+        <button
+          onClick={() => navigateCalendar('prev')}
           style={{
             padding: '8px',
-            backgroundColor: theme.cardBg,
-            minHeight: '100px',
-            opacity: isCurrentMonth ? 1 : 0.5
+            backgroundColor: theme.background,
+            border: `1px solid ${theme.border}`,
+            borderRadius: '6px',
+            cursor: 'pointer',
+            color: theme.text
           }}
         >
-          <div style={{
-            fontSize: '13px',
-            fontWeight: isToday ? 'bold' : 'normal',
-            color: isToday ? theme.primary : theme.text,
-            marginBottom: '6px'
-          }}>
-            {date.getDate()}
+          <ChevronLeft style={{ height: '16px', width: '16px' }} />
+        </button>
+        <h3 style={{
+          fontSize: '18px',
+          fontWeight: 'bold',
+          color: theme.text,
+          margin: '0'
+        }}>
+          {formatCalendarTitle()}
+        </h3>
+        <button
+          onClick={() => navigateCalendar('next')}
+          style={{
+            padding: '8px',
+            backgroundColor: theme.background,
+            border: `1px solid ${theme.border}`,
+            borderRadius: '6px',
+            cursor: 'pointer',
+            color: theme.text
+          }}
+        >
+          <ChevronRight style={{ height: '16px', width: '16px' }} />
+        </button>
+      </div>
+      
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {(['day', 'week', 'month'] as const).map(view => (
+          <button
+            key={view}
+            onClick={() => setCalendarView(view)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: calendarView === view ? theme.primary : 'transparent',
+              color: calendarView === view ? 'white' : theme.text,
+              border: `1px solid ${theme.border}`,
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              textTransform: 'capitalize'
+            }}
+          >
+            {view}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    {/* ============ MONTH VIEW ============ */}
+    {calendarView === 'month' && (
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(7, 1fr)',
+        gap: '1px',
+        backgroundColor: theme.border,
+        borderRadius: '8px',
+        overflow: 'hidden'
+      }}>
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+          <div
+            key={day}
+            style={{
+              padding: '12px',
+              backgroundColor: theme.background,
+              fontSize: '12px',
+              fontWeight: 'bold',
+              color: theme.textSecondary,
+              textAlign: 'center'
+            }}
+          >
+            {day}
           </div>
+        ))}
+        
+        {getMonthDates(currentDate).map((date, index) => {
+          const postsForDate = getPostsForDate(date);
+          const isCurrentMonth = date.getMonth() === currentDate.getMonth();
+          const isToday = date.toDateString() === new Date().toDateString();
           
-          {postsForDate.length > 0 && (
+          return (
+            <div
+              key={index}
+              style={{
+                padding: '8px',
+                backgroundColor: theme.cardBg,
+                minHeight: '100px',
+                opacity: isCurrentMonth ? 1 : 0.5
+              }}
+            >
+              <div style={{
+                fontSize: '13px',
+                fontWeight: isToday ? 'bold' : 'normal',
+                color: isToday ? theme.primary : theme.text,
+                marginBottom: '6px'
+              }}>
+                {date.getDate()}
+              </div>
+              
+              {postsForDate.length > 0 && (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px'
+                }}>
+                  {postsForDate.slice(0, 3).map((post, idx) => {
+                    const statusStyle = getStatusColor(post.status);
+                    const borderParts = statusStyle.borderLeft.split(' ');
+                    const statusColor = borderParts[2] || theme.primary;
+                    const profileData = characterProfiles[post.character_profile as string];
+                    
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          padding: '4px 6px',
+                          backgroundColor: statusColor,
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '2px'
+                        }}
+                        onClick={() => handleEditPost(post)}
+                        title={`${post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${profileData?.name || 'No profile'}`}
+                      >
+                        <div style={{ 
+                          fontWeight: 'bold', 
+                          fontSize: '11px',
+                          color: 'white'
+                        }}>
+                          {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        
+                        <div style={{ 
+                          fontWeight: '600',
+                          fontSize: '10px',
+                          color: 'white',
+                          textOverflow: 'ellipsis',
+                          overflow: 'hidden',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {profileData?.name || 'No profile'}
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+                          {(post.platformDetails && post.platformDetails.length > 0) ? (
+                            post.platformDetails.slice(0, 4).map((platform, pIdx) => {
+                              const getIconFromPlatform = (plat: any): string => {
+                                if (plat.platform_icon) return plat.platform_icon;
+                                const url = (plat.url || '').toLowerCase();
+                                if (url.includes('telegram') || url.includes('t.me')) return 'TG';
+                                if (url.includes('instagram')) return 'IG';
+                                if (url.includes('facebook')) return 'FB';
+                                if (url.includes('linkedin')) return 'LI';
+                                if (url.includes('twitter') || url.includes('x.com')) return 'TW';
+                                if (url.includes('youtube')) return 'YT';
+                                return '??';
+                              };
+                              return (
+                                <span key={pIdx} style={{
+                                  fontSize: '9px',
+                                  fontWeight: 'bold',
+                                  backgroundColor: 'rgba(0,0,0,0.3)',
+                                  color: 'white',
+                                  padding: '2px 4px',
+                                  borderRadius: '3px',
+                                  border: '1px solid rgba(255,255,255,0.4)'
+                                }}>
+                                  {getIconFromPlatform(platform)}
+                                </span>
+                              );
+                            })
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {postsForDate.length > 3 && (
+                    <div style={{
+                      fontSize: '9px',
+                      color: theme.textSecondary,
+                      textAlign: 'center',
+                      fontWeight: '600'
+                    }}>
+                      +{postsForDate.length - 3} more
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    )}
+
+    {/* ============ WEEK VIEW ============ */}
+    {calendarView === 'week' && (
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(7, 1fr)',
+        gap: '8px'
+      }}>
+        {getWeekDates(currentDate).map((date, index) => {
+          const postsForDate = getPostsForDate(date);
+          const isToday = date.toDateString() === new Date().toDateString();
+          
+          return (
+            <div
+              key={index}
+              style={{
+                padding: '16px',
+                backgroundColor: theme.cardBg,
+                border: `1px solid ${theme.border}`,
+                borderRadius: '8px',
+                minHeight: '250px'
+              }}
+            >
+              <div style={{
+                fontSize: '14px',
+                fontWeight: isToday ? 'bold' : 'normal',
+                color: isToday ? theme.primary : theme.text,
+                marginBottom: '12px',
+                textAlign: 'center',
+                paddingBottom: '8px',
+                borderBottom: `2px solid ${theme.border}`
+              }}>
+                {date.toLocaleDateString('en-GB', { 
+                  weekday: 'short',
+                  day: 'numeric' 
+                })}
+              </div>
+              
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px'
+              }}>
+                {postsForDate.map((post, idx) => {
+                  const profileData = characterProfiles[post.character_profile as string];
+                  const statusStyle = getStatusColor(post.status);
+                  const borderParts = statusStyle.borderLeft.split(' ');
+                  const statusColor = borderParts[2] || theme.primary;
+                  
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '8px',
+                        backgroundColor: statusColor,
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px'
+                      }}
+                      onClick={() => handleEditPost(post)}
+                      title="Click to edit"
+                    >
+                      <div style={{
+                        fontWeight: 'bold',
+                        color: 'white',
+                        fontSize: '13px'
+                      }}>
+                        {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </div>
+                      
+                      <div style={{
+                        color: 'white',
+                        fontWeight: '600',
+                        fontSize: '11px'
+                      }}>
+                        {profileData?.name || 'No profile'}
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        {(post.platformDetails && post.platformDetails.length > 0) ? (
+                          post.platformDetails.map((platform, pIdx) => {
+                            const getIconFromPlatform = (plat: any): string => {
+                              if (plat.platform_icon) return plat.platform_icon;
+                              const url = (plat.url || '').toLowerCase();
+                              if (url.includes('telegram') || url.includes('t.me')) return 'TG';
+                              if (url.includes('instagram')) return 'IG';
+                              if (url.includes('facebook')) return 'FB';
+                              if (url.includes('linkedin')) return 'LI';
+                              if (url.includes('twitter') || url.includes('x.com')) return 'TW';
+                              if (url.includes('youtube')) return 'YT';
+                              return '??';
+                            };
+                            return (
+                              <span key={pIdx} style={{
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                backgroundColor: 'rgba(0,0,0,0.3)',
+                                color: 'white',
+                                padding: '3px 6px',
+                                borderRadius: '4px',
+                                border: '1px solid rgba(255,255,255,0.4)'
+                              }}>
+                                {getIconFromPlatform(platform)}
+                              </span>
+                            );
+                          })
+                        ) : (
+                          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '9px' }}>No platforms</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+
+    {/* ============ DAY VIEW ============ */}
+    {calendarView === 'day' && (
+      <div style={{
+        display: 'grid',
+        gap: '1px',
+        backgroundColor: theme.border,
+        borderRadius: '8px',
+        overflow: 'hidden'
+      }}>
+        {Object.entries(getHourlyPostsForDay(currentDate)).map(([hour, posts]) => (
+          <div
+            key={hour}
+            style={{
+              display: 'flex',
+              backgroundColor: theme.cardBg,
+              minHeight: '70px'
+            }}
+          >
             <div style={{
+              width: '70px',
+              padding: '12px',
+              backgroundColor: theme.background,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              color: theme.textSecondary,
+              borderRight: `2px solid ${theme.border}`
+            }}>
+              {String(hour).padStart(2, '0')}:00
+            </div>
+            <div style={{
+              flex: 1,
+              padding: '8px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '4px'
+              gap: '6px'
             }}>
-              {postsForDate.slice(0, 3).map((post, idx) => {
+              {posts.map((post, idx) => {
+                const profileData = characterProfiles[post.character_profile as string];
                 const statusStyle = getStatusColor(post.status);
                 const borderParts = statusStyle.borderLeft.split(' ');
                 const statusColor = borderParts[2] || theme.primary;
-                const profileData = characterProfiles[post.character_profile as string];
                 
                 return (
                   <div
                     key={idx}
                     style={{
-                      padding: '4px 6px',
+                      padding: '10px 12px',
                       backgroundColor: statusColor,
-                      borderRadius: '4px',
+                      borderRadius: '6px',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '2px'
+                      gap: '4px'
                     }}
                     onClick={() => handleEditPost(post)}
-                    title={`${post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${profileData?.name || 'No profile'}`}
+                    title="Click to edit"
                   >
-                    {/* Time */}
-                    <div style={{ 
-                      fontWeight: 'bold', 
-                      fontSize: '11px',
-                      color: 'white'
+                    <div style={{
+                      fontWeight: 'bold',
+                      color: 'white',
+                      fontSize: '14px'
                     }}>
-                      {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                      {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
                     </div>
                     
-                    {/* Profile Name */}
-                    <div style={{ 
-                      fontWeight: '600',
-                      fontSize: '10px',
+                    <div style={{
                       color: 'white',
-                      textOverflow: 'ellipsis',
-                      overflow: 'hidden',
-                      whiteSpace: 'nowrap'
+                      fontWeight: '600',
+                      fontSize: '12px'
                     }}>
                       {profileData?.name || 'No profile'}
                     </div>
                     
-                    {/* Platform Badges */}
-                    <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '2px' }}>
                       {(post.platformDetails && post.platformDetails.length > 0) ? (
-                        post.platformDetails.slice(0, 4).map((platform, pIdx) => {
+                        post.platformDetails.map((platform, pIdx) => {
                           const getIconFromPlatform = (plat: any): string => {
                             if (plat.platform_icon) return plat.platform_icon;
                             const url = (plat.url || '').toLowerCase();
@@ -1727,295 +1978,33 @@ export default function ScheduleComponent() {
                           };
                           return (
                             <span key={pIdx} style={{
-                              fontSize: '9px',
+                              fontSize: '11px',
                               fontWeight: 'bold',
                               backgroundColor: 'rgba(0,0,0,0.3)',
                               color: 'white',
-                              padding: '2px 4px',
-                              borderRadius: '3px',
+                              padding: '4px 7px',
+                              borderRadius: '4px',
                               border: '1px solid rgba(255,255,255,0.4)'
                             }}>
                               {getIconFromPlatform(platform)}
                             </span>
                           );
                         })
-                      ) : null}
+                      ) : (
+                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '10px' }}>No platforms</span>
+                      )}
                     </div>
                   </div>
                 );
               })}
-              {postsForDate.length > 3 && (
-                <div style={{
-                  fontSize: '9px',
-                  color: theme.textSecondary,
-                  textAlign: 'center',
-                  fontWeight: '600'
-                }}>
-                  +{postsForDate.length - 3} more
-                </div>
-              )}
             </div>
-          )}
-        </div>
-      );
-    })}
+          </div>
+        ))}
+      </div>
+    )}
   </div>
 )}
-
-{/* ============ WEEK VIEW ============ */}
-{calendarView === 'week' && (
-  <div style={{
-    display: 'grid',
-    gridTemplateColumns: 'repeat(7, 1fr)',
-    gap: '8px'
-  }}>
-    {getWeekDates(currentDate).map((date, index) => {
-      const postsForDate = getPostsForDate(date);
-      const isToday = date.toDateString() === new Date().toDateString();
-      
-      return (
-        <div
-          key={index}
-          style={{
-            padding: '16px',
-            backgroundColor: theme.cardBg,
-            border: `1px solid ${theme.border}`,
-            borderRadius: '8px',
-            minHeight: '250px'
-          }}
-        >
-          <div style={{
-            fontSize: '14px',
-            fontWeight: isToday ? 'bold' : 'normal',
-            color: isToday ? theme.primary : theme.text,
-            marginBottom: '12px',
-            textAlign: 'center',
-            paddingBottom: '8px',
-            borderBottom: `2px solid ${theme.border}`
-          }}>
-            {date.toLocaleDateString('en-GB', { 
-              weekday: 'short',
-              day: 'numeric' 
-            })}
-          </div>
-          
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '6px'
-          }}>
-            {postsForDate.map((post, idx) => {
-              const profileData = characterProfiles[post.character_profile as string];
-              const statusStyle = getStatusColor(post.status);
-              const borderParts = statusStyle.borderLeft.split(' ');
-              const statusColor = borderParts[2] || theme.primary;
-              
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    padding: '8px',
-                    backgroundColor: statusColor,
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px'
-                  }}
-                  onClick={() => handleEditPost(post)}
-                  title="Click to edit"
-                >
-                  {/* Time */}
-                  <div style={{
-                    fontWeight: 'bold',
-                    color: 'white',
-                    fontSize: '13px'
-                  }}>
-                    {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </div>
-                  
-                  {/* Profile Name */}
-                  <div style={{
-                    color: 'white',
-                    fontWeight: '600',
-                    fontSize: '11px'
-                  }}>
-                    {profileData?.name || 'No profile'}
-                  </div>
-                  
-                  {/* Platform Badges */}
-                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                    {(post.platformDetails && post.platformDetails.length > 0) ? (
-                      post.platformDetails.map((platform, pIdx) => {
-                        const getIconFromPlatform = (plat: any): string => {
-                          if (plat.platform_icon) return plat.platform_icon;
-                          const url = (plat.url || '').toLowerCase();
-                          if (url.includes('telegram') || url.includes('t.me')) return 'TG';
-                          if (url.includes('instagram')) return 'IG';
-                          if (url.includes('facebook')) return 'FB';
-                          if (url.includes('linkedin')) return 'LI';
-                          if (url.includes('twitter') || url.includes('x.com')) return 'TW';
-                          if (url.includes('youtube')) return 'YT';
-                          return '??';
-                        };
-                        return (
-                          <span key={pIdx} style={{
-                            fontSize: '10px',
-                            fontWeight: 'bold',
-                            backgroundColor: 'rgba(0,0,0,0.3)',
-                            color: 'white',
-                            padding: '3px 6px',
-                            borderRadius: '4px',
-                            border: '1px solid rgba(255,255,255,0.4)'
-                          }}>
-                            {getIconFromPlatform(platform)}
-                          </span>
-                        );
-                      })
-                    ) : (
-                      <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '9px' }}>No platforms</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      );
-    })}
-  </div>
-)}
-
-{/* ============ DAY VIEW ============ */}
-{calendarView === 'day' && (
-  <div style={{
-    display: 'grid',
-    gap: '1px',
-    backgroundColor: theme.border,
-    borderRadius: '8px',
-    overflow: 'hidden'
-  }}>
-    {Object.entries(getHourlyPostsForDay(currentDate)).map(([hour, posts]) => (
-      <div
-        key={hour}
-        style={{
-          display: 'flex',
-          backgroundColor: theme.cardBg,
-          minHeight: '70px'
-        }}
-      >
-        <div style={{
-          width: '70px',
-          padding: '12px',
-          backgroundColor: theme.background,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '13px',
-          fontWeight: 'bold',
-          color: theme.textSecondary,
-          borderRight: `2px solid ${theme.border}`
-        }}>
-          {String(hour).padStart(2, '0')}:00
-        </div>
-        <div style={{
-          flex: 1,
-          padding: '8px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '6px'
-        }}>
-          {posts.map((post, idx) => {
-            const profileData = characterProfiles[post.character_profile as string];
-            const statusStyle = getStatusColor(post.status);
-            const borderParts = statusStyle.borderLeft.split(' ');
-            const statusColor = borderParts[2] || theme.primary;
-            
-            return (
-              <div
-                key={idx}
-                style={{
-                  padding: '10px 12px',
-                  backgroundColor: statusColor,
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px'
-                }}
-                onClick={() => handleEditPost(post)}
-                title="Click to edit"
-              >
-                {/* Time */}
-                <div style={{
-                  fontWeight: 'bold',
-                  color: 'white',
-                  fontSize: '14px'
-                }}>
-                  {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  })}
-                </div>
-                
-                {/* Profile Name */}
-                <div style={{
-                  color: 'white',
-                  fontWeight: '600',
-                  fontSize: '12px'
-                }}>
-                  {profileData?.name || 'No profile'}
-                </div>
-                
-                {/* Platform Badges */}
-                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '2px' }}>
-                  {(post.platformDetails && post.platformDetails.length > 0) ? (
-                    post.platformDetails.map((platform, pIdx) => {
-                      const getIconFromPlatform = (plat: any): string => {
-                        if (plat.platform_icon) return plat.platform_icon;
-                        const url = (plat.url || '').toLowerCase();
-                        if (url.includes('telegram') || url.includes('t.me')) return 'TG';
-                        if (url.includes('instagram')) return 'IG';
-                        if (url.includes('facebook')) return 'FB';
-                        if (url.includes('linkedin')) return 'LI';
-                        if (url.includes('twitter') || url.includes('x.com')) return 'TW';
-                        if (url.includes('youtube')) return 'YT';
-                        return '??';
-                      };
-                      return (
-                        <span key={pIdx} style={{
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          backgroundColor: 'rgba(0,0,0,0.3)',
-                          color: 'white',
-                          padding: '4px 7px',
-                          borderRadius: '4px',
-                          border: '1px solid rgba(255,255,255,0.4)'
-                        }}>
-                          {getIconFromPlatform(platform)}
-                        </span>
-                      );
-                    })
-                  ) : (
-                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '10px' }}>No platforms</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      );
-    })}
-  </div>
-)}
-
-          </div>  {/* ← ADD THIS: Closes the padding div */}
-        )}  {/* ← ADD THIS: Closes the calendar activeTab condition */}
-
+        
         {activeTab === 'status' && (
           <div style={{ padding: '24px' }}>
             <div style={{
