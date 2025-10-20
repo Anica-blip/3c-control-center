@@ -34,6 +34,16 @@ const mapContentPostToScheduledPost = (data: any): ScheduledPost => {
 
 // Helper function to map dashboard_posts to ScheduledPost interface
 const mapDashboardPostToScheduledPost = (data: any): ScheduledPost => {
+  // ✅ FIX: Combine DATE + TIME to create proper datetime
+  let scheduledDateTime = null;
+  if (data.scheduled_date && data.scheduled_time) {
+    // Combine "2025-10-21" + "06:00:00" = "2025-10-21T06:00:00"
+    const combinedDateTime = `${data.scheduled_date}T${data.scheduled_time}`;
+    scheduledDateTime = new Date(combinedDateTime);
+  } else if (data.scheduled_date) {
+    scheduledDateTime = new Date(data.scheduled_date);
+  }
+
   return {
     id: data.id,
     content_id: data.content_id || '',
@@ -51,7 +61,8 @@ const mapDashboardPostToScheduledPost = (data: any): ScheduledPost => {
     cta: data.cta || '',
     media_files: Array.isArray(data.media_files) ? data.media_files : [],
     selected_platforms: Array.isArray(data.selected_platforms) ? data.selected_platforms : [],
-    scheduled_date: new Date(data.scheduled_date),
+    scheduled_date: scheduledDateTime,
+    timezone: data.timezone || '',
     status: data.status || 'scheduled',
     service_type: data.service_type || '',
     failure_reason: data.failure_reason || '',
