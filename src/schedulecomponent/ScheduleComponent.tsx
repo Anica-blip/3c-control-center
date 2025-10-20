@@ -2001,14 +2001,15 @@ export default function ScheduleComponent() {
                     })
                   ) : (
                     <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '10px' }}>No platforms</span>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
-    ))}
+      );
+    })}
   </div>
 )}
 
