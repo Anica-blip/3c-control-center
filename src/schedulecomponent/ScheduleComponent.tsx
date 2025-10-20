@@ -2013,6 +2013,9 @@ export default function ScheduleComponent() {
   </div>
 )}
 
+          </div>  {/* ← ADD THIS: Closes the padding div */}
+        )}  {/* ← ADD THIS: Closes the calendar activeTab condition */}
+
         {activeTab === 'status' && (
           <div style={{ padding: '24px' }}>
             <div style={{
