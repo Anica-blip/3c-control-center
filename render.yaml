@@ -5,3 +5,8 @@ services:
     schedule: "0 6,9,14,17 * * *"
     buildCommand: npm install && npx tsc
     startCommand: node dist/schedulecomponent/api/cronHandler.js
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
