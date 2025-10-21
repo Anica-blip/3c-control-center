@@ -1,5 +1,5 @@
 // Cron job handler for scheduled posts - SERVICE-SPECIFIC ROUTING
-import { supabase } from '../config.node';
+import { supabase } from '../config.node.js';
 
 // ✅ TYPE DEFINITIONS
 interface ProcessResult {
@@ -321,7 +321,7 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
 export default processScheduledPosts;
 
 // ✅ EXECUTE WHEN RUN DIRECTLY (for Render cron job)
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   processScheduledPosts('Render Cron Job')
     .then(result => {
       console.log('Render Cron Job completed:', result);
