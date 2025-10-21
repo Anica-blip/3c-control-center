@@ -319,3 +319,16 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
 
 // ✅ EXPORT FOR EDGE FUNCTIONS / API ROUTES
 export default processScheduledPosts;
+
+// ✅ EXECUTE WHEN RUN DIRECTLY (for Render cron job)
+if (require.main === module) {
+  processScheduledPosts('Render Cron Job')
+    .then(result => {
+      console.log('Render Cron Job completed:', result);
+      process.exit(result.failed > 0 ? 1 : 0);
+    })
+    .catch(error => {
+      console.error('Render Cron Job failed:', error);
+      process.exit(1);
+    });
+}
