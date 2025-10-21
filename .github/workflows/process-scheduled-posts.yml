@@ -1,3 +1,5 @@
+name: Process Scheduled Posts
+
 on:
   schedule:
     # Runs EVERY DAY at these UTC times
@@ -12,38 +14,30 @@ on:
 jobs:
   process-posts:
     runs-on: ubuntu-latest
+    environment: SUPABASE_SCHEDULED_POSTS
     
     steps:
-      - name: Validate secrets
-        run: |
-          if [ -z "${{ secrets.SUPABASE_FUNCTIONS }}" ]; then
-            echo "Error: SUPABASE_FUNCTIONS secret is not set"
-            exit 1
-          fi
-          
-          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
-            echo "Error: CRON_SECRET secret is not set"
-            exit 1
-          fi
-          
-          echo "Secrets validation passed"
-          echo "Target URL: ${{ secrets.SUPABASE_FUNCTIONS }}"
-      
       - name: Call Supabase Edge Function
         run: |
-          echo "Calling Supabase Edge Function with service_type: GitHub - Workflow"
+          if [ -z "${{ secrets.SUPABASE_FUNCTION }}" ]; then
+            echo "Error: SUPABASE_FUNCTION secret is not set"
+            exit 1
+          fi
+          
+          if [ -z "${{ secrets.AUTHORIZATION_BEARER }}" ]; then
+            echo "Error: AUTHORIZATION_BEARER secret is not set"
+            exit 1
+          fi
+          
+          echo "Calling Supabase Edge Function with service_type: GitHub Actions"
           
           response=$(curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Authorization: Bearer ${{ secrets.AUTHORIZATION_BEARER }}" \
             -H "Content-Type: application/json" \
-            -d '{"service_type":"GitHub - Workflow"}' \
+            -d '{"service_type":"GitHub Actions"}' \
             -s -w "\nHTTP_STATUS:%{http_code}" \
-            "${{ secrets.SUPABASE_FUNCTIONS }}" \
-            2>&1) || {
-              echo "Error: curl command failed"
-              echo "Response: $response"
-              exit 1
-            }
+            "${{ secrets.SUPABASE_FUNCTION }}" \
+            2>&1)
           
           http_status=$(echo "$response" | grep "HTTP_STATUS:" | cut -d: -f2)
           body=$(echo "$response" | sed '/HTTP_STATUS:/d')
@@ -53,18 +47,14 @@ jobs:
           
           if [ "$http_status" != "200" ]; then
             echo "Error: Function returned status $http_status"
-            echo "Full response: $response"
             exit 1
           fi
           
-          echo "Successfully processed scheduled posts for GitHub - Workflow"
-      
-      - name: Log completion
-        if: success()
-        run: echo "✅ Successfully processed scheduled posts at $(date -u)"
+          echo "Successfully processed scheduled posts for GitHub Actions"
       
       - name: Log failure
         if: failure()
         run: |
           echo "❌ Failed to process scheduled posts at $(date -u)"
           echo "Check the logs above for details"
+
