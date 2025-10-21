@@ -1,23 +1,33 @@
 // Node.js-only config for Render cron jobs
 import { createClient } from '@supabase/supabase-js'
 
-// ✅ Works with either VITE_* variables (existing) OR server-side variables
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || ''
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || ''
+// ✅ SERVER-SIDE environment variables (following Supabase AI instructions)
+const supabaseUrl = process.env.SUPABASE_URL || ''
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const supabaseDbUrl = process.env.SUPABASE_DB_URL || ''
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase credentials')
-  console.error('  URL:', supabaseUrl ? 'SET' : 'MISSING')
-  console.error('  Key:', supabaseKey ? 'SET' : 'MISSING')
+// Log what we're using
+if (supabaseDbUrl) {
+  console.log('SUPABASE_DB_URL found (preferred for server cron):', supabaseDbUrl.replace(/:[^:@]+@/, ':****@'))
 }
 
-// SINGLE Supabase client instance
-export const supabase = createClient(supabaseUrl, supabaseKey, {
+if (!supabaseUrl || !supabaseServiceRoleKey) {
+  console.error('Missing Supabase credentials:')
+  console.error('  SUPABASE_DB_URL:', supabaseDbUrl ? 'SET' : 'MISSING')
+  console.error('  SUPABASE_URL:', supabaseUrl ? 'SET' : 'MISSING')
+  console.error('  SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceRoleKey ? 'SET' : 'MISSING')
+  throw new Error('Server-side Supabase credentials not configured')
+}
+
+// SINGLE Supabase client instance with SERVICE ROLE KEY
+export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false,
     detectSessionInUrl: false
   }
 })
+
+console.log('Supabase client created successfully (Node.js/Render - Service Role)')
 
 console.log('Supabase client created successfully (Node.js/Render)')
