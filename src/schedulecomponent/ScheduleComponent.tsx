@@ -803,33 +803,28 @@ export default function ScheduleComponent() {
     }
   };
 
-  const handleDeletePost = async (postId: string) => {
-    if (!confirm('Are you sure you want to remove this post from the dashboard?')) return;
-    
-    const operationKey = `delete-${postId}`;
-    setOperationLoading(operationKey, true);
-    
-    try {
-      const result = await deletePost(postId);
-      
-      if (result.success) {
-        showSuccess('Post removed from dashboard successfully!');
-        await refreshAllPosts();
-      } else {
-        showError(result.error!, () => handleDeletePost(postId));
-      }
-    } catch (error) {
-      showError({
-        message: 'Failed to remove post from dashboard. Please try again.',
-        code: 'DELETE_ERROR',
-        type: 'unknown',
-        timestamp: new Date(),
-        retryable: true
-      }, () => handleDeletePost(postId));
-    } finally {
-      setOperationLoading(operationKey, false);
-    }
-  };
+const handleDeletePost = async (postId: string) => {
+  if (!confirm('Are you sure you want to remove this post from the dashboard?')) return;
+  
+  const operationKey = `delete-${postId}`;
+  setOperationLoading(operationKey, true);
+  
+  try {
+    // Remove from local state ONLY - dashboard display removal
+    setScheduledPostsFromDB(prev => prev.filter(p => p.id !== postId));
+    showSuccess('Post removed from dashboard view!');
+  } catch (error) {
+    showError({
+      message: 'Failed to remove post from dashboard. Please try again.',
+      code: 'DELETE_ERROR',
+      type: 'unknown',
+      timestamp: new Date(),
+      retryable: true
+    }, () => handleDeletePost(postId));
+  } finally {
+    setOperationLoading(operationKey, false);
+  }
+};
 
   const handleSaveAsTemplate = async (post: ScheduledPost) => {
     const operationKey = `save-template-${post.id}`;
