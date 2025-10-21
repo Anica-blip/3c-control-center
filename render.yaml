@@ -4,7 +4,7 @@ services:
     env: node
     schedule: "0 6,9,14,17 * * *"
     buildCommand: npm install
-    startCommand: npx tsx schedulecomponent/api/cronHandler.ts
+    startCommand: cd /opt/render/project && npx tsx src/schedulecomponent/api/cronHandler.ts
     envVars:
       - key: VITE_SUPABASE_URL
         sync: false
