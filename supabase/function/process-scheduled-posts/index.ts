@@ -1,5 +1,5 @@
 // Supabase Edge Function for processing scheduled posts
-// This can be called by cron-job.org, GitHub Actions, or any HTTP client
+// Called by: Render, GitHub Actions, CronJob.org
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify authorization (optional but recommended)
+    // Verify authorization
     const authHeader = req.headers.get('Authorization')
     const cronSecret = Deno.env.get('CRON_SECRET')
     
@@ -25,6 +25,24 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    // ✅ Get service_type from request body
+    let requestedServiceType: string | undefined
+    try {
+      const body = await req.json()
+      requestedServiceType = body.service_type
+    } catch {
+      // No body provided - process all (fallback)
+    }
+
+    if (!requestedServiceType) {
+      return new Response(
+        JSON.stringify({ error: 'Missing service_type in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    console.log(`Processing posts for service_type: ${requestedServiceType}`)
 
     // Create Supabase client with service role key for admin access
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -36,11 +54,12 @@ Deno.serve(async (req) => {
     const currentDate = now.toISOString().split('T')[0] // YYYY-MM-DD
     const currentTime = now.toTimeString().split(' ')[0] // HH:MM:SS
     
-    // Get pending scheduled posts that are due
+    // ✅ Get pending scheduled posts that are due AND match service_type
     const { data: posts, error } = await supabase
       .from('scheduled_posts')
       .select('*')
       .eq('status', 'pending')
+      .eq('service_type', requestedServiceType)
       .or(`scheduled_date.lt.${currentDate},and(scheduled_date.eq.${currentDate},scheduled_time.lte.${currentTime})`)
       .limit(50)
 
@@ -52,29 +71,43 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'No posts to process',
+          message: `No posts to process for service_type: ${requestedServiceType}`,
           processed: 0,
           succeeded: 0,
-          timestamp: now.toISOString()
+          timestamp: now.toISOString(),
+          service_type: requestedServiceType
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    console.log(`Found ${posts.length} posts for ${requestedServiceType}`)
 
     let succeeded = 0
     const errors: string[] = []
 
     for (const post of posts) {
       try {
+        // ✅ Update attempt tracking
+        const attemptCount = (post.attempt_count || 0) + 1
+        await supabase
+          .from('scheduled_posts')
+          .update({
+            attempt_count: attemptCount,
+            last_attempt_at: now.toISOString()
+          })
+          .eq('id', post.id)
+
         // Get service configuration
         const { data: service, error: serviceError } = await supabase
           .from('external_services')
           .select('*')
           .eq('service_type', post.service_type)
+          .eq('is_active', true)
           .single()
 
         if (serviceError || !service) {
-          throw new Error('Service not found')
+          throw new Error(`Service not found for service_type: ${post.service_type}`)
         }
 
         // Prepare payload with post content and destination info
@@ -87,29 +120,44 @@ Deno.serve(async (req) => {
         }
 
         // Forward to external service
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json'
+        }
+
+        if (service.api_key) {
+          headers['Authorization'] = `Bearer ${service.api_key}`
+        }
+
         const response = await fetch(service.url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(payload)
         })
 
         if (!response.ok) {
-          throw new Error(`External service responded with ${response.status}`)
+          const responseText = await response.text().catch(() => 'Unable to read response')
+          throw new Error(`External service responded with ${response.status}: ${responseText}`)
         }
 
-        // Update platform assignments
+        console.log(`Successfully forwarded post ${post.id} to ${post.service_type}`)
+
+        // ✅ Update platform assignments
         await supabase
           .from('dashboard_platform_assignments')
           .update({ 
             delivery_status: 'sent', 
-            sent_at: new Date().toISOString()
+            sent_at: now.toISOString()
           })
           .eq('scheduled_post_id', post.id)
 
-        // Mark as published
+        // ✅ Mark as published with updated columns
         await supabase
           .from('scheduled_posts')
-          .update({ status: 'published' })
+          .update({ 
+            status: 'published',
+            post_status: 'published',
+            updated_at: now.toISOString()
+          })
           .eq('id', post.id)
 
         succeeded++
@@ -117,22 +165,41 @@ Deno.serve(async (req) => {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
         errors.push(`Post ${post.id}: ${errorMessage}`)
         
-        // Mark as failed
+        console.error(`Failed to process post ${post.id}:`, errorMessage)
+
+        // ✅ Update with all error tracking columns
+        const retryCount = (post.retry_count || 0) + 1
+        const maxRetries = 3
+        const finalStatus = retryCount >= maxRetries ? 'failed' : 'pending'
+
         await supabase
           .from('scheduled_posts')
           .update({ 
-            status: 'failed', 
+            status: finalStatus,
+            post_status: finalStatus,
             failure_reason: errorMessage,
-            retry_count: (post.retry_count || 0) + 1 
+            error_message: errorMessage,
+            retry_count: retryCount,
+            updated_at: now.toISOString()
           })
           .eq('id', post.id)
+
+        // ✅ Update platform assignments to failed
+        await supabase
+          .from('dashboard_platform_assignments')
+          .update({
+            delivery_status: 'failed',
+            error_message: errorMessage
+          })
+          .eq('scheduled_post_id', post.id)
       }
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        timestamp: new Date().toISOString(),
+        timestamp: now.toISOString(),
+        service_type: requestedServiceType,
         processed: posts.length,
         succeeded,
         failed: posts.length - succeeded,
