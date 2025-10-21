@@ -1,9 +1,10 @@
 on:
   schedule:
-    - cron: "0 8 * * 1-5"   # 08:00 UTC - Monday to Friday
-    - cron: "0 11 * * 1-5"  # 11:00 UTC - Monday to Friday
-    - cron: "0 16 * * 1-5"  # 16:00 UTC - Monday to Friday
-    - cron: "0 19 * * 1-5"  # 19:00 UTC - Monday to Friday
+    # ✅ CHANGED: Now runs EVERY DAY of the week (including weekends)
+    - cron: "0 8 * * *"   # 08:00 UTC - Every day
+    - cron: "0 11 * * *"  # 11:00 UTC - Every day
+    - cron: "0 16 * * *"  # 16:00 UTC - Every day
+    - cron: "0 19 * * *"  # 19:00 UTC - Every day
   
   # Allow manual trigger from GitHub Actions UI
   workflow_dispatch:
@@ -13,29 +14,58 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      # ✅ FIX: Validate secrets before making the request
+      - name: Validate secrets
+        run: |
+          if [ -z "${{ secrets.SUPABASE_FUNCTIONS }}" ]; then
+            echo "Error: SUPABASE_FUNCTIONS secret is not set"
+            exit 1
+          fi
+          
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "Error: CRON_SECRET secret is not set"
+            exit 1
+          fi
+          
+          echo "Secrets validation passed"
+          echo "Target URL: ${{ secrets.SUPABASE_FUNCTIONS }}"
+      
+      # ✅ FIX: Better curl command with proper error handling
       - name: Call Supabase Edge Function
         run: |
+          echo "Calling Supabase Edge Function..."
+          
           response=$(curl -X POST \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
-            -w "\nHTTP_STATUS:%{http_code}" \
-            "${{ secrets.SUPABASE_FUNCTIONS }}")
+            -s -w "\nHTTP_STATUS:%{http_code}" \
+            "${{ secrets.SUPABASE_FUNCTIONS }}" \
+            2>&1) || {
+              echo "Error: curl command failed"
+              echo "Response: $response"
+              exit 1
+            }
           
           http_status=$(echo "$response" | grep "HTTP_STATUS:" | cut -d: -f2)
           body=$(echo "$response" | sed '/HTTP_STATUS:/d')
           
-          echo "Response: $body"
+          echo "Response Body: $body"
           echo "HTTP Status: $http_status"
           
           if [ "$http_status" != "200" ]; then
             echo "Error: Function returned status $http_status"
+            echo "Full response: $response"
             exit 1
           fi
+          
+          echo "Successfully processed scheduled posts"
       
       - name: Log completion
         if: success()
-        run: echo "Successfully processed scheduled posts at $(date)"
+        run: echo "✅ Successfully processed scheduled posts at $(date -u)"
       
       - name: Log failure
         if: failure()
-        run: echo "Failed to process scheduled posts at $(date)"
+        run: |
+          echo "❌ Failed to process scheduled posts at $(date -u)"
+          echo "Check the logs above for details
