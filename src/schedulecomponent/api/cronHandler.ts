@@ -1,5 +1,5 @@
 // Cron job handler for scheduled posts - SERVICE-SPECIFIC ROUTING
-import { supabase } from '../config';
+import { supabase } from '../config.node';
 
 // ✅ TYPE DEFINITIONS
 interface ProcessResult {
