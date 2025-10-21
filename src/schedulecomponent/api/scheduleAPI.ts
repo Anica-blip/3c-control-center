@@ -785,28 +785,13 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
   }
 };
 
-// DELETE POST - Actually delete from scheduled_posts table
+// DELETE POST - Dashboard view removal only (NO database deletion)
 export const deleteScheduledPost = async (id: string): Promise<void> => {
   try {
-    if (!supabase) throw new Error('Supabase client not available');
-
-    console.log('Deleting post from scheduled_posts table:', id);
-
-    // Delete from scheduled_posts table
-    const { error } = await supabase
-      .from('scheduled_posts')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting post:', error);
-      throw error;
-    }
-
-    console.log('Post deleted successfully:', id);
+    console.log('Dashboard view removal only - no database deletion:', id);
   } catch (error) {
-    console.error('Error deleting post:', error);
-    throw new Error(`Failed to delete post: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('Error in delete operation:', error);
+    throw new Error(`Failed to remove from dashboard: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
