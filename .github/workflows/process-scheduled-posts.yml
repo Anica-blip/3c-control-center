@@ -1,10 +1,10 @@
 on:
   schedule:
     # Runs EVERY DAY at these UTC times
-    - cron: "0 8 * * *"   # 08:00 UTC
-    - cron: "0 11 * * *"  # 11:00 UTC
-    - cron: "0 16 * * *"  # 16:00 UTC
-    - cron: "0 19 * * *"  # 19:00 UTC
+    - cron: "0 7 * * *"   # 07:00 UTC
+    - cron: "0 10 * * *"  # 10:00 UTC
+    - cron: "0 15 * * *"  # 15:00 UTC
+    - cron: "0 18 * * *"  # 18:00 UTC
   
   # Allow manual trigger from GitHub Actions UI
   workflow_dispatch:
