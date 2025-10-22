@@ -4,7 +4,7 @@ services:
     env: node
     schedule: "0 6,9,14,17 * * *"
     buildCommand: npm install
-    startCommand: npx tsx src/cron-runners/render-cron.ts
+    startCommand: cd /opt/render/project && npx tsx src/cron-runners/render-cron.ts
     envVars:
       - key: CRON_SUPABASE_DB_URL
         sync: false
