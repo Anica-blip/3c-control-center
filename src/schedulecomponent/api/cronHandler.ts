@@ -103,7 +103,7 @@ export async function processScheduledPosts(requestedServiceType?: string): Prom
       .from('scheduled_posts')
       .select('*')
       .eq('status', 'pending')
-      .or(`scheduled_date.lt.${currentDate},and(scheduled_date.eq.${currentDate},scheduled_time.lte.${currentTime})`)
+      .lte('scheduled_date', currentDate)
       .order('scheduled_date', { ascending: true })
       .limit(50);
 
