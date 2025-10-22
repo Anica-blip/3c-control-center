@@ -1,4 +1,4 @@
-name: Process Scheduled Posts
+name: Process Scheduled Posts - GitHub Actions
 
 on:
   schedule:
@@ -14,47 +14,58 @@ on:
 jobs:
   process-posts:
     runs-on: ubuntu-latest
-    environment: SUPABASE_SCHEDULED_POSTS
     
     steps:
-      - name: Call Supabase Edge Function
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
         run: |
-          if [ -z "${{ secrets.SUPABASE_FUNCTION }}" ]; then
-            echo "Error: SUPABASE_FUNCTION secret is not set"
+          npm install @supabase/supabase-js
+          npm install -g tsx
+      
+      - name: Validate secrets
+        run: |
+          if [ -z "${{ secrets.CRON_SUPABASE_DB_URL }}" ]; then
+            echo "❌ Error: CRON_SUPABASE_DB_URL secret is not set"
             exit 1
           fi
           
-          if [ -z "${{ secrets.AUTHORIZATION_BEARER }}" ]; then
-            echo "Error: AUTHORIZATION_BEARER secret is not set"
+          if [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then
+            echo "❌ Error: SUPABASE_SERVICE_ROLE_KEY secret is not set"
             exit 1
           fi
           
-          echo "Calling Supabase Edge Function with service_type: GitHub Actions"
+          echo "✅ All required secrets are configured"
+      
+      - name: Run GitHub Actions Cron Job
+        env:
+          CRON_SUPABASE_DB_URL: ${{ secrets.CRON_SUPABASE_DB_URL }}
+          CRON_RUNNER_PASSWORD: ${{ secrets.CRON_RUNNER_PASSWORD }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "Starting GitHub Actions Cron Job at $(date -u)"
+          tsx .github/scripts/github-actions-cron.ts
           
-          response=$(curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.AUTHORIZATION_BEARER }}" \
-            -H "Content-Type: application/json" \
-            -d '{"service_type":"GitHub Actions"}' \
-            -s -w "\nHTTP_STATUS:%{http_code}" \
-            "${{ secrets.SUPABASE_FUNCTION }}" \
-            2>&1)
-          
-          http_status=$(echo "$response" | grep "HTTP_STATUS:" | cut -d: -f2)
-          body=$(echo "$response" | sed '/HTTP_STATUS:/d')
-          
-          echo "Response Body: $body"
-          echo "HTTP Status: $http_status"
-          
-          if [ "$http_status" != "200" ]; then
-            echo "Error: Function returned status $http_status"
+          if [ $? -eq 0 ]; then
+            echo "✅ GitHub Actions Cron Job completed successfully"
+          else
+            echo "❌ GitHub Actions Cron Job failed"
             exit 1
           fi
-          
-          echo "Successfully processed scheduled posts for GitHub Actions"
+      
+      - name: Log completion
+        if: success()
+        run: |
+          echo "✅ Scheduled posts processed successfully at $(date -u)"
       
       - name: Log failure
         if: failure()
         run: |
           echo "❌ Failed to process scheduled posts at $(date -u)"
           echo "Check the logs above for details"
-
