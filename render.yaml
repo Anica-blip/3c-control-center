@@ -2,9 +2,9 @@ services:
   - type: cron
     name: scheduled-posts-processor-render
     env: node
-    schedule: "0 6,9,14,17 * * *"  # Runs at 06:00, 09:00, 14:00, 17:00 UTC daily
-    buildCommand: npm install @supabase/supabase-js && npm install -g tsx
-    startCommand: npx tsx /opt/render/project/src/cron-runners/render-cron.ts
+    schedule: "0 6,9,14,17 * * *"
+    buildCommand: npm install
+    startCommand: npx tsx src/cron-runners/render-cron.ts
     envVars:
       - key: CRON_SUPABASE_DB_URL
         sync: false
