@@ -21,12 +21,23 @@ if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 // ✅ EXTRACT SUPABASE URL FROM DB URL
-// Format: postgres://postgres.xxx:password@aws-0-region.pooler.supabase.com:6543/postgres
-// Convert to: https://xxx.supabase.co
+// Handles two formats:
+// 1. postgres://postgres.xxx:password@aws-0-region.pooler.supabase.com:6543/postgres
+// 2. postgresql://cron_runner:password@db.xxx.supabase.co:5432/postgres
 const extractSupabaseUrl = (dbUrl: string): string => {
-  const match = dbUrl.match(/postgres\.([^:]+)/);
-  if (!match) throw new Error('Invalid CRON_SUPABASE_DB_URL format');
-  return `https://${match[1]}.supabase.co`;
+  // Try pattern 1: postgres.xxxxx format (connection pooler)
+  let match = dbUrl.match(/postgres\.([^:]+)/);
+  if (match) {
+    return `https://${match[1]}.supabase.co`;
+  }
+  
+  // Try pattern 2: db.xxxxx format (direct connection)
+  match = dbUrl.match(/db\.([^.]+)\.supabase\.co/);
+  if (match) {
+    return `https://${match[1]}.supabase.co`;
+  }
+  
+  throw new Error(`Invalid CRON_SUPABASE_DB_URL format. Expected format: postgresql://...@db.xxx.supabase.co:5432/... or postgres://...@postgres.xxx:...`);
 };
 
 const supabaseUrl = extractSupabaseUrl(CRON_SUPABASE_DB_URL);
