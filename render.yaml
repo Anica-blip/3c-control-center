@@ -1,6 +1,6 @@
 services:
   - type: cron
-    name: scheduled-posts-processor-render
+    name: scheduled-posts
     env: node
     schedule: "0 6,9,14,17 * * *"
     buildCommand: npm install
