@@ -9,8 +9,8 @@ const CRON_RUNNER_PASSWORD = process.env.CRON_RUNNER_PASSWORD || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 // ✅ RUNNER IDENTITY
-const RUNNER_NAME = 'GitHub Actions';
-const SERVICE_TYPE = 'GitHub Actions';
+const RUNNER_NAME = 'GitHub - Workflow';
+const SERVICE_TYPE = 'GitHub - Workflow';
 
 // ✅ VALIDATE CREDENTIALS
 if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY) {
