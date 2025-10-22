@@ -1,5 +1,5 @@
 // Render.com Cron Runner - Direct Database Connection
-// Uses SELECT FOR UPDATE SKIP LOCKED to claim and process scheduled posts
+// Queries scheduled_posts table directly - NO RPC functions
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -21,23 +21,21 @@ if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 // ✅ EXTRACT SUPABASE URL FROM DB URL
-// Handles two formats:
-// 1. postgres://postgres.xxx:password@aws-0-region.pooler.supabase.com:6543/postgres
-// 2. postgresql://cron_runner:password@db.xxx.supabase.co:5432/postgres
+// Handles: postgresql://cron_runner:password@db.xxx.supabase.co:5432/postgres
 const extractSupabaseUrl = (dbUrl: string): string => {
-  // Try pattern 1: postgres.xxxxx format (connection pooler)
-  let match = dbUrl.match(/postgres\.([^:]+)/);
+  // Pattern: db.xxx.supabase.co
+  const match = dbUrl.match(/db\.([^.]+)\.supabase\.co/);
   if (match) {
     return `https://${match[1]}.supabase.co`;
   }
   
-  // Try pattern 2: db.xxxxx format (direct connection)
-  match = dbUrl.match(/db\.([^.]+)\.supabase\.co/);
-  if (match) {
-    return `https://${match[1]}.supabase.co`;
+  // Fallback pattern: postgres.xxx (connection pooler)
+  const poolerMatch = dbUrl.match(/postgres\.([^:]+)/);
+  if (poolerMatch) {
+    return `https://${poolerMatch[1]}.supabase.co`;
   }
   
-  throw new Error(`Invalid CRON_SUPABASE_DB_URL format. Expected format: postgresql://...@db.xxx.supabase.co:5432/... or postgres://...@postgres.xxx:...`);
+  throw new Error(`Cannot extract Supabase URL from: ${dbUrl}`);
 };
 
 const supabaseUrl = extractSupabaseUrl(CRON_SUPABASE_DB_URL);
@@ -86,65 +84,61 @@ const getErrorMessage = (error: unknown): string => {
   return 'Unknown error occurred';
 };
 
-// ✅ CLAIM JOBS USING SELECT FOR UPDATE SKIP LOCKED
+// ✅ QUERY PENDING JOBS - DIRECT TABLE ACCESS ONLY
 async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
   const now = new Date();
   const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
   const currentTime = now.toTimeString().split(' ')[0]; // HH:MM:SS
   const lockId = crypto.randomUUID();
 
-  console.log(`[${now.toISOString()}] Claiming jobs...`);
+  console.log(`[${now.toISOString()}] Querying pending jobs...`);
   console.log(`Current Date: ${currentDate}, Current Time: ${currentTime}`);
 
   try {
-    // ✅ CLAIM JOBS: SELECT FOR UPDATE SKIP LOCKED
-    const { data, error } = await supabase.rpc('claim_scheduled_posts', {
-      p_service_type: SERVICE_TYPE,
-      p_current_date: currentDate,
-      p_current_time: currentTime,
-      p_lock_id: lockId,
-      p_run_by: RUNNER_NAME,
-      p_limit: limit
-    });
+    // ✅ SELECT pending posts from scheduled_posts table
+    const { data, error } = await supabase
+      .from('scheduled_posts')
+      .select('*')
+      .eq('service_type', SERVICE_TYPE)
+      .eq('status', 'pending')
+      .or(`scheduled_date.lt.${currentDate},and(scheduled_date.eq.${currentDate},scheduled_time.lte.${currentTime})`)
+      .limit(limit);
 
     if (error) {
-      console.error('Failed to claim jobs via RPC:', error);
-      
-      // ✅ FALLBACK: Direct query if RPC doesn't exist
-      console.log('Attempting direct query fallback...');
-      const { data: fallbackData, error: fallbackError } = await supabase
-        .from('scheduled_posts')
-        .select('*')
-        .eq('service_type', SERVICE_TYPE)
-        .eq('status', 'pending')
-        .or(`scheduled_date.lt.${currentDate},and(scheduled_date.eq.${currentDate},scheduled_time.lte.${currentTime})`)
-        .limit(limit);
-
-      if (fallbackError) throw fallbackError;
-
-      // Update claimed jobs
-      const claimedIds = (fallbackData || []).map((post: any) => post.id);
-      if (claimedIds.length > 0) {
-        await supabase
-          .from('scheduled_posts')
-          .update({
-            status: 'processing',
-            lock_id: lockId,
-            run_by: RUNNER_NAME,
-            attempted_at: now.toISOString(),
-            attempts: supabase.sql`COALESCE(attempts, 0) + 1`
-          })
-          .in('id', claimedIds);
-      }
-
-      return fallbackData || [];
+      console.error('Failed to query scheduled_posts:', error);
+      throw error;
     }
 
-    console.log(`Claimed ${data?.length || 0} jobs`);
-    return data || [];
+    if (!data || data.length === 0) {
+      console.log('No pending posts found');
+      return [];
+    }
+
+    console.log(`Found ${data.length} pending posts`);
+
+    // ✅ UPDATE claimed jobs to processing status
+    const claimedIds = data.map((post: any) => post.id);
+    
+    const { error: updateError } = await supabase
+      .from('scheduled_posts')
+      .update({
+        status: 'processing',
+        lock_id: lockId,
+        run_by: RUNNER_NAME,
+        attempted_at: now.toISOString()
+      })
+      .in('id', claimedIds);
+
+    if (updateError) {
+      console.error('Failed to update posts to processing:', updateError);
+      throw updateError;
+    }
+
+    console.log(`Claimed ${claimedIds.length} jobs`);
+    return data as ScheduledPost[];
 
   } catch (error) {
-    console.error('Error claiming jobs:', getErrorMessage(error));
+    console.error('Error in claimJobs:', getErrorMessage(error));
     throw error;
   }
 }
@@ -167,10 +161,10 @@ async function processPost(post: ScheduledPost): Promise<void> {
     }
 
     // ✅ POST TO SOCIAL PLATFORM
-    // TODO: Implement actual social platform API calls when needed
+    // TODO: Replace with actual social platform API calls
     console.log('Post Content:', JSON.stringify(post.post_content, null, 2));
     
-    // Placeholder response (will be replaced with actual API call)
+    // Placeholder response
     const responseCode = 200;
     const responseBody = { success: true, post_id: `mock_${Date.now()}` };
     const externalPostId = responseBody.post_id;
@@ -213,7 +207,6 @@ async function processPost(post: ScheduledPost): Promise<void> {
 
     if (insertError) {
       console.warn(`⚠️ Failed to insert into dashboard_posts: ${getErrorMessage(insertError)}`);
-      // Don't throw - post was successful, just logging failed
     }
 
     console.log(`✅ Post ${post.id} completed successfully`);
@@ -224,7 +217,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
 
     // ✅ DETERMINE IF SHOULD RETRY
     const maxRetries = 3;
-    const newAttempts = post.attempts + 1;
+    const newAttempts = (post.attempts || 0) + 1;
     const shouldRetry = newAttempts < maxRetries;
     const finalStatus = shouldRetry ? 'pending' : 'failed';
 
@@ -235,8 +228,8 @@ async function processPost(post: ScheduledPost): Promise<void> {
         status: finalStatus,
         completed_at: shouldRetry ? null : now.toISOString(),
         last_error: errorMessage,
-        lock_id: null, // Release lock for retry
-        next_retry_at: shouldRetry ? new Date(now.getTime() + 300000).toISOString() : null // 5 min delay
+        lock_id: null,
+        next_retry_at: shouldRetry ? new Date(now.getTime() + 300000).toISOString() : null
       })
       .eq('id', post.id);
 
@@ -246,7 +239,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
 
     console.log(`Post ${post.id} marked as ${finalStatus} (attempt ${newAttempts}/${maxRetries})`);
     
-    throw error; // Re-throw to count as failed in summary
+    throw error;
   }
 }
 
@@ -262,7 +255,7 @@ async function main(): Promise<ProcessResult> {
   let failed = 0;
 
   try {
-    // ✅ CLAIM JOBS
+    // ✅ QUERY AND CLAIM JOBS
     const posts = await claimJobs(50);
 
     if (posts.length === 0) {
