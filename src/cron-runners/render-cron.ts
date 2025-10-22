@@ -9,8 +9,8 @@ const CRON_RUNNER_PASSWORD = process.env.CRON_RUNNER_PASSWORD || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 // ✅ RUNNER IDENTITY
-const RUNNER_NAME = 'Render';
-const SERVICE_TYPE = 'Render';
+const RUNNER_NAME = 'Render Cron Job';
+const SERVICE_TYPE = 'Render Cron Job';
 
 // ✅ VALIDATE CREDENTIALS
 if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY) {
