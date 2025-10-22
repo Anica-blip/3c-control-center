@@ -14,6 +14,7 @@ on:
 jobs:
   process-posts:
     runs-on: ubuntu-latest
+    environment: SUPABASE_SCHEDULED_POSTS  # ← CRITICAL: References the environment where secrets are stored
     
     steps:
       - name: Checkout repository
