@@ -27,13 +27,22 @@ jobs:
       
       - name: Install dependencies
         run: |
-          npm install @supabase/supabase-js
           npm install -g tsx
       
       - name: Validate secrets
         run: |
+          if [ -z "${{ secrets.VERCEL_GATEWAY_URL }}" ]; then
+            echo "❌ Error: VERCEL_GATEWAY_URL secret is not set"
+            exit 1
+          fi
+          
           if [ -z "${{ secrets.CRON_SUPABASE_DB_URL }}" ]; then
             echo "❌ Error: CRON_SUPABASE_DB_URL secret is not set"
+            exit 1
+          fi
+          
+          if [ -z "${{ secrets.CRON_RUNNER_PASSWORD }}" ]; then
+            echo "❌ Error: CRON_RUNNER_PASSWORD secret is not set"
             exit 1
           fi
           
@@ -44,13 +53,15 @@ jobs:
           
           echo "✅ All required secrets are configured"
       
-      - name: Run GitHub Actions Cron Job
+      - name: Run GitHub Actions Cron Job via Gateway
         env:
+          VERCEL_GATEWAY_URL: ${{ secrets.VERCEL_GATEWAY_URL }}
           CRON_SUPABASE_DB_URL: ${{ secrets.CRON_SUPABASE_DB_URL }}
           CRON_RUNNER_PASSWORD: ${{ secrets.CRON_RUNNER_PASSWORD }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           echo "Starting GitHub Actions Cron Job at $(date -u)"
+          echo "Gateway URL: ${{ secrets.VERCEL_GATEWAY_URL }}"
           tsx .github/scripts/github-actions-cron.ts
           
           if [ $? -eq 0 ]; then
