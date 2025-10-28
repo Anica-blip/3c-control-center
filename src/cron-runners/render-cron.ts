@@ -9,6 +9,7 @@ const CRON_SUPABASE_DB_URL = process.env.CRON_SUPABASE_DB_URL || '';
 const CRON_RUNNER_PASSWORD = process.env.CRON_RUNNER_PASSWORD || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const AUTHORIZATION = process.env.AUTHORIZATION || '';
 
 // ✅ RUNNER IDENTITY
 const RUNNER_NAME = 'Render Cron Job';
@@ -23,6 +24,7 @@ if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_BOT_TOKEN) 
   console.error('  CRON_SUPABASE_DB_URL:', CRON_SUPABASE_DB_URL ? 'SET' : 'MISSING');
   console.error('  SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING');
   console.error('  TELEGRAM_BOT_TOKEN:', TELEGRAM_BOT_TOKEN ? 'SET' : 'MISSING');
+  console.error('  AUTHORIZATION:', AUTHORIZATION ? 'SET (optional)' : 'NOT SET (will use SERVICE_ROLE_KEY)');
   process.exit(1);
 }
 
@@ -44,6 +46,7 @@ const extractSupabaseUrl = (dbUrl: string): string => {
 const supabaseUrl = extractSupabaseUrl(CRON_SUPABASE_DB_URL);
 
 // ✅ CREATE SUPABASE CLIENT WITH PROPER AUTH HEADERS
+const authToken = AUTHORIZATION || SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
   auth: {
     persistSession: false,
@@ -52,7 +55,7 @@ const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
   },
   global: {
     headers: {
-      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Authorization': `Bearer ${authToken}`,
       'apikey': SUPABASE_SERVICE_ROLE_KEY
     }
   }
@@ -62,6 +65,7 @@ console.log(`[${new Date().toISOString()}] Render Cron Runner initialized`);
 console.log(`Supabase URL: ${supabaseUrl}`);
 console.log(`Service Type Filter: ${SERVICE_TYPE}`);
 console.log(`Timezone: WEST (UTC+${TIMEZONE_OFFSET_HOURS})`);
+console.log(`Authorization: ${AUTHORIZATION ? 'Using AUTHORIZATION env var' : 'Using SERVICE_ROLE_KEY'}`);
 
 // ============================================
 // TYPE DEFINITIONS
