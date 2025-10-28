@@ -43,12 +43,18 @@ const extractSupabaseUrl = (dbUrl: string): string => {
 
 const supabaseUrl = extractSupabaseUrl(CRON_SUPABASE_DB_URL);
 
-// ✅ CREATE SUPABASE CLIENT
+// ✅ CREATE SUPABASE CLIENT WITH PROPER AUTH HEADERS
 const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
   auth: {
     persistSession: false,
     autoRefreshToken: false,
     detectSessionInUrl: false
+  },
+  global: {
+    headers: {
+      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'apikey': SUPABASE_SERVICE_ROLE_KEY
+    }
   }
 });
 
