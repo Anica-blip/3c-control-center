@@ -4,12 +4,38 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// ✅ ENVIRONMENT VARIABLES
-const CRON_SUPABASE_DB_URL = process.env.CRON_SUPABASE_DB_URL || '';
-const CRON_RUNNER_PASSWORD = process.env.CRON_RUNNER_PASSWORD || '';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
-const AUTHORIZATION = process.env.AUTHORIZATION || '';
+// ============================================
+// JWT VALIDATION HELPER
+// ============================================
+
+/**
+ * Validates if a string is a properly formatted JWT token
+ */
+function validateJWT(token: string, varName: string): void {
+  if (!token) {
+    throw new Error(`${varName} is empty or missing`);
+  }
+  
+  const parts = token.split('.');
+  
+  if (parts.length !== 3) {
+    console.error(`\n❌ INVALID JWT FORMAT for ${varName}:`);
+    console.error(`   Expected: 3 parts (header.payload.signature)`);
+    console.error(`   Got: ${parts.length} part(s)`);
+    console.error(`   Token preview: ${token.substring(0, 50)}...`);
+    console.error(`   Token length: ${token.length} characters`);
+    throw new Error(`${varName} is not a valid JWT token (has ${parts.length} parts, expected 3)`);
+  }
+  
+  console.log(`✅ ${varName} format is valid (3 parts, ${token.length} chars)`);
+}
+
+// ✅ ENVIRONMENT VARIABLES - WITH TRIMMING
+const CRON_SUPABASE_DB_URL = (process.env.CRON_SUPABASE_DB_URL || '').trim();
+const CRON_RUNNER_PASSWORD = (process.env.CRON_RUNNER_PASSWORD || '').trim();
+const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+const TELEGRAM_BOT_TOKEN = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
+const AUTHORIZATION = (process.env.AUTHORIZATION || '').trim();
 
 // ✅ RUNNER IDENTITY
 const RUNNER_NAME = 'Render Cron Job';
@@ -19,12 +45,32 @@ const SERVICE_TYPE = 'Render Cron Job';
 const TIMEZONE_OFFSET_HOURS = 1;
 
 // ✅ VALIDATE CREDENTIALS
+console.log('\n--- ENVIRONMENT VARIABLE CHECK ---');
 if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_BOT_TOKEN) {
-  console.error('Missing required environment variables:');
+  console.error('❌ Missing required environment variables:');
   console.error('  CRON_SUPABASE_DB_URL:', CRON_SUPABASE_DB_URL ? 'SET' : 'MISSING');
   console.error('  SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING');
   console.error('  TELEGRAM_BOT_TOKEN:', TELEGRAM_BOT_TOKEN ? 'SET' : 'MISSING');
   console.error('  AUTHORIZATION:', AUTHORIZATION ? 'SET (optional)' : 'NOT SET (will use SERVICE_ROLE_KEY)');
+  process.exit(1);
+}
+
+// ✅ VALIDATE JWT FORMAT
+try {
+  console.log('\n--- JWT TOKEN VALIDATION ---');
+  validateJWT(SUPABASE_SERVICE_ROLE_KEY, 'SUPABASE_SERVICE_ROLE_KEY');
+  
+  if (AUTHORIZATION) {
+    validateJWT(AUTHORIZATION, 'AUTHORIZATION');
+  }
+  
+  console.log('✅ All JWT tokens validated successfully\n');
+} catch (error) {
+  console.error('\n❌ JWT Validation Failed!');
+  console.error('Please check your Render environment variables and ensure:');
+  console.error('  1. No extra spaces or newlines before/after the key');
+  console.error('  2. The complete key was copied (should be ~200+ characters)');
+  console.error('  3. Using SERVICE_ROLE_KEY, not ANON_KEY\n');
   process.exit(1);
 }
 
@@ -277,54 +323,28 @@ async function sendTelegramPhoto(
     return await response.json();
   }
   
-  // If sending as direct file upload
+  // If sending as Buffer (direct upload)
   const FormData = (await import('form-data')).default;
-  const form = new FormData();
+  const formData = new FormData();
   
-  form.append('chat_id', chatId);
-  form.append('photo', photoUrlOrBuffer, { filename: filename || 'photo.jpg' });
-  form.append('caption', caption);
-  form.append('parse_mode', 'HTML');
+  formData.append('chat_id', chatId);
+  formData.append('photo', photoUrlOrBuffer, { filename: filename || 'photo.jpg' });
+  formData.append('caption', caption);
+  formData.append('parse_mode', 'HTML');
   
   if (threadId) {
     const threadIdMatch = threadId.match(/(\d+)$/);
     if (threadIdMatch) {
-      form.append('message_thread_id', threadIdMatch[1]);
+      formData.append('message_thread_id', threadIdMatch[1]);
     }
   }
   
-  // Convert form stream to buffer for fetch compatibility
-  const formBuffer = await new Promise<Buffer>((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    form.on('data', (chunk: Buffer) => chunks.push(chunk));
-    form.on('end', () => resolve(Buffer.concat(chunks)));
-    form.on('error', reject);
-  });
-
   const response = await fetch(url, {
     method: 'POST',
-    headers: form.getHeaders(),
-    body: formBuffer,
+    body: formData as any,
   });
 
-  // Check if response is valid before parsing
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`Telegram API Error (${response.status}):`, errorText);
-    throw new Error(`Telegram API returned ${response.status}: ${errorText}`);
-  }
-
-  const responseText = await response.text();
-  if (!responseText) {
-    throw new Error('Telegram API returned empty response');
-  }
-
-  try {
-    return JSON.parse(responseText);
-  } catch (error) {
-    console.error('Failed to parse Telegram response:', responseText);
-    throw new Error(`Invalid JSON from Telegram: ${responseText.substring(0, 200)}`);
-  }
+  return await response.json();
 }
 
 /**
@@ -365,74 +385,48 @@ async function sendTelegramVideo(
     return await response.json();
   }
   
-  // If sending as direct file upload
+  // If sending as Buffer (direct upload)
   const FormData = (await import('form-data')).default;
-  const form = new FormData();
+  const formData = new FormData();
   
-  form.append('chat_id', chatId);
-  form.append('video', videoUrlOrBuffer, { filename: filename || 'video.mp4' });
-  form.append('caption', caption);
-  form.append('parse_mode', 'HTML');
+  formData.append('chat_id', chatId);
+  formData.append('video', videoUrlOrBuffer, { filename: filename || 'video.mp4' });
+  formData.append('caption', caption);
+  formData.append('parse_mode', 'HTML');
   
   if (threadId) {
     const threadIdMatch = threadId.match(/(\d+)$/);
     if (threadIdMatch) {
-      form.append('message_thread_id', threadIdMatch[1]);
+      formData.append('message_thread_id', threadIdMatch[1]);
     }
   }
   
-  // Convert form stream to buffer for fetch compatibility
-  const formBuffer = await new Promise<Buffer>((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    form.on('data', (chunk: Buffer) => chunks.push(chunk));
-    form.on('end', () => resolve(Buffer.concat(chunks)));
-    form.on('error', reject);
-  });
-
   const response = await fetch(url, {
     method: 'POST',
-    headers: form.getHeaders(),
-    body: formBuffer,
+    body: formData as any,
   });
 
-  // Check if response is valid before parsing
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`Telegram API Error (${response.status}):`, errorText);
-    throw new Error(`Telegram API returned ${response.status}: ${errorText}`);
-  }
-
-  const responseText = await response.text();
-  if (!responseText) {
-    throw new Error('Telegram API returned empty response');
-  }
-
-  try {
-    return JSON.parse(responseText);
-  } catch (error) {
-    console.error('Failed to parse Telegram response:', responseText);
-    throw new Error(`Invalid JSON from Telegram: ${responseText.substring(0, 200)}`);
-  }
+  return await response.json();
 }
 
 /**
- * Send GIF/Animation to Telegram (supports URL or direct upload)
+ * Send document to Telegram with caption (supports URL or direct upload)
  */
-async function sendTelegramAnimation(
+async function sendTelegramDocument(
   botToken: string,
   chatId: string,
-  animationUrlOrBuffer: string | Buffer,
+  documentUrlOrBuffer: string | Buffer,
   caption: string,
   threadId?: string,
   filename?: string
 ): Promise<TelegramResponse> {
-  const url = `https://api.telegram.org/bot${botToken}/sendAnimation`;
+  const url = `https://api.telegram.org/bot${botToken}/sendDocument`;
   
   // If sending as URL
-  if (typeof animationUrlOrBuffer === 'string') {
+  if (typeof documentUrlOrBuffer === 'string') {
     const body: any = {
       chat_id: chatId,
-      animation: animationUrlOrBuffer,
+      document: documentUrlOrBuffer,
       caption: caption,
       parse_mode: 'HTML',
     };
@@ -453,169 +447,178 @@ async function sendTelegramAnimation(
     return await response.json();
   }
   
-  // If sending as direct file upload
+  // If sending as Buffer (direct upload)
   const FormData = (await import('form-data')).default;
-  const form = new FormData();
+  const formData = new FormData();
   
-  form.append('chat_id', chatId);
-  form.append('animation', animationUrlOrBuffer, { filename: filename || 'animation.gif' });
-  form.append('caption', caption);
-  form.append('parse_mode', 'HTML');
+  formData.append('chat_id', chatId);
+  formData.append('document', documentUrlOrBuffer, { filename: filename || 'document.pdf' });
+  formData.append('caption', caption);
+  formData.append('parse_mode', 'HTML');
   
   if (threadId) {
     const threadIdMatch = threadId.match(/(\d+)$/);
     if (threadIdMatch) {
-      form.append('message_thread_id', threadIdMatch[1]);
+      formData.append('message_thread_id', threadIdMatch[1]);
     }
   }
   
-  // Convert form stream to buffer for fetch compatibility
-  const formBuffer = await new Promise<Buffer>((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    form.on('data', (chunk: Buffer) => chunks.push(chunk));
-    form.on('end', () => resolve(Buffer.concat(chunks)));
-    form.on('error', reject);
-  });
-
   const response = await fetch(url, {
     method: 'POST',
-    headers: form.getHeaders(),
-    body: formBuffer,
+    body: formData as any,
   });
 
-  // Check if response is valid before parsing
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`Telegram API Error (${response.status}):`, errorText);
-    throw new Error(`Telegram API returned ${response.status}: ${errorText}`);
-  }
-
-  const responseText = await response.text();
-  if (!responseText) {
-    throw new Error('Telegram API returned empty response');
-  }
-
-  try {
-    return JSON.parse(responseText);
-  } catch (error) {
-    console.error('Failed to parse Telegram response:', responseText);
-    throw new Error(`Invalid JSON from Telegram: ${responseText.substring(0, 200)}`);
-  }
+  return await response.json();
 }
 
 /**
- * Main function to post to Telegram based on media type
+ * Post content to Telegram based on media type
  */
 async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; post_id?: string; error?: string }> {
   try {
-    console.log(`📱 Posting to Telegram - Chat ID: ${post.channel_group_id}`);
-    if (post.thread_id) {
-      console.log(`📌 Thread ID: ${post.thread_id}`);
-    }
-    
-    const botToken = TELEGRAM_BOT_TOKEN;
-    const chatId = post.channel_group_id;
-    
-    if (!chatId) {
-      throw new Error('Missing channel_group_id (Chat ID)');
-    }
-
-    const caption = buildCaption(post);
+    const chatId = post.channel_group_id!;
     const threadId = post.thread_id || undefined;
-    let result: TelegramResponse;
-
-    // Check if there's media in post_content or direct fields
+    const caption = buildCaption(post);
+    
+    // Check for media files
     const postContent = post.post_content as any;
-    const mediaFiles = postContent?.media_files || post.media_files;
-    const hasMedia = mediaFiles && Array.isArray(mediaFiles) && mediaFiles.length > 0;
-
-    if (hasMedia) {
-      const mediaUrl = typeof mediaFiles[0] === 'string' ? mediaFiles[0] : mediaFiles[0]?.url;
-      const mediaType = (postContent?.media_type || post.media_type || '').toLowerCase();
-
-      console.log(`📎 Media detected - Type: ${mediaType}, URL: ${mediaUrl}`);
+    const mediaFiles = postContent?.media_files || post.media_files || [];
+    
+    let telegramResult: TelegramResponse;
+    
+    // CASE 1: Has media files
+    if (mediaFiles.length > 0) {
+      const firstMedia = mediaFiles[0];
+      const mediaUrl = firstMedia.url || firstMedia.src || firstMedia;
       
-      // ✅ DOWNLOAD FILE FROM SUPABASE FIRST
-      console.log(`⬇️ Downloading file from Supabase...`);
-      const { buffer, filename } = await downloadFile(mediaUrl);
-      console.log(`✅ Downloaded ${filename} (${buffer.length} bytes)`);
-
-      // ✅ UPLOAD FILE DIRECTLY TO TELEGRAM
-      if (mediaType.includes('image') || mediaType.includes('photo')) {
-        console.log(`📤 Uploading photo to Telegram...`);
-        result = await sendTelegramPhoto(botToken, chatId, buffer, caption, threadId, filename);
-      } else if (mediaType.includes('video')) {
-        console.log(`📤 Uploading video to Telegram...`);
-        result = await sendTelegramVideo(botToken, chatId, buffer, caption, threadId, filename);
-      } else if (mediaType.includes('gif') || mediaType.includes('animation')) {
-        console.log(`📤 Uploading animation to Telegram...`);
-        result = await sendTelegramAnimation(botToken, chatId, buffer, caption, threadId, filename);
-      } else {
-        console.log(`📤 Uploading as photo (type unclear)...`);
-        result = await sendTelegramPhoto(botToken, chatId, buffer, caption, threadId, filename);
+      if (typeof mediaUrl !== 'string') {
+        throw new Error('Invalid media URL format');
       }
-    } else {
-      // Text-only message
-      console.log('📝 Text-only message');
-      result = await sendTelegramMessage(botToken, chatId, caption, threadId);
+      
+      // Determine media type
+      const isVideo = /\.(mp4|mov|avi|mkv)$/i.test(mediaUrl);
+      const isDocument = /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(mediaUrl);
+      
+      if (isVideo) {
+        console.log(`Sending video: ${mediaUrl}`);
+        telegramResult = await sendTelegramVideo(TELEGRAM_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
+      } else if (isDocument) {
+        console.log(`Sending document: ${mediaUrl}`);
+        telegramResult = await sendTelegramDocument(TELEGRAM_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
+      } else {
+        console.log(`Sending photo: ${mediaUrl}`);
+        telegramResult = await sendTelegramPhoto(TELEGRAM_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
+      }
+    } 
+    // CASE 2: Text-only post
+    else {
+      console.log('Sending text-only message');
+      telegramResult = await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, caption, threadId);
     }
-
-    if (result.ok) {
-      console.log('✅ Telegram post successful');
-      return {
-        success: true,
-        post_id: result.result?.message_id?.toString() || 'unknown',
-      };
-    } else {
-      console.error('❌ Telegram API error:', result.description);
-      return {
-        success: false,
-        error: result.description || 'Unknown Telegram error',
-      };
+    
+    // Check Telegram API response
+    if (!telegramResult.ok) {
+      throw new Error(`Telegram API error: ${telegramResult.description || 'Unknown error'}`);
     }
-  } catch (error: any) {
-    console.error('❌ Error posting to Telegram:', error.message);
+    
+    const messageId = telegramResult.result?.message_id?.toString();
+    
+    return {
+      success: true,
+      post_id: messageId
+    };
+    
+  } catch (error) {
     return {
       success: false,
-      error: error.message,
+      error: getErrorMessage(error)
     };
   }
 }
 
 // ============================================
-// DATABASE & JOB PROCESSING
+// UTILITY FUNCTIONS
 // ============================================
 
-const getErrorMessage = (error: unknown): string => {
-  if (error instanceof Error) return error.message;
-  if (typeof error === 'string') return error;
+/**
+ * Get error message from unknown error type
+ */
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String(error.message);
+  }
   return 'Unknown error occurred';
-};
+}
 
 /**
- * Query and claim pending jobs - WITH TIMEZONE CONVERSION
+ * Generate unique lock ID
+ */
+function generateLockId(): string {
+  return `${RUNNER_NAME}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+}
+
+/**
+ * Convert UTC date to WEST (UTC+1) timezone
+ */
+function toWEST(date: Date): Date {
+  const utcTime = date.getTime();
+  const westTime = new Date(utcTime + (TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000));
+  return westTime;
+}
+
+/**
+ * Get current date and time in WEST timezone
+ */
+function getCurrentWESTDateTime(): { date: string; time: string } {
+  const nowUTC = new Date();
+  const nowWEST = toWEST(nowUTC);
+  
+  const year = nowWEST.getFullYear();
+  const month = String(nowWEST.getMonth() + 1).padStart(2, '0');
+  const day = String(nowWEST.getDate()).padStart(2, '0');
+  const hours = String(nowWEST.getHours()).padStart(2, '0');
+  const minutes = String(nowWEST.getMinutes()).padStart(2, '0');
+  const seconds = String(nowWEST.getSeconds()).padStart(2, '0');
+  
+  return {
+    date: `${year}-${month}-${day}`,
+    time: `${hours}:${minutes}:${seconds}`
+  };
+}
+
+// ============================================
+// CORE PROCESSING FUNCTIONS
+// ============================================
+
+/**
+ * Query and claim jobs from scheduled_posts table
  */
 async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
+  const lockId = generateLockId();
   const nowUTC = new Date();
+  const nowWEST = toWEST(nowUTC);
   
-  // ✅ CONVERT UTC TO WEST (UTC+1)
-  const nowWEST = new Date(nowUTC.getTime() + (TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000));
-  const currentDate = nowWEST.toISOString().split('T')[0];
-  const currentTime = nowWEST.toTimeString().split(' ')[0];
-  const lockId = crypto.randomUUID();
-
-  console.log(`[${nowUTC.toISOString()}] Querying pending jobs...`);
-  console.log(`UTC Time: ${nowUTC.toISOString()}`);
-  console.log(`WEST Time: ${nowWEST.toISOString()}`);
-  console.log(`Query Date: ${currentDate}, Query Time: ${currentTime}`);
-
+  const { date: currentDate, time: currentTime } = getCurrentWESTDateTime();
+  
   try {
-    // ✅ DIAGNOSTIC: Test connection and see sample data
-    console.log('\n--- DIAGNOSTIC: Testing Supabase Connection ---');
+    console.log(`\n${'='.repeat(60)}`);
+    console.log('Querying pending jobs...');
+    console.log(`UTC Time: ${nowUTC.toISOString()}`);
+    console.log(`WEST Time: ${nowWEST.toISOString()}`);
+    console.log(`Query Date: ${currentDate}, Query Time: ${currentTime}`);
+
+    // ✅ DIAGNOSTIC: Test basic connection
+    console.log('--- DIAGNOSTIC: Testing Supabase Connection ---');
     const { data: sampleData, error: sampleError } = await supabase
       .from('scheduled_posts')
-      .select('id, service_type, status, scheduled_date, scheduled_time')
-      .limit(5);
+      .select('id, service_type, status')
+      .limit(3);
     
     if (sampleError) {
       console.error('❌ Cannot connect to scheduled_posts table:', sampleError);
