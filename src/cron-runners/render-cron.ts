@@ -11,7 +11,7 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 
 // ✅ RUNNER IDENTITY
 const RUNNER_NAME = 'Render Cron Job';
-const SERVICE_TYPE = 'Render Cron job';
+const SERVICE_TYPE = 'Render Cron Job';
 
 // ✅ VALIDATE CREDENTIALS
 if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_BOT_TOKEN) {
