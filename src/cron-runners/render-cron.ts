@@ -1,5 +1,6 @@
 // Render.com Cron Runner - Direct Database Connection with Telegram Posting
 // Queries scheduled_posts table directly and posts to Telegram
+// TIMEZONE: WEST (UTC+1)
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -12,6 +13,9 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 // ✅ RUNNER IDENTITY
 const RUNNER_NAME = 'Render Cron Job';
 const SERVICE_TYPE = 'Render Cron Job';
+
+// ✅ TIMEZONE CONFIGURATION - WEST = UTC+1
+const TIMEZONE_OFFSET_HOURS = 1;
 
 // ✅ VALIDATE CREDENTIALS
 if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_BOT_TOKEN) {
@@ -51,6 +55,7 @@ const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
 console.log(`[${new Date().toISOString()}] Render Cron Runner initialized`);
 console.log(`Supabase URL: ${supabaseUrl}`);
 console.log(`Service Type Filter: ${SERVICE_TYPE}`);
+console.log(`Timezone: WEST (UTC+${TIMEZONE_OFFSET_HOURS})`);
 
 // ============================================
 // TYPE DEFINITIONS
@@ -578,16 +583,21 @@ const getErrorMessage = (error: unknown): string => {
 };
 
 /**
- * Query and claim pending jobs
+ * Query and claim pending jobs - WITH TIMEZONE CONVERSION
  */
 async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
-  const now = new Date();
-  const currentDate = now.toISOString().split('T')[0];
-  const currentTime = now.toTimeString().split(' ')[0];
+  const nowUTC = new Date();
+  
+  // ✅ CONVERT UTC TO WEST (UTC+1)
+  const nowWEST = new Date(nowUTC.getTime() + (TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000));
+  const currentDate = nowWEST.toISOString().split('T')[0];
+  const currentTime = nowWEST.toTimeString().split(' ')[0];
   const lockId = crypto.randomUUID();
 
-  console.log(`[${now.toISOString()}] Querying pending jobs...`);
-  console.log(`Current Date: ${currentDate}, Current Time: ${currentTime}`);
+  console.log(`[${nowUTC.toISOString()}] Querying pending jobs...`);
+  console.log(`UTC Time: ${nowUTC.toISOString()}`);
+  console.log(`WEST Time: ${nowWEST.toISOString()}`);
+  console.log(`Query Date: ${currentDate}, Query Time: ${currentTime}`);
 
   try {
     const { data, error } = await supabase
@@ -618,7 +628,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
         status: 'processing',
         lock_id: lockId,
         run_by: RUNNER_NAME,
-        attempted_at: now.toISOString()
+        attempted_at: nowUTC.toISOString()
       })
       .in('id', claimedIds);
 
