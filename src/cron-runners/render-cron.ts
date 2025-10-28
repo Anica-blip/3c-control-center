@@ -600,6 +600,38 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
   console.log(`Query Date: ${currentDate}, Query Time: ${currentTime}`);
 
   try {
+    // ✅ DIAGNOSTIC: Test connection and see sample data
+    console.log('\n--- DIAGNOSTIC: Testing Supabase Connection ---');
+    const { data: sampleData, error: sampleError } = await supabase
+      .from('scheduled_posts')
+      .select('id, service_type, status, scheduled_date, scheduled_time')
+      .limit(5);
+    
+    if (sampleError) {
+      console.error('❌ Cannot connect to scheduled_posts table:', sampleError);
+      throw sampleError;
+    }
+    
+    console.log('✅ Connection successful! Sample posts:');
+    console.log(JSON.stringify(sampleData, null, 2));
+    
+    // ✅ DIAGNOSTIC: Check posts matching our service_type
+    const { data: serviceData, error: serviceError } = await supabase
+      .from('scheduled_posts')
+      .select('id, service_type, status, scheduled_date, scheduled_time')
+      .eq('service_type', SERVICE_TYPE)
+      .limit(10);
+    
+    console.log(`\n--- Posts with service_type = '${SERVICE_TYPE}' ---`);
+    if (serviceData && serviceData.length > 0) {
+      console.log(`Found ${serviceData.length} posts:`);
+      console.log(JSON.stringify(serviceData, null, 2));
+    } else {
+      console.log('⚠️ No posts found with this service_type');
+    }
+    console.log('--- End Diagnostics ---\n');
+
+    // ✅ ACTUAL QUERY: Now find posts ready to process
     const { data, error } = await supabase
       .from('scheduled_posts')
       .select('*')
@@ -613,12 +645,24 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
       throw error;
     }
 
+    console.log('\n--- QUERY RESULTS ---');
     if (!data || data.length === 0) {
-      console.log('No pending posts found');
+      console.log('⚠️ No pending posts found matching criteria:');
+      console.log(`  - service_type: '${SERVICE_TYPE}'`);
+      console.log(`  - status: 'pending'`);
+      console.log(`  - scheduled_date <= '${currentDate}'`);
+      console.log(`  - scheduled_time <= '${currentTime}'`);
       return [];
     }
 
-    console.log(`Found ${data.length} pending posts`);
+    console.log(`✅ Found ${data.length} pending posts ready to process:`);
+    data.forEach((post: any) => {
+      console.log(`  - ID: ${post.id}`);
+      console.log(`    Service: ${post.service_type}`);
+      console.log(`    Status: ${post.status}`);
+      console.log(`    Scheduled: ${post.scheduled_date} ${post.scheduled_time}`);
+    });
+    console.log('--- End Query Results ---\n');
 
     const claimedIds = data.map((post: any) => post.id);
     
