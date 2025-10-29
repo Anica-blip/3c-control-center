@@ -129,7 +129,8 @@ interface ScheduledPost {
   channel_group_id: string | null;
   thread_id: string | null;
   attempts: number;
-  status: string;
+  posting_status: string;
+  post_status?: string;
   lock_id: string | null;
   character_profile?: string;
   theme?: string;
@@ -642,7 +643,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     console.log('--- DIAGNOSTIC: Testing Supabase Connection ---');
     const { data: sampleData, error: sampleError } = await supabase
       .from('scheduled_posts')
-      .select('id, service_type, status')
+      .select('id, service_type, posting_status')
       .limit(3);
     
     if (sampleError) {
@@ -656,7 +657,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     // ✅ DIAGNOSTIC: Check posts matching our service_type
     const { data: serviceData, error: serviceError } = await supabase
       .from('scheduled_posts')
-      .select('id, service_type, status, scheduled_date, scheduled_time')
+      .select('id, service_type, posting_status, scheduled_date, scheduled_time')
       .eq('service_type', SERVICE_TYPE)
       .limit(10);
     
@@ -671,9 +672,9 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     // ✅ DIAGNOSTIC: Check pending posts with our service_type (ignore date/time)
     const { data: pendingData, error: pendingError } = await supabase
       .from('scheduled_posts')
-      .select('id, service_type, status, scheduled_date, scheduled_time')
+      .select('id, service_type, posting_status, scheduled_date, scheduled_time')
       .eq('service_type', SERVICE_TYPE)
-      .eq('status', 'pending')
+      .eq('posting_status', 'pending')
       .limit(10);
     
     console.log(`\n--- PENDING posts with service_type = '${SERVICE_TYPE}' (ALL DATES) ---`);
@@ -696,14 +697,14 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
       console.log('⚠️ No PENDING posts found with this service_type AT ALL');
       console.log('This means either:');
       console.log('  1. service_type does not match exactly (check for spaces/typos)');
-      console.log('  2. All posts are in a different status (not pending)');
+      console.log('  2. All posts are in a different posting_status (not pending)');
       console.log('  3. No posts exist with this service_type');
     }
     
     console.log(`\n--- ACTUAL QUERY PARAMETERS ---`);
     console.log(`Looking for posts where:`);
     console.log(`  service_type = '${SERVICE_TYPE}'`);
-    console.log(`  status = 'pending'`);
+    console.log(`  posting_status = 'pending'`);
     console.log(`  scheduled_date < '${currentDate}' OR (scheduled_date = '${currentDate}' AND scheduled_time <= '${currentTime}')`);
     console.log('--- End Diagnostics ---\n');
 
@@ -712,7 +713,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
       .from('scheduled_posts')
       .select('*')
       .eq('service_type', SERVICE_TYPE)
-      .eq('status', 'pending')
+      .eq('posting_status', 'pending')
       .or(`scheduled_date.lt.${currentDate},and(scheduled_date.eq.${currentDate},scheduled_time.lte.${currentTime})`)
       .limit(limit);
 
@@ -725,7 +726,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     if (!data || data.length === 0) {
       console.log('⚠️ No pending posts found matching criteria:');
       console.log(`  - service_type: '${SERVICE_TYPE}'`);
-      console.log(`  - status: 'pending'`);
+      console.log(`  - posting_status: 'pending'`);
       console.log(`  - scheduled_date <= '${currentDate}'`);
       console.log(`  - scheduled_time <= '${currentTime}'`);
       return [];
@@ -735,7 +736,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     data.forEach((post: any) => {
       console.log(`  - ID: ${post.id}`);
       console.log(`    Service: ${post.service_type}`);
-      console.log(`    Status: ${post.status}`);
+      console.log(`    Status: ${post.posting_status}`);
       console.log(`    Scheduled: ${post.scheduled_date} ${post.scheduled_time}`);
     });
     console.log('--- End Query Results ---\n');
@@ -745,7 +746,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
-        status: 'processing',
+        posting_status: 'processing',
         lock_id: lockId,
         run_by: RUNNER_NAME,
         attempted_at: nowUTC.toISOString()
@@ -800,7 +801,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
-        status: 'success',
+        posting_status: 'success',
         completed_at: now.toISOString(),
         external_post_id: externalPostId,
         last_error: null
@@ -851,7 +852,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
     const { error: failError } = await supabase
       .from('scheduled_posts')
       .update({
-        status: finalStatus,
+        posting_status: finalStatus,
         completed_at: shouldRetry ? null : now.toISOString(),
         last_error: errorMessage,
         lock_id: null,
