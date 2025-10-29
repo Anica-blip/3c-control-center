@@ -131,7 +131,6 @@ interface ScheduledPost {
   attempts: number;
   posting_status: string;
   post_status?: string;
-  lock_id: string | null;
   character_profile?: string;
   theme?: string;
   audience?: string;
