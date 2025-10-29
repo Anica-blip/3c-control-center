@@ -1,8 +1,8 @@
 // GitHub Actions Cron Runner - HTTP Gateway Caller
-// Calls Vercel gateway instead of direct database connection
+// Calls Railway gateway instead of direct database connection
 
 // ✅ ENVIRONMENT VARIABLES
-const VERCEL_GATEWAY_URL = process.env.VERCEL_GATEWAY_URL || '';
+const RAILWAY_GATEWAY_URL = process.env.RAILWAY_GATEWAY_URL || '';
 const CRON_SUPABASE_DB_URL = process.env.CRON_SUPABASE_DB_URL || '';
 const CRON_RUNNER_PASSWORD = process.env.CRON_RUNNER_PASSWORD || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -12,9 +12,9 @@ const RUNNER_NAME = 'GitHub - Workflow';
 const SERVICE_TYPE = 'GitHub - Workflow';
 
 // ✅ VALIDATE CREDENTIALS
-if (!VERCEL_GATEWAY_URL || !CRON_SUPABASE_DB_URL || !CRON_RUNNER_PASSWORD || !SUPABASE_SERVICE_ROLE_KEY) {
+if (!RAILWAY_GATEWAY_URL || !CRON_SUPABASE_DB_URL || !CRON_RUNNER_PASSWORD || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error('Missing required environment variables:');
-  console.error('  VERCEL_GATEWAY_URL:', VERCEL_GATEWAY_URL ? 'SET' : 'MISSING');
+  console.error('  RAILWAY_GATEWAY_URL:', RAILWAY_GATEWAY_URL ? 'SET' : 'MISSING');
   console.error('  CRON_SUPABASE_DB_URL:', CRON_SUPABASE_DB_URL ? 'SET' : 'MISSING');
   console.error('  CRON_RUNNER_PASSWORD:', CRON_RUNNER_PASSWORD ? 'SET' : 'MISSING');
   console.error('  SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING');
@@ -22,7 +22,7 @@ if (!VERCEL_GATEWAY_URL || !CRON_SUPABASE_DB_URL || !CRON_RUNNER_PASSWORD || !SU
 }
 
 console.log(`[${new Date().toISOString()}] GitHub Actions Cron Runner initialized`);
-console.log(`Gateway URL: ${VERCEL_GATEWAY_URL}`);
+console.log(`Gateway URL: ${RAILWAY_GATEWAY_URL}`);
 console.log(`Service Type: ${SERVICE_TYPE}`);
 
 // ✅ SAFE ERROR EXTRACTOR
@@ -48,13 +48,13 @@ async function main(): Promise<void> {
       service_role_key: SUPABASE_SERVICE_ROLE_KEY
     };
 
-    console.log('Calling Vercel Gateway...');
-    console.log(`URL: ${VERCEL_GATEWAY_URL}`);
+    console.log('Calling Railway Gateway...');
+    console.log(`URL: ${RAILWAY_GATEWAY_URL}`);
     console.log(`Runner: ${RUNNER_NAME}`);
     console.log(`Service Type: ${SERVICE_TYPE}`);
 
     // ✅ CALL GATEWAY
-    const response = await fetch(VERCEL_GATEWAY_URL, {
+    const response = await fetch(RAILWAY_GATEWAY_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
