@@ -92,8 +92,8 @@ const extractSupabaseUrl = (dbUrl: string): string => {
 
 const supabaseUrl = extractSupabaseUrl(CRON_SUPABASE_DB_URL);
 
-// ✅ CREATE SUPABASE CLIENT WITH PROPER AUTH HEADERS
-const authToken = AUTHORIZATION || SUPABASE_SERVICE_ROLE_KEY;
+// ✅ CREATE SUPABASE CLIENT - ONLY USE SERVICE_ROLE_KEY FOR SUPABASE AUTH
+// Note: AUTHORIZATION key is for HTTP endpoint authentication only, not for Supabase
 const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
   auth: {
     persistSession: false,
@@ -102,7 +102,7 @@ const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
   },
   global: {
     headers: {
-      'Authorization': `Bearer ${authToken}`,
+      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
       'apikey': SUPABASE_SERVICE_ROLE_KEY
     }
   }
@@ -112,7 +112,7 @@ console.log(`[${new Date().toISOString()}] Render Cron Runner initialized`);
 console.log(`Supabase URL: ${supabaseUrl}`);
 console.log(`Service Type Filter: ${SERVICE_TYPE}`);
 console.log(`Timezone: WEST (UTC+${TIMEZONE_OFFSET_HOURS})`);
-console.log(`Authorization: ${AUTHORIZATION ? 'Using AUTHORIZATION env var' : 'Using SERVICE_ROLE_KEY'}`);
+console.log(`Supabase Auth: Using SERVICE_ROLE_KEY only`);
 
 // ============================================
 // TYPE DEFINITIONS
