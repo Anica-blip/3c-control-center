@@ -1,4 +1,4 @@
-// Render.com Cron Runner - Direct Database Connection with Telegram Posting
+// Railway Cron Runner - Direct Database Connection with Telegram Posting
 // Queries scheduled_posts table directly and posts to Telegram
 // TIMEZONE: WEST (UTC+1)
 
@@ -8,24 +8,24 @@ import { createClient } from '@supabase/supabase-js';
 const CRON_SUPABASE_DB_URL = (process.env.CRON_SUPABASE_DB_URL || '').trim();
 const CRON_RUNNER_PASSWORD = (process.env.CRON_RUNNER_PASSWORD || '').trim();
 const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-const TELEGRAM_BOT_TOKEN = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
-const AUTHORIZATION = (process.env.AUTHORIZATION || '').trim();
+const TELEGRAM_PUBLISHER_BOT_TOKEN = (process.env.TELEGRAM_PUBLISHER_BOT_TOKEN || '').trim();
+const PUBLISHER_TOKEN = (process.env.PUBLISHER_TOKEN || '').trim();
 
 // ✅ RUNNER IDENTITY
-const RUNNER_NAME = 'Render Cron Job';
-const SERVICE_TYPE = 'Render Cron Job';
+const RUNNER_NAME = 'Railway Cron Job';
+const SERVICE_TYPE = 'Railway Cron Job';
 
 // ✅ TIMEZONE CONFIGURATION - WEST = UTC+1
 const TIMEZONE_OFFSET_HOURS = 1;
 
 // ✅ VALIDATE CREDENTIALS
 console.log('\n--- ENVIRONMENT VARIABLE CHECK ---');
-if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_BOT_TOKEN) {
+if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_PUBLISHER_BOT_TOKEN) {
   console.error('❌ Missing required environment variables:');
   console.error('  CRON_SUPABASE_DB_URL:', CRON_SUPABASE_DB_URL ? 'SET' : 'MISSING');
   console.error('  SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING');
-  console.error('  TELEGRAM_BOT_TOKEN:', TELEGRAM_BOT_TOKEN ? 'SET' : 'MISSING');
-  console.error('  AUTHORIZATION:', AUTHORIZATION ? 'SET (optional)' : 'NOT SET (will use SERVICE_ROLE_KEY)');
+  console.error('  TELEGRAM_PUBLISHER_BOT_TOKEN:', TELEGRAM_PUBLISHER_BOT_TOKEN ? 'SET' : 'MISSING');
+  console.error('  PUBLISHER_TOKEN:', PUBLISHER_TOKEN ? 'SET' : 'NOT SET (optional)');
   process.exit(1);
 }
 
@@ -148,6 +148,40 @@ async function downloadFile(url: string): Promise<{ buffer: Buffer; filename: st
 }
 
 /**
+ * Parse Telegram API response with proper error handling
+ */
+async function parseTelegramResponse(response: Response): Promise<TelegramResponse> {
+  // Check if response is ok before parsing
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Telegram API error response (${response.status}):`, errorText);
+    return {
+      ok: false,
+      description: `HTTP ${response.status}: ${errorText.substring(0, 200)}`
+    };
+  }
+
+  // Try to parse JSON with error handling
+  try {
+    const json = await response.json();
+    return json;
+  } catch (error) {
+    // If JSON parsing fails, get text to debug
+    let responseText = '';
+    try {
+      responseText = await response.text();
+    } catch (e) {
+      responseText = 'Could not read response text';
+    }
+    console.error('Failed to parse Telegram response as JSON:', responseText.substring(0, 500));
+    return {
+      ok: false,
+      description: `Invalid JSON response: ${responseText.substring(0, 100)}`
+    };
+  }
+}
+
+/**
  * Build caption from post_content with proper Telegram HTML formatting
  */
 function buildCaption(post: ScheduledPost): string {
@@ -255,7 +289,7 @@ async function sendTelegramMessage(
     body: JSON.stringify(body),
   });
 
-  return await response.json();
+  return await parseTelegramResponse(response);
 }
 
 /**
@@ -293,7 +327,7 @@ async function sendTelegramPhoto(
       body: JSON.stringify(body),
     });
 
-    return await response.json();
+    return await parseTelegramResponse(response);
   }
   
   // If sending as Buffer (direct upload)
@@ -319,7 +353,7 @@ async function sendTelegramPhoto(
     body: formData as any,
   });
 
-  return await response.json();
+  return await parseTelegramResponse(response);
 }
 
 /**
@@ -357,7 +391,7 @@ async function sendTelegramVideo(
       body: JSON.stringify(body),
     });
 
-    return await response.json();
+    return await parseTelegramResponse(response);
   }
   
   // If sending as Buffer (direct upload)
@@ -383,7 +417,7 @@ async function sendTelegramVideo(
     body: formData as any,
   });
 
-  return await response.json();
+  return await parseTelegramResponse(response);
 }
 
 /**
@@ -421,7 +455,7 @@ async function sendTelegramDocument(
       body: JSON.stringify(body),
     });
 
-    return await response.json();
+    return await parseTelegramResponse(response);
   }
   
   // If sending as Buffer (direct upload)
@@ -447,7 +481,7 @@ async function sendTelegramDocument(
     body: formData as any,
   });
 
-  return await response.json();
+  return await parseTelegramResponse(response);
 }
 
 /**
@@ -508,19 +542,19 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
       
       if (isVideo) {
         console.log(`📹 Uploading video to Telegram: ${filename}`);
-        telegramResult = await sendTelegramVideo(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+        telegramResult = await sendTelegramVideo(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       } else if (isDocument) {
         console.log(`📄 Uploading document to Telegram: ${filename}`);
-        telegramResult = await sendTelegramDocument(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+        telegramResult = await sendTelegramDocument(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       } else {
         console.log(`🖼️ Uploading photo to Telegram: ${filename}`);
-        telegramResult = await sendTelegramPhoto(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+        telegramResult = await sendTelegramPhoto(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       }
     } 
     // CASE 2: Text-only post
     else {
       console.log('💬 Sending text-only message (no media detected)');
-      telegramResult = await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, caption, threadId);
+      telegramResult = await sendTelegramMessage(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, caption, threadId);
     }
     
     // Check Telegram API response
@@ -852,7 +886,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
 async function main(): Promise<ProcessResult> {
   const startTime = new Date();
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`Render Cron Job Started: ${startTime.toISOString()}`);
+  console.log(`Railway Cron Job Started: ${startTime.toISOString()}`);
   console.log(`${'='.repeat(60)}\n`);
 
   const errors: string[] = [];
@@ -889,7 +923,7 @@ async function main(): Promise<ProcessResult> {
     const duration = endTime.getTime() - startTime.getTime();
 
     console.log(`\n${'='.repeat(60)}`);
-    console.log(`Render Cron Job Completed`);
+    console.log(`Railway Cron Job Completed`);
     console.log(`${'='.repeat(60)}`);
     console.log(`Duration: ${duration}ms`);
     console.log(`Total Claimed: ${posts.length}`);
