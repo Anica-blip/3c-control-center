@@ -89,7 +89,8 @@ interface ScheduledPost {
   channel_group_id: string | null;
   thread_id: string | null;
   attempts: number;
-  status: string;
+  posting_status: string;
+  post_status?: string;
   lock_id: string | null;
   character_profile?: string;
   theme?: string;
@@ -448,7 +449,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
       .from('scheduled_posts')
       .select('*')
       .eq('service_type', SERVICE_TYPE)
-      .eq('status', 'pending')
+      .eq('posting_status', 'pending')
       .or(`scheduled_date.lt.${currentDate},and(scheduled_date.eq.${currentDate},scheduled_time.lte.${currentTime})`)
       .limit(limit);
 
@@ -469,7 +470,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
-        status: 'processing',
+        posting_status: 'processing',
         lock_id: lockId,
         run_by: RUNNER_NAME,
         attempted_at: nowUTC.toISOString()
@@ -515,7 +516,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
-        status: 'success',
+        posting_status: 'success',
         completed_at: now.toISOString(),
         external_post_id: externalPostId,
         last_error: null
@@ -559,7 +560,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
     const { error: failError } = await supabase
       .from('scheduled_posts')
       .update({
-        status: finalStatus,
+        posting_status: finalStatus,
         completed_at: shouldRetry ? null : now.toISOString(),
         last_error: errorMessage,
         lock_id: null,
