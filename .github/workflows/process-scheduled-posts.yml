@@ -1,16 +1,14 @@
 name: Process Scheduled Posts - GitHub Actions
-
 on:
   schedule:
     # Runs EVERY DAY at these UTC times
-    - cron: "0 7 * * *"   # 07:00 UTC
-    - cron: "0 10 * * *"  # 10:00 UTC
-    - cron: "0 15 * * *"  # 15:00 UTC
-    - cron: "0 18 * * *"  # 18:00 UTC
+    - cron: "0 8 * * *"   # 08:00 UTC = 09:00 WEST
+    - cron: "0 10 * * *"  # 10:00 UTC = 11:00 WEST
+    - cron: "0 15 * * *"  # 15:00 UTC = 16:00 WEST
+    - cron: "0 18 * * *"  # 18:00 UTC = 19:00 WEST
   
   # Allow manual trigger from GitHub Actions UI
   workflow_dispatch:
-
 jobs:
   process-posts:
     runs-on: ubuntu-latest
@@ -31,8 +29,8 @@ jobs:
       
       - name: Validate secrets
         run: |
-          if [ -z "${{ secrets.VERCEL_GATEWAY_URL }}" ]; then
-            echo "❌ Error: VERCEL_GATEWAY_URL secret is not set"
+          if [ -z "${{ secrets.RAILWAY_GATEWAY_URL }}" ]; then
+            echo "❌ Error: RAILWAY_GATEWAY_URL secret is not set"
             exit 1
           fi
           
@@ -55,13 +53,13 @@ jobs:
       
       - name: Run GitHub Actions Cron Job via Gateway
         env:
-          VERCEL_GATEWAY_URL: ${{ secrets.VERCEL_GATEWAY_URL }}
+          RAILWAY_GATEWAY_URL: ${{ secrets.RAILWAY_GATEWAY_URL }}
           CRON_SUPABASE_DB_URL: ${{ secrets.CRON_SUPABASE_DB_URL }}
           CRON_RUNNER_PASSWORD: ${{ secrets.CRON_RUNNER_PASSWORD }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           echo "Starting GitHub Actions Cron Job at $(date -u)"
-          echo "Gateway URL: ${{ secrets.VERCEL_GATEWAY_URL }}"
+          echo "Gateway URL: ${{ secrets.RAILWAY_GATEWAY_URL }}"
           tsx .github/scripts/github-actions-cron.ts
           
           if [ $? -eq 0 ]; then
