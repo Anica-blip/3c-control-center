@@ -55,16 +55,17 @@ if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_BOT_TOKEN) 
   process.exit(1);
 }
 
-// ✅ VALIDATE JWT FORMAT
+// ✅ VALIDATE JWT FORMAT (ONLY FOR SUPABASE_SERVICE_ROLE_KEY)
 try {
   console.log('\n--- JWT TOKEN VALIDATION ---');
   validateJWT(SUPABASE_SERVICE_ROLE_KEY, 'SUPABASE_SERVICE_ROLE_KEY');
   
+  // AUTHORIZATION is a custom key, not a JWT - no validation needed
   if (AUTHORIZATION) {
-    validateJWT(AUTHORIZATION, 'AUTHORIZATION');
+    console.log(`✅ AUTHORIZATION key is set (${AUTHORIZATION.length} chars) - using as custom auth token`);
   }
   
-  console.log('✅ All JWT tokens validated successfully\n');
+  console.log('✅ Token validation completed\n');
 } catch (error) {
   console.error('\n❌ JWT Validation Failed!');
   console.error('Please check your Render environment variables and ensure:');
