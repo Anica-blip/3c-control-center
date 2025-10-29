@@ -8,7 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 const CRON_SUPABASE_DB_URL = (process.env.CRON_SUPABASE_DB_URL || '').trim();
 const CRON_RUNNER_PASSWORD = (process.env.CRON_RUNNER_PASSWORD || '').trim();
 const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-const TELEGRAM_BOT_TOKEN = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
+const TELEGRAM_PUBLISHER_BOT_TOKEN = (process.env.TELEGRAM_PUBLISHER_BOT_TOKEN || '').trim();
 const PUBLISHER_TOKEN = (process.env.PUBLISHER_TOKEN || '').trim();
 
 // ✅ RUNNER IDENTITY
@@ -20,12 +20,12 @@ const TIMEZONE_OFFSET_HOURS = 1;
 
 // ✅ VALIDATE CREDENTIALS
 console.log('\n--- ENVIRONMENT VARIABLE CHECK ---');
-if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_BOT_TOKEN) {
+if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_PUBLISHER_BOT_TOKEN) {
   console.error('❌ Missing required environment variables:');
   console.error('  CRON_SUPABASE_DB_URL:', CRON_SUPABASE_DB_URL ? 'SET' : 'MISSING');
-  console.error('  CRON_RUNNER_PASSWORD:', CRON_RUNNER_PASSWORD ? 'SET' : 'MISSING');
   console.error('  SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING');
   console.error('  TELEGRAM_PUBLISHER_BOT_TOKEN:', TELEGRAM_PUBLISHER_BOT_TOKEN ? 'SET' : 'MISSING');
+  console.error('  PUBLISHER_TOKEN:', PUBLISHER_TOKEN ? 'SET' : 'NOT SET (optional)');
   process.exit(1);
 }
 
@@ -63,7 +63,7 @@ const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
   }
 });
 
-console.log(`[${new Date().toISOString()}] Railway Cron Runner initialized`);
+console.log(`[${new Date().toISOString()}] Render Cron Runner initialized`);
 console.log(`Supabase URL: ${supabaseUrl}`);
 console.log(`Service Type Filter: ${SERVICE_TYPE}`);
 console.log(`Timezone: WEST (UTC+${TIMEZONE_OFFSET_HOURS})`);
@@ -312,8 +312,10 @@ async function sendTelegramPhoto(
     }
   }
   
+  // ✅ CRITICAL FIX: Include FormData headers (boundary)
   const response = await fetch(url, {
     method: 'POST',
+    headers: formData.getHeaders(),
     body: formData as any,
   });
 
@@ -374,8 +376,10 @@ async function sendTelegramVideo(
     }
   }
   
+  // ✅ CRITICAL FIX: Include FormData headers (boundary)
   const response = await fetch(url, {
     method: 'POST',
+    headers: formData.getHeaders(),
     body: formData as any,
   });
 
@@ -436,8 +440,10 @@ async function sendTelegramDocument(
     }
   }
   
+  // ✅ CRITICAL FIX: Include FormData headers (boundary)
   const response = await fetch(url, {
     method: 'POST',
+    headers: formData.getHeaders(),
     body: formData as any,
   });
 
@@ -453,44 +459,68 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
     const threadId = post.thread_id || undefined;
     const caption = buildCaption(post);
     
-    // Check for media files
-    const postContent = post.post_content as any;
-    const mediaFiles = postContent?.media_files || post.media_files || [];
+    // ✅ BEST PRACTICE: Check media files with priority order
+    // Priority 1: Separate media_files column (normalized, easier to query)
+    // Priority 2: post_content.media_files (nested JSON, backward compatibility)
+    let mediaFiles: any[] = [];
+    let mediaSource = 'none';
+    
+    if (post.media_files && Array.isArray(post.media_files) && post.media_files.length > 0) {
+      mediaFiles = post.media_files;
+      mediaSource = 'media_files column';
+      console.log(`✅ Using media from: ${mediaSource}`);
+    } else {
+      const postContent = post.post_content as any;
+      if (postContent?.media_files && Array.isArray(postContent.media_files) && postContent.media_files.length > 0) {
+        mediaFiles = postContent.media_files;
+        mediaSource = 'post_content.media_files';
+        console.log(`✅ Using media from: ${mediaSource}`);
+      }
+    }
     
     let telegramResult: TelegramResponse;
     
     // CASE 1: Has media files
     if (mediaFiles.length > 0) {
       const firstMedia = mediaFiles[0];
-      const mediaUrl = firstMedia.url || firstMedia.src || firstMedia;
+      const mediaUrl = firstMedia.url || firstMedia.src || firstMedia.supabaseUrl || firstMedia;
+      
+      console.log(`📦 Media file detected:`);
+      console.log(`   Source: ${mediaSource}`);
+      console.log(`   Type: ${firstMedia.type || 'unknown'}`);
+      console.log(`   Name: ${firstMedia.name || 'unknown'}`);
+      console.log(`   Size: ${firstMedia.size ? `${(firstMedia.size / 1024 / 1024).toFixed(2)} MB` : 'unknown'}`);
+      console.log(`   URL: ${mediaUrl}`);
       
       if (typeof mediaUrl !== 'string') {
         throw new Error('Invalid media URL format');
       }
       
-      // Determine media type
-      const isVideo = /\.(mp4|mov|avi|mkv)$/i.test(mediaUrl);
-      const isDocument = /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(mediaUrl);
+      // Determine media type from file extension OR type field
+      const mediaType = firstMedia.type?.toLowerCase() || '';
+      const isVideo = mediaType === 'video' || /\.(mp4|mov|avi|mkv)$/i.test(mediaUrl);
+      const isDocument = mediaType === 'document' || /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(mediaUrl);
       
       // ✅ CRITICAL FIX: Download file as Buffer and upload directly to Telegram
-      console.log(`Downloading media file: ${mediaUrl}`);
+      console.log(`⬇️ Downloading media file as Buffer...`);
       const { buffer, filename } = await downloadFile(mediaUrl);
+      console.log(`✅ Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB as ${filename}`);
       
       if (isVideo) {
-        console.log(`Uploading video to Telegram: ${filename}`);
-        telegramResult = await sendTelegramVideo(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+        console.log(`📹 Uploading video to Telegram: ${filename}`);
+        telegramResult = await sendTelegramVideo(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       } else if (isDocument) {
-        console.log(`Uploading document to Telegram: ${filename}`);
-        telegramResult = await sendTelegramDocument(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+        console.log(`📄 Uploading document to Telegram: ${filename}`);
+        telegramResult = await sendTelegramDocument(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       } else {
-        console.log(`Uploading photo to Telegram: ${filename}`);
-        telegramResult = await sendTelegramPhoto(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+        console.log(`🖼️ Uploading photo to Telegram: ${filename}`);
+        telegramResult = await sendTelegramPhoto(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       }
     } 
     // CASE 2: Text-only post
     else {
-      console.log('Sending text-only message');
-      telegramResult = await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, caption, threadId);
+      console.log('💬 Sending text-only message (no media detected)');
+      telegramResult = await sendTelegramMessage(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, caption, threadId);
     }
     
     // Check Telegram API response
@@ -499,6 +529,7 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
     }
     
     const messageId = telegramResult.result?.message_id?.toString();
+    console.log(`✅ Telegram upload successful! Message ID: ${messageId}`);
     
     return {
       success: true,
@@ -506,6 +537,7 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
     };
     
   } catch (error) {
+    console.error('❌ postToTelegram failed:', getErrorMessage(error));
     return {
       success: false,
       error: getErrorMessage(error)
