@@ -735,18 +735,17 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
 
     const claimedIds = data.map((post: any) => post.id);
     
-    // ✅ UPDATE: Set to 'processing' and add post_status = 'pending'
+    // ✅ CRITICAL FIX: Do NOT touch posting_status, ONLY update post_status
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
-        posting_status: 'processing',
         post_status: 'pending'
       })
       .in('id', claimedIds)
       .eq('service_type', SERVICE_TYPE);
 
     if (updateError) {
-      console.error('Failed to update posts to processing:', updateError);
+      console.error('Failed to update posts to pending:', updateError);
       throw updateError;
     }
 
@@ -789,11 +788,10 @@ async function processPost(post: ScheduledPost): Promise<void> {
     console.log(`✅ Successfully posted to Telegram`);
     console.log(`External Post ID: ${externalPostId}`);
 
-    // ✅ UPDATE scheduled_posts TO SUCCESS
+    // ✅ CRITICAL FIX: Do NOT touch posting_status, ONLY update post_status to 'sent'
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
-        posting_status: 'success',
         post_status: 'sent'
       })
       .eq('id', post.id)
@@ -837,13 +835,11 @@ async function processPost(post: ScheduledPost): Promise<void> {
     const maxRetries = 3;
     const newAttempts = (post.attempts || 0) + 1;
     const shouldRetry = newAttempts < maxRetries;
-    const finalStatus = shouldRetry ? 'pending' : 'failed';
 
-    // ✅ UPDATE scheduled_posts WITH FAILURE
+    // ✅ CRITICAL FIX: Do NOT touch posting_status, ONLY update post_status to 'failed'
     const { error: failError } = await supabase
       .from('scheduled_posts')
       .update({
-        posting_status: finalStatus,
         post_status: 'failed',
         attempts: newAttempts
       })
@@ -854,7 +850,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
       console.error(`Failed to update error status: ${getErrorMessage(failError)}`);
     }
 
-    console.log(`Post ${post.id} marked as ${finalStatus} (attempt ${newAttempts}/${maxRetries})`);
+    console.log(`Post ${post.id} marked as failed (attempt ${newAttempts}/${maxRetries})`);
     
     throw error;
   }
