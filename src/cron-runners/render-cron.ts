@@ -661,6 +661,28 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     } else {
       console.log('⚠️ No posts found with this service_type');
     }
+    
+    // ✅ DIAGNOSTIC: Check pending posts with our service_type (ignore date/time)
+    const { data: pendingData, error: pendingError } = await supabase
+      .from('scheduled_posts')
+      .select('id, service_type, status, scheduled_date, scheduled_time')
+      .eq('service_type', SERVICE_TYPE)
+      .eq('status', 'pending')
+      .limit(10);
+    
+    console.log(`\n--- PENDING posts with service_type = '${SERVICE_TYPE}' ---`);
+    if (pendingData && pendingData.length > 0) {
+      console.log(`Found ${pendingData.length} pending posts:`);
+      console.log(JSON.stringify(pendingData, null, 2));
+    } else {
+      console.log('⚠️ No PENDING posts found with this service_type');
+    }
+    
+    console.log(`\n--- ACTUAL QUERY PARAMETERS ---`);
+    console.log(`Looking for posts where:`);
+    console.log(`  service_type = '${SERVICE_TYPE}'`);
+    console.log(`  status = 'pending'`);
+    console.log(`  scheduled_date < '${currentDate}' OR (scheduled_date = '${currentDate}' AND scheduled_time <= '${currentTime}')`);
     console.log('--- End Diagnostics ---\n');
 
     // ✅ ACTUAL QUERY: Now find posts ready to process
