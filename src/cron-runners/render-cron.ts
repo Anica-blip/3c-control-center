@@ -576,13 +576,6 @@ function getErrorMessage(error: unknown): string {
 }
 
 /**
- * Generate unique lock ID
- */
-function generateLockId(): string {
-  return `${RUNNER_NAME}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-}
-
-/**
  * Convert UTC date to WEST (UTC+1) timezone
  */
 function toWEST(date: Date): Date {
@@ -619,7 +612,6 @@ function getCurrentWESTDateTime(): { date: string; time: string } {
  * Query and claim jobs from scheduled_posts table
  */
 async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
-  const lockId = generateLockId();
   const nowUTC = new Date();
   const nowWEST = toWEST(nowUTC);
   
@@ -743,17 +735,15 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
 
     const claimedIds = data.map((post: any) => post.id);
     
-    // ✅ SAFETY: Update ONLY posts matching our service_type
+    // ✅ UPDATE: Set to 'processing' and add post_status = 'pending'
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
         posting_status: 'processing',
-        lock_id: lockId,
-        run_by: RUNNER_NAME,
-        attempted_at: nowUTC.toISOString()
+        post_status: 'pending'
       })
       .in('id', claimedIds)
-      .eq('service_type', SERVICE_TYPE); // ← SAFETY CHECK: Only update OUR posts
+      .eq('service_type', SERVICE_TYPE);
 
     if (updateError) {
       console.error('Failed to update posts to processing:', updateError);
@@ -804,12 +794,10 @@ async function processPost(post: ScheduledPost): Promise<void> {
       .from('scheduled_posts')
       .update({
         posting_status: 'success',
-        completed_at: now.toISOString(),
-        external_post_id: externalPostId,
-        last_error: null
+        post_status: 'sent'
       })
       .eq('id', post.id)
-      .eq('service_type', SERVICE_TYPE); // ← SAFETY CHECK: Only update OUR posts
+      .eq('service_type', SERVICE_TYPE);
 
     if (updateError) {
       throw new Error(`Failed to update scheduled_posts: ${getErrorMessage(updateError)}`);
@@ -856,13 +844,11 @@ async function processPost(post: ScheduledPost): Promise<void> {
       .from('scheduled_posts')
       .update({
         posting_status: finalStatus,
-        completed_at: shouldRetry ? null : now.toISOString(),
-        last_error: errorMessage,
-        lock_id: null,
-        next_retry_at: shouldRetry ? new Date(now.getTime() + 300000).toISOString() : null
+        post_status: 'failed',
+        attempts: newAttempts
       })
       .eq('id', post.id)
-      .eq('service_type', SERVICE_TYPE); // ← SAFETY CHECK: Only update OUR posts
+      .eq('service_type', SERVICE_TYPE);
 
     if (failError) {
       console.error(`Failed to update error status: ${getErrorMessage(failError)}`);
