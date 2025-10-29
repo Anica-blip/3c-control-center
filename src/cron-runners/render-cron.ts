@@ -4,32 +4,6 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// ============================================
-// JWT VALIDATION HELPER
-// ============================================
-
-/**
- * Validates if a string is a properly formatted JWT token
- */
-function validateJWT(token: string, varName: string): void {
-  if (!token) {
-    throw new Error(`${varName} is empty or missing`);
-  }
-  
-  const parts = token.split('.');
-  
-  if (parts.length !== 3) {
-    console.error(`\n❌ INVALID JWT FORMAT for ${varName}:`);
-    console.error(`   Expected: 3 parts (header.payload.signature)`);
-    console.error(`   Got: ${parts.length} part(s)`);
-    console.error(`   Token preview: ${token.substring(0, 50)}...`);
-    console.error(`   Token length: ${token.length} characters`);
-    throw new Error(`${varName} is not a valid JWT token (has ${parts.length} parts, expected 3)`);
-  }
-  
-  console.log(`✅ ${varName} format is valid (3 parts, ${token.length} chars)`);
-}
-
 // ✅ ENVIRONMENT VARIABLES - WITH TRIMMING
 const CRON_SUPABASE_DB_URL = (process.env.CRON_SUPABASE_DB_URL || '').trim();
 const CRON_RUNNER_PASSWORD = (process.env.CRON_RUNNER_PASSWORD || '').trim();
@@ -55,25 +29,7 @@ if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_BOT_TOKEN) 
   process.exit(1);
 }
 
-// ✅ VALIDATE JWT FORMAT (ONLY FOR SUPABASE_SERVICE_ROLE_KEY)
-try {
-  console.log('\n--- JWT TOKEN VALIDATION ---');
-  validateJWT(SUPABASE_SERVICE_ROLE_KEY, 'SUPABASE_SERVICE_ROLE_KEY');
-  
-  // AUTHORIZATION is a custom key, not a JWT - no validation needed
-  if (AUTHORIZATION) {
-    console.log(`✅ AUTHORIZATION key is set (${AUTHORIZATION.length} chars) - using as custom auth token`);
-  }
-  
-  console.log('✅ Token validation completed\n');
-} catch (error) {
-  console.error('\n❌ JWT Validation Failed!');
-  console.error('Please check your Render environment variables and ensure:');
-  console.error('  1. No extra spaces or newlines before/after the key');
-  console.error('  2. The complete key was copied (should be ~200+ characters)');
-  console.error('  3. Using SERVICE_ROLE_KEY, not ANON_KEY\n');
-  process.exit(1);
-}
+console.log('✅ All required environment variables are set\n');
 
 // ✅ EXTRACT SUPABASE URL FROM DB URL
 const extractSupabaseUrl = (dbUrl: string): string => {
@@ -93,7 +49,6 @@ const extractSupabaseUrl = (dbUrl: string): string => {
 const supabaseUrl = extractSupabaseUrl(CRON_SUPABASE_DB_URL);
 
 // ✅ CREATE SUPABASE CLIENT - ONLY USE SERVICE_ROLE_KEY FOR SUPABASE AUTH
-// Note: AUTHORIZATION key is for HTTP endpoint authentication only, not for Supabase
 const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
   auth: {
     persistSession: false,
@@ -112,7 +67,6 @@ console.log(`[${new Date().toISOString()}] Render Cron Runner initialized`);
 console.log(`Supabase URL: ${supabaseUrl}`);
 console.log(`Service Type Filter: ${SERVICE_TYPE}`);
 console.log(`Timezone: WEST (UTC+${TIMEZONE_OFFSET_HOURS})`);
-console.log(`Supabase Auth: Using SERVICE_ROLE_KEY only`);
 
 // ============================================
 // TYPE DEFINITIONS
@@ -518,15 +472,19 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
       const isVideo = /\.(mp4|mov|avi|mkv)$/i.test(mediaUrl);
       const isDocument = /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(mediaUrl);
       
+      // ✅ CRITICAL FIX: Download file as Buffer and upload directly to Telegram
+      console.log(`Downloading media file: ${mediaUrl}`);
+      const { buffer, filename } = await downloadFile(mediaUrl);
+      
       if (isVideo) {
-        console.log(`Sending video: ${mediaUrl}`);
-        telegramResult = await sendTelegramVideo(TELEGRAM_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
+        console.log(`Uploading video to Telegram: ${filename}`);
+        telegramResult = await sendTelegramVideo(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       } else if (isDocument) {
-        console.log(`Sending document: ${mediaUrl}`);
-        telegramResult = await sendTelegramDocument(TELEGRAM_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
+        console.log(`Uploading document to Telegram: ${filename}`);
+        telegramResult = await sendTelegramDocument(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       } else {
-        console.log(`Sending photo: ${mediaUrl}`);
-        telegramResult = await sendTelegramPhoto(TELEGRAM_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
+        console.log(`Uploading photo to Telegram: ${filename}`);
+        telegramResult = await sendTelegramPhoto(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       }
     } 
     // CASE 2: Text-only post
