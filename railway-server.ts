@@ -15,7 +15,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 8080;
 const CRON_SUPABASE_DB_URL = (process.env.CRON_SUPABASE_DB_URL || '').trim();
 const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-const TELEGRAM_BOT_TOKEN = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
+const TELEGRAM_PUBLISHER_BOT_TOKEN = (process.env.TELEGRAM_PUBLISHER_BOT_TOKEN || '').trim();
 const AUTHORIZATION = (process.env.AUTHORIZATION || '').trim();
 const CRON_RUNNER_PASSWORD = (process.env.CRON_RUNNER_PASSWORD || '').trim();
 
@@ -375,14 +375,14 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
       const isDocument = /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(mediaUrl);
       
       if (isVideo) {
-        telegramResult = await sendTelegramVideo(TELEGRAM_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
+        telegramResult = await sendTelegramVideo(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
       } else if (isDocument) {
-        telegramResult = await sendTelegramDocument(TELEGRAM_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
+        telegramResult = await sendTelegramDocument(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
       } else {
-        telegramResult = await sendTelegramPhoto(TELEGRAM_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
+        telegramResult = await sendTelegramPhoto(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
       }
     } else {
-      telegramResult = await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, caption, threadId);
+      telegramResult = await sendTelegramMessage(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, caption, threadId);
     }
     
     if (!telegramResult.ok) {
@@ -660,7 +660,7 @@ app.post('/run', async (req, res) => {
     }
 
     // ✅ VALIDATE REQUIRED ENV VARS
-    if (!supabase || !TELEGRAM_BOT_TOKEN) {
+    if (!supabase || !TELEGRAM_PUBLISHER_BOT_TOKEN) {
       return res.status(500).json({
         success: false,
         error: 'Server not properly configured - missing credentials'
