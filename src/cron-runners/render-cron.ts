@@ -631,6 +631,12 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     console.log(`UTC Time: ${nowUTC.toISOString()}`);
     console.log(`WEST Time: ${nowWEST.toISOString()}`);
     console.log(`Query Date: ${currentDate}, Query Time: ${currentTime}`);
+    
+    console.log(`\n--- CONNECTION INFO ---`);
+    console.log(`Supabase URL: ${supabaseUrl}`);
+    console.log(`Table Name: scheduled_posts`);
+    console.log(`Service Type Looking For: '${SERVICE_TYPE}'`);
+    console.log('--- End Connection Info ---\n');
 
     // ✅ DIAGNOSTIC: Test basic connection
     console.log('--- DIAGNOSTIC: Testing Supabase Connection ---');
@@ -670,12 +676,28 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
       .eq('status', 'pending')
       .limit(10);
     
-    console.log(`\n--- PENDING posts with service_type = '${SERVICE_TYPE}' ---`);
+    console.log(`\n--- PENDING posts with service_type = '${SERVICE_TYPE}' (ALL DATES) ---`);
     if (pendingData && pendingData.length > 0) {
-      console.log(`Found ${pendingData.length} pending posts:`);
+      console.log(`Found ${pendingData.length} pending posts (regardless of date/time):`);
       console.log(JSON.stringify(pendingData, null, 2));
+      
+      // Show which ones would match our date/time criteria
+      console.log(`\nChecking which posts match date/time criteria:`);
+      pendingData.forEach((post: any) => {
+        const postDate = post.scheduled_date;
+        const postTime = post.scheduled_time;
+        const matchesDate = postDate < currentDate || (postDate === currentDate && postTime <= currentTime);
+        console.log(`  Post ${post.id}:`);
+        console.log(`    Date: ${postDate} (${postDate < currentDate ? 'BEFORE' : postDate === currentDate ? 'TODAY' : 'FUTURE'})`);
+        console.log(`    Time: ${postTime} (${postTime <= currentTime ? 'PAST/NOW' : 'FUTURE'})`);
+        console.log(`    Matches? ${matchesDate ? '✅ YES' : '❌ NO'}`);
+      });
     } else {
-      console.log('⚠️ No PENDING posts found with this service_type');
+      console.log('⚠️ No PENDING posts found with this service_type AT ALL');
+      console.log('This means either:');
+      console.log('  1. service_type does not match exactly (check for spaces/typos)');
+      console.log('  2. All posts are in a different status (not pending)');
+      console.log('  3. No posts exist with this service_type');
     }
     
     console.log(`\n--- ACTUAL QUERY PARAMETERS ---`);
