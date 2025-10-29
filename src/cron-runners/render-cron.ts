@@ -154,10 +154,11 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
   // Check if response is ok before parsing
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`Telegram API error response (${response.status}):`, errorText);
+    console.error(`❌ Telegram API error response (${response.status}):`);
+    console.error(errorText);
     return {
       ok: false,
-      description: `HTTP ${response.status}: ${errorText.substring(0, 200)}`
+      description: `HTTP ${response.status}: ${errorText}`
     };
   }
 
@@ -173,10 +174,11 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
     } catch (e) {
       responseText = 'Could not read response text';
     }
-    console.error('Failed to parse Telegram response as JSON:', responseText.substring(0, 500));
+    console.error('❌ Failed to parse Telegram response as JSON:');
+    console.error(responseText.substring(0, 1000));
     return {
       ok: false,
-      description: `Invalid JSON response: ${responseText.substring(0, 100)}`
+      description: `Invalid JSON response: ${responseText.substring(0, 200)}`
     };
   }
 }
@@ -398,6 +400,13 @@ async function sendTelegramVideo(
   const FormData = (await import('form-data')).default;
   const formData = new FormData();
   
+  console.log(`📤 Preparing video upload:`);
+  console.log(`   Chat ID: ${chatId}`);
+  console.log(`   Filename: ${filename || 'video.mp4'}`);
+  console.log(`   Buffer size: ${videoUrlOrBuffer.length} bytes`);
+  console.log(`   Caption length: ${caption.length} chars`);
+  if (threadId) console.log(`   Thread ID: ${threadId}`);
+  
   formData.append('chat_id', chatId);
   formData.append('video', videoUrlOrBuffer, { filename: filename || 'video.mp4' });
   formData.append('caption', caption);
@@ -407,8 +416,11 @@ async function sendTelegramVideo(
     const threadIdMatch = threadId.match(/(\d+)$/);
     if (threadIdMatch) {
       formData.append('message_thread_id', threadIdMatch[1]);
+      console.log(`   Message thread ID: ${threadIdMatch[1]}`);
     }
   }
+  
+  console.log(`🚀 Sending video to Telegram API...`);
   
   // ✅ CRITICAL FIX: Include FormData headers (boundary)
   const response = await fetch(url, {
@@ -491,7 +503,13 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
   try {
     const chatId = post.channel_group_id!;
     const threadId = post.thread_id || undefined;
-    const caption = buildCaption(post);
+    let caption = buildCaption(post);
+    
+    // ✅ TELEGRAM CAPTION LIMIT: Max 1024 characters
+    if (caption.length > 1024) {
+      console.warn(`⚠️ Caption too long (${caption.length} chars), truncating to 1024 chars`);
+      caption = caption.substring(0, 1021) + '...';
+    }
     
     // ✅ BEST PRACTICE: Check media files with priority order
     // Priority 1: Separate media_files column (normalized, easier to query)
