@@ -639,19 +639,20 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     console.log(`Service Type Looking For: '${SERVICE_TYPE}'`);
     console.log('--- End Connection Info ---\n');
 
-    // ✅ DIAGNOSTIC: Test basic connection
+    // ✅ DIAGNOSTIC: Test basic connection with OUR service_type only
     console.log('--- DIAGNOSTIC: Testing Supabase Connection ---');
     const { data: sampleData, error: sampleError } = await supabase
       .from('scheduled_posts')
       .select('id, service_type, posting_status')
-      .limit(3);
+      .eq('service_type', SERVICE_TYPE)
+      .limit(5);
     
     if (sampleError) {
       console.error('❌ Cannot connect to scheduled_posts table:', sampleError);
       throw sampleError;
     }
     
-    console.log('✅ Connection successful! Sample posts:');
+    console.log(`✅ Connection successful! Sample of OUR posts (${SERVICE_TYPE}):`);
     console.log(JSON.stringify(sampleData, null, 2));
     
     // ✅ DIAGNOSTIC: Check posts matching our service_type
@@ -743,6 +744,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
 
     const claimedIds = data.map((post: any) => post.id);
     
+    // ✅ SAFETY: Update ONLY posts matching our service_type
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
@@ -751,7 +753,8 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
         run_by: RUNNER_NAME,
         attempted_at: nowUTC.toISOString()
       })
-      .in('id', claimedIds);
+      .in('id', claimedIds)
+      .eq('service_type', SERVICE_TYPE); // ← SAFETY CHECK: Only update OUR posts
 
     if (updateError) {
       console.error('Failed to update posts to processing:', updateError);
@@ -806,7 +809,8 @@ async function processPost(post: ScheduledPost): Promise<void> {
         external_post_id: externalPostId,
         last_error: null
       })
-      .eq('id', post.id);
+      .eq('id', post.id)
+      .eq('service_type', SERVICE_TYPE); // ← SAFETY CHECK: Only update OUR posts
 
     if (updateError) {
       throw new Error(`Failed to update scheduled_posts: ${getErrorMessage(updateError)}`);
@@ -858,7 +862,8 @@ async function processPost(post: ScheduledPost): Promise<void> {
         lock_id: null,
         next_retry_at: shouldRetry ? new Date(now.getTime() + 300000).toISOString() : null
       })
-      .eq('id', post.id);
+      .eq('id', post.id)
+      .eq('service_type', SERVICE_TYPE); // ← SAFETY CHECK: Only update OUR posts
 
     if (failError) {
       console.error(`Failed to update error status: ${getErrorMessage(failError)}`);
