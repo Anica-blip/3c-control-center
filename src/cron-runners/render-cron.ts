@@ -223,21 +223,39 @@ function buildCaption(post: ScheduledPost): string {
     caption += `\n`;
   }
   
+  // Helper function to convert markdown to Telegram HTML
+  function formatText(text: string): string {
+    if (!text) return '';
+    
+    // Convert markdown links [text](url) to HTML
+    text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>');
+    
+    // Convert bold **text** to <b>text</b>
+    text = text.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    
+    // Convert italic _text_ to <i>text</i>
+    text = text.replace(/(?<!\w)_(.+?)_(?!\w)/g, '<i>$1</i>');
+    
+    // Convert underline __text__ to <u>text</u>
+    text = text.replace(/__(.+?)__/g, '<u>$1</u>');
+    
+    // Convert strikethrough ~~text~~ to <s>text</s>
+    text = text.replace(/~~(.+?)~~/g, '<s>$1</s>');
+    
+    // Convert inline code `text` to <code>text</code>
+    text = text.replace(/`(.+?)`/g, '<code>$1</code>');
+    
+    return text;
+  }
+  
   // Add title with formatting
   if (postContent.title) {
-    let title = postContent.title;
-    title = title.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-    caption += `${title}\n\n`;
+    caption += `${formatText(postContent.title)}\n\n`;
   }
   
   // Add description with formatting
   if (postContent.description) {
-    let desc = postContent.description;
-    desc = desc.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-    desc = desc.replace(/_(.+?)_/g, '<i>$1</i>');
-    desc = desc.replace(/__(.+?)__/g, '<u>$1</u>');
-    desc = desc.replace(/\[([^\]]+)\]\s+(https?:\/\/[^\s]+)/g, '<a href="$2">$1</a>');
-    caption += `${desc}\n`;
+    caption += `${formatText(postContent.description)}\n`;
   }
   
   // Add hashtags
@@ -247,7 +265,7 @@ function buildCaption(post: ScheduledPost): string {
   
   // Add CTA
   if (postContent.cta) {
-    caption += `\n\n👉 ${postContent.cta}`;
+    caption += `\n\n👉 ${formatText(postContent.cta)}`;
   }
   
   return caption.trim();
