@@ -48,6 +48,15 @@ const extractSupabaseUrl = (dbUrl: string): string => {
 
 const supabaseUrl = extractSupabaseUrl(CRON_SUPABASE_DB_URL);
 
+// ✅ DIAGNOSTIC: Log connection details (mask sensitive parts)
+console.log('\n--- SUPABASE CONNECTION DIAGNOSTIC ---');
+console.log(`Extracted Supabase URL: ${supabaseUrl}`);
+console.log(`Database URL (masked): ${CRON_SUPABASE_DB_URL.substring(0, 30)}...`);
+console.log(`Service Role Key (masked): ${SUPABASE_SERVICE_ROLE_KEY.substring(0, 20)}...${SUPABASE_SERVICE_ROLE_KEY.slice(-10)}`);
+console.log(`Key length: ${SUPABASE_SERVICE_ROLE_KEY.length} characters`);
+console.log(`Key starts with 'eyJ': ${SUPABASE_SERVICE_ROLE_KEY.startsWith('eyJ')}`);
+console.log('--- End Diagnostic ---\n');
+
 // ✅ CREATE SUPABASE CLIENT - ONLY USE SERVICE_ROLE_KEY FOR SUPABASE AUTH
 const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
   auth: {
@@ -151,13 +160,17 @@ async function downloadFile(url: string): Promise<{ buffer: Buffer; filename: st
  * Parse Telegram API response with proper error handling
  */
 async function parseTelegramResponse(response: Response): Promise<TelegramResponse> {
-  // Check if response is ok before parsing
+  // Read response body as text first (only consume stream once)
+  const responseText = await response.text();
+  
+  // Check if response is ok
   if (!response.ok) {
-    // Telegram API always returns JSON, even for errors
+    console.error(`❌ Telegram API error response (${response.status}):`);
+    console.error('Raw response:', responseText);
+    
+    // Try to parse as JSON to extract error details
     try {
-      const errorJson = await response.json();
-      console.error(`❌ Telegram API error response (${response.status}):`);
-      console.error(JSON.stringify(errorJson, null, 2));
+      const errorJson = JSON.parse(responseText);
       
       // Extract the error description from Telegram's JSON response
       const description = errorJson.description || errorJson.error || 'Unknown error';
@@ -168,38 +181,19 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
         description: `HTTP ${errorCode}: ${description}`
       };
     } catch (jsonError) {
-      // Fallback: If JSON parsing fails, try to get raw text
-      let errorText = '';
-      try {
-        // Clone the response to read it again since we already tried .json()
-        const textResponse = response.clone();
-        errorText = await textResponse.text();
-      } catch (e) {
-        errorText = 'Could not read response body';
-      }
-      
-      console.error(`❌ Telegram API error response (${response.status}):`);
-      console.error('Raw error text:', errorText);
-      
+      // Not JSON, return raw text
       return {
         ok: false,
-        description: `HTTP ${response.status}: ${errorText || 'Empty response body'}`
+        description: `HTTP ${response.status}: ${responseText || 'Empty response body'}`
       };
     }
   }
 
-  // Try to parse JSON with error handling for successful responses
+  // Parse successful response as JSON
   try {
-    const json = await response.json();
+    const json = JSON.parse(responseText);
     return json;
   } catch (error) {
-    // If JSON parsing fails, get text to debug
-    let responseText = '';
-    try {
-      responseText = await response.text();
-    } catch (e) {
-      responseText = 'Could not read response text';
-    }
     console.error('❌ Failed to parse Telegram response as JSON:');
     console.error(responseText.substring(0, 1000));
     return {
@@ -698,6 +692,36 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     console.log(`Service Type Looking For: '${SERVICE_TYPE}'`);
     console.log('--- End Connection Info ---\n');
 
+    // ✅ DIAGNOSTIC: Test network connectivity to Supabase first
+    console.log('--- DIAGNOSTIC: Testing Network Connectivity ---');
+    try {
+      const healthCheckUrl = `${supabaseUrl}/rest/v1/`;
+      console.log(`Testing HTTP connection to: ${healthCheckUrl}`);
+      
+      const healthResponse = await fetch(healthCheckUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+        }
+      });
+      
+      console.log(`Health check response status: ${healthResponse.status}`);
+      console.log(`Health check response ok: ${healthResponse.ok}`);
+      
+      if (!healthResponse.ok) {
+        const errorText = await healthResponse.text();
+        console.error(`❌ Health check failed with status ${healthResponse.status}`);
+        console.error('Response body:', errorText.substring(0, 500));
+      } else {
+        console.log('✅ Network connectivity to Supabase is working');
+      }
+    } catch (netError) {
+      console.error('❌ Network connectivity test failed:', netError);
+      console.error('This indicates Render cannot reach Supabase at all');
+    }
+    console.log('--- End Network Diagnostic ---\n');
+
     // ✅ DIAGNOSTIC: Test basic connection with OUR service_type only
     console.log('--- DIAGNOSTIC: Testing Supabase Connection ---');
     const { data: sampleData, error: sampleError } = await supabase
@@ -708,6 +732,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     
     if (sampleError) {
       console.error('❌ Cannot connect to scheduled_posts table:', sampleError);
+      console.error('Error details:', JSON.stringify(sampleError, null, 2));
       throw sampleError;
     }
     
