@@ -352,15 +352,15 @@ async function sendTelegramPhoto(
     return await parseTelegramResponse(response);
   }
   
-  // If sending as Buffer (direct upload)
-  const FormData = (await import('form-data')).default;
-  const formData = new FormData();
+  // If sending as Buffer (direct upload) - USE BUILT-IN FormData
+  // Convert Buffer to Blob for built-in FormData
+  const blob = new Blob([photoUrlOrBuffer], { type: 'image/jpeg' });
+  const file = new File([blob], filename || 'photo.jpg', { type: 'image/jpeg' });
   
+  // Use built-in FormData (not form-data npm package)
+  const formData = new FormData();
   formData.append('chat_id', chatId);
-  formData.append('photo', photoUrlOrBuffer, { 
-    filename: filename || 'photo.jpg',
-    contentType: 'image/jpeg'
-  });
+  formData.append('photo', file);
   formData.append('caption', caption);
   formData.append('parse_mode', 'HTML');
   
@@ -371,10 +371,10 @@ async function sendTelegramPhoto(
     }
   }
   
+  // Built-in fetch handles FormData headers automatically
   const response = await fetch(url, {
     method: 'POST',
-    body: formData,
-    headers: formData.getHeaders()
+    body: formData
   });
 
   return await parseTelegramResponse(response);
@@ -418,10 +418,7 @@ async function sendTelegramVideo(
     return await parseTelegramResponse(response);
   }
   
-  // If sending as Buffer (direct upload) - FIXED VERSION
-  const FormData = (await import('form-data')).default;
-  const formData = new FormData();
-  
+  // If sending as Buffer (direct upload) - USE BUILT-IN FormData
   console.log(`📤 Preparing video upload:`);
   console.log(`   Chat ID: ${chatId}`);
   console.log(`   Filename: ${filename || 'video.mp4'}`);
@@ -429,11 +426,14 @@ async function sendTelegramVideo(
   console.log(`   Caption length: ${caption.length} chars`);
   if (threadId) console.log(`   Thread ID: ${threadId}`);
   
+  // Convert Buffer to Blob for built-in FormData
+  const blob = new Blob([videoUrlOrBuffer], { type: 'video/mp4' });
+  const file = new File([blob], filename || 'video.mp4', { type: 'video/mp4' });
+  
+  // Use built-in FormData (not form-data npm package)
+  const formData = new FormData();
   formData.append('chat_id', chatId);
-  formData.append('video', videoUrlOrBuffer, { 
-    filename: filename || 'video.mp4',
-    contentType: 'video/mp4'
-  });
+  formData.append('video', file);
   formData.append('caption', caption);
   formData.append('parse_mode', 'HTML');
   
@@ -447,12 +447,10 @@ async function sendTelegramVideo(
   
   console.log(`🚀 Sending video to Telegram API...`);
   
-  // ✅ CRITICAL FIX: Properly pass FormData to fetch
-  // The issue was that Node.js fetch needs the FormData stream, not the object
+  // Built-in fetch handles FormData headers automatically
   const response = await fetch(url, {
     method: 'POST',
-    body: formData,
-    headers: formData.getHeaders()
+    body: formData
   });
 
   return await parseTelegramResponse(response);
@@ -496,15 +494,15 @@ async function sendTelegramDocument(
     return await parseTelegramResponse(response);
   }
   
-  // If sending as Buffer (direct upload)
-  const FormData = (await import('form-data')).default;
-  const formData = new FormData();
+  // If sending as Buffer (direct upload) - USE BUILT-IN FormData
+  // Convert Buffer to Blob for built-in FormData
+  const blob = new Blob([documentUrlOrBuffer], { type: 'application/pdf' });
+  const file = new File([blob], filename || 'document.pdf', { type: 'application/pdf' });
   
+  // Use built-in FormData (not form-data npm package)
+  const formData = new FormData();
   formData.append('chat_id', chatId);
-  formData.append('document', documentUrlOrBuffer, { 
-    filename: filename || 'document.pdf',
-    contentType: 'application/pdf'
-  });
+  formData.append('document', file);
   formData.append('caption', caption);
   formData.append('parse_mode', 'HTML');
   
@@ -515,10 +513,10 @@ async function sendTelegramDocument(
     }
   }
   
+  // Built-in fetch handles FormData headers automatically
   const response = await fetch(url, {
     method: 'POST',
-    body: formData,
-    headers: formData.getHeaders()
+    body: formData
   });
 
   return await parseTelegramResponse(response);
