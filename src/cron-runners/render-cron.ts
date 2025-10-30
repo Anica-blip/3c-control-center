@@ -357,7 +357,10 @@ async function sendTelegramPhoto(
   const formData = new FormData();
   
   formData.append('chat_id', chatId);
-  formData.append('photo', photoUrlOrBuffer, { filename: filename || 'photo.jpg' });
+  formData.append('photo', photoUrlOrBuffer, { 
+    filename: filename || 'photo.jpg',
+    contentType: 'image/jpeg'
+  });
   formData.append('caption', caption);
   formData.append('parse_mode', 'HTML');
   
@@ -368,11 +371,10 @@ async function sendTelegramPhoto(
     }
   }
   
-  // ✅ CRITICAL FIX: Include FormData headers (boundary)
   const response = await fetch(url, {
     method: 'POST',
-    headers: formData.getHeaders(),
-    body: formData as any,
+    body: formData,
+    headers: formData.getHeaders()
   });
 
   return await parseTelegramResponse(response);
@@ -416,7 +418,7 @@ async function sendTelegramVideo(
     return await parseTelegramResponse(response);
   }
   
-  // If sending as Buffer (direct upload)
+  // If sending as Buffer (direct upload) - FIXED VERSION
   const FormData = (await import('form-data')).default;
   const formData = new FormData();
   
@@ -428,7 +430,10 @@ async function sendTelegramVideo(
   if (threadId) console.log(`   Thread ID: ${threadId}`);
   
   formData.append('chat_id', chatId);
-  formData.append('video', videoUrlOrBuffer, { filename: filename || 'video.mp4' });
+  formData.append('video', videoUrlOrBuffer, { 
+    filename: filename || 'video.mp4',
+    contentType: 'video/mp4'
+  });
   formData.append('caption', caption);
   formData.append('parse_mode', 'HTML');
   
@@ -442,11 +447,12 @@ async function sendTelegramVideo(
   
   console.log(`🚀 Sending video to Telegram API...`);
   
-  // ✅ CRITICAL FIX: Include FormData headers (boundary)
+  // ✅ CRITICAL FIX: Properly pass FormData to fetch
+  // The issue was that Node.js fetch needs the FormData stream, not the object
   const response = await fetch(url, {
     method: 'POST',
-    headers: formData.getHeaders(),
-    body: formData as any,
+    body: formData,
+    headers: formData.getHeaders()
   });
 
   return await parseTelegramResponse(response);
@@ -495,7 +501,10 @@ async function sendTelegramDocument(
   const formData = new FormData();
   
   formData.append('chat_id', chatId);
-  formData.append('document', documentUrlOrBuffer, { filename: filename || 'document.pdf' });
+  formData.append('document', documentUrlOrBuffer, { 
+    filename: filename || 'document.pdf',
+    contentType: 'application/pdf'
+  });
   formData.append('caption', caption);
   formData.append('parse_mode', 'HTML');
   
@@ -506,11 +515,10 @@ async function sendTelegramDocument(
     }
   }
   
-  // ✅ CRITICAL FIX: Include FormData headers (boundary)
   const response = await fetch(url, {
     method: 'POST',
-    headers: formData.getHeaders(),
-    body: formData as any,
+    body: formData,
+    headers: formData.getHeaders()
   });
 
   return await parseTelegramResponse(response);
@@ -573,19 +581,20 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
       const isVideo = mediaType === 'video' || /\.(mp4|mov|avi|mkv)$/i.test(mediaUrl);
       const isDocument = mediaType === 'document' || /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(mediaUrl);
       
-      // ✅ STRATEGY: Send media URL directly to Telegram (let Telegram download it)
-      // This avoids buffer upload issues with FormData
-      console.log(`📤 Sending media URL to Telegram (Telegram will download it)`);
+      // ✅ Download file as Buffer and upload to Telegram (URL method failed)
+      console.log(`⬇️ Downloading media file as Buffer...`);
+      const { buffer, filename } = await downloadFile(mediaUrl);
+      console.log(`✅ Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB as ${filename}`);
       
       if (isVideo) {
-        console.log(`📹 Sending video URL to Telegram`);
-        telegramResult = await sendTelegramVideo(TELEGRAM_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
+        console.log(`📹 Uploading video to Telegram: ${filename}`);
+        telegramResult = await sendTelegramVideo(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       } else if (isDocument) {
-        console.log(`📄 Sending document URL to Telegram`);
-        telegramResult = await sendTelegramDocument(TELEGRAM_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
+        console.log(`📄 Uploading document to Telegram: ${filename}`);
+        telegramResult = await sendTelegramDocument(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       } else {
-        console.log(`🖼️ Sending photo URL to Telegram`);
-        telegramResult = await sendTelegramPhoto(TELEGRAM_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
+        console.log(`🖼️ Uploading photo to Telegram: ${filename}`);
+        telegramResult = await sendTelegramPhoto(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       }
     } 
     // CASE 2: Text-only post
