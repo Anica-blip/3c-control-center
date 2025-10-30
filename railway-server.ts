@@ -61,7 +61,7 @@ const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
   }
 });
 
-console.log(`[${new Date().toISOString()}] Render Cron Runner initialized`);
+console.log(`[${new Date().toISOString()}] Railway Cron Runner initialized`);
 console.log(`Supabase URL: ${supabaseUrl}`);
 console.log(`Service Type Filter: ${SERVICE_TYPE}`);
 console.log(`Timezone: WEST (UTC+${TIMEZONE_OFFSET_HOURS})`);
@@ -146,7 +146,58 @@ async function downloadFile(url: string): Promise<{ buffer: Buffer; filename: st
 }
 
 /**
+ * Parse Telegram API response with proper error handling
+ */
+async function parseTelegramResponse(response: Response): Promise<TelegramResponse> {
+  // Read response body as text first (only consume stream once)
+  const responseText = await response.text();
+  
+  // Check if response is ok
+  if (!response.ok) {
+    console.error(`❌ Telegram API error response (${response.status}):`);
+    console.error('Raw response:', responseText);
+    
+    // Try to parse as JSON to extract error details
+    try {
+      const errorJson = JSON.parse(responseText);
+      
+      // Extract the error description from Telegram's JSON response
+      const description = errorJson.description || errorJson.error || 'Unknown error';
+      const errorCode = errorJson.error_code || response.status;
+      
+      return {
+        ok: false,
+        description: `HTTP ${errorCode}: ${description}`
+      };
+    } catch (jsonError) {
+      // Not JSON, return raw text
+      return {
+        ok: false,
+        description: `HTTP ${response.status}: ${responseText || 'Empty response body'}`
+      };
+    }
+  }
+
+  // Parse successful response as JSON
+  try {
+    const json = JSON.parse(responseText);
+    return json;
+  } catch (error) {
+    console.error('❌ Failed to parse Telegram response as JSON:');
+    console.error(responseText.substring(0, 1000));
+    return {
+      ok: false,
+      description: `Invalid JSON response: ${responseText.substring(0, 200)}`
+    };
+  }
+}
+
+/**
  * Build caption from post_content with proper Telegram HTML formatting
+ * FIXES: 
+ * - Single asterisk italic (*text*)
+ * - Character profile from postContent or top-level fields
+ * - Proper link formatting
  */
 function buildCaption(post: ScheduledPost): string {
   const postContent = post.post_content as any;
@@ -162,15 +213,20 @@ function buildCaption(post: ScheduledPost): string {
   
   let caption = '';
   
+  // ✅ FIX: Check for character profile in BOTH postContent AND top-level post fields
+  const name = postContent.name || post.name;
+  const username = postContent.username || post.username;
+  const role = postContent.role || post.role;
+  
   // Add character profile header
-  if (post.name) {
-    caption += `<b>${post.name}</b>\n`;
-    if (post.username) {
-      const username = post.username.startsWith('@') ? post.username : `@${post.username}`;
-      caption += `${username}\n`;
+  if (name) {
+    caption += `<b>${name}</b>\n`;
+    if (username) {
+      const formattedUsername = username.startsWith('@') ? username : `@${username}`;
+      caption += `${formattedUsername}\n`;
     }
-    if (post.role) {
-      caption += `${post.role}\n`;
+    if (role) {
+      caption += `${role}\n`;
     }
     caption += `\n`;
   }
@@ -179,14 +235,18 @@ function buildCaption(post: ScheduledPost): string {
   function formatText(text: string): string {
     if (!text) return '';
     
-    // Convert markdown links [text](url) to HTML
+    // ✅ FIX: Convert markdown links FIRST (before other replacements)
     text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>');
     
     // Convert bold **text** to <b>text</b>
     text = text.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
     
-    // Convert italic _text_ to <i>text</i>
-    text = text.replace(/(?<!\w)_(.+?)_(?!\w)/g, '<i>$1</i>');
+    // ✅ FIX: Convert italic *text* to <i>text</i> (single asterisk - AFTER bold)
+    // Use negative lookahead/lookbehind to avoid matching ** or ***
+    text = text.replace(/(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)/g, '<i>$1</i>');
+    
+    // Convert italic _text_ to <i>text</i> (underscore alternative)
+    text = text.replace(/(?<!\w)_([^_]+?)_(?!\w)/g, '<i>$1</i>');
     
     // Convert underline __text__ to <u>text</u>
     text = text.replace(/__(.+?)__/g, '<u>$1</u>');
@@ -253,7 +313,7 @@ async function sendTelegramMessage(
     body: JSON.stringify(body),
   });
 
-  return await response.json();
+  return await parseTelegramResponse(response);
 }
 
 /**
@@ -291,15 +351,18 @@ async function sendTelegramPhoto(
       body: JSON.stringify(body),
     });
 
-    return await response.json();
+    return await parseTelegramResponse(response);
   }
   
-  // If sending as Buffer (direct upload)
-  const FormData = (await import('form-data')).default;
-  const formData = new FormData();
+  // If sending as Buffer (direct upload) - USE BUILT-IN FormData
+  // Convert Buffer to Blob for built-in FormData
+  const blob = new Blob([photoUrlOrBuffer], { type: 'image/jpeg' });
+  const file = new File([blob], filename || 'photo.jpg', { type: 'image/jpeg' });
   
+  // Use built-in FormData (not form-data npm package)
+  const formData = new FormData();
   formData.append('chat_id', chatId);
-  formData.append('photo', photoUrlOrBuffer, { filename: filename || 'photo.jpg' });
+  formData.append('photo', file);
   formData.append('caption', caption);
   formData.append('parse_mode', 'HTML');
   
@@ -310,14 +373,13 @@ async function sendTelegramPhoto(
     }
   }
   
-  // ✅ CRITICAL FIX: Include FormData headers (boundary)
+  // Built-in fetch handles FormData headers automatically
   const response = await fetch(url, {
     method: 'POST',
-    headers: formData.getHeaders(),
-    body: formData as any,
+    body: formData
   });
 
-  return await response.json();
+  return await parseTelegramResponse(response);
 }
 
 /**
@@ -355,15 +417,25 @@ async function sendTelegramVideo(
       body: JSON.stringify(body),
     });
 
-    return await response.json();
+    return await parseTelegramResponse(response);
   }
   
-  // If sending as Buffer (direct upload)
-  const FormData = (await import('form-data')).default;
-  const formData = new FormData();
+  // If sending as Buffer (direct upload) - USE BUILT-IN FormData
+  console.log(`📤 Preparing video upload:`);
+  console.log(`   Chat ID: ${chatId}`);
+  console.log(`   Filename: ${filename || 'video.mp4'}`);
+  console.log(`   Buffer size: ${videoUrlOrBuffer.length} bytes`);
+  console.log(`   Caption length: ${caption.length} chars`);
+  if (threadId) console.log(`   Thread ID: ${threadId}`);
   
+  // Convert Buffer to Blob for built-in FormData
+  const blob = new Blob([videoUrlOrBuffer], { type: 'video/mp4' });
+  const file = new File([blob], filename || 'video.mp4', { type: 'video/mp4' });
+  
+  // Use built-in FormData (not form-data npm package)
+  const formData = new FormData();
   formData.append('chat_id', chatId);
-  formData.append('video', videoUrlOrBuffer, { filename: filename || 'video.mp4' });
+  formData.append('video', file);
   formData.append('caption', caption);
   formData.append('parse_mode', 'HTML');
   
@@ -371,17 +443,19 @@ async function sendTelegramVideo(
     const threadIdMatch = threadId.match(/(\d+)$/);
     if (threadIdMatch) {
       formData.append('message_thread_id', threadIdMatch[1]);
+      console.log(`   Message thread ID: ${threadIdMatch[1]}`);
     }
   }
   
-  // ✅ CRITICAL FIX: Include FormData headers (boundary)
+  console.log(`🚀 Sending video to Telegram API...`);
+  
+  // Built-in fetch handles FormData headers automatically
   const response = await fetch(url, {
     method: 'POST',
-    headers: formData.getHeaders(),
-    body: formData as any,
+    body: formData
   });
 
-  return await response.json();
+  return await parseTelegramResponse(response);
 }
 
 /**
@@ -419,15 +493,18 @@ async function sendTelegramDocument(
       body: JSON.stringify(body),
     });
 
-    return await response.json();
+    return await parseTelegramResponse(response);
   }
   
-  // If sending as Buffer (direct upload)
-  const FormData = (await import('form-data')).default;
-  const formData = new FormData();
+  // If sending as Buffer (direct upload) - USE BUILT-IN FormData
+  // Convert Buffer to Blob for built-in FormData
+  const blob = new Blob([documentUrlOrBuffer], { type: 'application/pdf' });
+  const file = new File([blob], filename || 'document.pdf', { type: 'application/pdf' });
   
+  // Use built-in FormData (not form-data npm package)
+  const formData = new FormData();
   formData.append('chat_id', chatId);
-  formData.append('document', documentUrlOrBuffer, { filename: filename || 'document.pdf' });
+  formData.append('document', file);
   formData.append('caption', caption);
   formData.append('parse_mode', 'HTML');
   
@@ -438,14 +515,13 @@ async function sendTelegramDocument(
     }
   }
   
-  // ✅ CRITICAL FIX: Include FormData headers (boundary)
+  // Built-in fetch handles FormData headers automatically
   const response = await fetch(url, {
     method: 'POST',
-    headers: formData.getHeaders(),
-    body: formData as any,
+    body: formData
   });
 
-  return await response.json();
+  return await parseTelegramResponse(response);
 }
 
 /**
@@ -455,7 +531,13 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
   try {
     const chatId = post.channel_group_id!;
     const threadId = post.thread_id || undefined;
-    const caption = buildCaption(post);
+    let caption = buildCaption(post);
+    
+    // ✅ TELEGRAM CAPTION LIMIT: Max 1024 characters
+    if (caption.length > 1024) {
+      console.warn(`⚠️ Caption too long (${caption.length} chars), truncating to 1024 chars`);
+      caption = caption.substring(0, 1021) + '...';
+    }
     
     // ✅ BEST PRACTICE: Check media files with priority order
     // Priority 1: Separate media_files column (normalized, easier to query)
@@ -499,7 +581,7 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
       const isVideo = mediaType === 'video' || /\.(mp4|mov|avi|mkv)$/i.test(mediaUrl);
       const isDocument = mediaType === 'document' || /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(mediaUrl);
       
-      // ✅ CRITICAL FIX: Download file as Buffer and upload directly to Telegram
+      // ✅ Download file as Buffer and upload to Telegram
       console.log(`⬇️ Downloading media file as Buffer...`);
       const { buffer, filename } = await downloadFile(mediaUrl);
       console.log(`✅ Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB as ${filename}`);
@@ -618,77 +700,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     console.log(`Service Type Looking For: '${SERVICE_TYPE}'`);
     console.log('--- End Connection Info ---\n');
 
-    // ✅ DIAGNOSTIC: Test basic connection with OUR service_type only
-    console.log('--- DIAGNOSTIC: Testing Supabase Connection ---');
-    const { data: sampleData, error: sampleError } = await supabase
-      .from('scheduled_posts')
-      .select('id, service_type, posting_status')
-      .eq('service_type', SERVICE_TYPE)
-      .limit(5);
-    
-    if (sampleError) {
-      console.error('❌ Cannot connect to scheduled_posts table:', sampleError);
-      throw sampleError;
-    }
-    
-    console.log(`✅ Connection successful! Sample of OUR posts (${SERVICE_TYPE}):`);
-    console.log(JSON.stringify(sampleData, null, 2));
-    
-    // ✅ DIAGNOSTIC: Check posts matching our service_type
-    const { data: serviceData, error: serviceError } = await supabase
-      .from('scheduled_posts')
-      .select('id, service_type, posting_status, scheduled_date, scheduled_time')
-      .eq('service_type', SERVICE_TYPE)
-      .limit(10);
-    
-    console.log(`\n--- Posts with service_type = '${SERVICE_TYPE}' ---`);
-    if (serviceData && serviceData.length > 0) {
-      console.log(`Found ${serviceData.length} posts:`);
-      console.log(JSON.stringify(serviceData, null, 2));
-    } else {
-      console.log('⚠️ No posts found with this service_type');
-    }
-    
-    // ✅ DIAGNOSTIC: Check pending posts with our service_type (ignore date/time)
-    const { data: pendingData, error: pendingError } = await supabase
-      .from('scheduled_posts')
-      .select('id, service_type, posting_status, scheduled_date, scheduled_time')
-      .eq('service_type', SERVICE_TYPE)
-      .eq('posting_status', 'pending')
-      .limit(10);
-    
-    console.log(`\n--- PENDING posts with service_type = '${SERVICE_TYPE}' (ALL DATES) ---`);
-    if (pendingData && pendingData.length > 0) {
-      console.log(`Found ${pendingData.length} pending posts (regardless of date/time):`);
-      console.log(JSON.stringify(pendingData, null, 2));
-      
-      // Show which ones would match our date/time criteria
-      console.log(`\nChecking which posts match date/time criteria:`);
-      pendingData.forEach((post: any) => {
-        const postDate = post.scheduled_date;
-        const postTime = post.scheduled_time;
-        const matchesDate = postDate < currentDate || (postDate === currentDate && postTime <= currentTime);
-        console.log(`  Post ${post.id}:`);
-        console.log(`    Date: ${postDate} (${postDate < currentDate ? 'BEFORE' : postDate === currentDate ? 'TODAY' : 'FUTURE'})`);
-        console.log(`    Time: ${postTime} (${postTime <= currentTime ? 'PAST/NOW' : 'FUTURE'})`);
-        console.log(`    Matches? ${matchesDate ? '✅ YES' : '❌ NO'}`);
-      });
-    } else {
-      console.log('⚠️ No PENDING posts found with this service_type AT ALL');
-      console.log('This means either:');
-      console.log('  1. service_type does not match exactly (check for spaces/typos)');
-      console.log('  2. All posts are in a different posting_status (not pending)');
-      console.log('  3. No posts exist with this service_type');
-    }
-    
-    console.log(`\n--- ACTUAL QUERY PARAMETERS ---`);
-    console.log(`Looking for posts where:`);
-    console.log(`  service_type = '${SERVICE_TYPE}'`);
-    console.log(`  posting_status = 'pending'`);
-    console.log(`  scheduled_date < '${currentDate}' OR (scheduled_date = '${currentDate}' AND scheduled_time <= '${currentTime}')`);
-    console.log('--- End Diagnostics ---\n');
-
-    // ✅ ACTUAL QUERY: Now find posts ready to process
+    // ✅ ACTUAL QUERY: Find posts ready to process
     const { data, error } = await supabase
       .from('scheduled_posts')
       .select('*')
@@ -704,26 +716,16 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
 
     console.log('\n--- QUERY RESULTS ---');
     if (!data || data.length === 0) {
-      console.log('⚠️ No pending posts found matching criteria:');
-      console.log(`  - service_type: '${SERVICE_TYPE}'`);
-      console.log(`  - posting_status: 'pending'`);
-      console.log(`  - scheduled_date <= '${currentDate}'`);
-      console.log(`  - scheduled_time <= '${currentTime}'`);
+      console.log('⚠️ No pending posts found');
       return [];
     }
 
-    console.log(`✅ Found ${data.length} pending posts ready to process:`);
-    data.forEach((post: any) => {
-      console.log(`  - ID: ${post.id}`);
-      console.log(`    Service: ${post.service_type}`);
-      console.log(`    Status: ${post.posting_status}`);
-      console.log(`    Scheduled: ${post.scheduled_date} ${post.scheduled_time}`);
-    });
+    console.log(`✅ Found ${data.length} pending posts ready to process`);
     console.log('--- End Query Results ---\n');
 
     const claimedIds = data.map((post: any) => post.id);
     
-    // ✅ CRITICAL FIX: Do NOT touch posting_status, ONLY update post_status
+    // ✅ Update post_status to pending
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
@@ -776,7 +778,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
     console.log(`✅ Successfully posted to Telegram`);
     console.log(`External Post ID: ${externalPostId}`);
 
-    // ✅ CRITICAL FIX: Do NOT touch posting_status, ONLY update post_status to 'sent'
+    // ✅ Update post_status to 'sent'
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
@@ -819,12 +821,10 @@ async function processPost(post: ScheduledPost): Promise<void> {
     const errorMessage = getErrorMessage(error);
     console.error(`❌ Failed to process post ${post.id}:`, errorMessage);
 
-    // ✅ DETERMINE IF SHOULD RETRY
+    // ✅ Mark as failed
     const maxRetries = 3;
     const newAttempts = (post.attempts || 0) + 1;
-    const shouldRetry = newAttempts < maxRetries;
 
-    // ✅ CRITICAL FIX: Do NOT touch posting_status, ONLY update post_status to 'failed'
     const { error: failError } = await supabase
       .from('scheduled_posts')
       .update({
