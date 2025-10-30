@@ -11,8 +11,8 @@ const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').
 const TELEGRAM_PUBLISHER_BOT_TOKEN = (process.env.TELEGRAM_PUBLISHER_BOT_TOKEN || '').trim();
 
 // ✅ RUNNER IDENTITY
-const RUNNER_NAME = 'Railway Cron Job';
-const SERVICE_TYPE = 'Railway Cron Job';
+const RUNNER_NAME = 'GitHub - Workflow';
+const SERVICE_TYPE = 'GitHub - Workflow';
 
 // ✅ TIMEZONE CONFIGURATION - WEST = UTC+1
 const TIMEZONE_OFFSET_HOURS = 1;
@@ -24,7 +24,6 @@ if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_PUBLISHER_B
   console.error('  CRON_SUPABASE_DB_URL:', CRON_SUPABASE_DB_URL ? 'SET' : 'MISSING');
   console.error('  SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING');
   console.error('  TELEGRAM_PUBLISHER_BOT_TOKEN:', TELEGRAM_PUBLISHER_BOT_TOKEN ? 'SET' : 'MISSING');
-  console.error('  PUBLISHER_TOKEN:', PUBLISHER_TOKEN ? 'SET' : 'NOT SET (optional)');
   process.exit(1);
 }
 
