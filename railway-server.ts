@@ -1,4 +1,4 @@
-// Railway Gateway for GitHub - Workflow - Direct Database Connection with Telegram Posting
+// Railway Cron Runner - Direct Database Connection with Telegram Posting
 // Queries scheduled_posts table directly and posts to Telegram
 // TIMEZONE: WEST (UTC+1)
 
@@ -9,7 +9,6 @@ const CRON_SUPABASE_DB_URL = (process.env.CRON_SUPABASE_DB_URL || '').trim();
 const CRON_RUNNER_PASSWORD = (process.env.CRON_RUNNER_PASSWORD || '').trim();
 const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 const TELEGRAM_PUBLISHER_BOT_TOKEN = (process.env.TELEGRAM_PUBLISHER_BOT_TOKEN || '').trim();
-const AUTHORIZATION = (process.env.AUTHORIZATION || '').trim();
 
 // ✅ RUNNER IDENTITY
 const RUNNER_NAME = 'GitHub - Workflow';
@@ -25,7 +24,6 @@ if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_PUBLISHER_B
   console.error('  CRON_SUPABASE_DB_URL:', CRON_SUPABASE_DB_URL ? 'SET' : 'MISSING');
   console.error('  SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING');
   console.error('  TELEGRAM_PUBLISHER_BOT_TOKEN:', TELEGRAM_PUBLISHER_BOT_TOKEN ? 'SET' : 'MISSING');
-  console.error('  AUTHORIZATION:', AUTHORIZATION ? 'SET (optional)' : 'NOT SET (will use SERVICE_ROLE_KEY)');
   process.exit(1);
 }
 
@@ -47,15 +45,6 @@ const extractSupabaseUrl = (dbUrl: string): string => {
 };
 
 const supabaseUrl = extractSupabaseUrl(CRON_SUPABASE_DB_URL);
-
-// ✅ DIAGNOSTIC: Log connection details (mask sensitive parts)
-console.log('\n--- SUPABASE CONNECTION DIAGNOSTIC ---');
-console.log(`Extracted Supabase URL: ${supabaseUrl}`);
-console.log(`Database URL (masked): ${CRON_SUPABASE_DB_URL.substring(0, 30)}...`);
-console.log(`Service Role Key (masked): ${SUPABASE_SERVICE_ROLE_KEY.substring(0, 20)}...${SUPABASE_SERVICE_ROLE_KEY.slice(-10)}`);
-console.log(`Key length: ${SUPABASE_SERVICE_ROLE_KEY.length} characters`);
-console.log(`Key starts with 'eyJ': ${SUPABASE_SERVICE_ROLE_KEY.startsWith('eyJ')}`);
-console.log('--- End Diagnostic ---\n');
 
 // ✅ CREATE SUPABASE CLIENT - ONLY USE SERVICE_ROLE_KEY FOR SUPABASE AUTH
 const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
@@ -209,6 +198,7 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
  * - Single asterisk italic (*text*)
  * - Character profile from postContent or top-level fields
  * - Proper link formatting
+ * - Smart truncation BEFORE HTML formatting (prevents broken tags)
  */
 function buildCaption(post: ScheduledPost): string {
   const postContent = post.post_content as any;
@@ -219,28 +209,20 @@ function buildCaption(post: ScheduledPost): string {
     if (post.description) caption += `${post.description}\n`;
     if (post.hashtags?.length) caption += `\n${post.hashtags.map(tag => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`;
     if (post.cta) caption += `\n\n👉 ${post.cta}`;
+    
+    // Truncate if too long BEFORE returning
+    if (caption.length > 1024) {
+      console.warn(`⚠️ Caption too long (${caption.length} chars), truncating to 1024 chars`);
+      caption = caption.substring(0, 1021) + '...';
+    }
+    
     return caption.trim();
   }
-  
-  let caption = '';
   
   // ✅ FIX: Check for character profile in BOTH postContent AND top-level post fields
   const name = postContent.name || post.name;
   const username = postContent.username || post.username;
   const role = postContent.role || post.role;
-  
-  // Add character profile header
-  if (name) {
-    caption += `<b>${name}</b>\n`;
-    if (username) {
-      const formattedUsername = username.startsWith('@') ? username : `@${username}`;
-      caption += `${formattedUsername}\n`;
-    }
-    if (role) {
-      caption += `${role}\n`;
-    }
-    caption += `\n`;
-  }
   
   // Helper function to convert markdown to Telegram HTML
   function formatText(text: string): string {
@@ -271,24 +253,101 @@ function buildCaption(post: ScheduledPost): string {
     return text;
   }
   
-  // Add title with formatting
+  // ✅ BUILD CAPTION PARTS WITHOUT FORMATTING FIRST
+  let headerPart = '';
+  let titlePart = '';
+  let descriptionPart = '';
+  let hashtagsPart = '';
+  let ctaPart = '';
+  
+  // Add character profile header (already plain text)
+  if (name) {
+    headerPart += `${name}\n`; // Will add <b> later
+    if (username) {
+      const formattedUsername = username.startsWith('@') ? username : `@${username}`;
+      headerPart += `${formattedUsername}\n`;
+    }
+    if (role) {
+      headerPart += `${role}\n`;
+    }
+    headerPart += `\n`;
+  }
+  
+  // Build parts (raw markdown, not HTML yet)
   if (postContent.title) {
-    caption += `${formatText(postContent.title)}\n\n`;
+    titlePart = postContent.title + '\n\n';
   }
   
-  // Add description with formatting
   if (postContent.description) {
-    caption += `${formatText(postContent.description)}\n`;
+    descriptionPart = postContent.description + '\n';
   }
   
-  // Add hashtags
   if (postContent.hashtags && Array.isArray(postContent.hashtags) && postContent.hashtags.length > 0) {
-    caption += `\n${postContent.hashtags.map((tag: string) => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`;
+    hashtagsPart = '\n' + postContent.hashtags.map((tag: string) => tag.startsWith('#') ? tag : `#${tag}`).join(' ');
   }
   
-  // Add CTA
   if (postContent.cta) {
-    caption += `\n\n👉 ${formatText(postContent.cta)}`;
+    ctaPart = '\n\n👉 ' + postContent.cta;
+  }
+  
+  // ✅ CHECK TOTAL LENGTH BEFORE FORMATTING
+  // Estimate formatted length (HTML tags add ~10-20% more characters)
+  const rawLength = headerPart.length + titlePart.length + descriptionPart.length + hashtagsPart.length + ctaPart.length;
+  const estimatedFormattedLength = Math.ceil(rawLength * 1.2); // Add 20% for HTML tags
+  
+  // If too long, truncate the description (usually the longest part)
+  if (estimatedFormattedLength > 1024) {
+    console.warn(`⚠️ Caption will be too long (estimated ${estimatedFormattedLength} chars), truncating description`);
+    
+    // Calculate how much space we have for description
+    const otherPartsLength = Math.ceil((headerPart.length + titlePart.length + hashtagsPart.length + ctaPart.length) * 1.2);
+    const availableForDescription = 1000 - otherPartsLength; // Leave some buffer
+    
+    if (availableForDescription > 50 && descriptionPart.length > availableForDescription) {
+      descriptionPart = descriptionPart.substring(0, availableForDescription - 3) + '...';
+    }
+  }
+  
+  // ✅ NOW APPLY FORMATTING TO EACH PART
+  let caption = '';
+  
+  // Header with bold name
+  if (name) {
+    caption += `<b>${name}</b>\n`;
+    if (username) {
+      const formattedUsername = username.startsWith('@') ? username : `@${username}`;
+      caption += `${formattedUsername}\n`;
+    }
+    if (role) {
+      caption += `${role}\n`;
+    }
+    caption += `\n`;
+  }
+  
+  // Format title
+  if (titlePart) {
+    caption += formatText(titlePart);
+  }
+  
+  // Format description
+  if (descriptionPart) {
+    caption += formatText(descriptionPart);
+  }
+  
+  // Hashtags (no formatting needed)
+  if (hashtagsPart) {
+    caption += hashtagsPart;
+  }
+  
+  // Format CTA
+  if (ctaPart) {
+    caption += '\n\n👉 ' + formatText(postContent.cta);
+  }
+  
+  // ✅ FINAL SAFETY CHECK: If still too long after formatting, truncate carefully
+  if (caption.length > 1024) {
+    console.warn(`⚠️ Caption still too long (${caption.length} chars), truncating to 1000 chars to be safe`);
+    caption = caption.substring(0, 1000) + '...';
   }
   
   return caption.trim();
@@ -542,13 +601,7 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
   try {
     const chatId = post.channel_group_id!;
     const threadId = post.thread_id || undefined;
-    let caption = buildCaption(post);
-    
-    // ✅ TELEGRAM CAPTION LIMIT: Max 1024 characters
-    if (caption.length > 1024) {
-      console.warn(`⚠️ Caption too long (${caption.length} chars), truncating to 1024 chars`);
-      caption = caption.substring(0, 1021) + '...';
-    }
+    const caption = buildCaption(post);
     
     // ✅ BEST PRACTICE: Check media files with priority order
     // Priority 1: Separate media_files column (normalized, easier to query)
@@ -592,7 +645,7 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
       const isVideo = mediaType === 'video' || /\.(mp4|mov|avi|mkv)$/i.test(mediaUrl);
       const isDocument = mediaType === 'document' || /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(mediaUrl);
       
-      // ✅ Download file as Buffer and upload to Telegram (URL method failed)
+      // ✅ Download file as Buffer and upload to Telegram
       console.log(`⬇️ Downloading media file as Buffer...`);
       const { buffer, filename } = await downloadFile(mediaUrl);
       console.log(`✅ Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB as ${filename}`);
@@ -711,108 +764,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     console.log(`Service Type Looking For: '${SERVICE_TYPE}'`);
     console.log('--- End Connection Info ---\n');
 
-    // ✅ DIAGNOSTIC: Test network connectivity to Supabase first
-    console.log('--- DIAGNOSTIC: Testing Network Connectivity ---');
-    try {
-      const healthCheckUrl = `${supabaseUrl}/rest/v1/`;
-      console.log(`Testing HTTP connection to: ${healthCheckUrl}`);
-      
-      const healthResponse = await fetch(healthCheckUrl, {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-        }
-      });
-      
-      console.log(`Health check response status: ${healthResponse.status}`);
-      console.log(`Health check response ok: ${healthResponse.ok}`);
-      
-      if (!healthResponse.ok) {
-        const errorText = await healthResponse.text();
-        console.error(`❌ Health check failed with status ${healthResponse.status}`);
-        console.error('Response body:', errorText.substring(0, 500));
-      } else {
-        console.log('✅ Network connectivity to Supabase is working');
-      }
-    } catch (netError) {
-      console.error('❌ Network connectivity test failed:', netError);
-      console.error('This indicates Render cannot reach Supabase at all');
-    }
-    console.log('--- End Network Diagnostic ---\n');
-
-    // ✅ DIAGNOSTIC: Test basic connection with OUR service_type only
-    console.log('--- DIAGNOSTIC: Testing Supabase Connection ---');
-    const { data: sampleData, error: sampleError } = await supabase
-      .from('scheduled_posts')
-      .select('id, service_type, posting_status')
-      .eq('service_type', SERVICE_TYPE)
-      .limit(5);
-    
-    if (sampleError) {
-      console.error('❌ Cannot connect to scheduled_posts table:', sampleError);
-      console.error('Error details:', JSON.stringify(sampleError, null, 2));
-      throw sampleError;
-    }
-    
-    console.log(`✅ Connection successful! Sample of OUR posts (${SERVICE_TYPE}):`);
-    console.log(JSON.stringify(sampleData, null, 2));
-    
-    // ✅ DIAGNOSTIC: Check posts matching our service_type
-    const { data: serviceData, error: serviceError } = await supabase
-      .from('scheduled_posts')
-      .select('id, service_type, posting_status, scheduled_date, scheduled_time')
-      .eq('service_type', SERVICE_TYPE)
-      .limit(10);
-    
-    console.log(`\n--- Posts with service_type = '${SERVICE_TYPE}' ---`);
-    if (serviceData && serviceData.length > 0) {
-      console.log(`Found ${serviceData.length} posts:`);
-      console.log(JSON.stringify(serviceData, null, 2));
-    } else {
-      console.log('⚠️ No posts found with this service_type');
-    }
-    
-    // ✅ DIAGNOSTIC: Check pending posts with our service_type (ignore date/time)
-    const { data: pendingData, error: pendingError } = await supabase
-      .from('scheduled_posts')
-      .select('id, service_type, posting_status, scheduled_date, scheduled_time')
-      .eq('service_type', SERVICE_TYPE)
-      .eq('posting_status', 'pending')
-      .limit(10);
-    
-    console.log(`\n--- PENDING posts with service_type = '${SERVICE_TYPE}' (ALL DATES) ---`);
-    if (pendingData && pendingData.length > 0) {
-      console.log(`Found ${pendingData.length} pending posts (regardless of date/time):`);
-      console.log(JSON.stringify(pendingData, null, 2));
-      
-      // Show which ones would match our date/time criteria
-      console.log(`\nChecking which posts match date/time criteria:`);
-      pendingData.forEach((post: any) => {
-        const postDate = post.scheduled_date;
-        const postTime = post.scheduled_time;
-        const matchesDate = postDate < currentDate || (postDate === currentDate && postTime <= currentTime);
-        console.log(`  Post ${post.id}:`);
-        console.log(`    Date: ${postDate} (${postDate < currentDate ? 'BEFORE' : postDate === currentDate ? 'TODAY' : 'FUTURE'})`);
-        console.log(`    Time: ${postTime} (${postTime <= currentTime ? 'PAST/NOW' : 'FUTURE'})`);
-        console.log(`    Matches? ${matchesDate ? '✅ YES' : '❌ NO'}`);
-      });
-    } else {
-      console.log('⚠️ No PENDING posts found with this service_type AT ALL');
-      console.log('This means either:');
-      console.log('  1. service_type does not match exactly (check for spaces/typos)');
-      console.log('  2. All posts are in a different posting_status (not pending)');
-      console.log('  3. No posts exist with this service_type');
-    }
-    
-    console.log(`\n--- ACTUAL QUERY PARAMETERS ---`);
-    console.log(`Looking for posts where:`);
-    console.log(`  service_type = '${SERVICE_TYPE}'`);
-    console.log(`  posting_status = 'pending'`);
-    console.log(`  scheduled_date < '${currentDate}' OR (scheduled_date = '${currentDate}' AND scheduled_time <= '${currentTime}')`);
-    console.log('--- End Diagnostics ---\n');
-
-    // ✅ ACTUAL QUERY: Now find posts ready to process
+    // ✅ ACTUAL QUERY: Find posts ready to process
     const { data, error } = await supabase
       .from('scheduled_posts')
       .select('*')
@@ -828,26 +780,16 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
 
     console.log('\n--- QUERY RESULTS ---');
     if (!data || data.length === 0) {
-      console.log('⚠️ No pending posts found matching criteria:');
-      console.log(`  - service_type: '${SERVICE_TYPE}'`);
-      console.log(`  - posting_status: 'pending'`);
-      console.log(`  - scheduled_date <= '${currentDate}'`);
-      console.log(`  - scheduled_time <= '${currentTime}'`);
+      console.log('⚠️ No pending posts found');
       return [];
     }
 
-    console.log(`✅ Found ${data.length} pending posts ready to process:`);
-    data.forEach((post: any) => {
-      console.log(`  - ID: ${post.id}`);
-      console.log(`    Service: ${post.service_type}`);
-      console.log(`    Status: ${post.posting_status}`);
-      console.log(`    Scheduled: ${post.scheduled_date} ${post.scheduled_time}`);
-    });
+    console.log(`✅ Found ${data.length} pending posts ready to process`);
     console.log('--- End Query Results ---\n');
 
     const claimedIds = data.map((post: any) => post.id);
     
-    // ✅ CRITICAL FIX: Do NOT touch posting_status, ONLY update post_status
+    // ✅ Update post_status to pending
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
@@ -900,7 +842,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
     console.log(`✅ Successfully posted to Telegram`);
     console.log(`External Post ID: ${externalPostId}`);
 
-    // ✅ CRITICAL FIX: Do NOT touch posting_status, ONLY update post_status to 'sent'
+    // ✅ Update post_status to 'sent'
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
@@ -943,12 +885,10 @@ async function processPost(post: ScheduledPost): Promise<void> {
     const errorMessage = getErrorMessage(error);
     console.error(`❌ Failed to process post ${post.id}:`, errorMessage);
 
-    // ✅ DETERMINE IF SHOULD RETRY
+    // ✅ Mark as failed
     const maxRetries = 3;
     const newAttempts = (post.attempts || 0) + 1;
-    const shouldRetry = newAttempts < maxRetries;
 
-    // ✅ CRITICAL FIX: Do NOT touch posting_status, ONLY update post_status to 'failed'
     const { error: failError } = await supabase
       .from('scheduled_posts')
       .update({
