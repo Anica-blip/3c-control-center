@@ -205,6 +205,10 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
 
 /**
  * Build caption from post_content with proper Telegram HTML formatting
+ * FIXES: 
+ * - Single asterisk italic (*text*)
+ * - Character profile from postContent or top-level fields
+ * - Proper link formatting
  */
 function buildCaption(post: ScheduledPost): string {
   const postContent = post.post_content as any;
@@ -220,15 +224,20 @@ function buildCaption(post: ScheduledPost): string {
   
   let caption = '';
   
+  // ✅ FIX: Check for character profile in BOTH postContent AND top-level post fields
+  const name = postContent.name || post.name;
+  const username = postContent.username || post.username;
+  const role = postContent.role || post.role;
+  
   // Add character profile header
-  if (post.name) {
-    caption += `<b>${post.name}</b>\n`;
-    if (post.username) {
-      const username = post.username.startsWith('@') ? post.username : `@${post.username}`;
-      caption += `${username}\n`;
+  if (name) {
+    caption += `<b>${name}</b>\n`;
+    if (username) {
+      const formattedUsername = username.startsWith('@') ? username : `@${username}`;
+      caption += `${formattedUsername}\n`;
     }
-    if (post.role) {
-      caption += `${post.role}\n`;
+    if (role) {
+      caption += `${role}\n`;
     }
     caption += `\n`;
   }
@@ -237,14 +246,18 @@ function buildCaption(post: ScheduledPost): string {
   function formatText(text: string): string {
     if (!text) return '';
     
-    // Convert markdown links [text](url) to HTML
+    // ✅ FIX: Convert markdown links FIRST (before other replacements)
     text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>');
     
     // Convert bold **text** to <b>text</b>
     text = text.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
     
-    // Convert italic _text_ to <i>text</i>
-    text = text.replace(/(?<!\w)_(.+?)_(?!\w)/g, '<i>$1</i>');
+    // ✅ FIX: Convert italic *text* to <i>text</i> (single asterisk - AFTER bold)
+    // Use negative lookahead/lookbehind to avoid matching ** or ***
+    text = text.replace(/(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)/g, '<i>$1</i>');
+    
+    // Convert italic _text_ to <i>text</i> (underscore alternative)
+    text = text.replace(/(?<!\w)_([^_]+?)_(?!\w)/g, '<i>$1</i>');
     
     // Convert underline __text__ to <u>text</u>
     text = text.replace(/__(.+?)__/g, '<u>$1</u>');
