@@ -394,6 +394,82 @@ async function sendTelegramPhoto(
 }
 
 /**
+ * Send animation (GIF) to Telegram with caption (supports URL or direct upload)
+ */
+async function sendTelegramAnimation(
+  botToken: string,
+  chatId: string,
+  animationUrlOrBuffer: string | Buffer,
+  caption: string,
+  threadId?: string,
+  filename?: string
+): Promise<TelegramResponse> {
+  const url = `https://api.telegram.org/bot${botToken}/sendAnimation`;
+  
+  // If sending as URL
+  if (typeof animationUrlOrBuffer === 'string') {
+    const body: any = {
+      chat_id: chatId,
+      animation: animationUrlOrBuffer,
+      caption: caption,
+      parse_mode: 'HTML',
+    };
+    
+    if (threadId) {
+      const threadIdMatch = threadId.match(/(\d+)$/);
+      if (threadIdMatch) {
+        body.message_thread_id = parseInt(threadIdMatch[1]);
+      }
+    }
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    return await parseTelegramResponse(response);
+  }
+  
+  // If sending as Buffer (direct upload) - USE BUILT-IN FormData
+  console.log(`📤 Preparing GIF animation upload:`);
+  console.log(`   Chat ID: ${chatId}`);
+  console.log(`   Filename: ${filename || 'animation.gif'}`);
+  console.log(`   Buffer size: ${animationUrlOrBuffer.length} bytes`);
+  console.log(`   Caption length: ${caption.length} chars`);
+  if (threadId) console.log(`   Thread ID: ${threadId}`);
+  
+  // Convert Buffer to Blob for built-in FormData
+  const blob = new Blob([animationUrlOrBuffer], { type: 'image/gif' });
+  const file = new File([blob], filename || 'animation.gif', { type: 'image/gif' });
+  
+  // Use built-in FormData (not form-data npm package)
+  const formData = new FormData();
+  formData.append('chat_id', chatId);
+  formData.append('animation', file);
+  formData.append('caption', caption);
+  formData.append('parse_mode', 'HTML');
+  
+  if (threadId) {
+    const threadIdMatch = threadId.match(/(\d+)$/);
+    if (threadIdMatch) {
+      formData.append('message_thread_id', threadIdMatch[1]);
+      console.log(`   Message thread ID: ${threadIdMatch[1]}`);
+    }
+  }
+  
+  console.log(`🚀 Sending GIF animation to Telegram API...`);
+  
+  // Built-in fetch handles FormData headers automatically
+  const response = await fetch(url, {
+    method: 'POST',
+    body: formData
+  });
+
+  return await parseTelegramResponse(response);
+}
+
+/**
  * Send video to Telegram with caption (supports URL or direct upload)
  */
 async function sendTelegramVideo(
@@ -589,15 +665,19 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
       
       // Determine media type from file extension OR type field
       const mediaType = firstMedia.type?.toLowerCase() || '';
+      const isGif = /\.gif$/i.test(mediaUrl);
       const isVideo = mediaType === 'video' || /\.(mp4|mov|avi|mkv)$/i.test(mediaUrl);
       const isDocument = mediaType === 'document' || /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(mediaUrl);
       
-      // ✅ Download file as Buffer and upload to Telegram (URL method failed)
+      // ✅ Download file as Buffer and upload to Telegram
       console.log(`⬇️ Downloading media file as Buffer...`);
       const { buffer, filename } = await downloadFile(mediaUrl);
       console.log(`✅ Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB as ${filename}`);
       
-      if (isVideo) {
+      if (isGif) {
+        console.log(`🎞️ Uploading GIF animation to Telegram: ${filename}`);
+        telegramResult = await sendTelegramAnimation(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+      } else if (isVideo) {
         console.log(`📹 Uploading video to Telegram: ${filename}`);
         telegramResult = await sendTelegramVideo(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       } else if (isDocument) {
@@ -914,6 +994,9 @@ async function processPost(post: ScheduledPost): Promise<void> {
     }
 
     // ✅ INSERT INTO dashboard_posts
+    // Extract character profile and other fields from post_content
+    const postContent = post.post_content as any;
+    
     const dashboardPost = {
       scheduled_post_id: post.id,
       social_platform: post.social_platform,
@@ -924,7 +1007,34 @@ async function processPost(post: ScheduledPost): Promise<void> {
         ? `https://t.me/c/${post.channel_group_id?.replace('-100', '')}/${externalPostId}`
         : post.url,
       channel_group_id: post.channel_group_id,
-      thread_id: post.thread_id
+      thread_id: post.thread_id,
+      
+      // ✅ FIX: Extract character profile fields
+      character_profile: post.character_profile || postContent?.character_profile || null,
+      name: post.name || postContent?.name || null,
+      username: post.username || postContent?.username || null,
+      role: post.role || postContent?.role || null,
+      character_avatar: post.character_avatar || postContent?.character_avatar || null,
+      
+      // ✅ FIX: Extract post metadata
+      title: post.title || postContent?.title || null,
+      description: post.description || postContent?.description || null,
+      hashtags: post.hashtags || postContent?.hashtags || null,
+      keywords: post.keywords || postContent?.keywords || null,
+      cta: post.cta || postContent?.cta || null,
+      theme: post.theme || postContent?.theme || null,
+      audience: post.audience || postContent?.audience || null,
+      voice_style: post.voice_style || postContent?.voice_style || null,
+      media_type: post.media_type || postContent?.media_type || null,
+      template_type: post.template_type || postContent?.template_type || null,
+      
+      // ✅ FIX: Preserve scheduled time
+      scheduled_date: post.scheduled_date,
+      scheduled_time: post.scheduled_time,
+      
+      // ✅ FIX: User identification
+      user_id: post.user_id || null,
+      created_by: post.created_by || null
     };
 
     const { error: insertError } = await supabase
@@ -935,6 +1045,21 @@ async function processPost(post: ScheduledPost): Promise<void> {
       console.warn(`⚠️ Failed to insert into dashboard_posts: ${getErrorMessage(insertError)}`);
     } else {
       console.log(`✅ Inserted into dashboard_posts`);
+    }
+
+    // ✅ FIX: SOFT-DELETE from scheduled_posts after successful posting
+    // This keeps dashboard clean while preserving data in dashboard_posts
+    const { error: deleteError } = await supabase
+      .from('scheduled_posts')
+      .delete()
+      .eq('id', post.id)
+      .eq('service_type', SERVICE_TYPE);
+
+    if (deleteError) {
+      console.warn(`⚠️ Failed to delete from scheduled_posts: ${getErrorMessage(deleteError)}`);
+      console.warn('Post was successful but cleanup failed. Manual cleanup may be needed.');
+    } else {
+      console.log(`✅ Deleted post ${post.id} from scheduled_posts (preserved in dashboard_posts)`);
     }
 
     console.log(`✅ Post ${post.id} completed successfully`);
