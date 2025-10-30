@@ -153,16 +153,42 @@ async function downloadFile(url: string): Promise<{ buffer: Buffer; filename: st
 async function parseTelegramResponse(response: Response): Promise<TelegramResponse> {
   // Check if response is ok before parsing
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`❌ Telegram API error response (${response.status}):`);
-    console.error(errorText);
-    return {
-      ok: false,
-      description: `HTTP ${response.status}: ${errorText}`
-    };
+    // Telegram API always returns JSON, even for errors
+    try {
+      const errorJson = await response.json();
+      console.error(`❌ Telegram API error response (${response.status}):`);
+      console.error(JSON.stringify(errorJson, null, 2));
+      
+      // Extract the error description from Telegram's JSON response
+      const description = errorJson.description || errorJson.error || 'Unknown error';
+      const errorCode = errorJson.error_code || response.status;
+      
+      return {
+        ok: false,
+        description: `HTTP ${errorCode}: ${description}`
+      };
+    } catch (jsonError) {
+      // Fallback: If JSON parsing fails, try to get raw text
+      let errorText = '';
+      try {
+        // Clone the response to read it again since we already tried .json()
+        const textResponse = response.clone();
+        errorText = await textResponse.text();
+      } catch (e) {
+        errorText = 'Could not read response body';
+      }
+      
+      console.error(`❌ Telegram API error response (${response.status}):`);
+      console.error('Raw error text:', errorText);
+      
+      return {
+        ok: false,
+        description: `HTTP ${response.status}: ${errorText || 'Empty response body'}`
+      };
+    }
   }
 
-  // Try to parse JSON with error handling
+  // Try to parse JSON with error handling for successful responses
   try {
     const json = await response.json();
     return json;
