@@ -61,7 +61,7 @@ const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
   }
 });
 
-console.log(`[${new Date().toISOString()}] Railway Cron Runner initialized`);
+console.log(`[${new Date().toISOString()}] Railway Gateway for GitHub - Workflow initialized`);
 console.log(`Supabase URL: ${supabaseUrl}`);
 console.log(`Service Type Filter: ${SERVICE_TYPE}`);
 console.log(`Timezone: WEST (UTC+${TIMEZONE_OFFSET_HOURS})`);
@@ -198,6 +198,7 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
  * - Single asterisk italic (*text*)
  * - Character profile from postContent or top-level fields
  * - Proper link formatting
+ * - Smart truncation BEFORE HTML formatting (prevents broken tags)
  */
 function buildCaption(post: ScheduledPost): string {
   const postContent = post.post_content as any;
@@ -208,28 +209,20 @@ function buildCaption(post: ScheduledPost): string {
     if (post.description) caption += `${post.description}\n`;
     if (post.hashtags?.length) caption += `\n${post.hashtags.map(tag => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`;
     if (post.cta) caption += `\n\n👉 ${post.cta}`;
+    
+    // Truncate if too long BEFORE returning
+    if (caption.length > 1024) {
+      console.warn(`⚠️ Caption too long (${caption.length} chars), truncating to 1024 chars`);
+      caption = caption.substring(0, 1021) + '...';
+    }
+    
     return caption.trim();
   }
-  
-  let caption = '';
   
   // ✅ FIX: Check for character profile in BOTH postContent AND top-level post fields
   const name = postContent.name || post.name;
   const username = postContent.username || post.username;
   const role = postContent.role || post.role;
-  
-  // Add character profile header
-  if (name) {
-    caption += `<b>${name}</b>\n`;
-    if (username) {
-      const formattedUsername = username.startsWith('@') ? username : `@${username}`;
-      caption += `${formattedUsername}\n`;
-    }
-    if (role) {
-      caption += `${role}\n`;
-    }
-    caption += `\n`;
-  }
   
   // Helper function to convert markdown to Telegram HTML
   function formatText(text: string): string {
@@ -260,24 +253,101 @@ function buildCaption(post: ScheduledPost): string {
     return text;
   }
   
-  // Add title with formatting
+  // ✅ BUILD CAPTION PARTS WITHOUT FORMATTING FIRST
+  let headerPart = '';
+  let titlePart = '';
+  let descriptionPart = '';
+  let hashtagsPart = '';
+  let ctaPart = '';
+  
+  // Add character profile header (already plain text)
+  if (name) {
+    headerPart += `${name}\n`; // Will add <b> later
+    if (username) {
+      const formattedUsername = username.startsWith('@') ? username : `@${username}`;
+      headerPart += `${formattedUsername}\n`;
+    }
+    if (role) {
+      headerPart += `${role}\n`;
+    }
+    headerPart += `\n`;
+  }
+  
+  // Build parts (raw markdown, not HTML yet)
   if (postContent.title) {
-    caption += `${formatText(postContent.title)}\n\n`;
+    titlePart = postContent.title + '\n\n';
   }
   
-  // Add description with formatting
   if (postContent.description) {
-    caption += `${formatText(postContent.description)}\n`;
+    descriptionPart = postContent.description + '\n';
   }
   
-  // Add hashtags
   if (postContent.hashtags && Array.isArray(postContent.hashtags) && postContent.hashtags.length > 0) {
-    caption += `\n${postContent.hashtags.map((tag: string) => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`;
+    hashtagsPart = '\n' + postContent.hashtags.map((tag: string) => tag.startsWith('#') ? tag : `#${tag}`).join(' ');
   }
   
-  // Add CTA
   if (postContent.cta) {
-    caption += `\n\n👉 ${formatText(postContent.cta)}`;
+    ctaPart = '\n\n👉 ' + postContent.cta;
+  }
+  
+  // ✅ CHECK TOTAL LENGTH BEFORE FORMATTING
+  // Estimate formatted length (HTML tags add ~10-20% more characters)
+  const rawLength = headerPart.length + titlePart.length + descriptionPart.length + hashtagsPart.length + ctaPart.length;
+  const estimatedFormattedLength = Math.ceil(rawLength * 1.2); // Add 20% for HTML tags
+  
+  // If too long, truncate the description (usually the longest part)
+  if (estimatedFormattedLength > 1024) {
+    console.warn(`⚠️ Caption will be too long (estimated ${estimatedFormattedLength} chars), truncating description`);
+    
+    // Calculate how much space we have for description
+    const otherPartsLength = Math.ceil((headerPart.length + titlePart.length + hashtagsPart.length + ctaPart.length) * 1.2);
+    const availableForDescription = 1000 - otherPartsLength; // Leave some buffer
+    
+    if (availableForDescription > 50 && descriptionPart.length > availableForDescription) {
+      descriptionPart = descriptionPart.substring(0, availableForDescription - 3) + '...';
+    }
+  }
+  
+  // ✅ NOW APPLY FORMATTING TO EACH PART
+  let caption = '';
+  
+  // Header with bold name
+  if (name) {
+    caption += `<b>${name}</b>\n`;
+    if (username) {
+      const formattedUsername = username.startsWith('@') ? username : `@${username}`;
+      caption += `${formattedUsername}\n`;
+    }
+    if (role) {
+      caption += `${role}\n`;
+    }
+    caption += `\n`;
+  }
+  
+  // Format title
+  if (titlePart) {
+    caption += formatText(titlePart);
+  }
+  
+  // Format description
+  if (descriptionPart) {
+    caption += formatText(descriptionPart);
+  }
+  
+  // Hashtags (no formatting needed)
+  if (hashtagsPart) {
+    caption += hashtagsPart;
+  }
+  
+  // Format CTA
+  if (ctaPart) {
+    caption += '\n\n👉 ' + formatText(postContent.cta);
+  }
+  
+  // ✅ FINAL SAFETY CHECK: If still too long after formatting, truncate carefully
+  if (caption.length > 1024) {
+    console.warn(`⚠️ Caption still too long (${caption.length} chars), truncating to 1000 chars to be safe`);
+    caption = caption.substring(0, 1000) + '...';
   }
   
   return caption.trim();
@@ -531,13 +601,7 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
   try {
     const chatId = post.channel_group_id!;
     const threadId = post.thread_id || undefined;
-    let caption = buildCaption(post);
-    
-    // ✅ TELEGRAM CAPTION LIMIT: Max 1024 characters
-    if (caption.length > 1024) {
-      console.warn(`⚠️ Caption too long (${caption.length} chars), truncating to 1024 chars`);
-      caption = caption.substring(0, 1021) + '...';
-    }
+    const caption = buildCaption(post);
     
     // ✅ BEST PRACTICE: Check media files with priority order
     // Priority 1: Separate media_files column (normalized, easier to query)
@@ -850,7 +914,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
 async function main(): Promise<ProcessResult> {
   const startTime = new Date();
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`Railway Cron Job Started: ${startTime.toISOString()}`);
+  console.log(`GitHub - Workflow Gateway Started: ${startTime.toISOString()}`);
   console.log(`${'='.repeat(60)}\n`);
 
   const errors: string[] = [];
@@ -887,7 +951,7 @@ async function main(): Promise<ProcessResult> {
     const duration = endTime.getTime() - startTime.getTime();
 
     console.log(`\n${'='.repeat(60)}`);
-    console.log(`Railway Cron Job Completed`);
+    console.log(`GitHub - Workflow Gateway Completed`);
     console.log(`${'='.repeat(60)}`);
     console.log(`Duration: ${duration}ms`);
     console.log(`Total Claimed: ${posts.length}`);
