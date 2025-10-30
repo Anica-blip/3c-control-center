@@ -573,20 +573,19 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
       const isVideo = mediaType === 'video' || /\.(mp4|mov|avi|mkv)$/i.test(mediaUrl);
       const isDocument = mediaType === 'document' || /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(mediaUrl);
       
-      // ✅ CRITICAL FIX: Download file as Buffer and upload directly to Telegram
-      console.log(`⬇️ Downloading media file as Buffer...`);
-      const { buffer, filename } = await downloadFile(mediaUrl);
-      console.log(`✅ Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB as ${filename}`);
+      // ✅ STRATEGY: Send media URL directly to Telegram (let Telegram download it)
+      // This avoids buffer upload issues with FormData
+      console.log(`📤 Sending media URL to Telegram (Telegram will download it)`);
       
       if (isVideo) {
-        console.log(`📹 Uploading video to Telegram: ${filename}`);
-        telegramResult = await sendTelegramVideo(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+        console.log(`📹 Sending video URL to Telegram`);
+        telegramResult = await sendTelegramVideo(TELEGRAM_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
       } else if (isDocument) {
-        console.log(`📄 Uploading document to Telegram: ${filename}`);
-        telegramResult = await sendTelegramDocument(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+        console.log(`📄 Sending document URL to Telegram`);
+        telegramResult = await sendTelegramDocument(TELEGRAM_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
       } else {
-        console.log(`🖼️ Uploading photo to Telegram: ${filename}`);
-        telegramResult = await sendTelegramPhoto(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+        console.log(`🖼️ Sending photo URL to Telegram`);
+        telegramResult = await sendTelegramPhoto(TELEGRAM_BOT_TOKEN, chatId, mediaUrl, caption, threadId);
       }
     } 
     // CASE 2: Text-only post
