@@ -1,10 +1,14 @@
-// Railway Gateway for GitHub - Workflow - Direct Database Connection with Telegram Posting
-// Queries scheduled_posts table directly and posts to Telegram
+// Railway Gateway for GitHub - Workflow - HTTP Server with Telegram Posting
+// Receives HTTP requests from GitHub Actions and posts to Telegram
 // TIMEZONE: WEST (UTC+1)
-// MODE: HTTP Server + Direct Execution
 
+import express from 'express';
 import { createClient } from '@supabase/supabase-js';
-import { createServer, IncomingMessage, ServerResponse } from 'http';
+
+const app = express();
+app.use(express.json());
+
+const PORT = process.env.PORT || 8080;
 
 // ✅ ENVIRONMENT VARIABLES - WITH TRIMMING
 const CRON_SUPABASE_DB_URL = (process.env.CRON_SUPABASE_DB_URL || '').trim();
@@ -12,7 +16,6 @@ const CRON_RUNNER_PASSWORD = (process.env.CRON_RUNNER_PASSWORD || '').trim();
 const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 const TELEGRAM_PUBLISHER_BOT_TOKEN = (process.env.TELEGRAM_PUBLISHER_BOT_TOKEN || '').trim();
 const AUTHORIZATION = (process.env.AUTHORIZATION || '').trim();
-const PORT = process.env.PORT || '3000';
 
 // ✅ RUNNER IDENTITY
 const RUNNER_NAME = 'GitHub - Workflow';
@@ -28,8 +31,11 @@ if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_PUBLISHER_B
   console.error('  CRON_SUPABASE_DB_URL:', CRON_SUPABASE_DB_URL ? 'SET' : 'MISSING');
   console.error('  SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING');
   console.error('  TELEGRAM_PUBLISHER_BOT_TOKEN:', TELEGRAM_PUBLISHER_BOT_TOKEN ? 'SET' : 'MISSING');
-  console.error('  AUTHORIZATION:', AUTHORIZATION ? 'SET (optional)' : 'NOT SET (will use SERVICE_ROLE_KEY)');
-  process.exit(1);
+  console.error('  CRON_RUNNER_PASSWORD:', CRON_RUNNER_PASSWORD ? 'SET' : 'MISSING');
+  
+  if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_PUBLISHER_BOT_TOKEN || !CRON_RUNNER_PASSWORD) {
+    process.exit(1);
+  }
 }
 
 console.log('✅ All required environment variables are set\n');
@@ -163,14 +169,19 @@ async function downloadFile(url: string): Promise<{ buffer: Buffer; filename: st
  * Parse Telegram API response with proper error handling
  */
 async function parseTelegramResponse(response: Response): Promise<TelegramResponse> {
+  // Read response body as text first (only consume stream once)
   const responseText = await response.text();
   
+  // Check if response is ok
   if (!response.ok) {
     console.error(`❌ Telegram API error response (${response.status}):`);
     console.error('Raw response:', responseText);
     
+    // Try to parse as JSON to extract error details
     try {
       const errorJson = JSON.parse(responseText);
+      
+      // Extract the error description from Telegram's JSON response
       const description = errorJson.description || errorJson.error || 'Unknown error';
       const errorCode = errorJson.error_code || response.status;
       
@@ -179,6 +190,7 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
         description: `HTTP ${errorCode}: ${description}`
       };
     } catch (jsonError) {
+      // Not JSON, return raw text
       return {
         ok: false,
         description: `HTTP ${response.status}: ${responseText || 'Empty response body'}`
@@ -186,6 +198,7 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
     }
   }
 
+  // Parse successful response as JSON
   try {
     const json = JSON.parse(responseText);
     return json;
@@ -233,6 +246,7 @@ function buildCaption(post: ScheduledPost): string {
     caption += `\n`;
   }
   
+  // Helper function to convert markdown to Telegram HTML
   function formatText(text: string): string {
     if (!text) return '';
     
@@ -300,7 +314,68 @@ async function sendTelegramMessage(
 }
 
 /**
- * Send photo to Telegram with caption (supports URL or direct upload)
+ * ✅ FIX #1: Send animation/GIF to Telegram with caption
+ */
+async function sendTelegramAnimation(
+  botToken: string,
+  chatId: string,
+  animationUrlOrBuffer: string | Buffer,
+  caption: string,
+  threadId?: string,
+  filename?: string
+): Promise<TelegramResponse> {
+  const url = `https://api.telegram.org/bot${botToken}/sendAnimation`;
+  
+  if (typeof animationUrlOrBuffer === 'string') {
+    const body: any = {
+      chat_id: chatId,
+      animation: animationUrlOrBuffer,
+      caption: caption,
+      parse_mode: 'HTML',
+    };
+    
+    if (threadId) {
+      const threadIdMatch = threadId.match(/(\d+)$/);
+      if (threadIdMatch) {
+        body.message_thread_id = parseInt(threadIdMatch[1]);
+      }
+    }
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    return await parseTelegramResponse(response);
+  }
+  
+  const blob = new Blob([animationUrlOrBuffer], { type: 'image/gif' });
+  const file = new File([blob], filename || 'animation.gif', { type: 'image/gif' });
+  
+  const formData = new FormData();
+  formData.append('chat_id', chatId);
+  formData.append('animation', file);
+  formData.append('caption', caption);
+  formData.append('parse_mode', 'HTML');
+  
+  if (threadId) {
+    const threadIdMatch = threadId.match(/(\d+)$/);
+    if (threadIdMatch) {
+      formData.append('message_thread_id', threadIdMatch[1]);
+    }
+  }
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    body: formData
+  });
+
+  return await parseTelegramResponse(response);
+}
+
+/**
+ * Send photo to Telegram with caption
  */
 async function sendTelegramPhoto(
   botToken: string,
@@ -361,78 +436,7 @@ async function sendTelegramPhoto(
 }
 
 /**
- * ✅ FIX #3: Send animation/GIF to Telegram (supports URL or direct upload)
- */
-async function sendTelegramAnimation(
-  botToken: string,
-  chatId: string,
-  animationUrlOrBuffer: string | Buffer,
-  caption: string,
-  threadId?: string,
-  filename?: string
-): Promise<TelegramResponse> {
-  const url = `https://api.telegram.org/bot${botToken}/sendAnimation`;
-  
-  if (typeof animationUrlOrBuffer === 'string') {
-    const body: any = {
-      chat_id: chatId,
-      animation: animationUrlOrBuffer,
-      caption: caption,
-      parse_mode: 'HTML',
-    };
-    
-    if (threadId) {
-      const threadIdMatch = threadId.match(/(\d+)$/);
-      if (threadIdMatch) {
-        body.message_thread_id = parseInt(threadIdMatch[1]);
-      }
-    }
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    return await parseTelegramResponse(response);
-  }
-  
-  console.log(`📤 Preparing GIF/animation upload:`);
-  console.log(`   Chat ID: ${chatId}`);
-  console.log(`   Filename: ${filename || 'animation.gif'}`);
-  console.log(`   Buffer size: ${animationUrlOrBuffer.length} bytes`);
-  console.log(`   Caption length: ${caption.length} chars`);
-  if (threadId) console.log(`   Thread ID: ${threadId}`);
-  
-  const blob = new Blob([animationUrlOrBuffer], { type: 'image/gif' });
-  const file = new File([blob], filename || 'animation.gif', { type: 'image/gif' });
-  
-  const formData = new FormData();
-  formData.append('chat_id', chatId);
-  formData.append('animation', file);
-  formData.append('caption', caption);
-  formData.append('parse_mode', 'HTML');
-  
-  if (threadId) {
-    const threadIdMatch = threadId.match(/(\d+)$/);
-    if (threadIdMatch) {
-      formData.append('message_thread_id', threadIdMatch[1]);
-      console.log(`   Message thread ID: ${threadIdMatch[1]}`);
-    }
-  }
-  
-  console.log(`🚀 Sending GIF/animation to Telegram API...`);
-  
-  const response = await fetch(url, {
-    method: 'POST',
-    body: formData
-  });
-
-  return await parseTelegramResponse(response);
-}
-
-/**
- * Send video to Telegram with caption (supports URL or direct upload)
+ * Send video to Telegram with caption
  */
 async function sendTelegramVideo(
   botToken: string,
@@ -468,13 +472,6 @@ async function sendTelegramVideo(
     return await parseTelegramResponse(response);
   }
   
-  console.log(`📤 Preparing video upload:`);
-  console.log(`   Chat ID: ${chatId}`);
-  console.log(`   Filename: ${filename || 'video.mp4'}`);
-  console.log(`   Buffer size: ${videoUrlOrBuffer.length} bytes`);
-  console.log(`   Caption length: ${caption.length} chars`);
-  if (threadId) console.log(`   Thread ID: ${threadId}`);
-  
   const blob = new Blob([videoUrlOrBuffer], { type: 'video/mp4' });
   const file = new File([blob], filename || 'video.mp4', { type: 'video/mp4' });
   
@@ -488,11 +485,8 @@ async function sendTelegramVideo(
     const threadIdMatch = threadId.match(/(\d+)$/);
     if (threadIdMatch) {
       formData.append('message_thread_id', threadIdMatch[1]);
-      console.log(`   Message thread ID: ${threadIdMatch[1]}`);
     }
   }
-  
-  console.log(`🚀 Sending video to Telegram API...`);
   
   const response = await fetch(url, {
     method: 'POST',
@@ -503,7 +497,7 @@ async function sendTelegramVideo(
 }
 
 /**
- * Send document to Telegram with caption (supports URL or direct upload)
+ * Send document to Telegram with caption
  */
 async function sendTelegramDocument(
   botToken: string,
@@ -572,9 +566,9 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
     const threadId = post.thread_id || undefined;
     const caption = buildCaption(post);
     
-    // ✅ FIX #4: TELEGRAM CAPTION LIMIT - Max 1024 characters
+    // ✅ FIX #2: TELEGRAM CAPTION LIMIT - Max 1024 characters
     if (caption.length > 1024) {
-      throw new Error(`Caption too long (${caption.length} chars). Telegram limit is 1024 characters. Please shorten your content.`);
+      throw new Error(`Caption too long (${caption.length} chars). Please shorten content to under 1024 characters.`);
     }
     
     let mediaFiles: any[] = [];
@@ -583,13 +577,11 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
     if (post.media_files && Array.isArray(post.media_files) && post.media_files.length > 0) {
       mediaFiles = post.media_files;
       mediaSource = 'media_files column';
-      console.log(`✅ Using media from: ${mediaSource}`);
     } else {
       const postContent = post.post_content as any;
       if (postContent?.media_files && Array.isArray(postContent.media_files) && postContent.media_files.length > 0) {
         mediaFiles = postContent.media_files;
         mediaSource = 'post_content.media_files';
-        console.log(`✅ Using media from: ${mediaSource}`);
       }
     }
     
@@ -599,28 +591,19 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
       const firstMedia = mediaFiles[0];
       const mediaUrl = firstMedia.url || firstMedia.src || firstMedia.supabaseUrl || firstMedia;
       
-      console.log(`📦 Media file detected:`);
-      console.log(`   Source: ${mediaSource}`);
-      console.log(`   Type: ${firstMedia.type || 'unknown'}`);
-      console.log(`   Name: ${firstMedia.name || 'unknown'}`);
-      console.log(`   Size: ${firstMedia.size ? `${(firstMedia.size / 1024 / 1024).toFixed(2)} MB` : 'unknown'}`);
-      console.log(`   URL: ${mediaUrl}`);
-      
       if (typeof mediaUrl !== 'string') {
         throw new Error('Invalid media URL format');
       }
       
-      // ✅ FIX #3: GIF DETECTION - Check file extension FIRST
+      // ✅ FIX #1: Determine media type - CHECK FILE EXTENSION FIRST
       const mediaType = firstMedia.type?.toLowerCase() || '';
-      const isGif = /\.(gif)$/i.test(mediaUrl) || mediaType === 'gif';
+      const isGif = /\.(gif)$/i.test(mediaUrl);
       const isVideo = mediaType === 'video' || /\.(mp4|mov|avi|mkv)$/i.test(mediaUrl);
       const isDocument = mediaType === 'document' || /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(mediaUrl);
       
-      console.log(`⬇️ Downloading media file as Buffer...`);
       const { buffer, filename } = await downloadFile(mediaUrl);
-      console.log(`✅ Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB as ${filename}`);
       
-      // ✅ FIX #3: Use sendTelegramAnimation for GIFs
+      // ✅ FIX #1: GIF/ANIMATION CHECK FIRST
       if (isGif) {
         console.log(`🎞️ Uploading GIF/animation to Telegram: ${filename}`);
         telegramResult = await sendTelegramAnimation(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
@@ -635,7 +618,7 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
         telegramResult = await sendTelegramPhoto(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       }
     } else {
-      console.log('💬 Sending text-only message (no media detected)');
+      console.log('💬 Sending text-only message');
       telegramResult = await sendTelegramMessage(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, caption, threadId);
     }
     
@@ -711,12 +694,6 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
   const { date: currentDate, time: currentTime } = getCurrentWESTDateTime();
   
   try {
-    console.log(`\n${'='.repeat(60)}`);
-    console.log('Querying pending jobs...');
-    console.log(`UTC Time: ${nowUTC.toISOString()}`);
-    console.log(`WEST Time: ${nowWEST.toISOString()}`);
-    console.log(`Query Date: ${currentDate}, Query Time: ${currentTime}`);
-    
     const { data, error } = await supabase
       .from('scheduled_posts')
       .select('*')
@@ -730,13 +707,13 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
       throw error;
     }
 
-    console.log('\n--- QUERY RESULTS ---');
     if (!data || data.length === 0) {
       console.log('⚠️ No pending posts found');
       return [];
     }
 
     console.log(`✅ Found ${data.length} pending posts`);
+
     const claimedIds = data.map((post: any) => post.id);
     
     const { error: updateError } = await supabase
@@ -752,7 +729,6 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
       throw updateError;
     }
 
-    console.log(`Claimed ${claimedIds.length} jobs`);
     return data as ScheduledPost[];
 
   } catch (error) {
@@ -764,16 +740,14 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
 async function processPost(post: ScheduledPost): Promise<void> {
   const now = new Date();
   console.log(`\n--- Processing Post ${post.id} ---`);
-  console.log(`Platform: ${post.social_platform}`);
-  console.log(`Scheduled: ${post.scheduled_date} ${post.scheduled_time}`);
 
   try {
     if (!post.channel_group_id) {
-      throw new Error('Missing channel_group_id (Telegram Chat ID)');
+      throw new Error('Missing channel_group_id');
     }
 
     if (!post.post_content && !post.description && !post.title) {
-      throw new Error('Missing post content (title or description required)');
+      throw new Error('Missing post content');
     }
 
     const postResult = await postToTelegram(post);
@@ -783,8 +757,6 @@ async function processPost(post: ScheduledPost): Promise<void> {
     }
 
     const externalPostId = postResult.post_id || 'unknown';
-    console.log(`✅ Successfully posted to Telegram`);
-    console.log(`External Post ID: ${externalPostId}`);
 
     const { error: updateError } = await supabase
       .from('scheduled_posts')
@@ -798,45 +770,43 @@ async function processPost(post: ScheduledPost): Promise<void> {
       throw new Error(`Failed to update scheduled_posts: ${getErrorMessage(updateError)}`);
     }
 
-    // ✅ FIX #1: DASHBOARD_POSTS SCHEMA - All 27 columns with proper null handling
+    // ✅ FIX #3: INSERT INTO dashboard_posts with ALL 27 fields
     const postContent = post.post_content as any;
     
     const dashboardPost = {
       scheduled_post_id: post.id,
-      social_platform: post.social_platform || null,
-      post_content: post.post_content || null,
+      social_platform: post.social_platform,
+      post_content: post.post_content,
       external_post_id: externalPostId,
       posted_at: now.toISOString(),
       url: externalPostId !== 'unknown' 
         ? `https://t.me/c/${post.channel_group_id?.replace('-100', '')}/${externalPostId}`
         : post.url,
-      channel_group_id: post.channel_group_id || null,
-      thread_id: post.thread_id || null,
-      content_id: post.content_id || null,
-      user_id: post.user_id || null,
-      created_by: post.created_by || null,
-      
-      // Character Profile Fields
-      character_avatar: post.character_avatar || postContent?.character_avatar || null,
+      channel_group_id: post.channel_group_id,
+      thread_id: post.thread_id,
+      character_profile: post.character_profile || postContent?.character_profile || null,
       name: post.name || postContent?.name || null,
       username: post.username || postContent?.username || null,
       role: post.role || postContent?.role || null,
-      voice_style: post.voice_style || postContent?.voice_style || null,
-      
-      // Content Fields
-      theme: post.theme || postContent?.theme || null,
-      audience: post.audience || postContent?.audience || null,
-      media_type: post.media_type || postContent?.media_type || null,
-      template_type: post.template_type || postContent?.template_type || null,
+      character_avatar: post.character_avatar || postContent?.character_avatar || null,
       title: post.title || postContent?.title || null,
       description: post.description || postContent?.description || null,
+      hashtags: post.hashtags || postContent?.hashtags || null,
       keywords: post.keywords || postContent?.keywords || null,
       cta: post.cta || postContent?.cta || null,
-      
-      // Arrays
-      hashtags: post.hashtags || postContent?.hashtags || [],
-      media_files: post.media_files || postContent?.media_files || [],
-      selected_platforms: post.selected_platforms || postContent?.selected_platforms || []
+      theme: post.theme || postContent?.theme || null,
+      audience: post.audience || postContent?.audience || null,
+      voice_style: post.voice_style || postContent?.voice_style || null,
+      media_type: post.media_type || postContent?.media_type || null,
+      template_type: post.template_type || postContent?.template_type || null,
+      scheduled_date: post.scheduled_date,
+      scheduled_time: post.scheduled_time,
+      user_id: post.user_id || null,
+      created_by: post.created_by || null,
+      content_id: post.content_id || null,
+      platform_id: post.platform_id || null,
+      media_files: post.media_files || postContent?.media_files || null,
+      selected_platforms: post.selected_platforms || postContent?.selected_platforms || null
     };
 
     const { error: insertError } = await supabase
@@ -849,7 +819,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
       console.log(`✅ Inserted into dashboard_posts`);
     }
 
-    // ✅ FIX #2: SOFT DELETE - Remove from scheduled_posts after success
+    // ✅ FIX #4: SOFT-DELETE
     const { error: deleteError } = await supabase
       .from('scheduled_posts')
       .delete()
@@ -859,7 +829,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
     if (deleteError) {
       console.warn(`⚠️ Failed to delete from scheduled_posts: ${getErrorMessage(deleteError)}`);
     } else {
-      console.log(`✅ Deleted post ${post.id} from scheduled_posts (preserved in dashboard_posts)`);
+      console.log(`✅ Deleted post ${post.id} from scheduled_posts`);
     }
 
     console.log(`✅ Post ${post.id} completed successfully`);
@@ -879,7 +849,6 @@ async function processPost(post: ScheduledPost): Promise<void> {
     
     if (!shouldRetry) {
       updateData.posting_status = 'failed';
-      console.log(`⚠️ Max retries reached (${maxRetries}). Marking as permanently failed.`);
     }
 
     const { error: failError } = await supabase
@@ -891,17 +860,15 @@ async function processPost(post: ScheduledPost): Promise<void> {
     if (failError) {
       console.error(`Failed to update error status: ${getErrorMessage(failError)}`);
     }
-
-    console.log(`Post ${post.id} marked as failed (attempt ${newAttempts}/${maxRetries})`);
     
     throw error;
   }
 }
 
-async function main(): Promise<ProcessResult> {
+async function processJobs(): Promise<ProcessResult> {
   const startTime = new Date();
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`GitHub - Workflow Gateway Started: ${startTime.toISOString()}`);
+  console.log(`Processing Started: ${startTime.toISOString()}`);
   console.log(`${'='.repeat(60)}\n`);
 
   const errors: string[] = [];
@@ -912,7 +879,6 @@ async function main(): Promise<ProcessResult> {
     const posts = await claimJobs(50);
 
     if (posts.length === 0) {
-      console.log('✅ No pending posts to process');
       return {
         total_claimed: 0,
         succeeded: 0,
@@ -921,8 +887,6 @@ async function main(): Promise<ProcessResult> {
         timestamp: startTime.toISOString()
       };
     }
-
-    console.log(`\n📋 Processing ${posts.length} posts...\n`);
 
     for (const post of posts) {
       try {
@@ -938,16 +902,10 @@ async function main(): Promise<ProcessResult> {
     const duration = endTime.getTime() - startTime.getTime();
 
     console.log(`\n${'='.repeat(60)}`);
-    console.log(`GitHub - Workflow Gateway Completed`);
-    console.log(`${'='.repeat(60)}`);
+    console.log(`Processing Completed`);
     console.log(`Duration: ${duration}ms`);
-    console.log(`Total Claimed: ${posts.length}`);
     console.log(`✅ Succeeded: ${succeeded}`);
     console.log(`❌ Failed: ${failed}`);
-    if (errors.length > 0) {
-      console.log(`\nErrors:`);
-      errors.forEach(err => console.log(`  - ${err}`));
-    }
     console.log(`${'='.repeat(60)}\n`);
 
     return {
@@ -959,7 +917,7 @@ async function main(): Promise<ProcessResult> {
     };
 
   } catch (error) {
-    console.error('❌ Fatal error in main execution:', getErrorMessage(error));
+    console.error('❌ Fatal error in processJobs:', getErrorMessage(error));
     
     return {
       total_claimed: 0,
@@ -972,82 +930,88 @@ async function main(): Promise<ProcessResult> {
 }
 
 // ============================================
-// ✅ HTTP SERVER FOR GITHUB ACTIONS
+// HTTP ENDPOINT
 // ============================================
 
-const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-  console.log(`\n[${new Date().toISOString()}] Incoming HTTP Request:`);
-  console.log(`  Method: ${req.method}`);
-  console.log(`  URL: ${req.url}`);
-  console.log(`  Headers:`, JSON.stringify(req.headers, null, 2));
-
-  // ✅ HEALTH CHECK
-  if (req.url === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ 
-      status: 'ok', 
-      service: 'Railway Gateway for GitHub - Workflow',
-      timestamp: new Date().toISOString()
-    }));
-    return;
-  }
-
-  // ✅ CRON TRIGGER ENDPOINT
-  if (req.url === '/cron' || req.url === '/trigger' || req.url === '/') {
-    try {
-      console.log('\n🚀 Executing cron job via HTTP request...\n');
-      
-      const result = await main();
-      
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ 
-        status: 'success', 
-        data: result 
-      }));
-    } catch (error) {
-      console.error('❌ HTTP request failed:', getErrorMessage(error));
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ 
-        status: 'error', 
-        message: getErrorMessage(error) 
-      }));
+app.post('/run', async (req, res) => {
+  const startTime = Date.now();
+  
+  console.log(`\n${'='.repeat(80)}`);
+  console.log(`[${new Date().toISOString()}] Received request from GitHub Actions`);
+  console.log(`${'='.repeat(80)}`);
+  
+  try {
+    const authHeader = req.headers['x-cron-password'] || req.headers['authorization'];
+    
+    if (!authHeader) {
+      console.error('❌ Missing authorization header');
+      return res.status(401).json({
+        success: false,
+        error: 'Missing X-Cron-Password or Authorization header'
+      });
     }
-    return;
+    
+    const providedPassword = typeof authHeader === 'string' 
+      ? authHeader.replace(/^Bearer\s+/i, '').trim()
+      : authHeader;
+    
+    if (providedPassword !== CRON_RUNNER_PASSWORD) {
+      console.error('❌ Invalid authorization password');
+      return res.status(403).json({
+        success: false,
+        error: 'Invalid authorization password'
+      });
+    }
+    
+    console.log('✅ Authorization validated');
+    
+    const result = await processJobs();
+    
+    const duration = Date.now() - startTime;
+    
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`Request completed in ${duration}ms`);
+    console.log(`${'='.repeat(80)}\n`);
+    
+    return res.status(200).json({
+      success: true,
+      runner: RUNNER_NAME,
+      service_type: SERVICE_TYPE,
+      result: result
+    });
+    
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`❌ Request failed after ${duration}ms:`, error);
+    
+    return res.status(500).json({
+      success: false,
+      error: getErrorMessage(error)
+    });
   }
-
-  // ✅ 404 - NOT FOUND
-  res.writeHead(404, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ 
-    status: 'error', 
-    message: 'Not Found',
-    available_endpoints: ['/health', '/cron', '/trigger', '/']
-  }));
 });
 
-server.listen(PORT, () => {
-  console.log(`\n${'='.repeat(60)}`);
-  console.log(`✅ Railway Gateway HTTP Server READY`);
-  console.log(`${'='.repeat(60)}`);
-  console.log(`Port: ${PORT}`);
-  console.log(`Health Check: http://localhost:${PORT}/health`);
-  console.log(`Cron Trigger: http://localhost:${PORT}/cron`);
-  console.log(`Waiting for GitHub Actions requests...`);
-  console.log(`${'='.repeat(60)}\n`);
-});
-
-// ✅ GRACEFUL SHUTDOWN
-process.on('SIGTERM', () => {
-  console.log('\n⚠️ SIGTERM received, shutting down gracefully...');
-  server.close(() => {
-    console.log('✅ HTTP server closed');
-    process.exit(0);
+app.get('/', (req, res) => {
+  res.json({
+    status: 'Railway Gateway for GitHub - Workflow is running',
+    service_type: SERVICE_TYPE,
+    runner_name: RUNNER_NAME,
+    timestamp: new Date().toISOString()
   });
 });
 
-process.on('SIGINT', () => {
-  console.log('\n⚠️ SIGINT received, shutting down gracefully...');
-  server.close(() => {
-    console.log('✅ HTTP server closed');
-    process.exit(0);
-  });
+// ============================================
+// START SERVER
+// ============================================
+
+app.listen(PORT, () => {
+  console.log(`\n${'='.repeat(80)}`);
+  console.log(`🚀 Railway Gateway for GitHub - Workflow`);
+  console.log(`${'='.repeat(80)}`);
+  console.log(`✅ Server started successfully`);
+  console.log(`📡 Listening on port: ${PORT}`);
+  console.log(`🔐 Authorization: ${CRON_RUNNER_PASSWORD ? 'ENABLED' : 'DISABLED'}`);
+  console.log(`🎯 Service Type: ${SERVICE_TYPE}`);
+  console.log(`⏰ Timezone: WEST (UTC+${TIMEZONE_OFFSET_HOURS})`);
+  console.log(`${'='.repeat(80)}\n`);
 });
