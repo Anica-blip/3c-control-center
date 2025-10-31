@@ -1,35 +1,32 @@
-// Railway Gateway for GitHub - Workflow - Direct Database Connection with Telegram Posting
-// Queries scheduled_posts table directly and posts to Telegram
+// Railway HTTP Server for GitHub - Workflow
+// Express.js wrapper that provides HTTP endpoint for GitHub Actions
+// Port 8080 with /run endpoint
 // TIMEZONE: WEST (UTC+1)
 
+import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 
+const app = express();
+app.use(express.json());
+
 // ✅ ENVIRONMENT VARIABLES - WITH TRIMMING
+const PORT = process.env.PORT || 8080;
 const CRON_SUPABASE_DB_URL = (process.env.CRON_SUPABASE_DB_URL || '').trim();
 const CRON_RUNNER_PASSWORD = (process.env.CRON_RUNNER_PASSWORD || '').trim();
 const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 const TELEGRAM_PUBLISHER_BOT_TOKEN = (process.env.TELEGRAM_PUBLISHER_BOT_TOKEN || '').trim();
-const AUTHORIZATION = (process.env.AUTHORIZATION || '').trim();
 
 // ✅ RUNNER IDENTITY
-const RUNNER_NAME = 'GitHub - Workflow';
+const RUNNER_NAME = 'Railway HTTP Server';
 const SERVICE_TYPE = 'GitHub - Workflow';
 
 // ✅ TIMEZONE CONFIGURATION - WEST = UTC+1
 const TIMEZONE_OFFSET_HOURS = 1;
 
-// ✅ VALIDATE CREDENTIALS
-console.log('\n--- ENVIRONMENT VARIABLE CHECK ---');
-if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_PUBLISHER_BOT_TOKEN) {
-  console.error('❌ Missing required environment variables:');
-  console.error('  CRON_SUPABASE_DB_URL:', CRON_SUPABASE_DB_URL ? 'SET' : 'MISSING');
-  console.error('  SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING');
-  console.error('  TELEGRAM_PUBLISHER_BOT_TOKEN:', TELEGRAM_PUBLISHER_BOT_TOKEN ? 'SET' : 'MISSING');
-  console.error('  AUTHORIZATION:', AUTHORIZATION ? 'SET (optional)' : 'NOT SET (will use SERVICE_ROLE_KEY)');
-  process.exit(1);
-}
-
-console.log('✅ All required environment variables are set\n');
+console.log('\n--- RAILWAY HTTP SERVER STARTING ---');
+console.log(`Service Type: ${SERVICE_TYPE}`);
+console.log(`Port: ${PORT}`);
+console.log(`Timezone: WEST (UTC+${TIMEZONE_OFFSET_HOURS})`);
 
 // ✅ EXTRACT SUPABASE URL FROM DB URL
 const extractSupabaseUrl = (dbUrl: string): string => {
@@ -46,36 +43,43 @@ const extractSupabaseUrl = (dbUrl: string): string => {
   throw new Error(`Cannot extract Supabase URL from: ${dbUrl}`);
 };
 
-const supabaseUrl = extractSupabaseUrl(CRON_SUPABASE_DB_URL);
+let supabase: any = null;
+let supabaseUrl: string = '';
 
-// ✅ DIAGNOSTIC: Log connection details (mask sensitive parts)
-console.log('\n--- SUPABASE CONNECTION DIAGNOSTIC ---');
-console.log(`Extracted Supabase URL: ${supabaseUrl}`);
-console.log(`Database URL (masked): ${CRON_SUPABASE_DB_URL.substring(0, 30)}...`);
-console.log(`Service Role Key (masked): ${SUPABASE_SERVICE_ROLE_KEY.substring(0, 20)}...${SUPABASE_SERVICE_ROLE_KEY.slice(-10)}`);
-console.log(`Key length: ${SUPABASE_SERVICE_ROLE_KEY.length} characters`);
-console.log(`Key starts with 'eyJ': ${SUPABASE_SERVICE_ROLE_KEY.startsWith('eyJ')}`);
-console.log('--- End Diagnostic ---\n');
-
-// ✅ CREATE SUPABASE CLIENT - ONLY USE SERVICE_ROLE_KEY FOR SUPABASE AUTH
-const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false
-  },
-  global: {
-    headers: {
-      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      'apikey': SUPABASE_SERVICE_ROLE_KEY
-    }
+// Initialize Supabase client
+if (CRON_SUPABASE_DB_URL && SUPABASE_SERVICE_ROLE_KEY) {
+  try {
+    supabaseUrl = extractSupabaseUrl(CRON_SUPABASE_DB_URL);
+    
+    console.log('\n--- SUPABASE CONNECTION DIAGNOSTIC ---');
+    console.log(`Extracted Supabase URL: ${supabaseUrl}`);
+    console.log(`Database URL (masked): ${CRON_SUPABASE_DB_URL.substring(0, 30)}...`);
+    console.log(`Service Role Key (masked): ${SUPABASE_SERVICE_ROLE_KEY.substring(0, 20)}...${SUPABASE_SERVICE_ROLE_KEY.slice(-10)}`);
+    console.log(`Key length: ${SUPABASE_SERVICE_ROLE_KEY.length} characters`);
+    console.log(`Key starts with 'eyJ': ${SUPABASE_SERVICE_ROLE_KEY.startsWith('eyJ')}`);
+    console.log('--- End Diagnostic ---\n');
+    
+    supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      },
+      global: {
+        headers: {
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'apikey': SUPABASE_SERVICE_ROLE_KEY
+        }
+      }
+    });
+    
+    console.log(`✅ Supabase client initialized`);
+    console.log(`Supabase URL: ${supabaseUrl}`);
+    console.log(`Service Type Filter: ${SERVICE_TYPE}`);
+  } catch (error) {
+    console.error('❌ Failed to initialize Supabase client:', error);
   }
-});
-
-console.log(`[${new Date().toISOString()}] Railway Gateway for GitHub - Workflow initialized`);
-console.log(`Supabase URL: ${supabaseUrl}`);
-console.log(`Service Type Filter: ${SERVICE_TYPE}`);
-console.log(`Timezone: WEST (UTC+${TIMEZONE_OFFSET_HOURS})`);
+}
 
 // ============================================
 // TYPE DEFINITIONS
@@ -119,6 +123,7 @@ interface ScheduledPost {
 }
 
 interface ProcessResult {
+  success: boolean;
   total_claimed: number;
   succeeded: number;
   failed: number;
@@ -160,19 +165,14 @@ async function downloadFile(url: string): Promise<{ buffer: Buffer; filename: st
  * Parse Telegram API response with proper error handling
  */
 async function parseTelegramResponse(response: Response): Promise<TelegramResponse> {
-  // Read response body as text first (only consume stream once)
   const responseText = await response.text();
   
-  // Check if response is ok
   if (!response.ok) {
     console.error(`❌ Telegram API error response (${response.status}):`);
     console.error('Raw response:', responseText);
     
-    // Try to parse as JSON to extract error details
     try {
       const errorJson = JSON.parse(responseText);
-      
-      // Extract the error description from Telegram's JSON response
       const description = errorJson.description || errorJson.error || 'Unknown error';
       const errorCode = errorJson.error_code || response.status;
       
@@ -181,7 +181,6 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
         description: `HTTP ${errorCode}: ${description}`
       };
     } catch (jsonError) {
-      // Not JSON, return raw text
       return {
         ok: false,
         description: `HTTP ${response.status}: ${responseText || 'Empty response body'}`
@@ -189,7 +188,6 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
     }
   }
 
-  // Parse successful response as JSON
   try {
     const json = JSON.parse(responseText);
     return json;
@@ -253,7 +251,6 @@ function buildCaption(post: ScheduledPost): string {
     text = text.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
     
     // ✅ FIX: Convert italic *text* to <i>text</i> (single asterisk - AFTER bold)
-    // Use negative lookahead/lookbehind to avoid matching ** or ***
     text = text.replace(/(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)/g, '<i>$1</i>');
     
     // Convert italic _text_ to <i>text</i> (underscore alternative)
@@ -365,12 +362,10 @@ async function sendTelegramPhoto(
     return await parseTelegramResponse(response);
   }
   
-  // If sending as Buffer (direct upload) - USE BUILT-IN FormData
-  // Convert Buffer to Blob for built-in FormData
+  // If sending as Buffer (direct upload)
   const blob = new Blob([photoUrlOrBuffer], { type: 'image/jpeg' });
   const file = new File([blob], filename || 'photo.jpg', { type: 'image/jpeg' });
   
-  // Use built-in FormData (not form-data npm package)
   const formData = new FormData();
   formData.append('chat_id', chatId);
   formData.append('photo', file);
@@ -384,7 +379,6 @@ async function sendTelegramPhoto(
     }
   }
   
-  // Built-in fetch handles FormData headers automatically
   const response = await fetch(url, {
     method: 'POST',
     body: formData
@@ -431,7 +425,7 @@ async function sendTelegramVideo(
     return await parseTelegramResponse(response);
   }
   
-  // If sending as Buffer (direct upload) - USE BUILT-IN FormData
+  // If sending as Buffer (direct upload)
   console.log(`📤 Preparing video upload:`);
   console.log(`   Chat ID: ${chatId}`);
   console.log(`   Filename: ${filename || 'video.mp4'}`);
@@ -439,11 +433,9 @@ async function sendTelegramVideo(
   console.log(`   Caption length: ${caption.length} chars`);
   if (threadId) console.log(`   Thread ID: ${threadId}`);
   
-  // Convert Buffer to Blob for built-in FormData
   const blob = new Blob([videoUrlOrBuffer], { type: 'video/mp4' });
   const file = new File([blob], filename || 'video.mp4', { type: 'video/mp4' });
   
-  // Use built-in FormData (not form-data npm package)
   const formData = new FormData();
   formData.append('chat_id', chatId);
   formData.append('video', file);
@@ -460,7 +452,6 @@ async function sendTelegramVideo(
   
   console.log(`🚀 Sending video to Telegram API...`);
   
-  // Built-in fetch handles FormData headers automatically
   const response = await fetch(url, {
     method: 'POST',
     body: formData
@@ -507,12 +498,10 @@ async function sendTelegramDocument(
     return await parseTelegramResponse(response);
   }
   
-  // If sending as Buffer (direct upload) - USE BUILT-IN FormData
-  // Convert Buffer to Blob for built-in FormData
+  // If sending as Buffer (direct upload)
   const blob = new Blob([documentUrlOrBuffer], { type: 'application/pdf' });
   const file = new File([blob], filename || 'document.pdf', { type: 'application/pdf' });
   
-  // Use built-in FormData (not form-data npm package)
   const formData = new FormData();
   formData.append('chat_id', chatId);
   formData.append('document', file);
@@ -526,7 +515,6 @@ async function sendTelegramDocument(
     }
   }
   
-  // Built-in fetch handles FormData headers automatically
   const response = await fetch(url, {
     method: 'POST',
     body: formData
@@ -549,9 +537,7 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
       throw new Error(`Caption too long (${caption.length} chars). Please shorten content to under 1024 characters.`);
     }
     
-    // ✅ BEST PRACTICE: Check media files with priority order
-    // Priority 1: Separate media_files column (normalized, easier to query)
-    // Priority 2: post_content.media_files (nested JSON, backward compatibility)
+    // ✅ Check media files with priority order
     let mediaFiles: any[] = [];
     let mediaSource = 'none';
     
@@ -586,12 +572,12 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
         throw new Error('Invalid media URL format');
       }
       
-      // Determine media type from file extension OR type field
+      // Determine media type
       const mediaType = firstMedia.type?.toLowerCase() || '';
       const isVideo = mediaType === 'video' || /\.(mp4|mov|avi|mkv)$/i.test(mediaUrl);
       const isDocument = mediaType === 'document' || /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(mediaUrl);
       
-      // ✅ Download file as Buffer and upload to Telegram (URL method failed)
+      // Download file as Buffer and upload to Telegram
       console.log(`⬇️ Downloading media file as Buffer...`);
       const { buffer, filename } = await downloadFile(mediaUrl);
       console.log(`✅ Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB as ${filename}`);
@@ -704,114 +690,6 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     console.log(`WEST Time: ${nowWEST.toISOString()}`);
     console.log(`Query Date: ${currentDate}, Query Time: ${currentTime}`);
     
-    console.log(`\n--- CONNECTION INFO ---`);
-    console.log(`Supabase URL: ${supabaseUrl}`);
-    console.log(`Table Name: scheduled_posts`);
-    console.log(`Service Type Looking For: '${SERVICE_TYPE}'`);
-    console.log('--- End Connection Info ---\n');
-
-    // ✅ DIAGNOSTIC: Test network connectivity to Supabase first
-    console.log('--- DIAGNOSTIC: Testing Network Connectivity ---');
-    try {
-      const healthCheckUrl = `${supabaseUrl}/rest/v1/`;
-      console.log(`Testing HTTP connection to: ${healthCheckUrl}`);
-      
-      const healthResponse = await fetch(healthCheckUrl, {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-        }
-      });
-      
-      console.log(`Health check response status: ${healthResponse.status}`);
-      console.log(`Health check response ok: ${healthResponse.ok}`);
-      
-      if (!healthResponse.ok) {
-        const errorText = await healthResponse.text();
-        console.error(`❌ Health check failed with status ${healthResponse.status}`);
-        console.error('Response body:', errorText.substring(0, 500));
-      } else {
-        console.log('✅ Network connectivity to Supabase is working');
-      }
-    } catch (netError) {
-      console.error('❌ Network connectivity test failed:', netError);
-      console.error('This indicates Render cannot reach Supabase at all');
-    }
-    console.log('--- End Network Diagnostic ---\n');
-
-    // ✅ DIAGNOSTIC: Test basic connection with OUR service_type only
-    console.log('--- DIAGNOSTIC: Testing Supabase Connection ---');
-    const { data: sampleData, error: sampleError } = await supabase
-      .from('scheduled_posts')
-      .select('id, service_type, posting_status')
-      .eq('service_type', SERVICE_TYPE)
-      .limit(5);
-    
-    if (sampleError) {
-      console.error('❌ Cannot connect to scheduled_posts table:', sampleError);
-      console.error('Error details:', JSON.stringify(sampleError, null, 2));
-      throw sampleError;
-    }
-    
-    console.log(`✅ Connection successful! Sample of OUR posts (${SERVICE_TYPE}):`);
-    console.log(JSON.stringify(sampleData, null, 2));
-    
-    // ✅ DIAGNOSTIC: Check posts matching our service_type
-    const { data: serviceData, error: serviceError } = await supabase
-      .from('scheduled_posts')
-      .select('id, service_type, posting_status, scheduled_date, scheduled_time')
-      .eq('service_type', SERVICE_TYPE)
-      .limit(10);
-    
-    console.log(`\n--- Posts with service_type = '${SERVICE_TYPE}' ---`);
-    if (serviceData && serviceData.length > 0) {
-      console.log(`Found ${serviceData.length} posts:`);
-      console.log(JSON.stringify(serviceData, null, 2));
-    } else {
-      console.log('⚠️ No posts found with this service_type');
-    }
-    
-    // ✅ DIAGNOSTIC: Check pending posts with our service_type (ignore date/time)
-    const { data: pendingData, error: pendingError } = await supabase
-      .from('scheduled_posts')
-      .select('id, service_type, posting_status, scheduled_date, scheduled_time')
-      .eq('service_type', SERVICE_TYPE)
-      .eq('posting_status', 'pending')
-      .limit(10);
-    
-    console.log(`\n--- PENDING posts with service_type = '${SERVICE_TYPE}' (ALL DATES) ---`);
-    if (pendingData && pendingData.length > 0) {
-      console.log(`Found ${pendingData.length} pending posts (regardless of date/time):`);
-      console.log(JSON.stringify(pendingData, null, 2));
-      
-      // Show which ones would match our date/time criteria
-      console.log(`\nChecking which posts match date/time criteria:`);
-      pendingData.forEach((post: any) => {
-        const postDate = post.scheduled_date;
-        const postTime = post.scheduled_time;
-        const matchesDate = postDate < currentDate || (postDate === currentDate && postTime <= currentTime);
-        console.log(`  Post ${post.id}:`);
-        console.log(`    Date: ${postDate} (${postDate < currentDate ? 'BEFORE' : postDate === currentDate ? 'TODAY' : 'FUTURE'})`);
-        console.log(`    Time: ${postTime} (${postTime <= currentTime ? 'PAST/NOW' : 'FUTURE'})`);
-        console.log(`    Matches? ${matchesDate ? '✅ YES' : '❌ NO'}`);
-      });
-    } else {
-      console.log('⚠️ No PENDING posts found with this service_type AT ALL');
-      console.log('This means either:');
-      console.log('  1. service_type does not match exactly (check for spaces/typos)');
-      console.log('  2. All posts are in a different posting_status (not pending)');
-      console.log('  3. No posts exist with this service_type');
-    }
-    
-    console.log(`\n--- ACTUAL QUERY PARAMETERS ---`);
-    console.log(`Looking for posts where:`);
-    console.log(`  service_type = '${SERVICE_TYPE}'`);
-    console.log(`  posting_status = 'pending'`);
-    console.log(`  scheduled_date < '${currentDate}' OR (scheduled_date = '${currentDate}' AND scheduled_time <= '${currentTime}')`);
-    console.log('--- End Diagnostics ---\n');
-
-    // ✅ ACTUAL QUERY: Now find posts ready to process
     const { data, error } = await supabase
       .from('scheduled_posts')
       .select('*')
@@ -827,26 +705,14 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
 
     console.log('\n--- QUERY RESULTS ---');
     if (!data || data.length === 0) {
-      console.log('⚠️ No pending posts found matching criteria:');
-      console.log(`  - service_type: '${SERVICE_TYPE}'`);
-      console.log(`  - posting_status: 'pending'`);
-      console.log(`  - scheduled_date <= '${currentDate}'`);
-      console.log(`  - scheduled_time <= '${currentTime}'`);
+      console.log('⚠️ No pending posts found');
       return [];
     }
 
-    console.log(`✅ Found ${data.length} pending posts ready to process:`);
-    data.forEach((post: any) => {
-      console.log(`  - ID: ${post.id}`);
-      console.log(`    Service: ${post.service_type}`);
-      console.log(`    Status: ${post.posting_status}`);
-      console.log(`    Scheduled: ${post.scheduled_date} ${post.scheduled_time}`);
-    });
-    console.log('--- End Query Results ---\n');
-
+    console.log(`✅ Found ${data.length} pending posts`);
     const claimedIds = data.map((post: any) => post.id);
     
-    // ✅ CRITICAL FIX: Do NOT touch posting_status, ONLY update post_status
+    // Update post_status to pending (don't touch posting_status)
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
@@ -879,7 +745,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
   console.log(`Scheduled: ${post.scheduled_date} ${post.scheduled_time}`);
 
   try {
-    // ✅ VALIDATE POST DATA
+    // Validate post data
     if (!post.channel_group_id) {
       throw new Error('Missing channel_group_id (Telegram Chat ID)');
     }
@@ -888,7 +754,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
       throw new Error('Missing post content (title or description required)');
     }
 
-    // ✅ POST TO TELEGRAM
+    // Post to Telegram
     const postResult = await postToTelegram(post);
 
     if (!postResult.success) {
@@ -899,7 +765,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
     console.log(`✅ Successfully posted to Telegram`);
     console.log(`External Post ID: ${externalPostId}`);
 
-    // ✅ CRITICAL FIX: Do NOT touch posting_status, ONLY update post_status to 'sent'
+    // Update post_status to 'sent' (don't touch posting_status)
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
@@ -912,7 +778,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
       throw new Error(`Failed to update scheduled_posts: ${getErrorMessage(updateError)}`);
     }
 
-    // ✅ INSERT INTO dashboard_posts
+    // Insert into dashboard_posts
     const dashboardPost = {
       scheduled_post_id: post.id,
       social_platform: post.social_platform,
@@ -942,19 +808,17 @@ async function processPost(post: ScheduledPost): Promise<void> {
     const errorMessage = getErrorMessage(error);
     console.error(`❌ Failed to process post ${post.id}:`, errorMessage);
 
-    // ✅ DETERMINE IF SHOULD RETRY
+    // Determine if should retry
     const maxRetries = 3;
     const newAttempts = (post.attempts || 0) + 1;
     const shouldRetry = newAttempts < maxRetries;
 
-    // ✅ FIX: After max retries, update BOTH post_status AND posting_status to 'failed'
-    // This stops the cron job from picking it up again
     const updateData: any = {
       post_status: 'failed',
       attempts: newAttempts
     };
     
-    // If we've hit max retries, mark posting_status as failed too
+    // If max retries reached, mark posting_status as failed
     if (!shouldRetry) {
       updateData.posting_status = 'failed';
       console.log(`⚠️ Max retries reached (${maxRetries}). Marking as permanently failed.`);
@@ -977,12 +841,12 @@ async function processPost(post: ScheduledPost): Promise<void> {
 }
 
 /**
- * Main execution
+ * Main cron job execution
  */
-async function main(): Promise<ProcessResult> {
+async function runCronJob(): Promise<ProcessResult> {
   const startTime = new Date();
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`GitHub - Workflow Gateway Started: ${startTime.toISOString()}`);
+  console.log(`Railway HTTP Server Job Started: ${startTime.toISOString()}`);
   console.log(`${'='.repeat(60)}\n`);
 
   const errors: string[] = [];
@@ -995,6 +859,7 @@ async function main(): Promise<ProcessResult> {
     if (posts.length === 0) {
       console.log('✅ No pending posts to process');
       return {
+        success: true,
         total_claimed: 0,
         succeeded: 0,
         failed: 0,
@@ -1019,7 +884,7 @@ async function main(): Promise<ProcessResult> {
     const duration = endTime.getTime() - startTime.getTime();
 
     console.log(`\n${'='.repeat(60)}`);
-    console.log(`GitHub - Workflow Gateway Completed`);
+    console.log(`Railway HTTP Server Job Completed`);
     console.log(`${'='.repeat(60)}`);
     console.log(`Duration: ${duration}ms`);
     console.log(`Total Claimed: ${posts.length}`);
@@ -1032,6 +897,7 @@ async function main(): Promise<ProcessResult> {
     console.log(`${'='.repeat(60)}\n`);
 
     return {
+      success: failed === 0,
       total_claimed: posts.length,
       succeeded,
       failed,
@@ -1040,9 +906,10 @@ async function main(): Promise<ProcessResult> {
     };
 
   } catch (error) {
-    console.error('❌ Fatal error in main execution:', getErrorMessage(error));
+    console.error('❌ Fatal error in runCronJob:', getErrorMessage(error));
     
     return {
+      success: false,
       total_claimed: 0,
       succeeded,
       failed,
@@ -1052,14 +919,92 @@ async function main(): Promise<ProcessResult> {
   }
 }
 
-// ✅ EXECUTE
-main()
-  .then(result => {
-    const exitCode = result.failed > 0 ? 1 : 0;
-    console.log(`Exiting with code: ${exitCode}`);
-    process.exit(exitCode);
-  })
-  .catch(error => {
-    console.error('Unhandled error:', error);
-    process.exit(1);
+// ============================================
+// EXPRESS ENDPOINTS
+// ============================================
+
+// Health check
+app.get('/', (req, res) => {
+  res.json({
+    status: 'Railway HTTP Server is running',
+    service: SERVICE_TYPE,
+    timestamp: new Date().toISOString()
   });
+});
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    service: SERVICE_TYPE,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Main cron endpoint - POST /run
+app.post('/run', async (req, res) => {
+  try {
+    // Validate authorization
+    const authHeader = req.headers['x-cron-password'] || req.headers['authorization'];
+    
+    if (!authHeader || authHeader !== CRON_RUNNER_PASSWORD) {
+      console.warn('❌ Unauthorized request attempt');
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized - Invalid or missing X-Cron-Password header'
+      });
+    }
+
+    // Validate required env vars
+    if (!supabase || !TELEGRAM_PUBLISHER_BOT_TOKEN) {
+      return res.status(500).json({
+        success: false,
+        error: 'Server not properly configured - missing credentials'
+      });
+    }
+
+    console.log('\n🚀 Received cron trigger request');
+    
+    // Run the cron job
+    const result = await runCronJob();
+    
+    // Return result
+    const statusCode = result.success ? 200 : 500;
+    res.status(statusCode).json(result);
+    
+  } catch (error) {
+    console.error('❌ Error in /run endpoint:', getErrorMessage(error));
+    res.status(500).json({
+      success: false,
+      error: getErrorMessage(error),
+      total_claimed: 0,
+      succeeded: 0,
+      failed: 0,
+      errors: [getErrorMessage(error)],
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Alternative endpoint - POST /api/run
+app.post('/api/run', async (req, res) => {
+  return app._router.handle(
+    Object.assign(req, { url: '/run', originalUrl: '/api/run' }), 
+    res
+  );
+});
+
+// ============================================
+// START SERVER
+// ============================================
+
+app.listen(PORT, () => {
+  console.log(`\n✅ Railway HTTP Server listening on port ${PORT}`);
+  console.log(`Service: ${SERVICE_TYPE}`);
+  console.log(`Endpoints:`);
+  console.log(`  GET  / - Status check`);
+  console.log(`  GET  /health - Health check`);
+  console.log(`  POST /run - Trigger cron job (requires X-Cron-Password header)`);
+  console.log(`  POST /api/run - Alternative trigger endpoint`);
+  console.log(`\nServer ready to receive requests from GitHub Actions!\n`);
+});
