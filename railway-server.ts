@@ -1,32 +1,35 @@
-// Railway HTTP Server for GitHub - Workflow
-// Express.js wrapper that provides HTTP endpoint for GitHub Actions
-// Port 8080 with /run endpoint
+// Railway Gateway for GitHub - Workflow - Direct Database Connection with Telegram Posting
+// Queries scheduled_posts table directly and posts to Telegram
 // TIMEZONE: WEST (UTC+1)
 
-import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 
-const app = express();
-app.use(express.json());
-
 // ✅ ENVIRONMENT VARIABLES - WITH TRIMMING
-const PORT = process.env.PORT || 8080;
 const CRON_SUPABASE_DB_URL = (process.env.CRON_SUPABASE_DB_URL || '').trim();
 const CRON_RUNNER_PASSWORD = (process.env.CRON_RUNNER_PASSWORD || '').trim();
 const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 const TELEGRAM_PUBLISHER_BOT_TOKEN = (process.env.TELEGRAM_PUBLISHER_BOT_TOKEN || '').trim();
+const AUTHORIZATION = (process.env.AUTHORIZATION || '').trim();
 
 // ✅ RUNNER IDENTITY
-const RUNNER_NAME = 'Railway HTTP Server';
+const RUNNER_NAME = 'GitHub - Workflow';
 const SERVICE_TYPE = 'GitHub - Workflow';
 
 // ✅ TIMEZONE CONFIGURATION - WEST = UTC+1
 const TIMEZONE_OFFSET_HOURS = 1;
 
-console.log('\n--- RAILWAY HTTP SERVER STARTING ---');
-console.log(`Service Type: ${SERVICE_TYPE}`);
-console.log(`Port: ${PORT}`);
-console.log(`Timezone: WEST (UTC+${TIMEZONE_OFFSET_HOURS})`);
+// ✅ VALIDATE CREDENTIALS
+console.log('\n--- ENVIRONMENT VARIABLE CHECK ---');
+if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_PUBLISHER_BOT_TOKEN) {
+  console.error('❌ Missing required environment variables:');
+  console.error('  CRON_SUPABASE_DB_URL:', CRON_SUPABASE_DB_URL ? 'SET' : 'MISSING');
+  console.error('  SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING');
+  console.error('  TELEGRAM_PUBLISHER_BOT_TOKEN:', TELEGRAM_PUBLISHER_BOT_TOKEN ? 'SET' : 'MISSING');
+  console.error('  AUTHORIZATION:', AUTHORIZATION ? 'SET (optional)' : 'NOT SET (will use SERVICE_ROLE_KEY)');
+  process.exit(1);
+}
+
+console.log('✅ All required environment variables are set\n');
 
 // ✅ EXTRACT SUPABASE URL FROM DB URL
 const extractSupabaseUrl = (dbUrl: string): string => {
@@ -43,43 +46,36 @@ const extractSupabaseUrl = (dbUrl: string): string => {
   throw new Error(`Cannot extract Supabase URL from: ${dbUrl}`);
 };
 
-let supabase: any = null;
-let supabaseUrl: string = '';
+const supabaseUrl = extractSupabaseUrl(CRON_SUPABASE_DB_URL);
 
-// Initialize Supabase client
-if (CRON_SUPABASE_DB_URL && SUPABASE_SERVICE_ROLE_KEY) {
-  try {
-    supabaseUrl = extractSupabaseUrl(CRON_SUPABASE_DB_URL);
-    
-    console.log('\n--- SUPABASE CONNECTION DIAGNOSTIC ---');
-    console.log(`Extracted Supabase URL: ${supabaseUrl}`);
-    console.log(`Database URL (masked): ${CRON_SUPABASE_DB_URL.substring(0, 30)}...`);
-    console.log(`Service Role Key (masked): ${SUPABASE_SERVICE_ROLE_KEY.substring(0, 20)}...${SUPABASE_SERVICE_ROLE_KEY.slice(-10)}`);
-    console.log(`Key length: ${SUPABASE_SERVICE_ROLE_KEY.length} characters`);
-    console.log(`Key starts with 'eyJ': ${SUPABASE_SERVICE_ROLE_KEY.startsWith('eyJ')}`);
-    console.log('--- End Diagnostic ---\n');
-    
-    supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false
-      },
-      global: {
-        headers: {
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'apikey': SUPABASE_SERVICE_ROLE_KEY
-        }
-      }
-    });
-    
-    console.log(`✅ Supabase client initialized`);
-    console.log(`Supabase URL: ${supabaseUrl}`);
-    console.log(`Service Type Filter: ${SERVICE_TYPE}`);
-  } catch (error) {
-    console.error('❌ Failed to initialize Supabase client:', error);
+// ✅ DIAGNOSTIC: Log connection details (mask sensitive parts)
+console.log('\n--- SUPABASE CONNECTION DIAGNOSTIC ---');
+console.log(`Extracted Supabase URL: ${supabaseUrl}`);
+console.log(`Database URL (masked): ${CRON_SUPABASE_DB_URL.substring(0, 30)}...`);
+console.log(`Service Role Key (masked): ${SUPABASE_SERVICE_ROLE_KEY.substring(0, 20)}...${SUPABASE_SERVICE_ROLE_KEY.slice(-10)}`);
+console.log(`Key length: ${SUPABASE_SERVICE_ROLE_KEY.length} characters`);
+console.log(`Key starts with 'eyJ': ${SUPABASE_SERVICE_ROLE_KEY.startsWith('eyJ')}`);
+console.log('--- End Diagnostic ---\n');
+
+// ✅ CREATE SUPABASE CLIENT - ONLY USE SERVICE_ROLE_KEY FOR SUPABASE AUTH
+const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false
+  },
+  global: {
+    headers: {
+      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'apikey': SUPABASE_SERVICE_ROLE_KEY
+    }
   }
-}
+});
+
+console.log(`[${new Date().toISOString()}] Railway Gateway for GitHub - Workflow initialized`);
+console.log(`Supabase URL: ${supabaseUrl}`);
+console.log(`Service Type Filter: ${SERVICE_TYPE}`);
+console.log(`Timezone: WEST (UTC+${TIMEZONE_OFFSET_HOURS})`);
 
 // ============================================
 // TYPE DEFINITIONS
@@ -123,7 +119,6 @@ interface ScheduledPost {
 }
 
 interface ProcessResult {
-  success: boolean;
   total_claimed: number;
   succeeded: number;
   failed: number;
@@ -203,10 +198,6 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
 
 /**
  * Build caption from post_content with proper Telegram HTML formatting
- * FIXES: 
- * - Single asterisk italic (*text*)
- * - Character profile from postContent or top-level fields
- * - Proper link formatting
  */
 function buildCaption(post: ScheduledPost): string {
   const postContent = post.post_content as any;
@@ -222,7 +213,6 @@ function buildCaption(post: ScheduledPost): string {
   
   let caption = '';
   
-  // ✅ FIX: Check for character profile in BOTH postContent AND top-level post fields
   const name = postContent.name || post.name;
   const username = postContent.username || post.username;
   const role = postContent.role || post.role;
@@ -240,50 +230,32 @@ function buildCaption(post: ScheduledPost): string {
     caption += `\n`;
   }
   
-  // Helper function to convert markdown to Telegram HTML
   function formatText(text: string): string {
     if (!text) return '';
     
-    // ✅ FIX: Convert markdown links FIRST (before other replacements)
     text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>');
-    
-    // Convert bold **text** to <b>text</b>
     text = text.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-    
-    // ✅ FIX: Convert italic *text* to <i>text</i> (single asterisk - AFTER bold)
     text = text.replace(/(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)/g, '<i>$1</i>');
-    
-    // Convert italic _text_ to <i>text</i> (underscore alternative)
     text = text.replace(/(?<!\w)_([^_]+?)_(?!\w)/g, '<i>$1</i>');
-    
-    // Convert underline __text__ to <u>text</u>
     text = text.replace(/__(.+?)__/g, '<u>$1</u>');
-    
-    // Convert strikethrough ~~text~~ to <s>text</s>
     text = text.replace(/~~(.+?)~~/g, '<s>$1</s>');
-    
-    // Convert inline code `text` to <code>text</code>
     text = text.replace(/`(.+?)`/g, '<code>$1</code>');
     
     return text;
   }
   
-  // Add title with formatting
   if (postContent.title) {
     caption += `${formatText(postContent.title)}\n\n`;
   }
   
-  // Add description with formatting
   if (postContent.description) {
     caption += `${formatText(postContent.description)}\n`;
   }
   
-  // Add hashtags
   if (postContent.hashtags && Array.isArray(postContent.hashtags) && postContent.hashtags.length > 0) {
     caption += `\n${postContent.hashtags.map((tag: string) => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`;
   }
   
-  // Add CTA
   if (postContent.cta) {
     caption += `\n\n👉 ${formatText(postContent.cta)}`;
   }
@@ -337,7 +309,6 @@ async function sendTelegramPhoto(
 ): Promise<TelegramResponse> {
   const url = `https://api.telegram.org/bot${botToken}/sendPhoto`;
   
-  // If sending as URL
   if (typeof photoUrlOrBuffer === 'string') {
     const body: any = {
       chat_id: chatId,
@@ -362,7 +333,6 @@ async function sendTelegramPhoto(
     return await parseTelegramResponse(response);
   }
   
-  // If sending as Buffer (direct upload)
   const blob = new Blob([photoUrlOrBuffer], { type: 'image/jpeg' });
   const file = new File([blob], filename || 'photo.jpg', { type: 'image/jpeg' });
   
@@ -388,6 +358,77 @@ async function sendTelegramPhoto(
 }
 
 /**
+ * ✅ FIX #3: Send animation/GIF to Telegram (supports URL or direct upload)
+ */
+async function sendTelegramAnimation(
+  botToken: string,
+  chatId: string,
+  animationUrlOrBuffer: string | Buffer,
+  caption: string,
+  threadId?: string,
+  filename?: string
+): Promise<TelegramResponse> {
+  const url = `https://api.telegram.org/bot${botToken}/sendAnimation`;
+  
+  if (typeof animationUrlOrBuffer === 'string') {
+    const body: any = {
+      chat_id: chatId,
+      animation: animationUrlOrBuffer,
+      caption: caption,
+      parse_mode: 'HTML',
+    };
+    
+    if (threadId) {
+      const threadIdMatch = threadId.match(/(\d+)$/);
+      if (threadIdMatch) {
+        body.message_thread_id = parseInt(threadIdMatch[1]);
+      }
+    }
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    return await parseTelegramResponse(response);
+  }
+  
+  console.log(`📤 Preparing GIF/animation upload:`);
+  console.log(`   Chat ID: ${chatId}`);
+  console.log(`   Filename: ${filename || 'animation.gif'}`);
+  console.log(`   Buffer size: ${animationUrlOrBuffer.length} bytes`);
+  console.log(`   Caption length: ${caption.length} chars`);
+  if (threadId) console.log(`   Thread ID: ${threadId}`);
+  
+  const blob = new Blob([animationUrlOrBuffer], { type: 'image/gif' });
+  const file = new File([blob], filename || 'animation.gif', { type: 'image/gif' });
+  
+  const formData = new FormData();
+  formData.append('chat_id', chatId);
+  formData.append('animation', file);
+  formData.append('caption', caption);
+  formData.append('parse_mode', 'HTML');
+  
+  if (threadId) {
+    const threadIdMatch = threadId.match(/(\d+)$/);
+    if (threadIdMatch) {
+      formData.append('message_thread_id', threadIdMatch[1]);
+      console.log(`   Message thread ID: ${threadIdMatch[1]}`);
+    }
+  }
+  
+  console.log(`🚀 Sending GIF/animation to Telegram API...`);
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    body: formData
+  });
+
+  return await parseTelegramResponse(response);
+}
+
+/**
  * Send video to Telegram with caption (supports URL or direct upload)
  */
 async function sendTelegramVideo(
@@ -400,7 +441,6 @@ async function sendTelegramVideo(
 ): Promise<TelegramResponse> {
   const url = `https://api.telegram.org/bot${botToken}/sendVideo`;
   
-  // If sending as URL
   if (typeof videoUrlOrBuffer === 'string') {
     const body: any = {
       chat_id: chatId,
@@ -425,7 +465,6 @@ async function sendTelegramVideo(
     return await parseTelegramResponse(response);
   }
   
-  // If sending as Buffer (direct upload)
   console.log(`📤 Preparing video upload:`);
   console.log(`   Chat ID: ${chatId}`);
   console.log(`   Filename: ${filename || 'video.mp4'}`);
@@ -473,7 +512,6 @@ async function sendTelegramDocument(
 ): Promise<TelegramResponse> {
   const url = `https://api.telegram.org/bot${botToken}/sendDocument`;
   
-  // If sending as URL
   if (typeof documentUrlOrBuffer === 'string') {
     const body: any = {
       chat_id: chatId,
@@ -498,7 +536,6 @@ async function sendTelegramDocument(
     return await parseTelegramResponse(response);
   }
   
-  // If sending as Buffer (direct upload)
   const blob = new Blob([documentUrlOrBuffer], { type: 'application/pdf' });
   const file = new File([blob], filename || 'document.pdf', { type: 'application/pdf' });
   
@@ -532,12 +569,11 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
     const threadId = post.thread_id || undefined;
     const caption = buildCaption(post);
     
-    // ✅ TELEGRAM CAPTION LIMIT: Max 1024 characters
+    // ✅ FIX #4: TELEGRAM CAPTION LIMIT - Max 1024 characters
     if (caption.length > 1024) {
-      throw new Error(`Caption too long (${caption.length} chars). Please shorten content to under 1024 characters.`);
+      throw new Error(`Caption too long (${caption.length} chars). Telegram limit is 1024 characters. Please shorten your content.`);
     }
     
-    // ✅ Check media files with priority order
     let mediaFiles: any[] = [];
     let mediaSource = 'none';
     
@@ -556,7 +592,6 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
     
     let telegramResult: TelegramResponse;
     
-    // CASE 1: Has media files
     if (mediaFiles.length > 0) {
       const firstMedia = mediaFiles[0];
       const mediaUrl = firstMedia.url || firstMedia.src || firstMedia.supabaseUrl || firstMedia;
@@ -572,17 +607,21 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
         throw new Error('Invalid media URL format');
       }
       
-      // Determine media type
+      // ✅ FIX #3: GIF DETECTION - Check file extension FIRST
       const mediaType = firstMedia.type?.toLowerCase() || '';
+      const isGif = /\.(gif)$/i.test(mediaUrl) || mediaType === 'gif';
       const isVideo = mediaType === 'video' || /\.(mp4|mov|avi|mkv)$/i.test(mediaUrl);
       const isDocument = mediaType === 'document' || /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(mediaUrl);
       
-      // Download file as Buffer and upload to Telegram
       console.log(`⬇️ Downloading media file as Buffer...`);
       const { buffer, filename } = await downloadFile(mediaUrl);
       console.log(`✅ Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB as ${filename}`);
       
-      if (isVideo) {
+      // ✅ FIX #3: Use sendTelegramAnimation for GIFs
+      if (isGif) {
+        console.log(`🎞️ Uploading GIF/animation to Telegram: ${filename}`);
+        telegramResult = await sendTelegramAnimation(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+      } else if (isVideo) {
         console.log(`📹 Uploading video to Telegram: ${filename}`);
         telegramResult = await sendTelegramVideo(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       } else if (isDocument) {
@@ -592,14 +631,11 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
         console.log(`🖼️ Uploading photo to Telegram: ${filename}`);
         telegramResult = await sendTelegramPhoto(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
       }
-    } 
-    // CASE 2: Text-only post
-    else {
+    } else {
       console.log('💬 Sending text-only message (no media detected)');
       telegramResult = await sendTelegramMessage(TELEGRAM_PUBLISHER_BOT_TOKEN, chatId, caption, threadId);
     }
     
-    // Check Telegram API response
     if (!telegramResult.ok) {
       throw new Error(`Telegram API error: ${telegramResult.description || 'Unknown error'}`);
     }
@@ -625,9 +661,6 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
 // UTILITY FUNCTIONS
 // ============================================
 
-/**
- * Get error message from unknown error type
- */
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
@@ -641,18 +674,12 @@ function getErrorMessage(error: unknown): string {
   return 'Unknown error occurred';
 }
 
-/**
- * Convert UTC date to WEST (UTC+1) timezone
- */
 function toWEST(date: Date): Date {
   const utcTime = date.getTime();
   const westTime = new Date(utcTime + (TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000));
   return westTime;
 }
 
-/**
- * Get current date and time in WEST timezone
- */
 function getCurrentWESTDateTime(): { date: string; time: string } {
   const nowUTC = new Date();
   const nowWEST = toWEST(nowUTC);
@@ -674,9 +701,6 @@ function getCurrentWESTDateTime(): { date: string; time: string } {
 // CORE PROCESSING FUNCTIONS
 // ============================================
 
-/**
- * Query and claim jobs from scheduled_posts table
- */
 async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
   const nowUTC = new Date();
   const nowWEST = toWEST(nowUTC);
@@ -712,7 +736,6 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     console.log(`✅ Found ${data.length} pending posts`);
     const claimedIds = data.map((post: any) => post.id);
     
-    // Update post_status to pending (don't touch posting_status)
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
@@ -735,9 +758,6 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
   }
 }
 
-/**
- * Process a single scheduled post
- */
 async function processPost(post: ScheduledPost): Promise<void> {
   const now = new Date();
   console.log(`\n--- Processing Post ${post.id} ---`);
@@ -745,7 +765,6 @@ async function processPost(post: ScheduledPost): Promise<void> {
   console.log(`Scheduled: ${post.scheduled_date} ${post.scheduled_time}`);
 
   try {
-    // Validate post data
     if (!post.channel_group_id) {
       throw new Error('Missing channel_group_id (Telegram Chat ID)');
     }
@@ -754,7 +773,6 @@ async function processPost(post: ScheduledPost): Promise<void> {
       throw new Error('Missing post content (title or description required)');
     }
 
-    // Post to Telegram
     const postResult = await postToTelegram(post);
 
     if (!postResult.success) {
@@ -765,7 +783,6 @@ async function processPost(post: ScheduledPost): Promise<void> {
     console.log(`✅ Successfully posted to Telegram`);
     console.log(`External Post ID: ${externalPostId}`);
 
-    // Update post_status to 'sent' (don't touch posting_status)
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
@@ -778,18 +795,45 @@ async function processPost(post: ScheduledPost): Promise<void> {
       throw new Error(`Failed to update scheduled_posts: ${getErrorMessage(updateError)}`);
     }
 
-    // Insert into dashboard_posts
+    // ✅ FIX #1: DASHBOARD_POSTS SCHEMA - All 27 columns with proper null handling
+    const postContent = post.post_content as any;
+    
     const dashboardPost = {
       scheduled_post_id: post.id,
-      social_platform: post.social_platform,
-      post_content: post.post_content,
+      social_platform: post.social_platform || null,
+      post_content: post.post_content || null,
       external_post_id: externalPostId,
       posted_at: now.toISOString(),
       url: externalPostId !== 'unknown' 
         ? `https://t.me/c/${post.channel_group_id?.replace('-100', '')}/${externalPostId}`
         : post.url,
-      channel_group_id: post.channel_group_id,
-      thread_id: post.thread_id
+      channel_group_id: post.channel_group_id || null,
+      thread_id: post.thread_id || null,
+      content_id: post.content_id || null,
+      user_id: post.user_id || null,
+      created_by: post.created_by || null,
+      
+      // Character Profile Fields
+      character_avatar: post.character_avatar || postContent?.character_avatar || null,
+      name: post.name || postContent?.name || null,
+      username: post.username || postContent?.username || null,
+      role: post.role || postContent?.role || null,
+      voice_style: post.voice_style || postContent?.voice_style || null,
+      
+      // Content Fields
+      theme: post.theme || postContent?.theme || null,
+      audience: post.audience || postContent?.audience || null,
+      media_type: post.media_type || postContent?.media_type || null,
+      template_type: post.template_type || postContent?.template_type || null,
+      title: post.title || postContent?.title || null,
+      description: post.description || postContent?.description || null,
+      keywords: post.keywords || postContent?.keywords || null,
+      cta: post.cta || postContent?.cta || null,
+      
+      // Arrays
+      hashtags: post.hashtags || postContent?.hashtags || [],
+      media_files: post.media_files || postContent?.media_files || [],
+      selected_platforms: post.selected_platforms || postContent?.selected_platforms || []
     };
 
     const { error: insertError } = await supabase
@@ -802,13 +846,25 @@ async function processPost(post: ScheduledPost): Promise<void> {
       console.log(`✅ Inserted into dashboard_posts`);
     }
 
+    // ✅ FIX #2: SOFT DELETE - Remove from scheduled_posts after success
+    const { error: deleteError } = await supabase
+      .from('scheduled_posts')
+      .delete()
+      .eq('id', post.id)
+      .eq('service_type', SERVICE_TYPE);
+
+    if (deleteError) {
+      console.warn(`⚠️ Failed to delete from scheduled_posts: ${getErrorMessage(deleteError)}`);
+    } else {
+      console.log(`✅ Deleted post ${post.id} from scheduled_posts (preserved in dashboard_posts)`);
+    }
+
     console.log(`✅ Post ${post.id} completed successfully`);
 
   } catch (error) {
     const errorMessage = getErrorMessage(error);
     console.error(`❌ Failed to process post ${post.id}:`, errorMessage);
 
-    // Determine if should retry
     const maxRetries = 3;
     const newAttempts = (post.attempts || 0) + 1;
     const shouldRetry = newAttempts < maxRetries;
@@ -818,7 +874,6 @@ async function processPost(post: ScheduledPost): Promise<void> {
       attempts: newAttempts
     };
     
-    // If max retries reached, mark posting_status as failed
     if (!shouldRetry) {
       updateData.posting_status = 'failed';
       console.log(`⚠️ Max retries reached (${maxRetries}). Marking as permanently failed.`);
@@ -840,13 +895,10 @@ async function processPost(post: ScheduledPost): Promise<void> {
   }
 }
 
-/**
- * Main cron job execution
- */
-async function runCronJob(): Promise<ProcessResult> {
+async function main(): Promise<ProcessResult> {
   const startTime = new Date();
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`Railway HTTP Server Job Started: ${startTime.toISOString()}`);
+  console.log(`GitHub - Workflow Gateway Started: ${startTime.toISOString()}`);
   console.log(`${'='.repeat(60)}\n`);
 
   const errors: string[] = [];
@@ -859,7 +911,6 @@ async function runCronJob(): Promise<ProcessResult> {
     if (posts.length === 0) {
       console.log('✅ No pending posts to process');
       return {
-        success: true,
         total_claimed: 0,
         succeeded: 0,
         failed: 0,
@@ -884,7 +935,7 @@ async function runCronJob(): Promise<ProcessResult> {
     const duration = endTime.getTime() - startTime.getTime();
 
     console.log(`\n${'='.repeat(60)}`);
-    console.log(`Railway HTTP Server Job Completed`);
+    console.log(`GitHub - Workflow Gateway Completed`);
     console.log(`${'='.repeat(60)}`);
     console.log(`Duration: ${duration}ms`);
     console.log(`Total Claimed: ${posts.length}`);
@@ -897,7 +948,6 @@ async function runCronJob(): Promise<ProcessResult> {
     console.log(`${'='.repeat(60)}\n`);
 
     return {
-      success: failed === 0,
       total_claimed: posts.length,
       succeeded,
       failed,
@@ -906,10 +956,9 @@ async function runCronJob(): Promise<ProcessResult> {
     };
 
   } catch (error) {
-    console.error('❌ Fatal error in runCronJob:', getErrorMessage(error));
+    console.error('❌ Fatal error in main execution:', getErrorMessage(error));
     
     return {
-      success: false,
       total_claimed: 0,
       succeeded,
       failed,
@@ -919,92 +968,14 @@ async function runCronJob(): Promise<ProcessResult> {
   }
 }
 
-// ============================================
-// EXPRESS ENDPOINTS
-// ============================================
-
-// Health check
-app.get('/', (req, res) => {
-  res.json({
-    status: 'Railway HTTP Server is running',
-    service: SERVICE_TYPE,
-    timestamp: new Date().toISOString()
+// ✅ EXECUTE
+main()
+  .then(result => {
+    const exitCode = result.failed > 0 ? 1 : 0;
+    console.log(`Exiting with code: ${exitCode}`);
+    process.exit(exitCode);
+  })
+  .catch(error => {
+    console.error('Unhandled error:', error);
+    process.exit(1);
   });
-});
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    service: SERVICE_TYPE,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Main cron endpoint - POST /run
-app.post('/run', async (req, res) => {
-  try {
-    // Validate authorization
-    const authHeader = req.headers['x-cron-password'] || req.headers['authorization'];
-    
-    if (!authHeader || authHeader !== CRON_RUNNER_PASSWORD) {
-      console.warn('❌ Unauthorized request attempt');
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized - Invalid or missing X-Cron-Password header'
-      });
-    }
-
-    // Validate required env vars
-    if (!supabase || !TELEGRAM_PUBLISHER_BOT_TOKEN) {
-      return res.status(500).json({
-        success: false,
-        error: 'Server not properly configured - missing credentials'
-      });
-    }
-
-    console.log('\n🚀 Received cron trigger request');
-    
-    // Run the cron job
-    const result = await runCronJob();
-    
-    // Return result
-    const statusCode = result.success ? 200 : 500;
-    res.status(statusCode).json(result);
-    
-  } catch (error) {
-    console.error('❌ Error in /run endpoint:', getErrorMessage(error));
-    res.status(500).json({
-      success: false,
-      error: getErrorMessage(error),
-      total_claimed: 0,
-      succeeded: 0,
-      failed: 0,
-      errors: [getErrorMessage(error)],
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-// Alternative endpoint - POST /api/run
-app.post('/api/run', async (req, res) => {
-  return app._router.handle(
-    Object.assign(req, { url: '/run', originalUrl: '/api/run' }), 
-    res
-  );
-});
-
-// ============================================
-// START SERVER
-// ============================================
-
-app.listen(PORT, () => {
-  console.log(`\n✅ Railway HTTP Server listening on port ${PORT}`);
-  console.log(`Service: ${SERVICE_TYPE}`);
-  console.log(`Endpoints:`);
-  console.log(`  GET  / - Status check`);
-  console.log(`  GET  /health - Health check`);
-  console.log(`  POST /run - Trigger cron job (requires X-Cron-Password header)`);
-  console.log(`  POST /api/run - Alternative trigger endpoint`);
-  console.log(`\nServer ready to receive requests from GitHub Actions!\n`);
-});
