@@ -1,8 +1,10 @@
 // Railway Gateway for GitHub - Workflow - Direct Database Connection with Telegram Posting
 // Queries scheduled_posts table directly and posts to Telegram
 // TIMEZONE: WEST (UTC+1)
+// MODE: HTTP Server + Direct Execution
 
 import { createClient } from '@supabase/supabase-js';
+import { createServer, IncomingMessage, ServerResponse } from 'http';
 
 // ✅ ENVIRONMENT VARIABLES - WITH TRIMMING
 const CRON_SUPABASE_DB_URL = (process.env.CRON_SUPABASE_DB_URL || '').trim();
@@ -10,6 +12,7 @@ const CRON_RUNNER_PASSWORD = (process.env.CRON_RUNNER_PASSWORD || '').trim();
 const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 const TELEGRAM_PUBLISHER_BOT_TOKEN = (process.env.TELEGRAM_PUBLISHER_BOT_TOKEN || '').trim();
 const AUTHORIZATION = (process.env.AUTHORIZATION || '').trim();
+const PORT = process.env.PORT || '3000';
 
 // ✅ RUNNER IDENTITY
 const RUNNER_NAME = 'GitHub - Workflow';
@@ -968,14 +971,83 @@ async function main(): Promise<ProcessResult> {
   }
 }
 
-// ✅ EXECUTE
-main()
-  .then(result => {
-    const exitCode = result.failed > 0 ? 1 : 0;
-    console.log(`Exiting with code: ${exitCode}`);
-    process.exit(exitCode);
-  })
-  .catch(error => {
-    console.error('Unhandled error:', error);
-    process.exit(1);
+// ============================================
+// ✅ HTTP SERVER FOR GITHUB ACTIONS
+// ============================================
+
+const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+  console.log(`\n[${new Date().toISOString()}] Incoming HTTP Request:`);
+  console.log(`  Method: ${req.method}`);
+  console.log(`  URL: ${req.url}`);
+  console.log(`  Headers:`, JSON.stringify(req.headers, null, 2));
+
+  // ✅ HEALTH CHECK
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ 
+      status: 'ok', 
+      service: 'Railway Gateway for GitHub - Workflow',
+      timestamp: new Date().toISOString()
+    }));
+    return;
+  }
+
+  // ✅ CRON TRIGGER ENDPOINT
+  if (req.url === '/cron' || req.url === '/trigger' || req.url === '/') {
+    try {
+      console.log('\n🚀 Executing cron job via HTTP request...\n');
+      
+      const result = await main();
+      
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ 
+        status: 'success', 
+        data: result 
+      }));
+    } catch (error) {
+      console.error('❌ HTTP request failed:', getErrorMessage(error));
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ 
+        status: 'error', 
+        message: getErrorMessage(error) 
+      }));
+    }
+    return;
+  }
+
+  // ✅ 404 - NOT FOUND
+  res.writeHead(404, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ 
+    status: 'error', 
+    message: 'Not Found',
+    available_endpoints: ['/health', '/cron', '/trigger', '/']
+  }));
+});
+
+server.listen(PORT, () => {
+  console.log(`\n${'='.repeat(60)}`);
+  console.log(`✅ Railway Gateway HTTP Server READY`);
+  console.log(`${'='.repeat(60)}`);
+  console.log(`Port: ${PORT}`);
+  console.log(`Health Check: http://localhost:${PORT}/health`);
+  console.log(`Cron Trigger: http://localhost:${PORT}/cron`);
+  console.log(`Waiting for GitHub Actions requests...`);
+  console.log(`${'='.repeat(60)}\n`);
+});
+
+// ✅ GRACEFUL SHUTDOWN
+process.on('SIGTERM', () => {
+  console.log('\n⚠️ SIGTERM received, shutting down gracefully...');
+  server.close(() => {
+    console.log('✅ HTTP server closed');
+    process.exit(0);
   });
+});
+
+process.on('SIGINT', () => {
+  console.log('\n⚠️ SIGINT received, shutting down gracefully...');
+  server.close(() => {
+    console.log('✅ HTTP server closed');
+    process.exit(0);
+  });
+});
