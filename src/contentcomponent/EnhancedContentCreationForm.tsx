@@ -92,7 +92,7 @@ const parseMarkdownToJSX = (text: string): React.ReactNode => {
       switch (match.type) {
         case 'link':
           elements.push(
-            
+            <a
               key={`link-${lineIndex}-${matchIndex}`}
               href={match.url}
               target="_blank"
