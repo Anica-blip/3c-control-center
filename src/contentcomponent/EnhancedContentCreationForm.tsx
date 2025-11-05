@@ -249,10 +249,11 @@ const EnhancedContentCreationForm = ({
     cta: ''
   });
 
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [contentId, setContentId] = useState('');
   const [isEditingPost, setIsEditingPost] = useState(false);
+  // ADD NEW STATE FOR TEMPLATE HANDLING:
   const [isEditingTemplate, setIsEditingTemplate] = useState(false);
   const [hashtagInput, setHashtagInput] = useState('');
   const [fieldConfig, setFieldConfig] = useState<any>(null);
@@ -333,35 +334,42 @@ const EnhancedContentCreationForm = ({
     return codes[value] || 'XX';
   };
 
+  // FIXED ISSUE #3: Platform symbol - DATABASE COLUMN ONLY (no name parsing)
   const getPlatformSymbol = (platform: any) => {
+    // Return platform_icon column value ONLY - no fallbacks
     return platform.platform_icon || '??';
   };
 
+  // FIXED ISSUE #3: Colour detection - DATABASE COLUMNS ONLY (platform_icon + type)
   const getPlatformColor = (platform: any) => {
+    // Use type column for Telegram colour distinction
     if (platform.type === 'telegram_group') {
-      return '#f97316';
+      return '#f97316'; // Orange for groups
     }
     if (platform.type === 'telegram_channel') {
-      return '#3b82f6';
+      return '#3b82f6'; // Blue for channels
     }
     
+    // Use platform_icon for all other platform colours
     const icon = platform.platform_icon;
-    if (icon === 'TG') return '#3b82f6';
-    if (icon === 'IG') return '#E4405F';
-    if (icon === 'FB') return '#1877F2';
-    if (icon === 'LI') return '#0A66C2';
-    if (icon === 'TW') return '#000000';
-    if (icon === 'YT') return '#FF0000';
-    if (icon === 'TK') return '#000000';
-    if (icon === 'PT') return '#BD081C';
-    if (icon === 'WA') return '#25D366';
-    if (icon === 'FR') return '#4b5563';
-    if (icon === 'DS') return '#5865F2';
+    if (icon === 'TG') return '#3b82f6'; // Telegram default
+    if (icon === 'IG') return '#E4405F'; // Instagram
+    if (icon === 'FB') return '#1877F2'; // Facebook
+    if (icon === 'LI') return '#0A66C2'; // LinkedIn
+    if (icon === 'TW') return '#000000'; // Twitter/X
+    if (icon === 'YT') return '#FF0000'; // YouTube
+    if (icon === 'TK') return '#000000'; // TikTok
+    if (icon === 'PT') return '#BD081C'; // Pinterest
+    if (icon === 'WA') return '#25D366'; // WhatsApp
+    if (icon === 'FR') return '#4b5563'; // Forum
+    if (icon === 'DS') return '#5865F2'; // Discord
     
-    return '#6b7280';
+    return '#6b7280'; // Default grey
   };
 
+  // FIXED ISSUE #3: Type detection - DATABASE COLUMN ONLY (no name parsing)
   const getPlatformType = (platform: any) => {
+    // Return type column value ONLY - no fallbacks
     return platform.type || 'other';
   };
 
@@ -891,19 +899,14 @@ const handleAddToSchedule = async () => {
     ...(isEditingPost && editingPost?.id && { id: editingPost.id })  // ← ADD THIS LINE
   };
 
-  try {
-    await onAddToSchedule(postData);
-    
-    if (isEditingPost && onEditComplete) {
-      onEditComplete();
-    } else {
+    try {
+      await onAddToSchedule(postData);
       resetForm();
+    } catch (error) {
+      console.error('Schedule failed:', error);
+      alert('Failed to schedule post. Your content is preserved.');
     }
-  } catch (error) {
-    console.error('Schedule failed:', error);
-    alert('Failed to schedule post. Please try again.');
-  }
-};
+  };
 
   const canSave = selections.characterProfile && selections.theme && selections.audience && selections.mediaType && selections.templateType && selections.voiceStyle && content.description;
 
