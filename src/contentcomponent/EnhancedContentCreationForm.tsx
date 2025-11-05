@@ -2586,14 +2586,11 @@ const handleAddToSchedule = async () => {
             )}
           </div>
         </div>
+      )}
 
-        {selectedPlatforms.length > 0 && (
-
-      {selectedPlatforms.length > 0 && (  // Now this is a NEW section
-
-        {selectedPlatforms.length > 0 && (
-          <div style={{
-            marginTop: '20px',
+      {selectedPlatforms.length > 0 && (
+        <div style={{
+          marginTop: '20px',
             padding: '16px',
             backgroundColor: '#f3f4f6',
             borderRadius: '8px',
