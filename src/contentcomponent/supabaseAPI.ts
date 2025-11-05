@@ -226,14 +226,17 @@ export const supabaseAPI = {
 
       let finalData;
 
-      // Use UPDATE or UPSERT based on whether we have a supabaseId
-      if (postData.supabaseId) {
-        console.log(`UPDATING existing post with Supabase ID: ${postData.supabaseId}`);
+      // FIXED: Check for both 'id' and 'supabaseId' to determine if this is an update
+      const existingId = (postData as any).id || (postData as any).supabaseId;
+      
+      // Use UPDATE or UPSERT based on whether we have an existing ID
+      if (existingId) {
+        console.log(`UPDATING existing post with ID: ${existingId}`);
         
         const { data, error } = await client
           .from('content_posts')
           .update(dbData)
-          .eq('id', parseInt(postData.supabaseId))
+          .eq('id', parseInt(existingId))
           .select()
           .single();
 
@@ -243,7 +246,7 @@ export const supabaseAPI = {
         }
         finalData = data;
       } else {
-        console.log(`UPSERTING post with content_id: ${postData.contentId}`);
+        console.log(`INSERTING new post with content_id: ${postData.contentId}`);
         
         const insertData = {
           ...dbData,
@@ -252,15 +255,12 @@ export const supabaseAPI = {
 
         const { data, error } = await client
           .from('content_posts')
-          .upsert(insertData, { 
-            onConflict: 'content_id',
-            ignoreDuplicates: false
-          })
+          .insert(insertData)
           .select()
           .single();
 
         if (error) {
-          console.error('Upsert error:', error);
+          console.error('Insert error:', error);
           throw error;
         }
         finalData = data;
