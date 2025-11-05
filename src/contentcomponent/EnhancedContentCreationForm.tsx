@@ -92,7 +92,7 @@ const parseMarkdownToJSX = (text: string): React.ReactNode => {
       switch (match.type) {
         case 'link':
           elements.push(
-            <a
+            
               key={`link-${lineIndex}-${matchIndex}`}
               href={match.url}
               target="_blank"
@@ -155,6 +155,26 @@ const parseMarkdownToJSX = (text: string): React.ReactNode => {
       </React.Fragment>
     );
   });
+};
+
+// Parse markdown links into structured format for saving
+const parseLinksForSaving = (text: string) => {
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const links: Array<{ text: string; url: string; position: number }> = [];
+  let match;
+  
+  while ((match = linkRegex.exec(text)) !== null) {
+    links.push({
+      text: match[1],
+      url: match[2],
+      position: match.index
+    });
+  }
+  
+  return {
+    textWithoutMarkdown: text.replace(linkRegex, '$1'),
+    links: links
+  };
 };
 
 // Enhanced Content Creation Form - WITH i18n INTEGRATION
@@ -644,7 +664,6 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
       });
     }
   }, [loadedTemplate, editingPost, onTemplateLoaded, characterProfiles]);
-
   const setupPlatformFields = (platform: string) => {
     if (platform) {
       const config = getPlatformConfig(platform);
@@ -850,16 +869,23 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
     
     const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
     
+    const parsedDescription = parseLinksForSaving(content.description);
+    const parsedTitle = parseLinksForSaving(content.title);
+    
     const postData = {
       contentId,
       ...selections,
       ...content,
+      description: parsedDescription.textWithoutMarkdown,
+      title: parsedTitle.textWithoutMarkdown,
+      links: [...parsedDescription.links, ...parsedTitle.links],
       mediaFiles,
       selectedPlatforms,
       detailedPlatforms,
       status: 'pending' as const,
       isFromTemplate: isEditingTemplate,
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
+      ...(isEditingPost && editingPost?.id && { id: editingPost.id })
     };
 
     try {
@@ -886,17 +912,23 @@ const handleAddToSchedule = async () => {
   
   const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
   
+  const parsedDescription = parseLinksForSaving(content.description);
+  const parsedTitle = parseLinksForSaving(content.title);
+  
   const postData = {
     contentId,
     ...selections,
     ...content,
+    description: parsedDescription.textWithoutMarkdown,
+    title: parsedTitle.textWithoutMarkdown,
+    links: [...parsedDescription.links, ...parsedTitle.links],
     mediaFiles,
     selectedPlatforms,
     detailedPlatforms,
     status: 'scheduled' as const,
     isFromTemplate: isEditingTemplate,
     sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
-    ...(isEditingPost && editingPost?.id && { id: editingPost.id })  // ← ADD THIS LINE
+    ...(isEditingPost && editingPost?.id && { id: editingPost.id })
   };
 
     try {
@@ -998,399 +1030,364 @@ const handleAddToSchedule = async () => {
           marginBottom: '12px'
         }}>
           <User style={{ height: '20px', width: '20px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
-          <h3 style={{
+          <span style={{
             fontSize: '16px',
             fontWeight: '600',
-            color: isDarkMode ? '#f8fafc' : '#111827',
-            margin: '0'
+            color: isDarkMode ? '#f8fafc' : '#111827'
           }}>
-            Character Profile
-          </h3>
+            {t('content.selectCharacter')}
+          </span>
         </div>
-        
-        <div style={{ display: 'grid', gap: '12px' }}>
-          <select
-            value={selections.characterProfile}
-            onChange={(e) => handleSelectionChange('characterProfile', e.target.value)}
-            disabled={isLoadingProfiles}
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-              borderRadius: '6px',
-              fontSize: '14px',
-              backgroundColor: '#334155',
-              color: '#ffffff',
-              fontFamily: 'inherit',
-              opacity: isLoadingProfiles ? 0.7 : 1
-            }}
-          >
-            <option value="">
-              {isLoadingProfiles ? 'Loading character profiles...' : 'Select character profile...'}
-            </option>
-            {!isLoadingProfiles && characterProfiles.map(profile => (
-              <option key={profile.id} value={profile.id}>
-                {profile.name} ({profile.username}) - {profile.role}
-              </option>
-            ))}
-          </select>
 
-          {selections.characterProfile && (
-            <div style={{
-              padding: '12px',
-              backgroundColor: isDarkMode ? '#1e293b' : 'white',
-              borderRadius: '6px',
-              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`
-            }}>
-              {(() => {
-                const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
-                if (!selectedProfile) return null;
-                
-                return (
+        {isLoadingProfiles ? (
+          <div style={{
+            padding: '20px',
+            textAlign: 'center',
+            color: isDarkMode ? '#94a3b8' : '#6b7280'
+          }}>
+            {t('common.loading')}...
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+            gap: '12px'
+          }}>
+            {characterProfiles.map((profile) => (
+              <div
+                key={profile.id}
+                onClick={() => handleSelectionChange('characterProfile', profile.id)}
+                style={{
+                  padding: '16px',
+                  backgroundColor: selections.characterProfile === profile.id 
+                    ? (isDarkMode ? '#1e3a8a30' : '#dbeafe') 
+                    : (isDarkMode ? '#1e293b' : 'white'),
+                  border: `2px solid ${selections.characterProfile === profile.id 
+                    ? (isDarkMode ? '#60a5fa' : '#3b82f6') 
+                    : (isDarkMode ? '#475569' : '#e5e7eb')}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
                   <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    backgroundColor: isDarkMode ? '#334155' : '#f3f4f6',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '12px'
+                    justifyContent: 'center',
+                    fontSize: '20px',
+                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                    fontWeight: 'bold',
+                    border: `2px solid ${selections.characterProfile === profile.id 
+                      ? (isDarkMode ? '#60a5fa' : '#3b82f6') 
+                      : (isDarkMode ? '#475569' : '#e5e7eb')}`,
+                    overflow: 'hidden'
+                  }}>
+                    {profile.avatar_id ? (
+                      <img
+                        src={profile.avatar_id}
+                        alt={profile.name}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    ) : (
+                      profile.name.charAt(0)
+                    )}
+                  </div>
+                  <div style={{
+                    textAlign: 'center'
                   }}>
                     <div style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      backgroundColor: isDarkMode ? '#475569' : '#f3f4f6',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '16px',
-                      color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                      fontWeight: 'bold',
-                      border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
-                      flexShrink: 0,
-                      overflow: 'hidden'
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: isDarkMode ? '#f8fafc' : '#111827',
+                      marginBottom: '2px'
                     }}>
-                      {selectedProfile.avatar_id ? (
-                        <img
-                          src={selectedProfile.avatar_id}
-                          alt={selectedProfile.name}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                      ) : (
-                        selectedProfile.name.charAt(0)
-                      )}
+                      {profile.name}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: isDarkMode ? '#f8fafc' : '#111827',
-                        marginBottom: '2px'
-                      }}>
-                        {selectedProfile.name}
-                      </div>
-                      <div style={{
-                        fontSize: '12px',
-                        color: isDarkMode ? '#94a3b8' : '#6b7280',
-                        marginBottom: '2px'
-                      }}>
-                        {selectedProfile.username}
-                      </div>
-                      <div style={{
-                        fontSize: '11px',
-                        color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                        fontWeight: '500'
-                      }}>
-                        {selectedProfile.role}
-                      </div>
+                    <div style={{
+                      fontSize: '12px',
+                      color: isDarkMode ? '#94a3b8' : '#6b7280'
+                    }}>
+                      {profile.role}
                     </div>
                   </div>
-                );
-              })()}
-            </div>
-          )}
-          
-          <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 12px',
-              backgroundColor: isDarkMode ? '#475569' : '#e5e7eb',
-              color: isDarkMode ? '#f8fafc' : '#374151',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: '500',
-              fontFamily: 'inherit',
-              alignSelf: 'flex-start'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = isDarkMode ? '#60a5fa' : '#3b82f6';
-              e.currentTarget.style.color = 'white';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = isDarkMode ? '#475569' : '#e5e7eb';
-              e.currentTarget.style.color = isDarkMode ? '#f8fafc' : '#374151';
-            }}
-            onClick={() => {
-              alert('Character Profile management available in Settings tab.\n\nTo add new profiles, go to Settings > Character Profiles');
-            }}
-          >
-            <Plus style={{ height: '16px', width: '16px' }} />
-            Manage Profiles
-          </button>
-        </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(2, 1fr)',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
         gap: '16px',
-        padding: '20px',
-        background: isDarkMode 
-          ? 'linear-gradient(135deg, #334155 0%, #475569 100%)' 
-          : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-        borderRadius: '8px',
-        border: `1px solid ${isDarkMode ? '#475569' : '#3b82f6'}`,
-        marginBottom: '24px',
-        width: '85%'
+        marginBottom: '24px'
       }}>
-        {[
-          { field: 'theme', label: 'Theme/Label *', options: [
-            'news_alert', 'promotion', 'standard_post', 'cta_quiz', 'cta_game', 
-            'cta_puzzle', 'cta_challenge', 'news', 'blog', 'tutorial_guide', 'course_tool', 'assessment'
-          ]},
-          { field: 'audience', label: 'Target Audience *', options: [
-            'existing_members', 'new_members', 'persona_falcon', 'persona_panther', 
-            'persona_wolf', 'persona_lion', 'general_public'
-          ]},
-          { field: 'mediaType', label: 'Media Type *', options: [
-            'no_media', 'image', 'video', 'gifs', 'pdf', 'interactive_media', 'url_link'
-          ]},
-          { field: 'templateType', label: 'Template Type *', options: [
-            'social_media', 'presentation', 'video_message', 'anica_chat', 'blog_posts', 
-            'news_article', 'newsletter', 'email_templates', 'custom_templates'
-          ]},
-          { field: 'voiceStyle', label: 'Voice Style *', options: [
-            'casual', 'friendly', 'professional', 'creative'
-          ]}
-        ].map(({ field, label, options }) => (
-          <div key={field}>
-            <label style={{
-              display: 'block',
-              fontSize: '12px',
-              fontWeight: '600',
-              color: isDarkMode ? '#bfdbfe' : '#1e40af',
-              marginBottom: '8px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            }}>
-              {label}
-            </label>
-            <select
-              value={selections[field as keyof typeof selections]}
-              onChange={(e) => handleSelectionChange(field, e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '6px',
-                fontSize: '14px',
-                backgroundColor: '#334155',
-                color: '#ffffff',
-                fontFamily: 'inherit',
-                appearance: 'none',
-                backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 12px center',
-                backgroundSize: '16px',
-                paddingRight: '40px'
-              }}
-            >
-              <option value="">{field === 'platform' ? 'Generic (no optimisation)...' : `Select ${label.toLowerCase().replace(' *', '')}...`}</option>
-              {options.map(option => (
-                <option key={option} value={option}>
-                  {option.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </option>
-              ))}
-            </select>
-          </div>
-        ))}
-        
         <div>
           <label style={{
             display: 'block',
-            fontSize: '12px',
+            fontSize: '14px',
             fontWeight: '600',
-            color: isDarkMode ? '#bfdbfe' : '#1e40af',
-            marginBottom: '8px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em'
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            marginBottom: '8px'
           }}>
-            Optimise For Platform
+            {t('content.theme')}
           </label>
           <select
-            value={selections.platform}
-            onChange={(e) => handleSelectionChange('platform', e.target.value)}
+            value={selections.theme}
+            onChange={(e) => handleSelectionChange('theme', e.target.value)}
             style={{
               width: '100%',
               padding: '10px 12px',
               border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: '#334155',
-              color: '#ffffff',
-              fontFamily: 'inherit',
-              appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 12px center',
-              backgroundSize: '16px',
-              paddingRight: '40px'
+              backgroundColor: isDarkMode ? '#334155' : 'white',
+              color: isDarkMode ? '#f8fafc' : '#111827',
+              cursor: 'pointer',
+              fontFamily: 'inherit'
             }}
           >
-            <option value="">Generic (no optimisation)...</option>
-            <option value="instagram">Instagram</option>
-            <option value="facebook">Facebook</option>
-            <option value="linkedin">LinkedIn</option>
-            <option value="twitter">Twitter/X</option>
-            <option value="youtube">YouTube</option>
-            <option value="tiktok">TikTok</option>
-            <option value="telegram">Telegram</option>
-            <option value="pinterest">Pinterest</option>
-            <option value="whatsapp">WhatsApp</option>
+            <option value="">{t('content.selectTheme')}</option>
+            <option value="news_alert">{t('content.newsAlert')}</option>
+            <option value="promotion">{t('content.promotion')}</option>
+            <option value="standard_post">{t('content.standardPost')}</option>
+            <option value="cta_quiz">{t('content.ctaQuiz')}</option>
+            <option value="cta_game">{t('content.ctaGame')}</option>
+            <option value="cta_puzzle">{t('content.ctaPuzzle')}</option>
+            <option value="cta_challenge">{t('content.ctaChallenge')}</option>
+            <option value="news">{t('content.news')}</option>
+            <option value="blog">{t('content.blog')}</option>
+            <option value="tutorial_guide">{t('content.tutorialGuide')}</option>
+            <option value="course_tool">{t('content.courseTool')}</option>
+            <option value="assessment">{t('content.assessment')}</option>
+          </select>
+        </div>
+
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            marginBottom: '8px'
+          }}>
+            {t('content.audience')}
+          </label>
+          <select
+            value={selections.audience}
+            onChange={(e) => handleSelectionChange('audience', e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: isDarkMode ? '#334155' : 'white',
+              color: isDarkMode ? '#f8fafc' : '#111827',
+              cursor: 'pointer',
+              fontFamily: 'inherit'
+            }}
+          >
+            <option value="">{t('content.selectAudience')}</option>
+            <option value="existing_members">{t('content.existingMembers')}</option>
+            <option value="new_members">{t('content.newMembers')}</option>
+            <option value="persona_falcon">{t('content.personaFalcon')}</option>
+            <option value="persona_panther">{t('content.personaPanther')}</option>
+            <option value="persona_wolf">{t('content.personaWolf')}</option>
+            <option value="persona_lion">{t('content.personaLion')}</option>
+            <option value="general_public">{t('content.generalPublic')}</option>
+          </select>
+        </div>
+
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            marginBottom: '8px'
+          }}>
+            {t('content.mediaType')}
+          </label>
+          <select
+            value={selections.mediaType}
+            onChange={(e) => handleSelectionChange('mediaType', e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: isDarkMode ? '#334155' : 'white',
+              color: isDarkMode ? '#f8fafc' : '#111827',
+              cursor: 'pointer',
+              fontFamily: 'inherit'
+            }}
+          >
+            <option value="">{t('content.selectMediaType')}</option>
+            <option value="no_media">{t('content.noMedia')}</option>
+            <option value="image">{t('content.image')}</option>
+            <option value="video">{t('content.video')}</option>
+            <option value="gifs">{t('content.gifs')}</option>
+            <option value="pdf">{t('content.pdf')}</option>
+            <option value="interactive_media">{t('content.interactiveMedia')}</option>
+            <option value="url_link">{t('content.urlLink')}</option>
+          </select>
+        </div>
+
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            marginBottom: '8px'
+          }}>
+            {t('content.templateType')}
+          </label>
+          <select
+            value={selections.templateType}
+            onChange={(e) => handleSelectionChange('templateType', e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: isDarkMode ? '#334155' : 'white',
+              color: isDarkMode ? '#f8fafc' : '#111827',
+              cursor: 'pointer',
+              fontFamily: 'inherit'
+            }}
+          >
+            <option value="">{t('content.selectTemplateType')}</option>
+            <option value="social_media">{t('content.socialMedia')}</option>
+            <option value="presentation">{t('content.presentation')}</option>
+            <option value="video_message">{t('content.videoMessage')}</option>
+            <option value="anica_chat">{t('content.anicaChat')}</option>
+            <option value="blog_posts">{t('content.blogPosts')}</option>
+            <option value="news_article">{t('content.newsArticle')}</option>
+            <option value="newsletter">{t('content.newsletter')}</option>
+            <option value="email_templates">{t('content.emailTemplates')}</option>
+            <option value="custom_templates">{t('content.customTemplates')}</option>
+          </select>
+        </div>
+
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            marginBottom: '8px'
+          }}>
+            {t('content.voiceStyle')}
+          </label>
+          <select
+            value={selections.voiceStyle}
+            onChange={(e) => handleSelectionChange('voiceStyle', e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: isDarkMode ? '#334155' : 'white',
+              color: isDarkMode ? '#f8fafc' : '#111827',
+              cursor: 'pointer',
+              fontFamily: 'inherit'
+            }}
+          >
+            <option value="">{t('content.selectVoiceStyle')}</option>
+            <option value="casual">{t('content.casual')}</option>
+            <option value="friendly">{t('content.friendly')}</option>
+            <option value="professional">{t('content.professional')}</option>
+            <option value="creative">{t('content.creative')}</option>
           </select>
         </div>
       </div>
 
-      {fieldConfig && (
-        <div style={{
-          backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
-          border: `1px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
-          borderRadius: '8px',
-          padding: '16px',
-          marginBottom: '24px',
-          width: '85%'
-        }}>
-          <h4 style={{
-            fontSize: '14px',
-            fontWeight: '600',
-            color: isDarkMode ? '#60a5fa' : '#1e40af',
-            margin: '0 0 8px 0'
-          }}>
-            Platform Optimisation: {selections.platform?.toUpperCase()}
-          </h4>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: '12px'
-          }}>
-            {fieldConfig.title?.show && (
-              <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#1e40af' }}>
-                Title: {fieldConfig.title.maxLength} chars
-              </div>
-            )}
-            <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#1e40af' }}>
-              Description: {fieldConfig.description.maxLength} chars
-            </div>
-            <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#1e40af' }}>
-              Hashtags: {fieldConfig.hashtags.maxCount} max ({fieldConfig.hashtags.recommended} recommended)
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div style={{ marginBottom: '24px', width: '85%' }}>
-        <label style={{
-          display: 'block',
+      <div style={{
+        backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
+        borderRadius: '8px',
+        padding: '20px',
+        marginBottom: '24px',
+        border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+      }}>
+        <h3 style={{
           fontSize: '16px',
           fontWeight: '600',
           color: isDarkMode ? '#f8fafc' : '#111827',
-          marginBottom: '12px'
+          margin: '0 0 16px 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
         }}>
-          Media Upload
-        </label>
-        
-        <div
-          onClick={() => fileInputRef.current?.click()}
-          style={{
-            border: `2px dashed ${isDarkMode ? '#60a5fa' : '#3b82f6'}`,
-            borderRadius: '8px',
-            padding: '32px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            backgroundColor: isDarkMode ? '#1e3a8a20' : '#f8fafc',
-            transition: 'all 0.3s ease',
-            width: '100%',
-            marginBottom: '16px'
-          }}
+          <Upload style={{ height: '18px', width: '18px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
+          {t('content.mediaFiles')}
+        </h3>
+
+        <div style={{
+          border: `2px dashed ${isDarkMode ? '#475569' : '#d1d5db'}`,
+          borderRadius: '8px',
+          padding: '24px',
+          textAlign: 'center',
+          backgroundColor: isDarkMode ? '#1e293b' : 'white',
+          marginBottom: '16px',
+          cursor: 'pointer'
+        }}
+        onClick={() => fileInputRef.current?.click()}
         >
           <Upload style={{
             height: '32px',
             width: '32px',
             color: isDarkMode ? '#60a5fa' : '#3b82f6',
-            margin: '0 auto 12px auto',
-            display: 'block'
+            margin: '0 auto 12px'
           }} />
-          <h3 style={{
-            fontSize: '16px',
-            fontWeight: '600',
-            color: isDarkMode ? '#f8fafc' : '#111827',
-            margin: '0 0 6px 0'
-          }}>
-            Upload your media files
-          </h3>
           <p style={{
             fontSize: '14px',
-            color: isDarkMode ? '#94a3b8' : '#6b7280',
+            color: isDarkMode ? '#f8fafc' : '#111827',
+            fontWeight: '500',
             margin: '0 0 4px 0'
           }}>
-            Drop files here or click to browse
+            {t('content.clickToUpload')}
           </p>
           <p style={{
             fontSize: '12px',
-            color: isDarkMode ? '#64748b' : '#9ca3af',
+            color: isDarkMode ? '#94a3b8' : '#6b7280',
             margin: '0'
           }}>
-            Support for Images, Videos, GIFs, PDFs, and Interactive Media (up to 100MB per file)
+            {t('content.supportedFormats')}
           </p>
           <input
             ref={fileInputRef}
             type="file"
             multiple
             accept="image/*,video/*,.pdf,.gif,.html"
+            onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
             style={{ display: 'none' }}
-            onChange={(e) => {
-              if (e.target.files) {
-                const maxSize = 100 * 1024 * 1024;
-                const oversizedFiles: string[] = [];
-                
-                Array.from(e.target.files).forEach(file => {
-                  if (file.size > maxSize) {
-                    oversizedFiles.push(`${file.name} (${Math.round(file.size / 1024 / 1024)}MB)`);
-                  }
-                });
-                
-                if (oversizedFiles.length > 0) {
-                  alert(`The following files are too large (>100MB):\n${oversizedFiles.join('\n')}\n\nPlease compress or choose smaller files.`);
-                  return;
-                }
-                
-                handleFileUpload(e.target.files);
-              }
-            }}
           />
         </div>
 
         <div style={{
-          backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
-          border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+          backgroundColor: isDarkMode ? '#1e293b' : 'white',
           borderRadius: '8px',
           padding: '16px',
-          marginBottom: '16px'
+          border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
         }}>
           <h4 style={{
             fontSize: '14px',
@@ -1864,7 +1861,6 @@ const handleAddToSchedule = async () => {
       <span>{content.description.length}/{fieldConfig?.description?.maxLength || 2200}</span>
     </div>
   </div>
-
   <div>
     <label style={{
       display: 'block',
@@ -2003,7 +1999,7 @@ const handleAddToSchedule = async () => {
         borderRadius: '8px',
         fontSize: '14px',
         backgroundColor: isDarkMode ? '#334155' : 'white',
-        color: isDarkMode ? '#f8fafc' : '#111827',
+        color: '#000000',
         fontFamily: 'inherit'
       }}
     />
@@ -2012,7 +2008,7 @@ const handleAddToSchedule = async () => {
       color: isDarkMode ? '#94a3b8' : '#6b7280',
       marginTop: '4px'
     }}>
-      {t('content.keywordsOptional')}
+      {t('content.keywordsHelp')}
     </div>
   </div>
 
@@ -2024,7 +2020,7 @@ const handleAddToSchedule = async () => {
       color: isDarkMode ? '#f8fafc' : '#111827',
       marginBottom: '8px'
     }}>
-      {t('content.cta')}
+      {t('content.callToAction')}
     </label>
     <input
       type="text"
@@ -2032,8 +2028,6 @@ const handleAddToSchedule = async () => {
       onChange={(e) => setContent(prev => ({ ...prev, cta: e.target.value }))}
       placeholder={t('content.ctaPlaceholder')}
       maxLength={100}
-      lang="en-GB"
-      spellCheck={true}
       style={{
         width: '100%',
         padding: '12px',
@@ -2041,7 +2035,7 @@ const handleAddToSchedule = async () => {
         borderRadius: '8px',
         fontSize: '14px',
         backgroundColor: isDarkMode ? '#334155' : 'white',
-        color: isDarkMode ? '#f8fafc' : '#111827',
+        color: '#000000',
         fontFamily: 'inherit'
       }}
     />
@@ -2052,665 +2046,623 @@ const handleAddToSchedule = async () => {
       fontSize: '12px',
       color: isDarkMode ? '#94a3b8' : '#6b7280'
     }}>
-      <span>{t('content.clearAction')}</span>
+      <span>{t('content.ctaHelp')}</span>
       <span>{content.cta.length}/100</span>
     </div>
   </div>
 </div>
 
-      <div style={{ marginBottom: '24px', width: '85%' }}>
-        <label style={{
-          display: 'block',
+      <div style={{
+        backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
+        borderRadius: '8px',
+        padding: '20px',
+        marginBottom: '24px',
+        border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
+      }}>
+        <h3 style={{
           fontSize: '16px',
           fontWeight: '600',
           color: isDarkMode ? '#f8fafc' : '#111827',
-          marginBottom: '12px'
+          margin: '0 0 16px 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
         }}>
-          Select Publishing Platforms
-        </label>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '12px'
-        }}>
-          {activePlatforms.map((platform) => (
-            <label
-              key={platform.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px',
-                border: selectedPlatforms.includes(platform.id) 
-                  ? `1px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}` 
-                  : `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-                borderRadius: '8px',
-                cursor: 'pointer',
-                backgroundColor: selectedPlatforms.includes(platform.id) 
-                  ? (isDarkMode ? '#1e3a8a30' : '#dbeafe') 
-                  : '#334155',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={selectedPlatforms.includes(platform.id)}
-                onChange={() => handlePlatformToggle(platform.id)}
-                style={{
-                  height: '16px',
-                  width: '16px',
-                  accentColor: isDarkMode ? '#60a5fa' : '#3b82f6'
-                }}
-              />
-              <div style={{ flex: 1 }}>
-                <div style={{
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: isDarkMode ? '#f8fafc' : '#111827',
-                  marginBottom: '2px'
-                }}>
-                  {platform.name}
-                </div>
-                {platform.isDefault && (
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '1px 6px',
-                    fontSize: '10px',
-                    fontWeight: '600',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    borderRadius: '8px'
+          <Settings style={{ height: '18px', width: '18px', color: isDarkMode ? '#60a5fa' : '#3b82f6' }} />
+          {t('content.selectPlatforms')}
+        </h3>
+
+        {isLoadingPlatformsState ? (
+          <div style={{
+            padding: '20px',
+            textAlign: 'center',
+            color: isDarkMode ? '#94a3b8' : '#6b7280'
+          }}>
+            {t('common.loading')}...
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+            gap: '12px'
+          }}>
+            {activePlatforms.map((platform) => {
+              const isSelected = selectedPlatforms.includes(platform.id);
+              const platformSymbol = getPlatformSymbol(platform);
+              const platformColor = getPlatformColor(platform);
+              
+              return (
+                <div
+                  key={platform.id}
+                  onClick={() => handlePlatformToggle(platform.id)}
+                  style={{
+                    padding: '12px',
+                    backgroundColor: isSelected 
+                      ? platformColor 
+                      : (isDarkMode ? '#1e293b' : 'white'),
+                    border: `2px solid ${isSelected ? platformColor : (isDarkMode ? '#475569' : '#e5e7eb')}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '8px',
+                    backgroundColor: isSelected 
+                      ? 'rgba(255,255,255,0.2)' 
+                      : platformColor,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    color: isSelected ? 'white' : 'white'
                   }}>
-                    Default
-                  </span>
-                )}
-              </div>
-            </label>
-          ))}
-        </div>
+                    {platformSymbol}
+                  </div>
+                  <div style={{
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    color: isSelected ? 'white' : (isDarkMode ? '#f8fafc' : '#111827'),
+                    textAlign: 'center',
+                    wordBreak: 'break-word'
+                  }}>
+                    {platform.name}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {selectedPlatforms.length > 0 && (
+          <div style={{
+            marginTop: '16px',
+            padding: '12px',
+            backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
+            borderRadius: '8px',
+            border: `1px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
+          }}>
+            <div style={{
+              fontSize: '13px',
+              fontWeight: '600',
+              color: isDarkMode ? '#60a5fa' : '#1e40af',
+              marginBottom: '8px'
+            }}>
+              {t('content.selectedPlatforms')}: {selectedPlatforms.length}
+            </div>
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '6px'
+            }}>
+              {selectedPlatforms.map(platformId => {
+                const platform = activePlatforms.find(p => p.id === platformId);
+                if (!platform) return null;
+                
+                const platformSymbol = getPlatformSymbol(platform);
+                const platformColor = getPlatformColor(platform);
+                
+                return (
+                  <div key={platformId} style={{
+                    padding: '4px 10px',
+                    backgroundColor: platformColor,
+                    border: `1px solid ${platformColor}`,
+                    borderRadius: '12px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      backgroundColor: 'rgba(255,255,255,0.3)',
+                      padding: '1px 4px',
+                      borderRadius: '3px'
+                    }}>
+                      {platformSymbol}
+                    </span>
+                    {platform.name}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{
         display: 'flex',
-        justifyContent: 'flex-end',
         gap: '12px',
+        justifyContent: 'flex-end',
         paddingTop: '16px',
         borderTop: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
       }}>
         <button
           onClick={resetForm}
+          disabled={isSaving}
           style={{
-            padding: '12px 20px',
-            fontSize: '14px',
-            fontWeight: '600',
-            borderRadius: '8px',
-            border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
-            cursor: 'pointer',
+            padding: '12px 24px',
             backgroundColor: 'transparent',
             color: isDarkMode ? '#94a3b8' : '#6b7280',
+            border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+            borderRadius: '8px',
+            cursor: isSaving ? 'not-allowed' : 'pointer',
+            fontSize: '14px',
+            fontWeight: '600',
             fontFamily: 'inherit'
           }}
         >
-          Reset Form
+          {t('common.reset')}
         </button>
-        
+
         <button
           onClick={handleSave}
           disabled={!canSave || isSaving}
           style={{
-            padding: '12px 20px',
+            padding: '12px 24px',
+            backgroundColor: canSave && !isSaving 
+              ? (isDarkMode ? '#60a5fa' : '#3b82f6') 
+              : (isDarkMode ? '#475569' : '#d1d5db'),
+            color: canSave && !isSaving ? 'white' : (isDarkMode ? '#64748b' : '#9ca3af'),
+            border: 'none',
+            borderRadius: '8px',
+            cursor: canSave && !isSaving ? 'pointer' : 'not-allowed',
             fontSize: '14px',
             fontWeight: '600',
-            borderRadius: '8px',
-            border: 'none',
-            cursor: (canSave && !isSaving) ? 'pointer' : 'not-allowed',
-            backgroundColor: (canSave && !isSaving) ? (isDarkMode ? '#64748b' : '#6b7280') : (isDarkMode ? '#475569' : '#d1d5db'),
-            color: (canSave && !isSaving) ? 'white' : (isDarkMode ? '#64748b' : '#9ca3af'),
             fontFamily: 'inherit',
-            opacity: isSaving ? 0.7 : 1
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}
         >
-          {isSaving ? 'Saving...' : 
-           isEditingPost ? 'Update Draft' : 
-           isEditingTemplate ? 'Save Template as Post' : 'Save as Draft'}
+          {isSaving ? t('common.saving') : (isEditingPost ? t('common.update') : t('common.save'))}
         </button>
-        
+
         <button
           onClick={handleAddToSchedule}
           disabled={!canSave || isSaving}
           style={{
-            padding: '12px 20px',
+            padding: '12px 24px',
+            backgroundColor: canSave && !isSaving 
+              ? (isDarkMode ? '#10b981' : '#059669') 
+              : (isDarkMode ? '#475569' : '#d1d5db'),
+            color: canSave && !isSaving ? 'white' : (isDarkMode ? '#64748b' : '#9ca3af'),
+            border: 'none',
+            borderRadius: '8px',
+            cursor: canSave && !isSaving ? 'pointer' : 'not-allowed',
             fontSize: '14px',
             fontWeight: '600',
-            borderRadius: '8px',
-            border: 'none',
-            cursor: (canSave && !isSaving) ? 'pointer' : 'not-allowed',
-            backgroundColor: (canSave && !isSaving) ? (isDarkMode ? '#60a5fa' : '#3b82f6') : (isDarkMode ? '#475569' : '#d1d5db'),
-            color: (canSave && !isSaving) ? 'white' : (isDarkMode ? '#64748b' : '#9ca3af'),
             fontFamily: 'inherit',
-            opacity: isSaving ? 0.7 : 1
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}
         >
-          {isSaving ? 'Saving...' : 'Schedule Post'}
+          <Calendar style={{ height: '16px', width: '16px' }} />
+          {t('common.schedule')}
         </button>
       </div>
-      
-      {(selections.characterProfile || content.title || content.description || mediaFiles.length > 0) && (
+
+      {selectedPlatforms.length > 0 && (
         <div style={{
-          marginTop: '32px',
-          padding: '24px',
-          backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-          borderRadius: '12px',
-          border: `2px solid ${isDarkMode ? '#3b82f6' : '#3b82f6'}`,
-          boxShadow: isDarkMode ? '0 8px 32px rgba(59, 130, 246, 0.15)' : '0 8px 32px rgba(59, 130, 246, 0.1)'
+          marginTop: '24px',
+          padding: '20px',
+          backgroundColor: isDarkMode ? '#1e293b' : 'white',
+          borderRadius: '8px',
+          border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
         }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
-            marginBottom: '20px'
+            justifyContent: 'space-between',
+            marginBottom: '16px'
           }}>
-            <Eye style={{ height: '24px', width: '24px', color: '#3b82f6' }} />
             <h3 style={{
               fontSize: '18px',
               fontWeight: '600',
-              color: '#3b82f6',
-              margin: '0'
+              color: isDarkMode ? '#60a5fa' : '#3b82f6',
+              margin: '0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}>
-              Live Preview - Final Post Format
+              <Eye style={{ height: '20px', width: '20px' }} />
+              {t('content.previewPost')}
             </h3>
             <div style={{
-              fontSize: '12px',
-              color: isDarkMode ? '#e2e8f0' : '#6b7280',
-              fontStyle: 'italic',
-              marginLeft: 'auto'
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}>
-              This is the exact format when the post is published
+              <span style={{
+                fontSize: '13px',
+                color: isDarkMode ? '#94a3b8' : '#6b7280',
+                fontWeight: '500'
+              }}>
+                {t('content.previewFor')}:
+              </span>
+              <select
+                value={selections.platform}
+                onChange={(e) => handleSelectionChange('platform', e.target.value)}
+                style={{
+                  padding: '6px 10px',
+                  border: `1px solid ${isDarkMode ? '#475569' : '#d1d5db'}`,
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  backgroundColor: isDarkMode ? '#334155' : 'white',
+                  color: isDarkMode ? '#f8fafc' : '#111827',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit'
+                }}
+              >
+                <option value="">{t('content.genericPreview')}</option>
+                <option value="instagram">{t('content.instagram')}</option>
+                <option value="facebook">{t('content.facebook')}</option>
+                <option value="twitter">{t('content.twitter')}</option>
+                <option value="linkedin">{t('content.linkedin')}</option>
+                <option value="youtube">{t('content.youtube')}</option>
+                <option value="tiktok">{t('content.tiktok')}</option>
+                <option value="telegram">{t('content.telegram')}</option>
+                <option value="pinterest">{t('content.pinterest')}</option>
+                <option value="whatsapp">{t('content.whatsapp')}</option>
+              </select>
             </div>
           </div>
-          
+
           <div style={{
-            backgroundColor: isDarkMode ? '#1e293b' : 'white',
+            border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
             borderRadius: '8px',
-            border: `1px solid ${isDarkMode ? '#3b82f6' : '#e5e7eb'}`,
             overflow: 'hidden',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+            backgroundColor: 'white'
           }}>
-            {mediaFiles.length > 0 && (
-              <div style={{
-                padding: '16px',
-                backgroundColor: isDarkMode ? '#f8fafc' : '#f9fafb',
-                borderBottom: `1px solid ${isDarkMode ? '#e5e7eb' : '#e5e7eb'}`
-              }}>
+            {(() => {
+              const previewStyle = getPlatformPreviewStyle(selections.platform || 'generic');
+              
+              return (
                 <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  marginBottom: '12px',
-                  padding: '8px 12px',
-                  backgroundColor: isDarkMode ? '#3b82f6' : '#e5e7eb',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  color: isDarkMode ? 'white' : '#374151'
+                  maxWidth: previewStyle.maxWidth,
+                  margin: '0 auto'
                 }}>
-                  <Eye style={{ height: '14px', width: '14px' }} />
-                  {selections.platform ? (
-                    <span>Platform Preview: {selections.platform.toUpperCase()} - Optimised Size</span>
-                  ) : (
-                    <span>Generic preview (no platform optimisation selected)</span>
-                  )}
-                </div>
-
-                {(() => {
-                  const platformStyle = getPlatformPreviewStyle(selections.platform);
-                  
-                  return (
+                  {mediaFiles.length > 0 && (
                     <div style={{
+                      aspectRatio: previewStyle.aspectRatio !== 'auto' ? previewStyle.aspectRatio : undefined,
+                      width: '100%',
+                      backgroundColor: '#f3f4f6',
                       display: 'flex',
-                      flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '12px'
+                      justifyContent: 'center',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}>
-                      <div style={{
-                        fontSize: '11px',
-                        color: '#3b82f6',
-                        fontWeight: '600',
-                        textAlign: 'center',
-                        padding: '4px 12px',
-                        backgroundColor: isDarkMode ? 'white' : '#dbeafe',
-                        borderRadius: '12px'
-                      }}>
-                        {platformStyle.label}
-                      </div>
-
-                      <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: mediaFiles.length === 1 
-                          ? '1fr' 
-                          : selections.platform === 'tiktok' || selections.platform === 'pinterest'
-                            ? 'repeat(auto-fit, minmax(150px, 200px))'
-                            : 'repeat(auto-fit, minmax(200px, 300px))',
-                        gap: '12px',
-                        justifyContent: 'center',
-                        width: '100%',
-                        maxWidth: selections.platform ? platformStyle.maxWidth : '100%'
-                      }}>
-                        {mediaFiles.slice(0, 4).map((file, index) => (
-                          <div key={file.id} style={{
-                            position: 'relative',
-                            borderRadius: '8px',
-                            overflow: 'hidden',
-                            backgroundColor: 'white',
-                            border: `2px solid #3b82f6`,
-                            aspectRatio: selections.platform ? platformStyle.aspectRatio : 'auto',
-                            width: selections.platform ? '100%' : 'auto',
-                            maxWidth: selections.platform ? platformStyle.maxWidth : '300px',
-                            margin: '0 auto',
-                            minHeight: selections.platform ? '200px' : 'auto'
-                          }}>
-                            {file.type === 'image' || file.type === 'gif' ? (
-                              <img
-                                src={file.url}
-                                alt={file.name}
-                                style={{
-                                  width: '100%',
-                                  height: '100%',
-                                  objectFit: selections.platform ? 'cover' : 'contain',
-                                  backgroundColor: 'white'
-                                }}
-                              />
-                            ) : file.type === 'video' ? (
-                              <video
-                                src={file.url}
-                                style={{
-                                  width: '100%',
-                                  height: '100%',
-                                  objectFit: selections.platform ? 'cover' : 'contain',
-                                  backgroundColor: 'white'
-                                }}
-                                controls
-                                muted
-                              />
-                            ) : file.size === 0 && file.url ? (
-                              <div style={{
-                                width: '100%',
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                backgroundColor: 'white',
-                                position: 'relative',
-                                overflow: 'hidden'
-                              }}>
-                                {file.urlPreview?.image ? (
-                                  <div style={{
-                                    flex: 1,
-                                    backgroundImage: `url(${file.urlPreview.image})`,
-                                    backgroundSize: 'cover',
-                                    backgroundPosition: 'center',
-                                    backgroundRepeat: 'no-repeat',
-                                    width: '100%',
-                                    height: '100%',
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0
-                                  }} />
-                                ) : (
-                                  <div style={{
-                                    flex: 1,
-                                    backgroundColor: '#f3f4f6',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '48px',
-                                    color: '#3b82f6'
-                                  }}>
-                                    🌐
-                                  </div>
-                                )}
-                                
-                                <div style={{
-                                  position: 'absolute',
-                                  bottom: 0,
-                                  left: 0,
-                                  right: 0,
-                                  background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
-                                  padding: '12px',
-                                  color: 'white'
-                                }}>
-                                  <div style={{
-                                    fontSize: '13px',
-                                    fontWeight: '600',
-                                    marginBottom: '4px',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap'
-                                  }}>
-                                    {file.urlPreview?.title || file.name}
-                                  </div>
-                                  <div style={{
-                                    fontSize: '11px',
-                                    opacity: 0.9,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap'
-                                  }}>
-                                    {(() => {
-                                      try {
-                                        return file.urlPreview?.siteName || new URL(file.url).hostname;
-                                      } catch {
-                                        return file.url;
-                                      }
-                                    })()}
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div style={{
-                                width: '100%',
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                padding: '16px',
-                                backgroundColor: 'white'
-                              }}>
-                                {getFileIcon(file.type)}
-                                <span style={{
-                                  fontSize: '12px',
-                                  color: '#374151',
-                                  textAlign: 'center',
-                                  fontWeight: '500'
-                                }}>
-                                  {file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name}
-                                </span>
-                                <span style={{
-                                  fontSize: '10px',
-                                  color: '#6b7280',
-                                  textAlign: 'center'
-                                }}>
-                                  {file.type.toUpperCase()}
-                                </span>
-                              </div>
-                            )}
-                            
-                            {mediaFiles.length > 4 && index === 3 && (
-                              <div style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'white',
-                                fontSize: '16px',
-                                fontWeight: '700'
-                              }}>
-                                +{mediaFiles.length - 3} more
-                              </div>
-                            )}
-
-                            <div style={{
-                              position: 'absolute',
-                              top: '8px',
-                              right: '8px',
-                              backgroundColor: 'rgba(59, 130, 246, 0.9)',
-                              color: 'white',
-                              padding: '4px 8px',
-                              borderRadius: '12px',
-                              fontSize: '10px',
-                              fontWeight: '600',
-                              textTransform: 'uppercase'
-                            }}>
-                              {file.type}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {selections.platform && (
-                        <div style={{
-                          fontSize: '11px',
-                          color: '#6b7280',
-                          textAlign: 'center',
-                          fontStyle: 'italic',
-                          maxWidth: '500px',
-                          lineHeight: '1.4',
-                          padding: '8px 16px',
-                          backgroundColor: isDarkMode ? 'white' : '#f3f4f6',
-                          borderRadius: '6px'
-                        }}>
-                          {selections.platform === 'instagram' && 'Instagram will crop images to square format for feed posts. Stories use 9:16 ratio.'}
-                          {selections.platform === 'tiktok' && 'TikTok optimises for vertical 9:16 video format for maximum engagement.'}
-                          {selections.platform === 'youtube' && 'YouTube thumbnails work best at 16:9 ratio with bold, readable visuals.'}
-                          {selections.platform === 'facebook' && 'Facebook recommends 1.91:1 ratio for optimal feed display and engagement.'}
-                          {selections.platform === 'twitter' && 'Twitter displays images best at 16:9 ratio in timeline feeds.'}
-                          {selections.platform === 'linkedin' && 'LinkedIn professional posts perform well with 1.91:1 landscape format.'}
-                          {selections.platform === 'telegram' && 'Telegram displays media in original dimensions and automatically adjusts for optimal viewing.'}
-                          {selections.platform === 'pinterest' && 'Pinterest favours vertical 2:3 pins for discovery and engagement.'}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-
-            <div style={{ padding: '20px', backgroundColor: 'white' }}>
-              {selections.characterProfile && (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  marginBottom: '16px',
-                  paddingBottom: '12px',
-                  borderBottom: `1px solid #e5e7eb`
-                }}>
-                  {(() => {
-                    const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
-                    if (!selectedProfile) return null;
-                    
-                    return (
-                      <>
-                        <div style={{
-                          width: '48px',
-                          height: '48px',
-                          borderRadius: '50%',
-                          backgroundColor: '#f3f4f6',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '20px',
-                          color: '#3b82f6',
-                          fontWeight: 'bold',
-                          border: `2px solid #3b82f6`,
-                          flexShrink: 0,
-                          overflow: 'hidden'
-                        }}>
-                          {selectedProfile.avatar_id ? (
+                      {(() => {
+                        const firstMedia = mediaFiles[0];
+                        if (firstMedia.type === 'image' || firstMedia.type === 'gif') {
+                          return (
                             <img
-                              src={selectedProfile.avatar_id}
-                              alt={selectedProfile.name}
+                              src={firstMedia.url}
+                              alt={firstMedia.name}
                               style={{
                                 width: '100%',
                                 height: '100%',
                                 objectFit: 'cover'
                               }}
                             />
-                          ) : (
-                            selectedProfile.name.charAt(0)
-                          )}
+                          );
+                        } else if (firstMedia.type === 'video') {
+                          return (
+                            <video
+                              src={firstMedia.url}
+                              controls
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          );
+                        } else {
+                          return (
+                            <div style={{
+                              padding: '40px',
+                              textAlign: 'center'
+                            }}>
+                              <div style={{
+                                fontSize: '48px',
+                                marginBottom: '12px'
+                              }}>
+                                {getFileIcon(firstMedia.type)}
+                              </div>
+                              <div style={{
+                                fontSize: '14px',
+                                color: '#6b7280',
+                                fontWeight: '500'
+                              }}>
+                                {firstMedia.name}
+                              </div>
+                            </div>
+                          );
+                        }
+                      })()}
+                      
+                      {mediaFiles.length > 1 && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '12px',
+                          right: '12px',
+                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          color: 'white',
+                          padding: '6px 12px',
+                          borderRadius: '16px',
+                          fontSize: '12px',
+                          fontWeight: '600'
+                        }}>
+                          +{mediaFiles.length - 1} {t('content.more')}
                         </div>
-                        <div>
-                          <div style={{
-                            fontSize: '16px',
-                            fontWeight: '600',
-                            color: '#111827',
-                            marginBottom: '2px'
-                          }}>
-                            {selectedProfile.name}
-                          </div>
-                          <div style={{
-                            fontSize: '13px',
-                            color: '#6b7280',
-                            marginBottom: '2px'
-                          }}>
-                            {selectedProfile.username}
-                          </div>
-                          <div style={{
-                            fontSize: '12px',
-                            color: '#3b82f6',
-                            fontWeight: '500'
-                          }}>
-                            {selectedProfile.role}
-                          </div>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {content.title && (
-                <h4 style={{
-                  fontSize: '18px',
-                  fontWeight: '700',
-                  color: '#111827',
-                  margin: '0 0 12px 0',
-                  lineHeight: '1.3'
-                }}>
-                  {parseMarkdownToJSX(content.title)}
-                </h4>
-              )}
-
-              {content.description && (
-                <div style={{
-                  fontSize: '15px',
-                  color: '#374151',
-                  lineHeight: '1.6',
-                  marginBottom: '16px'
-                }}>
-                  {parseMarkdownToJSX(content.description)}
-                </div>
-              )}
-
-              {content.hashtags.length > 0 && (
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '6px',
-                  marginBottom: '16px'
-                }}>
-                  {content.hashtags.map((tag) => (
-                    <span key={tag} style={{
-                      fontSize: '14px',
-                      color: '#3b82f6',
-                      fontWeight: '500'
+                      )}
+                    </div>
+                  )}
+                  
+                  {selections.platform && (
+                    <div style={{
+                      padding: '12px 16px',
+                      backgroundColor: isDarkMode ? 'white' : '#f3f4f6',
+                      borderRadius: '6px'
                     }}>
-                      #{tag}
-                    </span>
-                  ))}
+                      {selections.platform === 'instagram' && 'Instagram will crop images to square format for feed posts. Stories use 9:16 ratio.'}
+                      {selections.platform === 'tiktok' && 'TikTok optimises for vertical 9:16 video format for maximum engagement.'}
+                      {selections.platform === 'youtube' && 'YouTube thumbnails work best at 16:9 ratio with bold, readable visuals.'}
+                      {selections.platform === 'facebook' && 'Facebook recommends 1.91:1 ratio for optimal feed display and engagement.'}
+                      {selections.platform === 'twitter' && 'Twitter displays images best at 16:9 ratio in timeline feeds.'}
+                      {selections.platform === 'linkedin' && 'LinkedIn professional posts perform well with 1.91:1 landscape format.'}
+                      {selections.platform === 'telegram' && 'Telegram displays media in original dimensions and automatically adjusts for optimal viewing.'}
+                      {selections.platform === 'pinterest' && 'Pinterest favours vertical 2:3 pins for discovery and engagement.'}
+                    </div>
+                  )}
                 </div>
-              )}
-
-              {content.cta && (
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  textAlign: 'center',
-                  marginTop: '16px'
-                }}>
-                  {content.cta}
-                </div>
-              )}
-            </div>
+              );
+            })()}
           </div>
 
-          {selectedPlatforms.length > 0 && (
-            <div style={{
-              marginTop: '20px',
-              padding: '16px',
-              backgroundColor: '#f3f4f6',
-              borderRadius: '8px',
-              border: `1px dashed #3b82f6`
-            }}>
+          <div style={{ padding: '20px', backgroundColor: 'white' }}>
+            {selections.characterProfile && (
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                marginBottom: '12px'
+                gap: '12px',
+                marginBottom: '16px',
+                paddingBottom: '12px',
+                borderBottom: `1px solid #e5e7eb`
               }}>
-                <Settings style={{ height: '16px', width: '16px', color: '#3b82f6' }} />
-                <span style={{
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#3b82f6'
-                }}>
-                  Distribution Settings (Internal Dashboard Only)
-                </span>
+                {(() => {
+                  const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
+                  if (!selectedProfile) return null;
+                  
+                  return (
+                    <>
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        backgroundColor: '#f3f4f6',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '20px',
+                        color: '#3b82f6',
+                        fontWeight: 'bold',
+                        border: `2px solid #3b82f6`,
+                        flexShrink: 0,
+                        overflow: 'hidden'
+                      }}>
+                        {selectedProfile.avatar_id ? (
+                          <img
+                            src={selectedProfile.avatar_id}
+                            alt={selectedProfile.name}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        ) : (
+                          selectedProfile.name.charAt(0)
+                        )}
+                      </div>
+                      <div>
+                        <div style={{
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          color: '#111827',
+                          marginBottom: '2px'
+                        }}>
+                          {selectedProfile.name}
+                        </div>
+                        <div style={{
+                          fontSize: '13px',
+                          color: '#6b7280',
+                          marginBottom: '2px'
+                        }}>
+                          {selectedProfile.username}
+                        </div>
+                        <div style={{
+                          fontSize: '12px',
+                          color: '#3b82f6',
+                          fontWeight: '500'
+                        }}>
+                          {selectedProfile.role}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
+            )}
+
+            {content.title && (
+              <h4 style={{
+                fontSize: '18px',
+                fontWeight: '700',
+                color: '#111827',
+                margin: '0 0 12px 0',
+                lineHeight: '1.3'
+              }}>
+                {parseMarkdownToJSX(content.title)}
+              </h4>
+            )}
+
+            {content.description && (
+              <div style={{
+                fontSize: '15px',
+                color: '#374151',
+                lineHeight: '1.6',
+                marginBottom: '16px'
+              }}>
+                {parseMarkdownToJSX(content.description)}
+              </div>
+            )}
+
+            {content.hashtags.length > 0 && (
               <div style={{
                 display: 'flex',
                 flexWrap: 'wrap',
-                gap: '8px'
+                gap: '6px',
+                marginBottom: '16px'
               }}>
-                {selectedPlatforms.map(platformId => {
-                  const platform = activePlatforms.find(p => p.id === platformId);
-                  if (!platform) return null;
-                  
-                  const platformSymbol = getPlatformSymbol(platform);
-                  const platformColor = getPlatformColor(platform);
-                  
-                  return (
-                    <div key={platformId} style={{
-                      padding: '6px 12px',
-                      backgroundColor: platformColor,
-                      border: `1px solid ${platformColor}`,
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      color: 'white',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}>
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        backgroundColor: 'rgba(255,255,255,0.3)',
-                        padding: '2px 6px',
-                        borderRadius: '4px'
-                      }}>
-                        {platformSymbol}
-                      </span>
-                      {platform.name}
-                    </div>
-                  );
-                })}
+                {content.hashtags.map((tag) => (
+                  <span key={tag} style={{
+                    fontSize: '14px',
+                    color: '#3b82f6',
+                    fontWeight: '500'
+                  }}>
+                    #{tag}
+                  </span>
+                ))}
               </div>
+            )}
+
+            {content.cta && (
               <div style={{
-                fontSize: '11px',
-                color: '#9ca3af',
-                fontStyle: 'italic',
-                marginTop: '8px'
+                padding: '12px 16px',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                textAlign: 'center',
+                marginTop: '16px'
               }}>
-                * Platform links are for internal dashboard tracking only and will not appear in the public post
+                {content.cta}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      )}
-    </div>
-  );
+
+        {selectedPlatforms.length > 0 && (
+          <div style={{
+            marginTop: '20px',
+            padding: '16px',
+            backgroundColor: '#f3f4f6',
+            borderRadius: '8px',
+            border: `1px dashed #3b82f6`
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px'
+            }}>
+              <Settings style={{ height: '16px', width: '16px', color: '#3b82f6' }} />
+              <span style={{
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#3b82f6'
+              }}>
+                Distribution Settings (Internal Dashboard Only)
+              </span>
+            </div>
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '8px'
+            }}>
+              {selectedPlatforms.map(platformId => {
+                const platform = activePlatforms.find(p => p.id === platformId);
+                if (!platform) return null;
+                
+                const platformSymbol = getPlatformSymbol(platform);
+                const platformColor = getPlatformColor(platform);
+                
+                return (
+                  <div key={platformId} style={{
+                    padding: '6px 12px',
+                    backgroundColor: platformColor,
+                    border: `1px solid ${platformColor}`,
+                    borderRadius: '16px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      backgroundColor: 'rgba(255,255,255,0.3)',
+                      padding: '2px 6px',
+                      borderRadius: '4px'
+                    }}>
+                      {platformSymbol}
+                    </span>
+                    {platform.name}
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{
+              fontSize: '11px',
+              color: '#9ca3af',
+              fontStyle: 'italic',
+              marginTop: '8px'
+            }}>
+              * Platform links are for internal dashboard tracking only and will not appear in the public post
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+);
 };
 
 export { EnhancedContentCreationForm };
