@@ -25,158 +25,6 @@ const ThemeContext = React.createContext({
 
 const useTheme = () => useContext(ThemeContext);
 
-// MARKDOWN PARSER FUNCTION - Converts markdown to JSX elements
-const parseMarkdownToJSX = (text: string): React.ReactNode => {
-  if (!text) return null;
-  
-  const lines = text.split('\n');
-  
-  return lines.map((line, lineIndex) => {
-    const elements: React.ReactNode[] = [];
-    let currentIndex = 0;
-    
-    const patterns = [
-      { regex: /\[([^\]]+)\]\(([^)]+)\)/g, type: 'link' },
-      { regex: /\*\*([^*]+)\*\*/g, type: 'bold' },
-      { regex: /__([^_]+)__/g, type: 'underline' },
-      { regex: /(?<!\*)\*(?!\*)([^*]+)\*(?!\*)/g, type: 'italic' }
-    ];
-    
-    const matches: Array<{ index: number; length: number; type: string; content: string; url?: string }> = [];
-    
-    patterns.forEach(({ regex, type }) => {
-      let match;
-      const localRegex = new RegExp(regex.source, regex.flags);
-      
-      while ((match = localRegex.exec(line)) !== null) {
-        if (type === 'link') {
-          matches.push({
-            index: match.index,
-            length: match[0].length,
-            type: 'link',
-            content: match[1],
-            url: match[2]
-          });
-        } else {
-          matches.push({
-            index: match.index,
-            length: match[0].length,
-            type,
-            content: match[1]
-          });
-        }
-      }
-    });
-    
-    matches.sort((a, b) => a.index - b.index);
-    
-    const filteredMatches: typeof matches = [];
-    let lastEndIndex = -1;
-    
-    matches.forEach(match => {
-      if (match.index >= lastEndIndex) {
-        filteredMatches.push(match);
-        lastEndIndex = match.index + match.length;
-      }
-    });
-    
-    filteredMatches.forEach((match, matchIndex) => {
-      if (match.index > currentIndex) {
-        elements.push(
-          <span key={`text-${lineIndex}-${matchIndex}`}>
-            {line.substring(currentIndex, match.index)}
-          </span>
-        );
-      }
-      
-      switch (match.type) {
-        case 'link':
-          elements.push(
-            <a
-              key={`link-${lineIndex}-${matchIndex}`}
-              href={match.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: '#3b82f6',
-                textDecoration: 'underline',
-                fontWeight: '500'
-              }}
-            >
-              {match.content}
-            </a>
-          );
-          break;
-        case 'bold':
-          elements.push(
-            <strong key={`bold-${lineIndex}-${matchIndex}`}>
-              {match.content}
-            </strong>
-          );
-          break;
-        case 'italic':
-          elements.push(
-            <em key={`italic-${lineIndex}-${matchIndex}`}>
-              {match.content}
-            </em>
-          );
-          break;
-        case 'underline':
-          elements.push(
-            <span
-              key={`underline-${lineIndex}-${matchIndex}`}
-              style={{ textDecoration: 'underline' }}
-            >
-              {match.content}
-            </span>
-          );
-          break;
-      }
-      
-      currentIndex = match.index + match.length;
-    });
-    
-    if (currentIndex < line.length) {
-      elements.push(
-        <span key={`text-${lineIndex}-end`}>
-          {line.substring(currentIndex)}
-        </span>
-      );
-    }
-    
-    if (elements.length === 0) {
-      elements.push(<span key={`line-${lineIndex}`}>{line}</span>);
-    }
-    
-    return (
-      <React.Fragment key={`line-${lineIndex}`}>
-        {elements}
-        {lineIndex < lines.length - 1 && <br />}
-      </React.Fragment>
-    );
-  });
-};
-
-// Parse markdown links into structured format for saving
-const parseLinksForSaving = (text: string) => {
-  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-  const links: Array<{ text: string; url: string; position: number }> = [];
-  let match;
-  
-  while ((match = linkRegex.exec(text)) !== null) {
-    links.push({
-      text: match[1],
-      url: match[2],
-      position: match.index
-    });
-  }
-  
-  return {
-    textWithoutMarkdown: text.replace(linkRegex, '$1'),
-    links: links
-  };
-};
-
 // Enhanced Content Creation Form - WITH i18n INTEGRATION
 const EnhancedContentCreationForm = ({ 
   onSave, 
@@ -198,20 +46,25 @@ const EnhancedContentCreationForm = ({
   isLoadingProfiles?: boolean;
   editingPost?: ContentPost | null;
   onEditComplete?: () => void;
+  // ADD THESE NEW PROPS FOR TEMPLATE LIBRARY INTEGRATION:
   loadedTemplate?: PendingLibraryTemplate | null;
   onTemplateLoaded?: () => void;
 }) => {
   const { isDarkMode } = useTheme();
+  // ADD i18n HOOK
   const { t } = useI18n();
 
+// Platform state management - separate from props
   const [loadedPlatforms, setLoadedPlatforms] = useState<SocialPlatform[]>([]);
   const [isLoadingPlatformsState, setIsLoadingPlatformsState] = useState(false);
 
+  // Load platforms on mount
   useEffect(() => {
     const loadPlatformsFromSupabase = async () => {
       try {
         setIsLoadingPlatformsState(true);
     
+    // Load both platforms and Telegram channels concurrently
     const [supabasePlatforms, telegramChannels] = await Promise.all([
       supabaseAPI.loadPlatforms(),
       supabaseAPI.loadTelegramChannels()
@@ -220,24 +73,27 @@ const EnhancedContentCreationForm = ({
     console.log('Loaded platforms from Supabase:', supabasePlatforms);
     console.log('Loaded Telegram channels from Supabase:', telegramChannels);
     
+    // Transform Telegram channels to platform format
     const telegramPlatforms = telegramChannels
-      .filter(t => t && t.id && t.name)
+      .filter(t => t && t.id && t.name) // Ensure valid data
       .map(t => ({
         id: t.id.toString(),
         name: `${t.name} (Telegram)`,
         url: t.channel_group_id ? `https://t.me/${t.channel_group_id}` : '',
-        platform_icon: 'TG',
-        type: t.thread_id ? 'telegram_group' : 'telegram_channel',
+        platform_icon: 'TG', // FIXED: Add platform_icon
+        type: t.thread_id ? 'telegram_group' : 'telegram_channel', // FIXED: Add type
         isActive: true,
         isDefault: false
       }));
     
+    // Merge platforms and Telegram channels
     const allPlatforms = [...supabasePlatforms, ...telegramPlatforms];
     
     console.log('Combined platforms and Telegram channels:', allPlatforms);
     setLoadedPlatforms(allPlatforms);
   } catch (error) {
     console.error('Error loading platforms and Telegram channels from Supabase:', error);
+    // Use prop platforms as fallback only if Supabase fails
     setLoadedPlatforms(platforms || []);
   } finally {
     setIsLoadingPlatformsState(false);
@@ -245,12 +101,14 @@ const EnhancedContentCreationForm = ({
     };
 
     loadPlatformsFromSupabase();
-  }, []);
+  }, []); // Remove dependency on platforms to avoid loops
 
+  // Use loaded platforms, fallback to props if nothing loaded
   const activePlatforms = loadedPlatforms.length > 0 
     ? loadedPlatforms.filter(p => p?.isActive) 
     : (platforms?.filter(p => p?.isActive) || []);
   
+  // Form state matching template builder structure
   const [selections, setSelections] = useState({
     characterProfile: '',
     theme: '',
@@ -269,7 +127,7 @@ const EnhancedContentCreationForm = ({
     cta: ''
   });
 
-const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [contentId, setContentId] = useState('');
   const [isEditingPost, setIsEditingPost] = useState(false);
@@ -281,6 +139,7 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [urlTitle, setUrlTitle] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // TELEGRAM VALIDATION HELPER FUNCTIONS - ADDED FROM CORRECTED CODE
   const isTelegramSelected = () => {
     return selectedPlatforms
       .map(platformId => activePlatforms.find(p => p.id === platformId))
@@ -288,12 +147,14 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   };
 
   const getPrimaryTelegramUrl = () => {
+    // Checks detailedPlatforms for a Telegram URL, else checks mediaFiles for a url type
     const telegramPlatform = selectedPlatforms
       .map(platformId => activePlatforms.find(p => p.id === platformId))
       .find(p => p && p.name && p.name.toLowerCase().includes('telegram'));
     return telegramPlatform?.url || null;
   };
   
+  // Code mapping functions for content ID generation
   const getThemeCodeLocal = (value: string) => {
     const codes: Record<string, string> = {
       'news_alert': 'NA', 'promotion': 'PR', 'standard_post': 'SP',
@@ -313,9 +174,10 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
     return codes[value] || 'XX';
   };
 
+  // FIXED ISSUE #2: Added no_media option
   const getMediaCodeLocal = (value: string) => {
     const codes: Record<string, string> = {
-      'no_media': 'NM',
+      'no_media': 'NM', // NEW: No media option
       'image': 'IM', 
       'video': 'VD', 
       'gifs': 'GF', 
@@ -393,6 +255,7 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
     return platform.type || 'other';
   };
 
+  // Create detailed platforms array with full info including platform_icon and type
   const createDetailedPlatforms = (selectedPlatformIds: string[]) => {
     return selectedPlatformIds.map(platformId => {
       const platform = activePlatforms.find(p => p.id === platformId);
@@ -402,16 +265,17 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
         id: platform.id,
         name: platform.name,
         url: platform.url || '',
-        platform_icon: platform.platform_icon || getPlatformSymbol(platform),
-        type: platform.type || getPlatformType(platform),
+        platform_icon: platform.platform_icon || getPlatformSymbol(platform), // FIXED: Include platform_icon
+        type: platform.type || getPlatformType(platform), // FIXED: Include type
         symbol: getPlatformSymbol(platform),
         color: getPlatformColor(platform),
         isActive: platform.isActive,
         isDefault: platform.isDefault
       };
-    }).filter(Boolean);
+    }).filter(Boolean); // Remove null entries
   };
 
+  // Platform configuration functions (inline implementation)
   const getPlatformConfig = (platform: string) => {
     const configs: Record<string, any> = {
       instagram: {
@@ -448,68 +312,71 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
     };
   };
 
+  // Platform-specific preview sizing - FIXED ALL PLATFORMS
   const getPlatformPreviewStyle = (platform: string) => {
     const styles = {
       instagram: {
-        aspectRatio: '1 / 1',
+        aspectRatio: '1 / 1', // Square posts
         maxWidth: '400px',
         label: 'Instagram Square Post (1:1)'
       },
       facebook: {
-        aspectRatio: '1.91 / 1',
+        aspectRatio: '1.91 / 1', // Facebook recommended
         maxWidth: '500px', 
         label: 'Facebook Post (1.91:1)'
       },
       twitter: {
-        aspectRatio: '16 / 9',
+        aspectRatio: '16 / 9', // Twitter recommended
         maxWidth: '500px',
         label: 'Twitter/X Post (16:9)'
       },
       linkedin: {
-        aspectRatio: '1.91 / 1',
+        aspectRatio: '1.91 / 1', // LinkedIn recommended
         maxWidth: '500px',
         label: 'LinkedIn Post (1.91:1)'
       },
       youtube: {
-        aspectRatio: '16 / 9',
+        aspectRatio: '16 / 9', // YouTube thumbnail
         maxWidth: '480px',
         label: 'YouTube Thumbnail (16:9)'
       },
       tiktok: {
-        aspectRatio: '9 / 16',
+        aspectRatio: '9 / 16', // TikTok vertical
         maxWidth: '300px',
         label: 'TikTok Video (9:16)'
       },
       telegram: {
-        aspectRatio: 'auto',
-        maxWidth: '100%',
+        aspectRatio: 'auto', // Use original media dimensions
+        maxWidth: '100%', // Allow full width flexibility
         label: 'Telegram Post (Original Size)'
       },
       pinterest: {
-        aspectRatio: '2 / 3',
+        aspectRatio: '2 / 3', // Pinterest vertical
         maxWidth: '400px',
         label: 'Pinterest Pin (2:3)'
       },
       whatsapp: {
-        aspectRatio: '16 / 9',
+        aspectRatio: '16 / 9', // WhatsApp recommended
         maxWidth: '500px',
         label: 'WhatsApp Post (16:9)'
       }
     };
     
     return styles[platform as keyof typeof styles] || {
-      aspectRatio: '16 / 9',
-      maxWidth: '600px',
+      aspectRatio: '16 / 9', // Changed from 'auto' to 16:9 default
+      maxWidth: '600px', // Changed from '100%' to larger default
       label: 'Standard Format (16:9)'
     };
   };
 
+  // Generate content ID (Pattern-###CC format)
   const generateContentId = () => {
     const theme = selections.theme ? getThemeCodeLocal(selections.theme) : 'XX';
     const audience = selections.audience ? getAudienceCodeLocal(selections.audience) : 'XX';
     const media = selections.mediaType ? getMediaCodeLocal(selections.mediaType) : 'XX';
     const template = selections.templateType ? getTemplateTypeCodeLocal(selections.templateType) : 'XX';
     
+    // FIX: Get character code from actual profile name, not ID
     let character = 'XX';
     if (selections.characterProfile) {
       const selectedProfile = characterProfiles.find(p => p.id === selections.characterProfile);
@@ -523,16 +390,22 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
     return `${theme}-${audience}-${media}-${template}-${character}-${voiceStyle}-${String(randomNum).padStart(3, '0')}`;
   };
 
+  // Initialise and update content ID based on selections
+  // FIXED ISSUE #2: Don't regenerate contentId when editing an existing post
   useEffect(() => {
-    const newId = generateContentId();
-    setContentId(newId);
-  }, [selections.theme, selections.audience, selections.mediaType, selections.templateType, selections.characterProfile, selections.voiceStyle, characterProfiles]);
+    if (!isEditingPost) {
+      const newId = generateContentId();
+      setContentId(newId);
+    }
+  }, [selections.theme, selections.audience, selections.mediaType, selections.templateType, selections.characterProfile, selections.voiceStyle, characterProfiles, isEditingPost]);
 
+  // FIXED: Listen for templates sent from Template Library (DIRECT EVENT COMMUNICATION)
   useEffect(() => {
     const unsubscribe = templateEventEmitter.listen((template) => {
       console.log('=== TEMPLATE RECEIVED FROM TEMPLATE LIBRARY ===');
       console.log('Template data:', template);
       
+      // Set form data from template
       setSelections({
         characterProfile: template.character_profile || '',
         theme: template.theme || '',
@@ -561,9 +434,10 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
       console.log('Template loaded into form successfully!');
     });
 
-    return unsubscribe;
+    return unsubscribe; // Cleanup event listener
   }, []);
 
+  // Load editing post data when provided
   useEffect(() => {
     if (editingPost) {
       setSelections({
@@ -594,24 +468,29 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
     }
   }, [editingPost]);
 
+  // UPDATED USEEFFECT FOR TEMPLATE LOADING - TEXT ONLY, NO MEDIA FILES
   useEffect(() => {
-    if (loadedTemplate && !editingPost) {
+    if (loadedTemplate && !editingPost) { // Don't load template if editing a post
       console.log('=== LOADING TEMPLATE INTO FORM ===');
       console.log('Template data:', loadedTemplate);
       console.log('Available character profiles:', characterProfiles);
       
+      // FIND MATCHING CHARACTER PROFILE BY NAME OR ID
       let matchedCharacterProfileId = '';
       if (loadedTemplate.character_profile) {
         console.log('Looking for character profile:', loadedTemplate.character_profile);
         
+        // Try to find by ID first
         let matchedProfile = characterProfiles.find(p => p.id === loadedTemplate.character_profile);
         
+        // If not found by ID, try to find by name (case insensitive)
         if (!matchedProfile) {
           matchedProfile = characterProfiles.find(p => 
             p.name.toLowerCase() === loadedTemplate.character_profile?.toLowerCase()
           );
         }
         
+        // If still not found, try to find by username
         if (!matchedProfile) {
           matchedProfile = characterProfiles.find(p => 
             p.username.toLowerCase() === loadedTemplate.character_profile?.toLowerCase()
@@ -627,8 +506,9 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
         }
       }
       
+      // POPULATE SELECTIONS (dropdown fields)
       setSelections({
-        characterProfile: matchedCharacterProfileId,
+        characterProfile: matchedCharacterProfileId, // Use the matched ID
         theme: loadedTemplate.theme || '',
         audience: loadedTemplate.audience || '',
         mediaType: loadedTemplate.media_type || '',
@@ -637,6 +517,7 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
         voiceStyle: loadedTemplate.voiceStyle || ''
       });
       
+      // POPULATE CONTENT (text fields only)
       setContent({
         title: loadedTemplate.title || '',
         description: loadedTemplate.description || '',
@@ -645,9 +526,14 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
         cta: loadedTemplate.cta || ''
       });
       
+      // DO NOT LOAD MEDIA FILES - USER SPECIFIED TEXT ONLY
+      // setMediaFiles remains empty - user will add media manually if needed
+      
+      // SET TEMPLATE EDITING STATE
       setIsEditingTemplate(true);
       setupPlatformFields(loadedTemplate.platform);
       
+      // CLEAR THE LOADED TEMPLATE STATE
       if (onTemplateLoaded) {
         onTemplateLoaded();
       }
@@ -664,6 +550,7 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
       });
     }
   }, [loadedTemplate, editingPost, onTemplateLoaded, characterProfiles]);
+
   const setupPlatformFields = (platform: string) => {
     if (platform) {
       const config = getPlatformConfig(platform);
@@ -732,18 +619,22 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
     );
   };
 
+  // FIXED: Smart URL type detection and proper preview handling
   const handleAddUrl = async () => {
     if (!urlInput.trim()) return;
     
     console.log('Adding URL:', urlInput.trim());
     
     try {
+      // Validate and clean URL
       let url = urlInput.trim();
       
+      // Add protocol if missing
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         url = 'https://' + url;
       }
       
+      // Validate URL format
       let urlObj;
       try {
         urlObj = new URL(url);
@@ -754,51 +645,89 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
       }
       
       const hostname = urlObj.hostname;
-      let urlType = 'url_link';
+      let urlType = 'url_link'; // Default type
       let displayName = urlTitle || 'URL Link';
       
+      // Classify URL type based on domain and content
       if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
         urlType = 'video';
         displayName = urlTitle || 'YouTube Video';
       } else if (hostname.includes('github.com')) {
         urlType = 'url_link';
         displayName = urlTitle || 'GitHub Repository';
-      } else if (url.includes('anica-blip.github.io/3c-smpost-generator')) {
+      } else if (url.toLowerCase().endsWith('.html') || url.toLowerCase().endsWith('.htm')) {
+        // ENHANCED: Detect HTML files
+        urlType = 'interactive';
+        displayName = urlTitle || 'HTML Page';
+      } else if (url.includes('.github.io') || url.includes('anica-blip.github.io')) {
+        // ENHANCED: Detect GitHub Pages and interactive content
         urlType = 'interactive';
         displayName = urlTitle || 'Interactive Content';
       } else if (hostname.includes('codepen.io') || hostname.includes('jsfiddle.net') || 
-                 hostname.includes('repl.it') || hostname.includes('glitch.com')) {
+                 hostname.includes('repl.it') || hostname.includes('glitch.com') ||
+                 hostname.includes('codesandbox.io') || hostname.includes('stackblitz.com')) {
         urlType = 'interactive';
         displayName = urlTitle || 'Interactive Demo';
       } else if (url.toLowerCase().includes('.pdf')) {
         urlType = 'pdf';
         displayName = urlTitle || 'PDF Document';
       } else {
+        // Regular website
         urlType = 'url_link';
         displayName = urlTitle || 'Website Link';
       }
       
       console.log('Detected URL type:', urlType, 'for', hostname);
       
+      // Fetch URL preview with error handling
       let urlPreview = null;
       try {
         console.log('Fetching URL preview...');
         urlPreview = await fetchUrlPreview(url);
         console.log('URL preview result:', urlPreview);
         
+        // Update display name if we got a better title from preview
         if (urlPreview?.title && !urlTitle) {
           displayName = urlPreview.title;
         }
         
+        // ENHANCED: If no preview image was returned, generate a screenshot for interactive/HTML content
+        if (!urlPreview?.image && (urlType === 'interactive' || urlType === 'url_link')) {
+          console.log('No preview image found, generating screenshot fallback...');
+          // Use a screenshot API service as fallback
+          // Option 1: Screenshot API (free tier available)
+          const screenshotUrl = `https://api.screenshotone.com/take?url=${encodeURIComponent(url)}&viewport_width=1200&viewport_height=630&format=jpg&quality=80&cache=true&access_key=YOUR_API_KEY`;
+          // Option 2: Alternative free service
+          const alternativeScreenshot = `https://image.thum.io/get/width/1200/crop/800/${encodeURIComponent(url)}`;
+          
+          // For now, use the alternative free service (no API key needed)
+          if (!urlPreview) {
+            urlPreview = { title: displayName, siteName: hostname, image: alternativeScreenshot };
+          } else {
+            urlPreview.image = alternativeScreenshot;
+          }
+          console.log('Screenshot fallback added:', alternativeScreenshot);
+        }
+        
       } catch (error) {
         console.error('URL preview failed:', error);
+        // ENHANCED: Even if preview fails, try to generate a screenshot for visual content
+        if (urlType === 'interactive' || urlType === 'url_link') {
+          const fallbackScreenshot = `https://image.thum.io/get/width/1200/crop/800/${encodeURIComponent(url)}`;
+          urlPreview = {
+            title: displayName,
+            siteName: hostname,
+            image: fallbackScreenshot
+          };
+          console.log('Using fallback screenshot after preview error:', fallbackScreenshot);
+        }
       }
       
       const newUrlFile: MediaFile = {
         id: Date.now().toString() + Math.random(),
         name: displayName,
         type: urlType,
-        size: 0,
+        size: 0, // URLs don't have file size
         url: url,
         urlPreview: urlPreview
       };
@@ -815,9 +744,11 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
     }
   };
 
+  // FIXED: Proper reset function that clears ALL state
   const resetForm = () => {
     console.log('Resetting form...');
     
+    // Clear all selections
     setSelections({
       characterProfile: '',
       theme: '',
@@ -828,6 +759,7 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
       voiceStyle: ''
     });
     
+    // Clear all content
     setContent({
       title: '',
       description: '',
@@ -836,6 +768,7 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
       cta: ''
     });
     
+    // FIXED: Clear media files and revoke object URLs to prevent memory leaks
     mediaFiles.forEach(file => {
       if (file.url.startsWith('blob:')) {
         URL.revokeObjectURL(file.url);
@@ -843,22 +776,28 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
     });
     setMediaFiles([]);
     
+    // Clear platform selections
     setSelectedPlatforms([]);
     
+    // Reset states
     setIsEditingPost(false);
     setIsEditingTemplate(false);
     setFieldConfig(null);
     
+    // Clear URL inputs
     setUrlInput('');
     setUrlTitle('');
     setHashtagInput('');
     
+    // Generate new content ID
     setContentId(generateContentId());
     
     console.log('Form reset complete');
   };
 
+  // UPDATED SAVE HANDLER WITH TELEGRAM VALIDATION AND TEMPLATE INTEGRATION
   const handleSave = async () => {
+    // TELEGRAM URL VALIDATION - ADDED FROM CORRECTED CODE
     if (isTelegramSelected()) {
       const telegramUrl = getPrimaryTelegramUrl();
       if (!telegramUrl) {
@@ -867,25 +806,23 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
       }
     }
     
+    // Create detailed platforms array with full info
     const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
     
-    const parsedDescription = parseLinksForSaving(content.description);
-    const parsedTitle = parseLinksForSaving(content.title);
+    // FIXED ISSUE #1: Parse markdown links in description before saving
+    const parsedDescription = parseMarkdownLinks(content.description);
     
     const postData = {
       contentId,
       ...selections,
       ...content,
-      description: parsedDescription.textWithoutMarkdown,
-      title: parsedTitle.textWithoutMarkdown,
-      links: [...parsedDescription.links, ...parsedTitle.links],
+      description: parsedDescription, // Use parsed description with HTML links
       mediaFiles,
       selectedPlatforms,
-      detailedPlatforms,
+      detailedPlatforms, // Add detailed platform info
       status: 'pending' as const,
-      isFromTemplate: isEditingTemplate,
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
-      ...(isEditingPost && editingPost?.id && { id: editingPost.id })
+      isFromTemplate: isEditingTemplate, // CHANGED: Use template status
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
     };
 
     try {
@@ -901,35 +838,35 @@ const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
     }
   };
 
-const handleAddToSchedule = async () => {
-  if (isTelegramSelected()) {
-    const telegramUrl = getPrimaryTelegramUrl();
-    if (!telegramUrl) {
-      alert('A Telegram URL is required for Telegram posts. Please select a Telegram channel/group that has a valid URL.');
-      return;
+  // UPDATED ADD TO SCHEDULE HANDLER WITH TELEGRAM VALIDATION AND TEMPLATE INTEGRATION
+  const handleAddToSchedule = async () => {
+    // TELEGRAM URL VALIDATION - ADDED FROM CORRECTED CODE
+    if (isTelegramSelected()) {
+      const telegramUrl = getPrimaryTelegramUrl();
+      if (!telegramUrl) {
+        alert('A Telegram URL is required for Telegram posts. Please select a Telegram channel/group that has a valid URL.');
+        return;
+      }
     }
-  }
-  
-  const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
-  
-  const parsedDescription = parseLinksForSaving(content.description);
-  const parsedTitle = parseLinksForSaving(content.title);
-  
-  const postData = {
-    contentId,
-    ...selections,
-    ...content,
-    description: parsedDescription.textWithoutMarkdown,
-    title: parsedTitle.textWithoutMarkdown,
-    links: [...parsedDescription.links, ...parsedTitle.links],
-    mediaFiles,
-    selectedPlatforms,
-    detailedPlatforms,
-    status: 'scheduled' as const,
-    isFromTemplate: isEditingTemplate,
-    sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
-    ...(isEditingPost && editingPost?.id && { id: editingPost.id })
-  };
+    
+    // Create detailed platforms array with full info
+    const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
+    
+    // FIXED ISSUE #1: Parse markdown links in description before saving
+    const parsedDescription = parseMarkdownLinks(content.description);
+    
+    const postData = {
+      contentId,
+      ...selections,
+      ...content,
+      description: parsedDescription, // Use parsed description with HTML links
+      mediaFiles,
+      selectedPlatforms,
+      detailedPlatforms, // Add detailed platform info
+      status: 'scheduled' as const,
+      isFromTemplate: isEditingTemplate, // CHANGED: Use template status
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
+    };
 
     try {
       await onAddToSchedule(postData);
@@ -960,9 +897,18 @@ const handleAddToSchedule = async () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Truncate URL for display
   const truncateUrl = (url: string, maxLength: number = 50) => {
     if (url.length <= maxLength) return url;
     return url.substring(0, maxLength) + '...';
+  };
+
+  // FIXED ISSUE #1: Parse markdown-style links [text](url) to HTML anchor tags
+  const parseMarkdownLinks = (text: string): string => {
+    if (!text) return text;
+    // Match markdown links: [text](url)
+    const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    return text.replace(markdownLinkRegex, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
   };
   
   return (
@@ -975,6 +921,7 @@ const handleAddToSchedule = async () => {
       marginBottom: '24px',
       fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
+      {/* UPDATED HEADER SECTION WITH TEMPLATE STATUS */}
       <div style={{
         borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
         paddingBottom: '16px',
@@ -996,6 +943,7 @@ const handleAddToSchedule = async () => {
               fontSize: '14px',
               margin: '0'
             }}>
+              {/* FIXED ISSUE #1: UK English */}
               {isEditingPost ? `Editing post: ${contentId}` :
                isEditingTemplate ? `Working from template` :
                'Design and prepare your social media content for publishing (UK English)'
@@ -1016,6 +964,7 @@ const handleAddToSchedule = async () => {
         </div>
       </div>
 
+      {/* Character Profile Section */}
       <div style={{
         backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
         borderRadius: '8px',
@@ -1067,6 +1016,7 @@ const handleAddToSchedule = async () => {
             ))}
           </select>
 
+          {/* Character Profile Preview */}
           {selections.characterProfile && (
             <div style={{
               padding: '12px',
@@ -1177,6 +1127,7 @@ const handleAddToSchedule = async () => {
         </div>
       </div>
 
+      {/* Template Builder Style Selections */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(2, 1fr)',
@@ -1190,6 +1141,7 @@ const handleAddToSchedule = async () => {
         marginBottom: '24px',
         width: '85%'
       }}>
+        {/* Selection dropdowns with consistent styling */}
         {[
           { field: 'theme', label: 'Theme/Label *', options: [
             'news_alert', 'promotion', 'standard_post', 'cta_quiz', 'cta_game', 
@@ -1199,6 +1151,7 @@ const handleAddToSchedule = async () => {
             'existing_members', 'new_members', 'persona_falcon', 'persona_panther', 
             'persona_wolf', 'persona_lion', 'general_public'
           ]},
+          // FIXED ISSUE #2: Added no_media to options
           { field: 'mediaType', label: 'Media Type *', options: [
             'no_media', 'image', 'video', 'gifs', 'pdf', 'interactive_media', 'url_link'
           ]},
@@ -1252,6 +1205,8 @@ const handleAddToSchedule = async () => {
           </div>
         ))}
         
+        {/* FIXED ISSUE #1: UK English - "Optimise" not "Optimize" */}
+        {/* Platform Optimisation Selector */}
         <div>
           <label style={{
             display: 'block',
@@ -1298,6 +1253,8 @@ const handleAddToSchedule = async () => {
         </div>
       </div>
 
+      {/* FIXED ISSUE #1: UK English - "Optimisation" not "Optimization" */}
+      {/* Platform-Specific Field Information */}
       {fieldConfig && (
         <div style={{
           backgroundColor: isDarkMode ? '#1e3a8a30' : '#dbeafe',
@@ -1335,6 +1292,7 @@ const handleAddToSchedule = async () => {
         </div>
       )}
 
+      {/* Media Upload */}
       <div style={{ marginBottom: '24px', width: '85%' }}>
         <label style={{
           display: 'block',
@@ -1346,6 +1304,7 @@ const handleAddToSchedule = async () => {
           Media Upload
         </label>
         
+        {/* File Upload Area */}
         <div
           onClick={() => fileInputRef.current?.click()}
           style={{
@@ -1397,7 +1356,7 @@ const handleAddToSchedule = async () => {
             style={{ display: 'none' }}
             onChange={(e) => {
               if (e.target.files) {
-                const maxSize = 100 * 1024 * 1024;
+                const maxSize = 100 * 1024 * 1024; // 100MB limit
                 const oversizedFiles: string[] = [];
                 
                 Array.from(e.target.files).forEach(file => {
@@ -1417,6 +1376,7 @@ const handleAddToSchedule = async () => {
           />
         </div>
 
+        {/* URL Input Section */}
         <div style={{
           backgroundColor: isDarkMode ? '#334155' : '#f9fafb',
           border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
@@ -1501,6 +1461,7 @@ const handleAddToSchedule = async () => {
           </div>
         </div>
 
+        {/* Uploaded Files and URLs */}
         {mediaFiles.length > 0 && (
           <div>
             <div style={{
@@ -1604,12 +1565,15 @@ const handleAddToSchedule = async () => {
         )}
       </div>
 
+{/* FIXED ISSUE #1: UK English throughout all content fields */}
+{/* CONTENT FIELDS - WITH i18n */}
 <div style={{ 
   display: 'grid', 
   gap: '16px', 
   marginBottom: '24px',
   width: '85%'
 }}>
+  {/* TITLE FIELD - WITH i18n */}
   {(!fieldConfig || fieldConfig.title?.show !== false) && (
     <div>
       <label style={{
@@ -1702,6 +1666,7 @@ const handleAddToSchedule = async () => {
     </div>
   )}
 
+  {/* DESCRIPTION FIELD - WITH i18n */}
   <div>
     <label style={{
       display: 'block',
@@ -1897,6 +1862,7 @@ const handleAddToSchedule = async () => {
     </div>
   </div>
 
+  {/* HASHTAGS FIELD - WITH i18n */}
   <div>
     <label style={{
       display: 'block',
@@ -2013,6 +1979,7 @@ const handleAddToSchedule = async () => {
     </div>
   </div>
 
+  {/* SEO KEYWORDS FIELD - WITH i18n */}
   <div>
     <label style={{
       display: 'block',
@@ -2048,6 +2015,7 @@ const handleAddToSchedule = async () => {
     </div>
   </div>
 
+  {/* CALL TO ACTION FIELD - WITH i18n */}
   <div>
     <label style={{
       display: 'block',
@@ -2090,6 +2058,7 @@ const handleAddToSchedule = async () => {
   </div>
 </div>
 
+{/* Platform Selection for Publishing */}
       <div style={{ marginBottom: '24px', width: '85%' }}>
         <label style={{
           display: 'block',
@@ -2162,6 +2131,7 @@ const handleAddToSchedule = async () => {
         </div>
       </div>
 
+      {/* UPDATED ACTION BUTTONS WITH TEMPLATE INTEGRATION */}
       <div style={{
         display: 'flex',
         justifyContent: 'flex-end',
@@ -2227,6 +2197,8 @@ const handleAddToSchedule = async () => {
         </button>
       </div>
       
+      {/* FIXED ISSUE #1 & #3: UK English + Platform icon/type usage in Live Preview */}
+      {/* Live Preview Section - Shows Exact Final Post Format */}
       {(selections.characterProfile || content.title || content.description || mediaFiles.length > 0) && (
         <div style={{
           marginTop: '32px',
@@ -2268,12 +2240,14 @@ const handleAddToSchedule = async () => {
             overflow: 'hidden',
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
           }}>
+            {/* 1. Media Files Preview - Platform Responsive with URL Preview Support */}
             {mediaFiles.length > 0 && (
               <div style={{
                 padding: '16px',
                 backgroundColor: isDarkMode ? '#f8fafc' : '#f9fafb',
                 borderBottom: `1px solid ${isDarkMode ? '#e5e7eb' : '#e5e7eb'}`
               }}>
+                {/* FIXED ISSUE #1: UK English - "Optimised" */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -2304,6 +2278,7 @@ const handleAddToSchedule = async () => {
                       alignItems: 'center',
                       gap: '12px'
                     }}>
+                      {/* Platform Label */}
                       <div style={{
                         fontSize: '11px',
                         color: '#3b82f6',
@@ -2316,6 +2291,7 @@ const handleAddToSchedule = async () => {
                         {platformStyle.label}
                       </div>
 
+                      {/* Media Grid with Platform-Specific Sizing */}
                       <div style={{
                         display: 'grid',
                         gridTemplateColumns: mediaFiles.length === 1 
@@ -2505,6 +2481,7 @@ const handleAddToSchedule = async () => {
                         ))}
                       </div>
 
+                      {/* FIXED ISSUE #1: UK English - "optimises", "favours" */}
                       {selections.platform && (
                         <div style={{
                           fontSize: '11px',
@@ -2533,6 +2510,7 @@ const handleAddToSchedule = async () => {
               </div>
             )}
 
+            {/* 2. Post Content */}
             <div style={{ padding: '20px', backgroundColor: 'white' }}>
               {selections.characterProfile && (
                 <div style={{
@@ -2616,7 +2594,7 @@ const handleAddToSchedule = async () => {
                   margin: '0 0 12px 0',
                   lineHeight: '1.3'
                 }}>
-                  {parseMarkdownToJSX(content.title)}
+                  {content.title}
                 </h4>
               )}
 
@@ -2625,9 +2603,10 @@ const handleAddToSchedule = async () => {
                   fontSize: '15px',
                   color: '#374151',
                   lineHeight: '1.6',
-                  marginBottom: '16px'
+                  marginBottom: '16px',
+                  whiteSpace: 'pre-wrap'
                 }}>
-                  {parseMarkdownToJSX(content.description)}
+                  {content.description}
                 </div>
               )}
 
@@ -2667,6 +2646,7 @@ const handleAddToSchedule = async () => {
             </div>
           </div>
 
+          {/* FIXED ISSUE #3: Platform badges using platform_icon and type columns */}
           {selectedPlatforms.length > 0 && (
             <div style={{
               marginTop: '20px',
@@ -2699,6 +2679,7 @@ const handleAddToSchedule = async () => {
                   const platform = activePlatforms.find(p => p.id === platformId);
                   if (!platform) return null;
                   
+                  // FIXED ISSUE #3: Use platform_icon and type columns for display
                   const platformSymbol = getPlatformSymbol(platform);
                   const platformColor = getPlatformColor(platform);
                   
