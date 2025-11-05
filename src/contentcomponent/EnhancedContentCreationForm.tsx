@@ -812,7 +812,8 @@ const EnhancedContentCreationForm = ({
     // FIXED ISSUE #1: Parse markdown links in description before saving
     const parsedDescription = parseMarkdownLinks(content.description);
     
-    const postData = {
+    // FIXED ISSUE #2: Include the 'id' field when editing so parent can UPDATE instead of INSERT
+    const postData: any = {
       contentId,
       ...selections,
       ...content,
@@ -824,8 +825,14 @@ const EnhancedContentCreationForm = ({
       isFromTemplate: isEditingTemplate, // CHANGED: Use template status
       sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
     };
+    
+    // If editing an existing post, include the id so the database can UPDATE
+    if (isEditingPost && editingPost?.id) {
+      postData.id = editingPost.id;
+    }
 
     try {
+      console.log('Saving post data:', postData);
       await onSave(postData);
       if (isEditingPost && onEditComplete) {
         onEditComplete();
@@ -855,7 +862,8 @@ const EnhancedContentCreationForm = ({
     // FIXED ISSUE #1: Parse markdown links in description before saving
     const parsedDescription = parseMarkdownLinks(content.description);
     
-    const postData = {
+    // FIXED ISSUE #2: Include the 'id' field when editing so parent can UPDATE instead of INSERT
+    const postData: any = {
       contentId,
       ...selections,
       ...content,
@@ -867,6 +875,11 @@ const EnhancedContentCreationForm = ({
       isFromTemplate: isEditingTemplate, // CHANGED: Use template status
       sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
     };
+    
+    // If editing an existing post, include the id so the database can UPDATE
+    if (isEditingPost && editingPost?.id) {
+      postData.id = editingPost.id;
+    }
 
     try {
       await onAddToSchedule(postData);
