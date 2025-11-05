@@ -2582,10 +2582,12 @@ const handleAddToSchedule = async () => {
                 marginTop: '16px'
               }}>
                 {content.cta}
-            </div>
+              </div>
+            )}
           </div>
         </div>
-      )}  //
+
+        {selectedPlatforms.length > 0 && (
 
       {selectedPlatforms.length > 0 && (  // Now this is a NEW section
 
