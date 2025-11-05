@@ -867,47 +867,43 @@ const EnhancedContentCreationForm = ({
     }
   };
 
-  const handleAddToSchedule = async () => {
-    if (isTelegramSelected()) {
-      const telegramUrl = getPrimaryTelegramUrl();
-      if (!telegramUrl) {
-        alert('A Telegram URL is required for Telegram posts. Please select a Telegram channel/group that has a valid URL.');
-        return;
-      }
+const handleAddToSchedule = async () => {
+  if (isTelegramSelected()) {
+    const telegramUrl = getPrimaryTelegramUrl();
+    if (!telegramUrl) {
+      alert('A Telegram URL is required for Telegram posts. Please select a Telegram channel/group that has a valid URL.');
+      return;
     }
-    
-    const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
-    
-    const postData: any = {
-      contentId,
-      ...selections,
-      ...content,
-      mediaFiles,
-      selectedPlatforms,
-      detailedPlatforms,
-      status: 'scheduled' as const,
-      isFromTemplate: isEditingTemplate,
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id
-    };
-    
-    if (isEditingPost && editingPost?.id) {
-      postData.id = editingPost.id;
-      console.log('Updating existing post with ID:', editingPost.id);
-    }
-
-    try {
-      await onAddToSchedule(postData);
-      
-      if (isEditingPost && onEditComplete) {
-        onEditComplete();
-      } else {
-        resetForm();
-      }
-    } catch (error) {
-      console.error('Schedule failed:', error);
-      alert('Failed to schedule post. Your content is preserved.');
-    }
+  }
+  
+  const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
+  
+  const postData = {
+    contentId,
+    ...selections,
+    ...content,
+    mediaFiles,
+    selectedPlatforms,
+    detailedPlatforms,
+    status: 'scheduled' as const,
+    isFromTemplate: isEditingTemplate,
+    sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
+    ...(isEditingPost && editingPost?.id && { id: editingPost.id })  // ← ADD THIS LINE
   };
+
+  try {
+    await onAddToSchedule(postData);
+    
+    if (isEditingPost && onEditComplete) {
+      onEditComplete();
+    } else {
+      resetForm();
+    }
+  } catch (error) {
+    console.error('Schedule failed:', error);
+    alert('Failed to schedule post. Please try again.');
+  }
+};
 
   const canSave = selections.characterProfile && selections.theme && selections.audience && selections.mediaType && selections.templateType && selections.voiceStyle && content.description;
 
