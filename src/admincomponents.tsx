@@ -1092,6 +1092,11 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                     name: 'SM Content Generator',
                     desc: 'Generate social media post content',
                     url: 'https://anica-blip.github.io/3c-smpost-generator/'
+                  },
+                  {
+                    name: 'Content Library',
+                    desc: 'Access and manage your content library',
+                    url: 'https://3c-content-library.vercel.app/'
                   }
                 ].map((tool, index) => (
                   <a 
