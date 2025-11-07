@@ -8,6 +8,8 @@ import { Calendar, Clock, Edit3, Trash2, RefreshCw, AlertCircle, CheckCircle, Pl
 import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './types';
 import { supabase } from './config';
 import { updatePendingPost } from './api/scheduleAPI';
+import StatusManagement from './components/StatusManagement';
+import TemplateManager from './components/TemplateManager';
 
 // Platform badge component
 const PlatformBadge: React.FC<{ platform: any }> = ({ platform }) => {
@@ -2001,14 +2003,14 @@ const handleDeletePost = async (postId: string) => {
 )}
         
         {activeTab === 'status' && (
-          <div style={{ padding: '24px' }}>
-            <div style={{
-              display: 'flex',
-              gap: '8px',
-              marginBottom: '24px',
-              flexWrap: 'wrap'
-            }}>
-              {['all', 'scheduled', 'processing', 'published', 'failed'].map(status => (
+          <StatusManagement
+            posts={scheduledPostsFiltered}
+            loading={postsLoading}
+            error={postsError?.message || null}
+            onDelete={handleDeletePost}
+            onEdit={handleEditPost}
+            onRetry={async (postId) => {
+              await handleCopyToPending(scheduledPostsFiltered.find(p => p.id === postId));
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status)}
@@ -2307,8 +2309,20 @@ const handleDeletePost = async (postId: string) => {
         )}
 
         {activeTab === 'saved' && (
-          <div style={{ padding: '24px' }}>
-            {(savedTemplates || []).length === 0 ? (
+          <TemplateManager
+            templates={savedTemplates || []}
+            loading={templatesLoading}
+            error={templatesError?.message || null}
+            onCreate={handleCreateTemplate}
+            onUpdate={handleUpdateTemplate}
+            onDelete={handleDeleteTemplate}
+            onUse={handleUseTemplate}
+            onLoadTemplate={(template) => {
+              // Load template into pending post creation
+              console.log('Loading template:', template);
+            }}
+          />
+        )}
               <div style={{
                 backgroundColor: theme.background,
                 border: `1px solid ${theme.border}`,
