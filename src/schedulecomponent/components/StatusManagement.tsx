@@ -1,27 +1,18 @@
-// /src/schedulecomponent/components/StatusManagement.tsx - FIXED to use centralized getTheme()
+// /src/schedulecomponent/components/StatusManagement.tsx - FIXED status tabs
 import React, { useState, useMemo } from 'react';
 import { CheckCircle, AlertCircle, Clock, PlayCircle, XCircle, RefreshCw, Edit, Trash2, Eye, Filter, Search, TrendingUp } from 'lucide-react';
 import { formatDate, formatTime, getRelativeTime } from '../utils/dateUtils';
 import { getPlatformIcon, formatPlatformList } from '../utils/platformUtils';
 import { getTheme } from '../utils/styleUtils';
 import { ScheduledPost } from '../types';
-import { 
-  getStatusColor, 
-  getStatusIcon, 
-  getStatusDisplayInfo,
-  getStatusCounts,
-  filterPostsByStatus,
-  sortByStatusPriority,
-  getSuggestedActions,
-  isStatusActionable,
-  PostStatus
-} from '../utils/statusUtils';
+
+// Simplified status type matching posting_status column
+type StatusFilter = 'all' | 'scheduled' | 'processing' | 'published' | 'failed';
 
 interface StatusManagementProps {
   posts: ScheduledPost[];
   loading: boolean;
   error?: string | null;
-  onUpdateStatus: (postId: string, newStatus: PostStatus) => Promise<void>;
   onDelete: (postId: string) => Promise<void>;
   onEdit: (post: ScheduledPost) => void;
   onRetry?: (postId: string) => Promise<void>;
@@ -31,20 +22,36 @@ export default function StatusManagement({
   posts,
   loading,
   error,
-  onUpdateStatus,
   onDelete,
   onEdit,
   onRetry
 }: StatusManagementProps) {
-  const [selectedStatus, setSelectedStatus] = useState<PostStatus | 'all'>('all');
+  const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'status' | 'date' | 'retry'>('status');
   const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
 
   const { isDarkMode, theme } = getTheme();
 
-  // Calculate status counts
-  const statusCounts = useMemo(() => getStatusCounts(posts), [posts]);
+  // Calculate status counts from posts
+  const statusCounts = useMemo(() => {
+    const counts = {
+      all: posts.length,
+      scheduled: 0,
+      processing: 0,
+      published: 0,
+      failed: 0
+    };
+
+    posts.forEach(post => {
+      if (post.status === 'scheduled') counts.scheduled++;
+      else if (post.status === 'processing') counts.processing++;
+      else if (post.status === 'published') counts.published++;
+      else if (post.status === 'failed') counts.failed++;
+    });
+
+    return counts;
+  }, [posts]);
 
   // Filter and sort posts
   const filteredPosts = useMemo(() => {
@@ -52,7 +59,7 @@ export default function StatusManagement({
 
     // Filter by status
     if (selectedStatus !== 'all') {
-      filtered = filterPostsByStatus(filtered, selectedStatus);
+      filtered = filtered.filter(post => post.status === selectedStatus);
     }
 
     // Filter by search term
@@ -69,7 +76,16 @@ export default function StatusManagement({
     // Sort posts
     switch (sortBy) {
       case 'status':
-        return sortByStatusPriority(filtered);
+        // Priority: failed > processing > scheduled > published
+        const statusPriority: Record<string, number> = {
+          'failed': 1,
+          'processing': 2,
+          'scheduled': 3,
+          'published': 4
+        };
+        return filtered.sort((a, b) => 
+          (statusPriority[a.status] || 999) - (statusPriority[b.status] || 999)
+        );
       case 'date':
         return filtered.sort((a, b) => {
           const dateA = a.scheduled_date || new Date(0);
@@ -83,35 +99,34 @@ export default function StatusManagement({
     }
   }, [posts, selectedStatus, searchTerm, sortBy]);
 
-  // Status filter options
-  const statusOptions: { key: PostStatus | 'all', label: string, count: number }[] = [
-    { key: 'all', label: 'All Posts', count: posts.length },
-    { key: 'pending', label: 'Pending', count: statusCounts.pending },
-    { key: 'pending_schedule', label: 'Pending Schedule', count: statusCounts.pending_schedule },
-    { key: 'scheduled', label: 'Scheduled', count: statusCounts.scheduled },
-    { key: 'publishing', label: 'Publishing', count: statusCounts.publishing },
-    { key: 'published', label: 'Published', count: statusCounts.published },
-    { key: 'failed', label: 'Failed', count: statusCounts.failed },
-    { key: 'cancelled', label: 'Cancelled', count: statusCounts.cancelled }
+  // Status filter options - matching posting_status column
+  const statusOptions: { key: StatusFilter, label: string, icon: any, color: string }[] = [
+    { key: 'all', label: 'All', icon: Filter, color: theme.primary },
+    { key: 'scheduled', label: 'Scheduled', icon: Clock, color: '#3b82f6' },
+    { key: 'processing', label: 'Processing', icon: PlayCircle, color: '#f59e0b' },
+    { key: 'published', label: 'Published', icon: CheckCircle, color: '#10b981' },
+    { key: 'failed', label: 'Failed', icon: XCircle, color: '#ef4444' }
   ];
 
-  // Handle status change
-  const handleStatusChange = async (postId: string, newStatus: PostStatus) => {
-    try {
-      await onUpdateStatus(postId, newStatus);
-    } catch (error) {
-      console.error('Failed to update status:', error);
+  // Get status color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'scheduled': return '#3b82f6';
+      case 'processing': return '#f59e0b';
+      case 'published': return '#10b981';
+      case 'failed': return '#ef4444';
+      default: return theme.textSecondary;
     }
   };
 
-  // Handle retry
-  const handleRetry = async (postId: string) => {
-    if (onRetry) {
-      try {
-        await onRetry(postId);
-      } catch (error) {
-        console.error('Failed to retry post:', error);
-      }
+  // Get status icon
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'scheduled': return <Clock size={16} />;
+      case 'processing': return <PlayCircle size={16} />;
+      case 'published': return <CheckCircle size={16} />;
+      case 'failed': return <XCircle size={16} />;
+      default: return <AlertCircle size={16} />;
     }
   };
 
@@ -185,7 +200,7 @@ export default function StatusManagement({
             color: theme.textSecondary,
             margin: '0'
           }}>
-            Monitor and manage post statuses across all platforms
+            Monitor and manage post delivery status from cron runners
           </p>
         </div>
 
@@ -205,140 +220,122 @@ export default function StatusManagement({
         </div>
       </div>
 
-      {/* Status Overview Cards */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-        gap: '16px',
-        marginBottom: '24px'
-      }}>
-        {statusOptions.filter(s => s.count > 0).map(option => (
-          <div key={option.key} style={{
-            padding: '16px',
-            backgroundColor: selectedStatus === option.key ? theme.primary + '20' : theme.cardBg,
-            border: `1px solid ${selectedStatus === option.key ? theme.primary : theme.border}`,
-            borderRadius: '8px',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-          onClick={() => setSelectedStatus(option.key)}
-          onMouseOver={(e) => {
-            if (selectedStatus !== option.key) {
-              e.currentTarget.style.backgroundColor = theme.cardBg;
-            }
-          }}
-          onMouseOut={(e) => {
-            if (selectedStatus !== option.key) {
-              e.currentTarget.style.backgroundColor = theme.cardBg;
-            }
-          }}
-          >
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '8px'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                {option.key !== 'all' && getStatusIcon(option.key as PostStatus)}
-                <span style={{
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: selectedStatus === option.key ? theme.primary : theme.text
-                }}>
-                  {option.label}
-                </span>
-              </div>
-              <div style={{
-                fontSize: '18px',
-                fontWeight: '700',
-                color: selectedStatus === option.key ? theme.primary : theme.text
-              }}>
-                {option.count}
-              </div>
-            </div>
-            <div style={{
-              width: '100%',
-              height: '4px',
-              backgroundColor: theme.border,
-              borderRadius: '2px',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                height: '100%',
-                width: `${posts.length > 0 ? (option.count / posts.length) * 100 : 0}%`,
-                backgroundColor: selectedStatus === option.key ? theme.primary : theme.textSecondary,
-                borderRadius: '2px',
-                transition: 'width 0.3s ease'
-              }} />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters and Search */}
+      {/* Status Filter Tabs */}
       <div style={{
         display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
+        gap: '12px',
         marginBottom: '24px',
-        padding: '16px',
-        backgroundColor: theme.cardBg,
-        borderRadius: '8px',
-        border: `1px solid ${theme.border}`
+        flexWrap: 'wrap'
       }}>
-        {/* Search */}
+        {statusOptions.map(option => {
+          const Icon = option.icon;
+          const count = statusCounts[option.key];
+          const isSelected = selectedStatus === option.key;
+
+          return (
+            <button
+              key={option.key}
+              onClick={() => setSelectedStatus(option.key)}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: isSelected ? option.color + '20' : theme.cardBg,
+                border: `2px solid ${isSelected ? option.color : theme.border}`,
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: isSelected ? option.color : theme.text
+              }}
+              onMouseOver={(e) => {
+                if (!isSelected) {
+                  e.currentTarget.style.backgroundColor = theme.cardBg;
+                  e.currentTarget.style.borderColor = option.color;
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!isSelected) {
+                  e.currentTarget.style.backgroundColor = theme.cardBg;
+                  e.currentTarget.style.borderColor = theme.border;
+                }
+              }}
+            >
+              <Icon size={18} />
+              {option.label}
+              <span style={{
+                backgroundColor: isSelected ? option.color : theme.border,
+                color: 'white',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search and Sort Controls */}
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        marginBottom: '24px',
+        alignItems: 'center'
+      }}>
         <div style={{
           flex: 1,
           position: 'relative'
         }}>
-          <Search size={16} style={{
-            position: 'absolute',
-            left: '12px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            color: theme.textSecondary
-          }} />
+          <Search 
+            size={18} 
+            style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: theme.textSecondary
+            }}
+          />
           <input
             type="text"
-            placeholder="Search posts..."
+            placeholder="Search posts by title, description, or ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
               width: '100%',
-              padding: '10px 12px 10px 36px',
+              padding: '12px 12px 12px 40px',
               border: `1px solid ${theme.border}`,
-              borderRadius: '6px',
-              fontSize: '14px',
-              backgroundColor: theme.background,
+              borderRadius: '8px',
+              backgroundColor: theme.cardBg,
               color: theme.text,
-              fontFamily: 'inherit'
+              fontSize: '14px',
+              outline: 'none'
             }}
           />
         </div>
 
-        {/* Sort */}
         <select
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as 'status' | 'date' | 'retry')}
+          onChange={(e) => setSortBy(e.target.value as any)}
           style={{
-            padding: '10px 12px',
+            padding: '12px 16px',
             border: `1px solid ${theme.border}`,
-            borderRadius: '6px',
-            fontSize: '14px',
-            backgroundColor: theme.background,
+            borderRadius: '8px',
+            backgroundColor: theme.cardBg,
             color: theme.text,
-            fontFamily: 'inherit',
-            minWidth: '120px'
+            fontSize: '14px',
+            cursor: 'pointer',
+            outline: 'none'
           }}
         >
-          <option value="status">By Status Priority</option>
-          <option value="date">By Schedule Date</option>
-          <option value="retry">By Retry Count</option>
+          <option value="status">Sort by Status</option>
+          <option value="date">Sort by Date</option>
+          <option value="retry">Sort by Retries</option>
         </select>
       </div>
 
@@ -347,291 +344,259 @@ export default function StatusManagement({
         <div style={{
           textAlign: 'center',
           padding: '60px 20px',
-          color: theme.textSecondary
+          backgroundColor: theme.cardBg,
+          borderRadius: '12px',
+          border: `2px dashed ${theme.border}`
         }}>
-          <CheckCircle size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-          <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0' }}>
-            {searchTerm || selectedStatus !== 'all' ? 'No Matching Posts' : 'No Posts Found'}
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '600',
+            color: theme.text,
+            margin: '0 0 8px 0'
+          }}>
+            No Posts Found
           </h3>
-          <p style={{ fontSize: '14px', margin: '0' }}>
-            {searchTerm || selectedStatus !== 'all' 
-              ? 'Try adjusting your filters or search terms.'
-              : 'Posts will appear here once they are created.'
-            }
+          <p style={{
+            fontSize: '14px',
+            color: theme.textSecondary,
+            margin: '0'
+          }}>
+            {searchTerm ? 'Try adjusting your search terms' : 'No posts match the selected status'}
           </p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '16px' }}>
-          {filteredPosts.map((post) => {
-            const statusInfo = getStatusDisplayInfo(post.status);
-            const statusColors = getStatusColor(post.status, isDarkMode);
-            const actions = getSuggestedActions(post.status);
-            
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {filteredPosts.map(post => {
+            const statusColor = getStatusColor(post.status);
+            const statusIcon = getStatusIcon(post.status);
+
             return (
               <div key={post.id} style={{
+                padding: '20px',
                 backgroundColor: theme.cardBg,
                 border: `1px solid ${theme.border}`,
-                borderRadius: '12px',
-                padding: '20px',
+                borderLeft: `4px solid ${statusColor}`,
+                borderRadius: '8px',
                 transition: 'all 0.2s ease'
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.borderColor = theme.primary;
-                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
               }}
               onMouseOut={(e) => {
-                e.currentTarget.style.borderColor = theme.border;
-                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
               }}
               >
-                {/* Post Header */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'flex-start',
                   justifyContent: 'space-between',
-                  marginBottom: '16px'
+                  gap: '16px'
                 }}>
+                  {/* Post Info */}
                   <div style={{ flex: 1 }}>
-                    <h3 style={{
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      color: theme.text,
-                      margin: '0 0 8px 0',
-                      lineHeight: '1.4'
-                    }}>
-                      {post.title || 'Untitled Post'}
-                    </h3>
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
-                      fontSize: '12px',
-                      color: theme.textSecondary
+                      marginBottom: '12px'
                     }}>
-                      <span>ID: {post.content_id}</span>
-                      {post.scheduled_date && (
-                        <span>Scheduled: {formatDate(post.scheduled_date)} {formatTime(post.scheduled_date)}</span>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        backgroundColor: statusColor + '20',
+                        color: statusColor,
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        textTransform: 'uppercase'
+                      }}>
+                        {statusIcon}
+                        {post.status}
+                      </div>
+
+                      {post.retry_count && post.retry_count > 0 && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '6px 12px',
+                          backgroundColor: '#fef3c7',
+                          color: '#92400e',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: '600'
+                        }}>
+                          <RefreshCw size={12} />
+                          {post.retry_count} retries
+                        </div>
                       )}
                     </div>
-                  </div>
 
-                  {/* Status Badge */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    backgroundColor: statusColors.bg,
-                    color: statusColors.text,
-                    borderRadius: '16px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
-                  }}>
-                    {getStatusIcon(post.status)}
-                    {statusInfo.label}
-                  </div>
-                </div>
+                    <h3 style={{
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      color: theme.text,
+                      margin: '0 0 8px 0'
+                    }}>
+                      {post.title || 'Untitled Post'}
+                    </h3>
 
-                {/* Post Content Preview */}
-                <p style={{
-                  fontSize: '14px',
-                  color: theme.text,
-                  lineHeight: '1.5',
-                  margin: '0 0 12px 0',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden'
-                }}>
-                  {post.description}
-                </p>
+                    <p style={{
+                      fontSize: '14px',
+                      color: theme.textSecondary,
+                      margin: '0 0 12px 0',
+                      lineHeight: '1.5'
+                    }}>
+                      {post.description?.substring(0, 150)}
+                      {post.description?.length > 150 ? '...' : ''}
+                    </p>
 
-                {/* Failure Info */}
-                {post.status === 'failed' && post.failure_reason && (
-                  <div style={{
-                    backgroundColor: '#fef2f2',
-                    border: '1px solid #fecaca',
-                    borderRadius: '8px',
-                    padding: '12px',
-                    marginBottom: '12px'
-                  }}>
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      color: '#dc2626',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      marginBottom: '4px'
+                      gap: '16px',
+                      fontSize: '12px',
+                      color: theme.textSecondary
                     }}>
-                      <AlertCircle size={16} />
-                      Failure Reason
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock size={14} />
+                        {post.scheduled_date 
+                          ? `${formatDate(post.scheduled_date)} at ${formatTime(post.scheduled_date)}`
+                          : 'Not scheduled'
+                        }
+                      </div>
+
+                      <div>
+                        ID: {post.content_id?.substring(0, 12)}...
+                      </div>
+
+                      {post.selected_platforms && post.selected_platforms.length > 0 && (
+                        <div>
+                          {post.selected_platforms.length} platform{post.selected_platforms.length > 1 ? 's' : ''}
+                        </div>
+                      )}
                     </div>
-                    <p style={{
-                      fontSize: '13px',
-                      color: '#7f1d1d',
-                      margin: '0',
-                      lineHeight: '1.4'
-                    }}>
-                      {post.failure_reason}
-                    </p>
-                    {post.retry_count && post.retry_count > 0 && (
+
+                    {post.failure_reason && (
                       <div style={{
-                        fontSize: '12px',
-                        color: '#7f1d1d',
-                        marginTop: '4px'
+                        marginTop: '12px',
+                        padding: '12px',
+                        backgroundColor: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        color: '#991b1b'
                       }}>
-                        Retry attempts: {post.retry_count}
-                        {post.last_attempt && ` • Last: ${getRelativeTime(post.last_attempt)}`}
+                        <strong>Failure reason:</strong> {post.failure_reason}
                       </div>
                     )}
                   </div>
-                )}
 
-                {/* Platforms and Character */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '16px',
-                  marginBottom: '16px',
-                  fontSize: '12px',
-                  color: theme.textSecondary
-                }}>
+                  {/* Action Buttons */}
                   <div style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
+                    flexDirection: 'column',
+                    gap: '8px',
+                    minWidth: '100px'
                   }}>
-                    <span>Platforms:</span>
-                    {post.selected_platforms.slice(0, 3).map((platform, index) => (
-                      <div key={index} style={{ marginLeft: '4px' }}>
-                        {getPlatformIcon(platform, 14)}
-                      </div>
-                    ))}
-                    {post.selected_platforms.length > 3 && (
-                      <span>+{post.selected_platforms.length - 3}</span>
-                    )}
-                  </div>
-                  {post.character_profile && (
-                    <span>Character: {post.character_profile}</span>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingTop: '16px',
-                  borderTop: `1px solid ${theme.border}`
-                }}>
-                  <div style={{
-                    fontSize: '12px',
-                    color: theme.textSecondary
-                  }}>
-                    {statusInfo.description}
-                  </div>
-                  
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    {/* View Details */}
                     <button
                       onClick={() => setSelectedPost(post)}
                       style={{
-                        padding: '8px 12px',
+                        padding: '8px 16px',
                         backgroundColor: 'transparent',
                         border: `1px solid ${theme.border}`,
                         borderRadius: '6px',
+                        color: theme.text,
                         cursor: 'pointer',
-                        color: theme.textSecondary,
-                        fontSize: '12px',
+                        fontSize: '13px',
                         fontWeight: '500',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '6px'
+                        gap: '6px',
+                        justifyContent: 'center'
                       }}
                       onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.cardBg}
                       onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <Eye size={14} />
-                      Details
+                      View
                     </button>
 
-                    {/* Retry (for failed posts) */}
+                    <button
+                      onClick={() => onEdit(post)}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: '6px',
+                        color: theme.text,
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        justifyContent: 'center'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.cardBg}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <Edit size={14} />
+                      Edit
+                    </button>
+
                     {post.status === 'failed' && onRetry && (
                       <button
-                        onClick={() => handleRetry(post.id)}
+                        onClick={() => onRetry(post.id)}
                         style={{
-                          padding: '8px 12px',
-                          backgroundColor: theme.warning,
-                          color: 'white',
-                          border: 'none',
+                          padding: '8px 16px',
+                          backgroundColor: '#fef3c7',
+                          border: '1px solid #fcd34d',
                           borderRadius: '6px',
+                          color: '#92400e',
                           cursor: 'pointer',
-                          fontSize: '12px',
+                          fontSize: '13px',
                           fontWeight: '500',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '6px'
+                          gap: '6px',
+                          justifyContent: 'center'
                         }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fde68a'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#fef3c7'}
                       >
                         <RefreshCw size={14} />
                         Retry
                       </button>
                     )}
 
-                    {/* Edit (for actionable posts) */}
-                    {isStatusActionable(post.status) && (
+                    {post.status === 'published' && (
                       <button
-                        onClick={() => onEdit(post)}
+                        onClick={() => onDelete(post.id)}
                         style={{
-                          padding: '8px 12px',
+                          padding: '8px 16px',
                           backgroundColor: 'transparent',
-                          border: `1px solid ${theme.border}`,
+                          border: '1px solid #fecaca',
                           borderRadius: '6px',
+                          color: '#dc2626',
                           cursor: 'pointer',
-                          color: theme.textSecondary,
-                          fontSize: '12px',
+                          fontSize: '13px',
                           fontWeight: '500',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '6px'
+                          gap: '6px',
+                          justifyContent: 'center'
                         }}
-                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.cardBg}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
-                        <Edit size={14} />
-                        Edit
+                        <Trash2 size={14} />
+                        Delete
                       </button>
                     )}
-
-                    {/* Delete */}
-                    <button
-                      onClick={() => {
-                        if (window.confirm('Are you sure you want to delete this post?')) {
-                          onDelete(post.id);
-                        }
-                      }}
-                      style={{
-                        padding: '8px 12px',
-                        backgroundColor: 'transparent',
-                        border: `1px solid ${theme.danger}`,
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        color: theme.danger,
-                        fontSize: '12px',
-                        fontWeight: '500',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
-                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <Trash2 size={14} />
-                      Delete
-                    </button>
                   </div>
                 </div>
               </div>
@@ -701,47 +666,6 @@ export default function StatusManagement({
               </button>
             </div>
 
-            {/* Status Quick Actions */}
-            {isStatusActionable(selectedPost.status) && (
-              <div style={{
-                display: 'flex',
-                gap: '12px',
-                marginBottom: '20px',
-                padding: '16px',
-                backgroundColor: theme.cardBg,
-                borderRadius: '8px'
-              }}>
-                <h4 style={{
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  margin: '0',
-                  color: theme.text,
-                  flex: 1
-                }}>
-                  Quick Actions:
-                </h4>
-                {getSuggestedActions(selectedPost.status).slice(0, 3).map((action, index) => (
-                  <button
-                    key={index}
-                    style={{
-                      padding: '6px 12px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      border: `1px solid ${theme.border}`,
-                      borderRadius: '4px',
-                      backgroundColor: 'transparent',
-                      color: theme.textSecondary,
-                      cursor: 'pointer'
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.cardBg}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    {action}
-                  </button>
-                ))}
-              </div>
-            )}
-
             {/* Post Details */}
             <div style={{ marginBottom: '20px' }}>
               <h4 style={{
@@ -787,11 +711,12 @@ export default function StatusManagement({
                   </span>
                   <div style={{
                     fontSize: '14px',
-                    color: getStatusColor(selectedPost.status, isDarkMode).text,
+                    color: getStatusColor(selectedPost.status),
                     marginTop: '2px',
-                    fontWeight: '600'
+                    fontWeight: '600',
+                    textTransform: 'uppercase'
                   }}>
-                    {getStatusDisplayInfo(selectedPost.status).label}
+                    {selectedPost.status}
                   </div>
                 </div>
               </div>
@@ -819,13 +744,30 @@ export default function StatusManagement({
                 </div>
               )}
 
-              <div style={{
-                fontSize: '14px',
-                color: theme.textSecondary,
-                marginBottom: '16px'
-              }}>
-                Platforms: {formatPlatformList(selectedPost.selected_platforms)}
-              </div>
+              {selectedPost.selected_platforms && selectedPost.selected_platforms.length > 0 && (
+                <div style={{
+                  fontSize: '14px',
+                  color: theme.textSecondary,
+                  marginBottom: '16px'
+                }}>
+                  Platforms: {formatPlatformList(selectedPost.selected_platforms)}
+                </div>
+              )}
+
+              {selectedPost.failure_reason && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  color: '#991b1b',
+                  marginTop: '16px'
+                }}>
+                  <strong>Failure Reason:</strong><br />
+                  {selectedPost.failure_reason}
+                </div>
+              )}
             </div>
 
             {/* Close Button */}
