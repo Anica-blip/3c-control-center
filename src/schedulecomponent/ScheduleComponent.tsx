@@ -2011,6 +2011,14 @@ const handleDeletePost = async (postId: string) => {
             onEdit={handleEditPost}
             onRetry={async (postId) => {
               await handleCopyToPending(scheduledPostsFiltered.find(p => p.id === postId));
+          <div style={{ padding: '24px' }}>
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '24px',
+              flexWrap: 'wrap'
+            }}>
+              {['all', 'scheduled', 'processing', 'published', 'failed'].map(status => (
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status)}
