@@ -176,7 +176,7 @@ const createPlatformAssignment = async (
   }
 };
 
-// ✅ FIXED: SCHEDULED POSTS - Read ONLY from scheduled_posts table
+// ✅ FIXED: SCHEDULED POSTS - Read ONLY from two tables
 // content_posts = Pending posts (before scheduling)
 // scheduled_posts = Posts with date/time assigned (shows in Pending Schedules, Status Manager, Calendar)
 // dashboard_posts = Cron runner analytics ONLY (populated after successful send)
@@ -184,7 +184,17 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    // ONLY fetch from scheduled_posts table
+    // Get scheduled posts from content_posts table
+    const { data: contentPosts, error: contentError } = await supabase
+      .from('content_posts')
+      .select('*')
+      .eq('status', 'scheduled')
+      .or(`user_id.eq.${userId},user_id.is.null`)
+      .order('created_at', { ascending: false });
+    
+    if (contentError) throw contentError;
+
+    // Get scheduled posts from scheduled_posts table
     const { data: scheduledPosts, error: scheduledError } = await supabase
       .from('scheduled_posts')
       .select('*')
