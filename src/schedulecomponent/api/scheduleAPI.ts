@@ -830,13 +830,18 @@ export const createTemplate = async (templateData: Omit<SavedTemplate, 'id' | 'c
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    // Sanitize empty string UUIDs to null
+    // Get auth user with system UUID fallback
+    const { data: { user } } = await supabase.auth.getUser();
+    const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+    const finalUserId = user?.id || templateData.user_id || SYSTEM_USER_ID;
+
+    // Sanitize empty string UUIDs and ensure user_id/created_by are never NULL
     const sanitizedData = {
       ...templateData,
       character_profile: templateData.character_profile?.trim() || null,
       source_template_id: templateData.source_template_id?.trim() || null,
-      user_id: templateData.user_id?.trim() || null,
-      created_by: templateData.created_by?.trim() || null
+      user_id: finalUserId,  // ✅ Never NULL
+      created_by: finalUserId  // ✅ Never NULL
     };
 
     const { data, error } = await supabase
@@ -916,6 +921,10 @@ export const incrementTemplateUsage = async (id: string): Promise<void> => {
 export const rescheduleFromTemplate = async (templateId: string, userId: string): Promise<any> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
+
+    // ✅ Ensure userId is never NULL
+    const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+    const finalUserId = userId || SYSTEM_USER_ID;
 
     const { data: template, error: templateError } = await supabase
       .from('dashboard_templates')
@@ -997,8 +1006,8 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
       status: template.status || 'pending',
       is_from_template: true,
       source_template_id: templateId,
-      user_id: userId,
-      created_by: userId,
+      user_id: finalUserId,  // ✅ Never NULL
+      created_by: finalUserId,  // ✅ Never NULL
       platform_id: platformDetails.platform_id,
       social_platform: platformDetails.social_platform,
       url: platformDetails.url,
