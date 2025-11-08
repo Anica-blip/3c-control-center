@@ -176,25 +176,15 @@ const createPlatformAssignment = async (
   }
 };
 
-// SCHEDULED POSTS - Fetch from content_posts + scheduled_posts ONLY
-// content_posts = Posts waiting to be scheduled (show in Pending)
-// scheduled_posts = Posts with timestamp (MOVED from content_posts, show in Pending/Calendar/Status Manager)
-// dashboard_posts = NEVER fetch (cron runner analytics only)
+// ✅ FIXED: SCHEDULED POSTS - Read ONLY from scheduled_posts table
+// content_posts = Pending posts (before scheduling)
+// scheduled_posts = Posts with date/time assigned (Scheduled/Processing/Failed in Status Manager)
+// dashboard_posts = Published posts (cron copies here after successful send, shows in Published tab)
 export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost[]> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    // Get posts from content_posts table (waiting to be scheduled)
-    const { data: contentPosts, error: contentError } = await supabase
-      .from('content_posts')
-      .select('*')
-      .eq('status', 'scheduled')
-      .or(`user_id.eq.${userId},user_id.is.null`)
-      .order('created_at', { ascending: false });
-    
-    if (contentError) throw contentError;
-
-    // Get posts from scheduled_posts table (scheduled, waiting for cron)
+    // Fetch from scheduled_posts (Scheduled/Processing/Failed)
     const { data: scheduledPosts, error: scheduledError } = await supabase
       .from('scheduled_posts')
       .select('*')
@@ -203,11 +193,23 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (scheduledError) throw scheduledError;
 
-    // Combine ONLY content_posts + scheduled_posts (NO dashboard_posts)
+    // Fetch from dashboard_posts (Published posts)
+    const { data: dashboardPosts, error: dashboardError } = await supabase
+      .from('dashboard_posts')
+      .select('*')
+      .or(`user_id.eq.${userId},user_id.is.null`)
+      .order('created_at', { ascending: false });
+    
+    if (dashboardError) throw dashboardError;
+
+    // Get UI-deleted posts from localStorage
+    const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
+
+    // Combine both sources and filter out UI-deleted posts
     const allPosts = [
-      ...(contentPosts || []).map(post => mapContentPostToScheduledPost(post)),
-      ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post))
-    ];
+      ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post)),
+      ...(dashboardPosts || []).map(post => mapDashboardPostToScheduledPost(post))
+    ].filter(post => !deletedPostsUI.includes(post.id));
 
     // Enrich with platform details for display
     const enrichedPosts = await Promise.all(
@@ -388,6 +390,13 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
 
     if (fetchError) throw fetchError;
 
+    // ✅ FIX: Ensure we have a valid user_id - fallback to original post's user_id
+    const finalUserId = userId || originalPost?.user_id;
+    
+    if (!finalUserId) {
+      throw new Error('User ID is required but not available from auth or original post');
+    }
+
     // Validate required fields from the original post
     if (!originalPost.description || (typeof originalPost.description === 'string' && originalPost.description.trim() === '')) {
       throw new Error('Post description is required but missing from the original post');
@@ -520,8 +529,8 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       source_template_id: isUUID(originalPost.source_template_id) ? originalPost.source_template_id : null,
       
       // User tracking
-      user_id: userId,
-      created_by: userId,
+      user_id: finalUserId,
+      created_by: finalUserId,
       
       // Platform details
       platform_id: isUUID(platformDetails.platform_id) ? platformDetails.platform_id : null,
@@ -583,20 +592,6 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
     }
 
     console.log('✅ POST SAVED SUCCESSFULLY:', newScheduledPost.id);
-
-    // ✅ DELETE from content_posts - post has MOVED to scheduled_posts
-    console.log('Deleting original post from content_posts table');
-    const { error: deleteError } = await supabase
-      .from('content_posts')
-      .delete()
-      .eq('content_id', originalPost.content_id);
-    
-    if (deleteError) {
-      console.error('Warning: Could not delete from content_posts:', deleteError);
-      // Don't throw - the scheduled post was created successfully
-    } else {
-      console.log('✅ Original post removed from content_posts');
-    }
 
     // PHASE 3: Create platform assignments
     console.log(`Creating ${platformAssignmentData.length} platform assignments`);
@@ -793,12 +788,22 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
 };
 
 // DELETE POST - Dashboard view removal only (NO database deletion)
+// UI-ONLY DELETE - Does NOT touch database, uses localStorage to track deleted posts
 export const deleteScheduledPost = async (id: string): Promise<void> => {
   try {
-    console.log('Dashboard view removal only - no database deletion:', id);
+    // Get current deleted posts from localStorage
+    const deletedPosts = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
+    
+    // Add this post ID to deleted list
+    if (!deletedPosts.includes(id)) {
+      deletedPosts.push(id);
+      localStorage.setItem('deleted_posts_ui', JSON.stringify(deletedPosts));
+    }
+    
+    console.log('Post removed from UI (database untouched):', id);
   } catch (error) {
-    console.error('Error in delete operation:', error);
-    throw new Error(`Failed to remove from dashboard: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('Error removing post from UI:', error);
+    throw new Error(`Failed to remove from UI: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
@@ -826,9 +831,18 @@ export const createTemplate = async (templateData: Omit<SavedTemplate, 'id' | 'c
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
+    // Sanitize empty string UUIDs to null
+    const sanitizedData = {
+      ...templateData,
+      character_profile: templateData.character_profile?.trim() || null,
+      source_template_id: templateData.source_template_id?.trim() || null,
+      user_id: templateData.user_id?.trim() || null,
+      created_by: templateData.created_by?.trim() || null
+    };
+
     const { data, error } = await supabase
       .from('dashboard_templates')
-      .insert(templateData)
+      .insert(sanitizedData)
       .select()
       .single();
       
