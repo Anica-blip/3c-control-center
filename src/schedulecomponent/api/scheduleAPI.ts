@@ -176,10 +176,7 @@ const createPlatformAssignment = async (
   }
 };
 
-// ✅ FIXED: SCHEDULED POSTS - Read ONLY from two tables
-// content_posts = Pending posts (before scheduling)
-// scheduled_posts = Posts with date/time assigned (shows in Pending Schedules, Status Manager, Calendar)
-// dashboard_posts = Cron runner analytics ONLY (populated after successful send)
+// SCHEDULED POSTS - Read from all three tables
 export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost[]> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
@@ -194,6 +191,15 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (contentError) throw contentError;
 
+    // Get completed posts from dashboard_posts table  
+    const { data: dashboardPosts, error: dashboardError } = await supabase
+      .from('dashboard_posts')
+      .select('*')
+      .or(`user_id.eq.${userId},user_id.is.null`)
+      .order('created_at', { ascending: false });
+    
+    if (dashboardError) throw dashboardError;
+
     // Get scheduled posts from scheduled_posts table
     const { data: scheduledPosts, error: scheduledError } = await supabase
       .from('scheduled_posts')
@@ -203,8 +209,10 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (scheduledError) throw scheduledError;
 
-    // Map scheduled_posts with platform details enrichment
+    // Combine and map all three arrays with platform details enrichment
     const allPosts = [
+      ...(contentPosts || []).map(post => mapContentPostToScheduledPost(post)),
+      ...(dashboardPosts || []).map(post => mapDashboardPostToScheduledPost(post)),
       ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post))
     ];
 
