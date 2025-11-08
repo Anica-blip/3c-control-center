@@ -176,12 +176,15 @@ const createPlatformAssignment = async (
   }
 };
 
-// SCHEDULED POSTS - Read from all three tables
+// SCHEDULED POSTS - Fetch from content_posts + scheduled_posts ONLY
+// content_posts = Posts waiting to be scheduled (show in Pending)
+// scheduled_posts = Posts with timestamp (MOVED from content_posts, show in Pending/Calendar/Status Manager)
+// dashboard_posts = NEVER fetch (cron runner analytics only)
 export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost[]> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    // Get scheduled posts from content_posts table
+    // Get posts from content_posts table (waiting to be scheduled)
     const { data: contentPosts, error: contentError } = await supabase
       .from('content_posts')
       .select('*')
@@ -191,16 +194,7 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (contentError) throw contentError;
 
-    // Get completed posts from dashboard_posts table  
-    const { data: dashboardPosts, error: dashboardError } = await supabase
-      .from('dashboard_posts')
-      .select('*')
-      .or(`user_id.eq.${userId},user_id.is.null`)
-      .order('created_at', { ascending: false });
-    
-    if (dashboardError) throw dashboardError;
-
-    // Get scheduled posts from scheduled_posts table
+    // Get posts from scheduled_posts table (scheduled, waiting for cron)
     const { data: scheduledPosts, error: scheduledError } = await supabase
       .from('scheduled_posts')
       .select('*')
@@ -209,10 +203,9 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (scheduledError) throw scheduledError;
 
-    // Combine and map all three arrays with platform details enrichment
+    // Combine ONLY content_posts + scheduled_posts (NO dashboard_posts)
     const allPosts = [
       ...(contentPosts || []).map(post => mapContentPostToScheduledPost(post)),
-      ...(dashboardPosts || []).map(post => mapDashboardPostToScheduledPost(post)),
       ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post))
     ];
 
@@ -590,6 +583,20 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
     }
 
     console.log('✅ POST SAVED SUCCESSFULLY:', newScheduledPost.id);
+
+    // ✅ DELETE from content_posts - post has MOVED to scheduled_posts
+    console.log('Deleting original post from content_posts table');
+    const { error: deleteError } = await supabase
+      .from('content_posts')
+      .delete()
+      .eq('content_id', originalPost.content_id);
+    
+    if (deleteError) {
+      console.error('Warning: Could not delete from content_posts:', deleteError);
+      // Don't throw - the scheduled post was created successfully
+    } else {
+      console.log('✅ Original post removed from content_posts');
+    }
 
     // PHASE 3: Create platform assignments
     console.log(`Creating ${platformAssignmentData.length} platform assignments`);
