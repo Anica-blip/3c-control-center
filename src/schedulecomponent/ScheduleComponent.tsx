@@ -2000,7 +2000,6 @@ const handleDeletePost = async (postId: string) => {
   </div>
 )}
         
-        {/* STATUS MANAGER TAB - INLINE IMPLEMENTATION */}
         {activeTab === 'status' && (
           <div style={{ padding: '24px' }}>
             <div style={{
@@ -2307,10 +2306,9 @@ const handleDeletePost = async (postId: string) => {
           </div>
         )}
 
-        {/* SAVED TEMPLATES TAB - INLINE IMPLEMENTATION */}
         {activeTab === 'saved' && (
           <div style={{ padding: '24px' }}>
-            {(!savedTemplates || savedTemplates.length === 0) ? (
+            {(savedTemplates || []).length === 0 ? (
               <div style={{
                 backgroundColor: theme.background,
                 border: `1px solid ${theme.border}`,
@@ -2503,7 +2501,7 @@ const handleDeletePost = async (postId: string) => {
                         <button
                           onClick={() => {
                             if (confirm('Are you sure you want to delete this template?')) {
-                              handleDeleteTemplate(template.id);
+                              deleteTemplate(template.id);
                             }
                           }}
                           style={{
@@ -2528,7 +2526,7 @@ const handleDeletePost = async (postId: string) => {
         )}
       </div>
 
-      {/* MODALS */}
+      {/* Modals */}
       {isScheduleModalOpen && selectedPost && (
         <ScheduleModal
           post={selectedPost}
@@ -2552,7 +2550,6 @@ const handleDeletePost = async (postId: string) => {
         />
       )}
 
-      {/* CSS ANIMATIONS */}
       <style>{getCSSAnimations()}</style>
     </div>
   );
