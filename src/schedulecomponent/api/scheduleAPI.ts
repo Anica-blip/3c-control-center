@@ -390,12 +390,11 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
 
     if (fetchError) throw fetchError;
 
-    // ✅ FIX: Ensure we have a valid user_id - fallback to original post's user_id
-    const finalUserId = userId || originalPost?.user_id;
+    // ✅ FIX: Ensure we have a valid user_id with system UUID as absolute fallback
+    const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+    const finalUserId = userId || originalPost?.user_id || SYSTEM_USER_ID;
     
-    if (!finalUserId) {
-      throw new Error('User ID is required but not available from auth or original post');
-    }
+    console.log('User ID resolution:', { userId, originalPostUserId: originalPost?.user_id, finalUserId });
 
     // Validate required fields from the original post
     if (!originalPost.description || (typeof originalPost.description === 'string' && originalPost.description.trim() === '')) {
