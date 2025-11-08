@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "start": "tsx railway-server.ts",
     "railway": "tsx railway-server.ts",
-    "render": "tsx render-cron-runner.ts"
+    "render": "tsx render-cron-runner.ts",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "patch-package": "^8.0.0",
