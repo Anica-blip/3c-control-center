@@ -8,8 +8,6 @@ import { Calendar, Clock, Edit3, Trash2, RefreshCw, AlertCircle, CheckCircle, Pl
 import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './types';
 import { supabase } from './config';
 import { updatePendingPost } from './api/scheduleAPI';
-import StatusManagement from './components/StatusManagement';
-import TemplateManager from './components/TemplateManager';
 
 // Platform badge component
 const PlatformBadge: React.FC<{ platform: any }> = ({ platform }) => {
@@ -2002,15 +2000,8 @@ const handleDeletePost = async (postId: string) => {
   </div>
 )}
         
+        {/* STATUS MANAGER TAB - INLINE IMPLEMENTATION */}
         {activeTab === 'status' && (
-          <StatusManagement
-            posts={scheduledPostsFiltered}
-            loading={postsLoading}
-            error={postsError?.message || null}
-            onDelete={handleDeletePost}
-            onEdit={handleEditPost}
-            onRetry={async (postId) => {
-              await handleCopyToPending(scheduledPostsFiltered.find(p => p.id === postId));
           <div style={{ padding: '24px' }}>
             <div style={{
               display: 'flex',
@@ -2316,21 +2307,10 @@ const handleDeletePost = async (postId: string) => {
           </div>
         )}
 
+        {/* SAVED TEMPLATES TAB - INLINE IMPLEMENTATION */}
         {activeTab === 'saved' && (
-          <TemplateManager
-            templates={savedTemplates || []}
-            loading={templatesLoading}
-            error={templatesError?.message || null}
-            onCreate={handleCreateTemplate}
-            onUpdate={handleUpdateTemplate}
-            onDelete={handleDeleteTemplate}
-            onUse={handleUseTemplate}
-            onLoadTemplate={(template) => {
-              // Load template into pending post creation
-              console.log('Loading template:', template);
-            }}
-          />
-        )}
+          <div style={{ padding: '24px' }}>
+            {(!savedTemplates || savedTemplates.length === 0) ? (
               <div style={{
                 backgroundColor: theme.background,
                 border: `1px solid ${theme.border}`,
@@ -2523,7 +2503,7 @@ const handleDeletePost = async (postId: string) => {
                         <button
                           onClick={() => {
                             if (confirm('Are you sure you want to delete this template?')) {
-                              deleteTemplate(template.id);
+                              handleDeleteTemplate(template.id);
                             }
                           }}
                           style={{
@@ -2548,7 +2528,7 @@ const handleDeletePost = async (postId: string) => {
         )}
       </div>
 
-      {/* Modals */}
+      {/* MODALS */}
       {isScheduleModalOpen && selectedPost && (
         <ScheduleModal
           post={selectedPost}
@@ -2572,6 +2552,7 @@ const handleDeletePost = async (postId: string) => {
         />
       )}
 
+      {/* CSS ANIMATIONS */}
       <style>{getCSSAnimations()}</style>
     </div>
   );
