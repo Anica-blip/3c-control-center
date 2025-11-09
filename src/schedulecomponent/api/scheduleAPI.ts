@@ -206,7 +206,7 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     // Combine ONLY content_posts + scheduled_posts (NO dashboard_posts)
     const allPosts = [
       ...(contentPosts || []).map(post => mapContentPostToScheduledPost(post)),
-      ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post))
+      ...(scheduledPosts || []).map(post => mapScheduledPostToDashboardPost(post))
     ];
 
     // Get UI-deleted posts from localStorage
