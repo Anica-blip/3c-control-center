@@ -535,8 +535,8 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       source_template_id: isUUID(originalPost.source_template_id) ? originalPost.source_template_id : null,
       
       // User tracking
-      user_id: finalUserId,
-      created_by: finalUserId,
+      user_id: userId,
+      created_by: userId,
       
       // Platform details
       platform_id: isUUID(platformDetails.platform_id) ? platformDetails.platform_id : null,
@@ -598,6 +598,20 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
     }
 
     console.log('✅ POST SAVED SUCCESSFULLY:', newScheduledPost.id);
+
+    // ✅ DELETE from content_posts - post has MOVED to scheduled_posts
+    console.log('Deleting original post from content_posts table');
+    const { error: deleteError } = await supabase
+      .from('content_posts')
+      .delete()
+      .eq('content_id', originalPost.content_id);
+    
+    if (deleteError) {
+      console.error('Warning: Could not delete from content_posts:', deleteError);
+      // Don't throw - the scheduled post was created successfully
+    } else {
+      console.log('✅ Original post removed from content_posts');
+    }
 
     // PHASE 3: Create platform assignments
     console.log(`Creating ${platformAssignmentData.length} platform assignments`);
@@ -794,22 +808,12 @@ export const updateScheduledPost = async (id: string, updates: Partial<Scheduled
 };
 
 // DELETE POST - Dashboard view removal only (NO database deletion)
-// UI-ONLY DELETE - Does NOT touch database, uses localStorage to track deleted posts
 export const deleteScheduledPost = async (id: string): Promise<void> => {
   try {
-    // Get current deleted posts from localStorage
-    const deletedPosts = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
-    
-    // Add this post ID to deleted list
-    if (!deletedPosts.includes(id)) {
-      deletedPosts.push(id);
-      localStorage.setItem('deleted_posts_ui', JSON.stringify(deletedPosts));
-    }
-    
-    console.log('Post removed from UI (database untouched):', id);
+    console.log('Dashboard view removal only - no database deletion:', id);
   } catch (error) {
-    console.error('Error removing post from UI:', error);
-    throw new Error(`Failed to remove from UI: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('Error in delete operation:', error);
+    throw new Error(`Failed to remove from dashboard: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
@@ -837,23 +841,9 @@ export const createTemplate = async (templateData: Omit<SavedTemplate, 'id' | 'c
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    // Get auth user with system UUID fallback
-    const { data: { user } } = await supabase.auth.getUser();
-    const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
-    const finalUserId = user?.id || templateData.user_id || SYSTEM_USER_ID;
-
-    // Sanitize empty string UUIDs and ensure user_id/created_by are never NULL
-    const sanitizedData = {
-      ...templateData,
-      character_profile: templateData.character_profile?.trim() || null,
-      source_template_id: templateData.source_template_id?.trim() || null,
-      user_id: finalUserId,  // ✅ Never NULL
-      created_by: finalUserId  // ✅ Never NULL
-    };
-
     const { data, error } = await supabase
       .from('dashboard_templates')
-      .insert(sanitizedData)
+      .insert(templateData)
       .select()
       .single();
       
@@ -928,10 +918,6 @@ export const incrementTemplateUsage = async (id: string): Promise<void> => {
 export const rescheduleFromTemplate = async (templateId: string, userId: string): Promise<any> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
-
-    // ✅ Ensure userId is never NULL
-    const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
-    const finalUserId = userId || SYSTEM_USER_ID;
 
     const { data: template, error: templateError } = await supabase
       .from('dashboard_templates')
@@ -1013,8 +999,8 @@ export const rescheduleFromTemplate = async (templateId: string, userId: string)
       status: template.status || 'pending',
       is_from_template: true,
       source_template_id: templateId,
-      user_id: finalUserId,  // ✅ Never NULL
-      created_by: finalUserId,  // ✅ Never NULL
+      user_id: userId,
+      created_by: userId,
       platform_id: platformDetails.platform_id,
       social_platform: platformDetails.social_platform,
       url: platformDetails.url,
