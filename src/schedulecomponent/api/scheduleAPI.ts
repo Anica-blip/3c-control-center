@@ -180,10 +180,24 @@ const createPlatformAssignment = async (
 // content_posts = Pending posts (before scheduling)
 // scheduled_posts = Posts with date/time assigned (Scheduled/Processing/Failed in Status Manager)
 // dashboard_posts = Published posts (cron copies here after successful send, shows in Published tab)
+// SCHEDULED POSTS - Fetch from content_posts + scheduled_posts ONLY
+// content_posts = Posts waiting to be scheduled (show in Pending)
+// scheduled_posts = Posts with timestamp (MOVED from content_posts, show in Pending/Calendar/Status Manager)
+// dashboard_posts = NEVER fetch (cron runner analytics only)
 export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost[]> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
+    // Get posts from content_posts table (waiting to be scheduled)
+    const { data: contentPosts, error: contentError } = await supabase
+      .from('content_posts')
+      .select('*')
+      .eq('status', 'scheduled')
+      .or(`user_id.eq.${userId},user_id.is.null`)
+      .order('created_at', { ascending: false });
+    
+    if (contentError) throw contentError;
+    
     // Fetch from scheduled_posts (Scheduled/Processing/Failed)
     const { data: scheduledPosts, error: scheduledError } = await supabase
       .from('scheduled_posts')
@@ -193,14 +207,11 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (scheduledError) throw scheduledError;
 
-    // Fetch from dashboard_posts (Published posts)
-    const { data: dashboardPosts, error: dashboardError } = await supabase
-      .from('dashboard_posts')
-      .select('*')
-      .or(`user_id.eq.${userId},user_id.is.null`)
-      .order('created_at', { ascending: false });
-    
-    if (dashboardError) throw dashboardError;
+    // Combine ONLY content_posts + scheduled_posts (NO dashboard_posts)
+    const allPosts = [
+      ...(contentPosts || []).map(post => mapContentPostToScheduledPost(post)),
+      ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post))
+    ];
 
     // Get UI-deleted posts from localStorage
     const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
@@ -519,7 +530,7 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       scheduled_date: scheduledDateOnly, // DATE type: "2025-10-19"
       scheduled_time: scheduledTimeOnly, // TIME type: "11:00:00"
       timezone: postData.timezone || 'UTC',
-      status: 'scheduled',
+      posting_status: 'pending',
       service_type: postData.service_type,
       retry_count: 0,
       
