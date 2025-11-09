@@ -194,7 +194,7 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (contentError) throw contentError;
 
-    // Get posts from scheduled_posts table (scheduled, waiting for cron)
+    // Fetch from scheduled_posts (Scheduled/Processing/Failed)
     const { data: scheduledPosts, error: scheduledError } = await supabase
       .from('scheduled_posts')
       .select('*')
@@ -203,10 +203,14 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (scheduledError) throw scheduledError;
 
-    // Combine ONLY content_posts + scheduled_posts (NO dashboard_posts)
-    const allPosts = [
-      ...(contentPosts || []).map(post => mapContentPostToScheduledPost(post)),
-    ];
+    // Fetch from dashboard_posts (Published posts)
+    const { data: dashboardPosts, error: dashboardError } = await supabase
+      .from('dashboard_posts')
+      .select('*')
+      .or(`user_id.eq.${userId},user_id.is.null`)
+      .order('created_at', { ascending: false });
+    
+    if (dashboardError) throw dashboardError;
 
     // Get UI-deleted posts from localStorage
     const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
