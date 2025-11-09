@@ -194,7 +194,7 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (contentError) throw contentError;
 
-    // Fetch from scheduled_posts (Scheduled/Processing/Failed)
+    // Get posts from scheduled_posts table (scheduled, waiting for cron)
     const { data: scheduledPosts, error: scheduledError } = await supabase
       .from('scheduled_posts')
       .select('*')
@@ -203,23 +203,11 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (scheduledError) throw scheduledError;
 
-    // Fetch from dashboard_posts (Published posts)
-    const { data: dashboardPosts, error: dashboardError } = await supabase
-      .from('dashboard_posts')
-      .select('*')
-      .or(`user_id.eq.${userId},user_id.is.null`)
-      .order('created_at', { ascending: false });
-    
-    if (dashboardError) throw dashboardError;
-
-    // Get UI-deleted posts from localStorage
-    const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
-
-    // Combine both sources and filter out UI-deleted posts
+    // Combine ONLY content_posts + scheduled_posts (NO dashboard_posts)
     const allPosts = [
-      ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post)),
-      ...(dashboardPosts || []).map(post => mapDashboardPostToScheduledPost(post))
-    ].filter(post => !deletedPostsUI.includes(post.id));
+      ...(contentPosts || []).map(post => mapContentPostToScheduledPost(post)),
+      ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post))
+    ];
 
     // Enrich with platform details for display
     const enrichedPosts = await Promise.all(
@@ -399,12 +387,6 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       .single();
 
     if (fetchError) throw fetchError;
-
-    // ✅ FIX: Ensure we have a valid user_id with system UUID as absolute fallback
-    const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
-    const finalUserId = userId || originalPost?.user_id || SYSTEM_USER_ID;
-    
-    console.log('User ID resolution:', { userId, originalPostUserId: originalPost?.user_id, finalUserId });
 
     // Validate required fields from the original post
     if (!originalPost.description || (typeof originalPost.description === 'string' && originalPost.description.trim() === '')) {
