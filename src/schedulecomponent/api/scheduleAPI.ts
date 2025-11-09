@@ -176,10 +176,6 @@ const createPlatformAssignment = async (
   }
 };
 
-// ✅ FIXED: SCHEDULED POSTS - Read ONLY from scheduled_posts table
-// content_posts = Pending posts (before scheduling)
-// scheduled_posts = Posts with date/time assigned (Scheduled/Processing/Failed in Status Manager)
-// dashboard_posts = Published posts (cron copies here after successful send, shows in Published tab)
 // SCHEDULED POSTS - Fetch from content_posts + scheduled_posts ONLY
 // content_posts = Posts waiting to be scheduled (show in Pending)
 // scheduled_posts = Posts with timestamp (MOVED from content_posts, show in Pending/Calendar/Status Manager)
@@ -197,8 +193,8 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
       .order('created_at', { ascending: false });
     
     if (contentError) throw contentError;
-    
-    // Fetch from scheduled_posts (Scheduled/Processing/Failed)
+
+    // Get posts from scheduled_posts table (scheduled, waiting for cron)
     const { data: scheduledPosts, error: scheduledError } = await supabase
       .from('scheduled_posts')
       .select('*')
