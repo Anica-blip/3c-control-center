@@ -933,10 +933,7 @@ async function processJobs(): Promise<ProcessResult> {
 // HTTP ENDPOINT
 // ============================================
 
-/**
- * Shared handler for cron job execution
- */
-async function handleCronRequest(req: any, res: any) {
+app.post('/run', async (req, res) => {
   const startTime = Date.now();
   
   console.log(`\n${'='.repeat(80)}`);
@@ -992,36 +989,11 @@ async function handleCronRequest(req: any, res: any) {
       error: getErrorMessage(error)
     });
   }
-}
-
-/**
- * POST /cron - Main endpoint for GitHub Actions
- */
-app.post('/cron', handleCronRequest);
-
-/**
- * POST /trigger - Alias endpoint
- */
-app.post('/trigger', handleCronRequest);
-
-/**
- * POST /run - Alias endpoint (for backward compatibility)
- */
-app.post('/run', handleCronRequest);
+});
 
 app.get('/', (req, res) => {
   res.json({
     status: 'Railway Gateway for GitHub - Workflow is running',
-    service_type: SERVICE_TYPE,
-    runner_name: RUNNER_NAME,
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    service: 'Railway Gateway for GitHub - Workflow',
     service_type: SERVICE_TYPE,
     runner_name: RUNNER_NAME,
     timestamp: new Date().toISOString()
