@@ -526,7 +526,7 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       scheduled_date: scheduledDateOnly, // DATE type: "2025-10-19"
       scheduled_time: scheduledTimeOnly, // TIME type: "11:00:00"
       timezone: postData.timezone || 'UTC',
-      posting_status: 'pending',
+      status: 'scheduled',
       service_type: postData.service_type,
       retry_count: 0,
       
