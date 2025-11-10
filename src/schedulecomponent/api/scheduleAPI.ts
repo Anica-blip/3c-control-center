@@ -203,12 +203,6 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (scheduledError) throw scheduledError;
 
-    // Combine ONLY content_posts + scheduled_posts (NO dashboard_posts)
-    const allPosts = [
-      ...(contentPosts || []).map(post => mapContentPostToScheduledPost(post)),
-      ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post))
-    ];
-
     // Get UI-deleted posts from localStorage
     const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
 
@@ -217,6 +211,7 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
       ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post)),
       ...(dashboardPosts || []).map(post => mapDashboardPostToScheduledPost(post))
     ].filter(post => !deletedPostsUI.includes(post.id));
+    ];
     
     // Enrich with platform details for display
     const enrichedPosts = await Promise.all(
@@ -397,6 +392,12 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
 
     if (fetchError) throw fetchError;
 
+    // ✅ FIX: Ensure we have a valid user_id with system UUID as absolute fallback
+    const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+    const finalUserId = userId || originalPost?.user_id || SYSTEM_USER_ID;
+    
+    console.log('User ID resolution:', { userId, originalPostUserId: originalPost?.user_id, finalUserId });
+    
     // Validate required fields from the original post
     if (!originalPost.description || (typeof originalPost.description === 'string' && originalPost.description.trim() === '')) {
       throw new Error('Post description is required but missing from the original post');
