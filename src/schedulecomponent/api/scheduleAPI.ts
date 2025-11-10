@@ -209,6 +209,15 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
       ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post))
     ];
 
+    // Get UI-deleted posts from localStorage
+    const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
+
+    // Combine both sources and filter out UI-deleted posts
+    const allPosts = [
+      ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post)),
+      ...(dashboardPosts || []).map(post => mapDashboardPostToScheduledPost(post))
+    ].filter(post => !deletedPostsUI.includes(post.id));
+    
     // Enrich with platform details for display
     const enrichedPosts = await Promise.all(
       allPosts.map(async (post) => {
