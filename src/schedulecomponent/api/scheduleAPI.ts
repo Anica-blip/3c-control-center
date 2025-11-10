@@ -211,7 +211,6 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
       ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post)),
       ...(dashboardPosts || []).map(post => mapDashboardPostToScheduledPost(post))
     ].filter(post => !deletedPostsUI.includes(post.id));
-    ];
     
     // Enrich with platform details for display
     const enrichedPosts = await Promise.all(
