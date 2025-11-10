@@ -194,7 +194,7 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (contentError) throw contentError;
 
-    // Get posts from scheduled_posts table (scheduled, waiting for cron)
+    // Fetch posts from scheduled_posts table (scheduled, waiting for cron)
     const { data: scheduledPosts, error: scheduledError } = await supabase
       .from('scheduled_posts')
       .select('*')
@@ -203,7 +203,7 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (scheduledError) throw scheduledError;
 
-    // Fetch from scheduled_posts (Scheduled/Processing/Failed)
+    // Get from scheduled_posts (Scheduled/Processing/Failed)
     const { data: scheduledPosts, error: scheduledError } = await supabase
       .from('scheduled_posts')
       .select('*')
@@ -212,7 +212,7 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (scheduledError) throw scheduledError;
 
-    // Fetch from dashboard_posts (Published posts)
+    // Get from dashboard_posts (Published posts)
     const { data: dashboardPosts, error: dashboardError } = await supabase
       .from('dashboard_posts')
       .select('*')
