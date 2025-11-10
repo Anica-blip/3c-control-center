@@ -203,15 +203,6 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (scheduledError) throw scheduledError;
 
-    // Get from scheduled_posts (Scheduled/Processing/Failed)
-    const { data: scheduledPosts, error: scheduledError } = await supabase
-      .from('scheduled_posts')
-      .select('*')
-      .or(`user_id.eq.${userId},user_id.is.null`)
-      .order('created_at', { ascending: false });
-    
-    if (scheduledError) throw scheduledError;
-
     // Get from dashboard_posts (Published posts)
     const { data: dashboardPosts, error: dashboardError } = await supabase
       .from('dashboard_posts')
