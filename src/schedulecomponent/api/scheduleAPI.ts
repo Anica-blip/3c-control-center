@@ -2,6 +2,53 @@
 import { supabase } from '../config';
 import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 
+// ============================================================================
+// RUNNER SPECIFICATIONS - CRITICAL FOR CRON JOBS
+// ============================================================================
+/*
+RUNNER WORKFLOW:
+
+1. READ FROM scheduled_posts WHERE:
+   - posting_status = 'pending'
+   - scheduled_date <= CURRENT_DATE
+   - scheduled_time <= CURRENT_TIME
+
+2. COLUMNS RUNNERS MUST READ:
+   - id (primary key)
+   - content_id, title, description
+   - scheduled_date, scheduled_time, timezone
+   - media_files (JSONB array)
+   - selected_platforms (JSONB array)
+   - platform_id, social_platform, url
+   - channel_group_id, thread_id
+   - posting_status, retry_count
+
+3. AFTER POSTING ATTEMPT:
+   
+   IF SUCCESS:
+   - UPDATE scheduled_posts SET 
+       posting_status = 'sent',
+       updated_at = NOW()
+     WHERE id = <post_id>
+   
+   - INSERT INTO dashboard_posts (copy entire row from scheduled_posts)
+   - DO NOT DELETE from scheduled_posts (keep for history)
+   
+   IF FAILED:
+   - UPDATE scheduled_posts SET 
+       posting_status = 'failed',
+       failure_reason = '<error_message>',
+       retry_count = retry_count + 1,
+       updated_at = NOW()
+     WHERE id = <post_id>
+
+4. IMPORTANT NOTES:
+   - dashboard_posts is READ-ONLY analytics table
+   - Only copy to dashboard_posts when posting_status = 'sent'
+   - scheduled_posts remains source of truth for all scheduling
+*/
+// ============================================================================
+
 // Helper function to map content_posts to ScheduledPost interface
 const mapContentPostToScheduledPost = (data: any): ScheduledPost => {
   return {
@@ -178,53 +225,45 @@ const createPlatformAssignment = async (
 
 // NEW: Get dashboard statistics for Quick Stats badges
 export const getDashboardStats = async (userId: string): Promise<{
-  pending: number;
   scheduled: number;
-  processing: number;
   published: number;
   failed: number;
 }> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    // Get pending posts from content_posts
-    const { data: contentPosts, error: contentError } = await supabase
-      .from('content_posts')
-      .select('id', { count: 'exact' })
-      .eq('status', 'pending_schedule')
-      .or(`user_id.eq.${userId},user_id.is.null`);
-    
-    if (contentError) throw contentError;
-
     // Get all posts from scheduled_posts ONLY (dashboard_posts is for analytics only)
     const { data: scheduledPosts, error: scheduledError } = await supabase
       .from('scheduled_posts')
-      .select('*')
+      .select('posting_status')
       .or(`user_id.eq.${userId},user_id.is.null`);
 
     if (scheduledError) throw scheduledError;
 
-    // Count by posting_status
+    // ✅ Count by posting_status column from database
+    // posting_status values: 'pending' | 'sent' | 'failed'
+    // Dashboard mapping: pending → Scheduled, sent → Published, failed → Failed
     const stats = {
-      pending: contentPosts?.length || 0,
-      scheduled: 0,
-      processing: 0,
-      published: 0,
-      failed: 0
+      scheduled: 0,  // posting_status = 'pending'
+      published: 0,  // posting_status = 'sent'
+      failed: 0      // posting_status = 'failed'
     };
 
     (scheduledPosts || []).forEach(post => {
-      const status = determinePostStatus(post);
-      stats[status]++;
+      if (post.posting_status === 'pending') {
+        stats.scheduled++;
+      } else if (post.posting_status === 'sent') {
+        stats.published++;
+      } else if (post.posting_status === 'failed') {
+        stats.failed++;
+      }
     });
 
     return stats;
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
     return {
-      pending: 0,
       scheduled: 0,
-      processing: 0,
       published: 0,
       failed: 0
     };
@@ -587,6 +626,7 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       scheduled_time: scheduledTimeOnly, // TIME type: "11:00:00"
       timezone: postData.timezone || 'UTC',
       status: 'scheduled',
+      posting_status: 'pending',  // ✅ RUNNER STATUS: Start as 'pending' for cron job pickup
       service_type: postData.service_type,
       retry_count: 0,
       
@@ -902,13 +942,15 @@ export const createTemplate = async (templateData: Omit<SavedTemplate, 'id' | 'c
     const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
     const finalUserId = user?.id || templateData.user_id || SYSTEM_USER_ID;
 
+    // ✅ FIX: Ensure is_active is ALWAYS set to true for template persistence
     // Sanitize empty string UUIDs and ensure user_id/created_by are never NULL
     const sanitizedData = {
       ...templateData,
       character_profile: templateData.character_profile?.trim() || null,
       source_template_id: templateData.source_template_id?.trim() || null,
       user_id: finalUserId,  // ✅ Never NULL
-      created_by: finalUserId  // ✅ Never NULL
+      created_by: finalUserId,  // ✅ Never NULL
+      is_active: true  // ✅ CRITICAL: Always set to true for template to appear after refresh
     };
 
     const { data, error } = await supabase
