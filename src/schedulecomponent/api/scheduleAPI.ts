@@ -213,11 +213,13 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     if (dashboardError) throw dashboardError;
 
     // Combine and map all three arrays with platform details enrichment
-    const allPosts = [
-      ...(contentPosts || []).map(post => mapContentPostToScheduledPost(post)),
-      ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post)),
-      ...(dashboardPosts || []).map(post => mapDashboardPostToScheduledPost(post))
+    const allScheduledPosts = [
+    ...(contentPosts || []).map(post => mapContentPostToScheduledPost(post)),
+    ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post)),
+    ...(dashboardPosts || []).map(post => mapDashboardPostToScheduledPost(post))
     ];
+
+    return allScheduledPosts;
     
     // Get UI-deleted posts from localStorage
     const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
