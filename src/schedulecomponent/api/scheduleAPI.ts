@@ -261,10 +261,12 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
 
     // Combine and map both arrays with platform details enrichment
     // NOTE: dashboard_posts excluded (cron runner analytics only)
-    const allPosts = [
+    const allScheduledPosts = [
       ...(contentPosts || []).map(post => mapContentPostToScheduledPost(post)),
       ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post))
     ];
+
+    return allScheduledPosts;
     
     // Get UI-deleted posts from localStorage
     const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
