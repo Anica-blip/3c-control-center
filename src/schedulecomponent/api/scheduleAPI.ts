@@ -176,15 +176,71 @@ const createPlatformAssignment = async (
   }
 };
 
-// SCHEDULED POSTS - Fetch from content_posts + scheduled_posts ONLY
-// content_posts = Posts waiting to be scheduled (show in Pending)
-// scheduled_posts = Posts with timestamp (MOVED from content_posts, show in Pending/Calendar/Status Manager)
-// dashboard_posts = NEVER fetch (cron runner analytics only)
+// NEW: Get dashboard statistics for Quick Stats badges
+export const getDashboardStats = async (userId: string): Promise<{
+  pending: number;
+  scheduled: number;
+  processing: number;
+  published: number;
+  failed: number;
+}> => {
+  try {
+    if (!supabase) throw new Error('Supabase client not available');
+
+    // Get pending posts from content_posts
+    const { data: contentPosts, error: contentError } = await supabase
+      .from('content_posts')
+      .select('id', { count: 'exact' })
+      .eq('status', 'pending_schedule')
+      .or(`user_id.eq.${userId},user_id.is.null`);
+    
+    if (contentError) throw contentError;
+
+    // Get all posts from scheduled_posts ONLY (dashboard_posts is for analytics only)
+    const { data: scheduledPosts, error: scheduledError } = await supabase
+      .from('scheduled_posts')
+      .select('*')
+      .or(`user_id.eq.${userId},user_id.is.null`);
+
+    if (scheduledError) throw scheduledError;
+
+    // Count by posting_status
+    const stats = {
+      pending: contentPosts?.length || 0,
+      scheduled: 0,
+      processing: 0,
+      published: 0,
+      failed: 0
+    };
+
+    (scheduledPosts || []).forEach(post => {
+      const status = determinePostStatus(post);
+      stats[status]++;
+    });
+
+    return stats;
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    return {
+      pending: 0,
+      scheduled: 0,
+      processing: 0,
+      published: 0,
+      failed: 0
+    };
+  }
+};
+
+// ============================================================================
+// EXISTING METHODS (Keep as-is)
+// ============================================================================
+
+// SCHEDULED POSTS - Read from content_posts and scheduled_posts ONLY
 export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost[]> => {
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    // Get posts from content_posts table (waiting to be scheduled)
+    // Get scheduled posts from content_posts table
     const { data: contentPosts, error: contentError } = await supabase
       .from('content_posts')
       .select('*')
@@ -194,7 +250,7 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (contentError) throw contentError;
 
-    // Fetch from scheduled_posts (Scheduled/Processing/Failed)
+    // Get scheduled posts from scheduled_posts table
     const { data: scheduledPosts, error: scheduledError } = await supabase
       .from('scheduled_posts')
       .select('*')
@@ -203,23 +259,12 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
     
     if (scheduledError) throw scheduledError;
 
-    // Get from dashboard_posts (Published posts)
-    const { data: dashboardPosts, error: dashboardError } = await supabase
-      .from('dashboard_posts')
-      .select('*')
-      .or(`user_id.eq.${userId},user_id.is.null`)
-      .order('created_at', { ascending: false });
-    
-    if (dashboardError) throw dashboardError;
-
-    // Combine and map all three arrays with platform details enrichment
-    const allScheduledPosts = [
-    ...(contentPosts || []).map(post => mapContentPostToScheduledPost(post)),
-    ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post)),
-    ...(dashboardPosts || []).map(post => mapDashboardPostToScheduledPost(post))
+    // Combine and map both arrays with platform details enrichment
+    // NOTE: dashboard_posts excluded (cron runner analytics only)
+    const allPosts = [
+      ...(contentPosts || []).map(post => mapContentPostToScheduledPost(post)),
+      ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post))
     ];
-
-    return allScheduledPosts;
     
     // Get UI-deleted posts from localStorage
     const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
