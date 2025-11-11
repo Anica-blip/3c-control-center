@@ -184,7 +184,7 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    // Fetch posts from content_posts table (waiting to be scheduled)
+    // Get posts from content_posts table (waiting to be scheduled)
     const { data: contentPosts, error: contentError } = await supabase
       .from('content_posts')
       .select('*')
