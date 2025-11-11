@@ -867,6 +867,9 @@ const EnhancedContentCreationForm = ({
     // FIXED ISSUE #1: Parse markdown links in description before saving
     const parsedDescription = parseMarkdownLinks(content.description);
     
+    // ✅ FIX: Ensure user_id and created_by are NEVER NULL
+    const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+    
     // FIXED ISSUE #2: Include the 'id' field when editing so parent can UPDATE instead of INSERT
     const postData: any = {
       contentId,
@@ -878,7 +881,9 @@ const EnhancedContentCreationForm = ({
       detailedPlatforms, // Add detailed platform info
       status: 'scheduled' as const,
       isFromTemplate: isEditingTemplate, // CHANGED: Use template status
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id, // ADDED
+      user_id: SYSTEM_USER_ID, // ✅ CRITICAL: Never NULL
+      created_by: SYSTEM_USER_ID // ✅ CRITICAL: Never NULL
     };
     
     // If editing an existing post, include the id so the database can UPDATE
