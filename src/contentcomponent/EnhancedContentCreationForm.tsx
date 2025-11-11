@@ -824,6 +824,10 @@ const EnhancedContentCreationForm = ({
       status: 'pending' as const,
       isFromTemplate: isEditingTemplate, // CHANGED: Use template status
       sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id // ADDED
+
+    const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';     
+      user_id: SYSTEM_USER_ID,      // ✅ ADDED
+      created_by: SYSTEM_USER_ID    // ✅ ADDED
     };
     
     // If editing an existing post, include the id so the database can UPDATE
