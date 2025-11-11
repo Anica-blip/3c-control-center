@@ -85,7 +85,10 @@ export const supabaseAPI = {
     try {
       const client = getSupabaseClient();
       const { data: { user } } = await client.auth.getUser();
-      const userId = user?.id || null;
+      
+      // ✅ FIX: Use SYSTEM_USER_ID instead of NULL
+      const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+      const userId = user?.id || SYSTEM_USER_ID;
 
       // --- Character Profile Details (WORKING PATTERN) ---
       let characterDetails = {
@@ -362,7 +365,10 @@ export const supabaseAPI = {
     try {
       const client = getSupabaseClient();
       const { data: { user } } = await client.auth.getUser();
-      const userId = user?.id || null;
+      
+      // ✅ FIX: Use SYSTEM_USER_ID instead of NULL
+      const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+      const userId = user?.id || SYSTEM_USER_ID;
       
       // Handle media file updates
       let updatedMediaFiles = updates.mediaFiles;
