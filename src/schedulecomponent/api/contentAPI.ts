@@ -53,6 +53,11 @@ export const contentAPI = {
 
   async savePost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
     try {
+      // ✅ FIX: Ensure user_id and created_by are NEVER NULL
+      const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+      const finalUserId = postData.user_id || SYSTEM_USER_ID;
+      const finalCreatedBy = postData.created_by || SYSTEM_USER_ID;
+      
       const { data, error } = await supabase
         .from('content_posts')
         .insert({
@@ -74,8 +79,8 @@ export const contentAPI = {
           status: postData.status,
           is_from_template: postData.isFromTemplate,
           source_template_id: postData.sourceTemplateId,
-          user_id: postData.user_id,
-          created_by: postData.created_by
+          user_id: finalUserId,  // ✅ Never NULL
+          created_by: finalCreatedBy  // ✅ Never NULL
         })
         .select()
         .single();
@@ -143,6 +148,9 @@ export const contentAPI = {
 
   async duplicatePost(id: string): Promise<ContentPost> {
     try {
+      // ✅ FIX: Ensure user_id and created_by are NEVER NULL
+      const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+      
       // First, fetch the original post
       const { data: originalPost, error: fetchError } = await supabase
         .from('content_posts')
@@ -158,7 +166,9 @@ export const contentAPI = {
         id: undefined, // Let Supabase generate new ID
         content_id: `${originalPost.content_id}-copy-${Date.now()}`,
         created_at: undefined, // Let Supabase set current timestamp
-        updated_at: undefined
+        updated_at: undefined,
+        user_id: originalPost.user_id || SYSTEM_USER_ID,  // ✅ Never NULL
+        created_by: originalPost.created_by || SYSTEM_USER_ID  // ✅ Never NULL
       };
       
       const { data, error } = await supabase
@@ -219,6 +229,11 @@ export const contentAPI = {
 
   async createPendingPost(postData: any): Promise<any> {
     try {
+      // ✅ FIX: Ensure user_id and created_by are NEVER NULL
+      const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+      const finalUserId = postData.user_id || SYSTEM_USER_ID;
+      const finalCreatedBy = postData.created_by || SYSTEM_USER_ID;
+      
       // This method is called by scheduleAPI to create the pending schedule entry
       const { data, error } = await supabase
         .from('pending_schedule')
@@ -242,8 +257,8 @@ export const contentAPI = {
           status: postData.status,
           is_from_template: postData.isFromTemplate,
           source_template_id: postData.sourceTemplateId,
-          user_id: postData.user_id,
-          created_by: postData.created_by
+          user_id: finalUserId,  // ✅ Never NULL
+          created_by: finalCreatedBy  // ✅ Never NULL
         })
         .select()
         .single();
