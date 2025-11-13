@@ -494,10 +494,8 @@ export const supabaseAPI = {
       // ========================================================================
       console.log('🚀 INSERTING into scheduled_posts with content_id:', postData.contentId);
       
-      // ⭐ FIX #2: Leave scheduled_date, timezone, service_type as NULL
-      // This makes the post appear in the PENDING TAB
-      // User will add these values in Schedule Manager's Pending tab
-      let scheduledDateTime = postData.scheduledDate || null;
+      // Parse scheduled date and time
+      let scheduledDateTime = postData.scheduledDate;
       let scheduledTime = null;
       
       if (scheduledDateTime) {
@@ -521,11 +519,11 @@ export const supabaseAPI = {
         cta: postData.cta || '',
         media_files: uploadedMediaFiles,
         selected_platforms: postData.selectedPlatforms || [],
-        status: 'pending', // ⭐ FIX: Set to 'pending' not 'scheduled'
+        status: 'scheduled',
         is_from_template: postData.isFromTemplate || false,
         source_template_id: postData.sourceTemplateId || null,
         created_date: new Date().toISOString(),
-        scheduled_date: null, // ⭐ FIX #2: NULL until user schedules in Pending tab
+        scheduled_date: scheduledDateTime || new Date().toISOString(),
         user_id: finalUserId,
         created_by: finalCreatedBy,
         is_active: true,
@@ -540,9 +538,9 @@ export const supabaseAPI = {
         
         // Scheduled_posts specific columns
         posting_status: 'pending', // ⭐ CRITICAL: Set to 'pending' for runner
-        service_type: null, // ⭐ FIX #2: NULL until user selects in Pending tab
-        scheduled_time: null, // ⭐ FIX #2: NULL until user schedules
-        timezone: null, // ⭐ FIX #2: NULL until user selects in Pending tab
+        service_type: 'render_cron', // Default service (can be changed)
+        scheduled_time: scheduledTime,
+        timezone: 'UTC', // Default timezone
         retry_count: 0,
         failure_reason: null,
         is_deleted: false,
