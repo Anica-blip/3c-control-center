@@ -850,7 +850,7 @@ const EnhancedContentCreationForm = ({
     }
   };
 
-  // UPDATED ADD TO SCHEDULE HANDLER WITH TELEGRAM VALIDATION AND TEMPLATE INTEGRATION
+  // ⭐ FIX #1: UPDATED ADD TO SCHEDULE HANDLER - NOW CREATES scheduled_posts ROW ⭐
   const handleAddToSchedule = async () => {
     // TELEGRAM URL VALIDATION - ADDED FROM CORRECTED CODE
     if (isTelegramSelected()) {
@@ -892,11 +892,33 @@ const EnhancedContentCreationForm = ({
     }
 
     try {
-      await onAddToSchedule(postData);
-      resetForm();
+      console.log('🎯 ADD TO SCHEDULE: Calling supabaseAPI.addToSchedule()');
+      
+      // ⭐⭐⭐ CRITICAL FIX: Call supabaseAPI.addToSchedule() instead of onAddToSchedule ⭐⭐⭐
+      // This function:
+      // 1. Updates/Inserts into content_posts with status='scheduled'
+      // 2. Creates a NEW ROW in scheduled_posts with posting_status='pending'
+      const result = await supabaseAPI.addToSchedule(postData);
+      
+      if (result.success) {
+        console.log('✅ Post forwarded to Schedule Manager successfully!');
+        console.log('Content Post ID:', result.data?.contentPost?.id);
+        console.log('Scheduled Post ID:', result.data?.scheduledPost?.id);
+        
+        alert('✅ Post sent to Schedule Manager! Go to the Pending tab to add date/time/service.');
+        resetForm();
+        
+        // Also call the parent's onAddToSchedule if it exists (for UI updates)
+        if (onAddToSchedule) {
+          await onAddToSchedule(postData);
+        }
+      } else {
+        console.error('❌ Failed to schedule post:', result.error);
+        alert(`Failed to schedule post: ${result.error?.message || 'Unknown error'}`);
+      }
     } catch (error) {
-      console.error('Schedule failed:', error);
-      alert('Failed to schedule post. Your content is preserved.');
+      console.error('❌ Schedule failed with exception:', error);
+      alert('Failed to schedule post. Your content is preserved. Check console for details.');
     }
   };
 
