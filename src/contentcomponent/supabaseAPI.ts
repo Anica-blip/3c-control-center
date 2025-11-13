@@ -145,6 +145,8 @@ export const supabaseAPI = {
               platform_id: selectedPlatform.id,
               social_platform: selectedPlatform.name || null,
               url: selectedPlatform.url || null,
+              channel_group_id: null,
+              thread_id: null
             };
           } else {
             // Try to find in telegram_configurations
@@ -152,7 +154,7 @@ export const supabaseAPI = {
             if (selectedTelegram) {
               console.log('Found Telegram channel:', selectedTelegram.name);
               platformDetails = {
-                platform_id: selectedTelegram.id,
+                platform_id: selectedTelegram.id.toString(),
                 social_platform: selectedTelegram.name || null,
                 url: selectedTelegram.url || null,
                 channel_group_id: selectedTelegram.channel_group_id || null,
@@ -216,220 +218,411 @@ export const supabaseAPI = {
         name: characterDetails.name,
         username: characterDetails.username,
         role: characterDetails.role,
-        // Platform or Telegram details
+        // Platform details
         platform_id: platformDetails.platform_id,
         social_platform: platformDetails.social_platform,
         url: platformDetails.url,
         channel_group_id: platformDetails.channel_group_id,
-        thread_id: platformDetails.thread_id,
-        updated_at: new Date().toISOString()
+        thread_id: platformDetails.thread_id
       };
 
-      console.log('Platform details to save:', platformDetails);
+      console.log('Saving post data to content_posts:', dbData);
 
-      let finalData;
+      const { data, error } = await client
+        .from('content_posts')
+        .insert(dbData)
+        .select()
+        .single();
 
-      // FIXED: Check for both 'id' and 'supabaseId' to determine if this is an update
-      const existingId = (postData as any).id || (postData as any).supabaseId;
-      
-      // Use UPDATE or UPSERT based on whether we have an existing ID
-      if (existingId) {
-        console.log(`UPDATING existing post with ID: ${existingId}`);
-        
-        const { data, error } = await client
-          .from('content_posts')
-          .update(dbData)
-          .eq('id', parseInt(existingId))
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Update error:', error);
-          throw error;
-        }
-        finalData = data;
-      } else {
-        console.log(`INSERTING new post with content_id: ${postData.contentId}`);
-        
-        const insertData = {
-          ...dbData,
-          created_at: new Date().toISOString()
-        };
-
-        const { data, error } = await client
-          .from('content_posts')
-          .insert(insertData)
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Insert error:', error);
-          throw error;
-        }
-        finalData = data;
+      if (error) {
+        console.error('Insert error:', error);
+        throw error;
       }
 
-      // --- Convert back to ContentPost format ---
       const contentPost: ContentPost = {
-        id: finalData.id.toString(),
-        contentId: finalData.content_id,
-        characterProfile: finalData.character_profile || '',
-        theme: finalData.theme || '',
-        audience: finalData.audience || '',
-        mediaType: finalData.media_type || '',
-        templateType: finalData.template_type || '',
-        platform: finalData.platform || '',
-        voiceStyle: finalData.voice_style || '',
-        title: finalData.title || '',
-        description: finalData.description || '',
-        hashtags: finalData.hashtags || [],
-        keywords: finalData.keywords || '',
-        cta: finalData.cta || '',
-        mediaFiles: uploadedMediaFiles,
-        selectedPlatforms: finalData.selected_platforms || [],
-        detailedPlatforms: finalData.selected_platforms || [],
-        status: finalData.status || 'pending',
-        createdDate: new Date(finalData.created_at),
-        scheduledDate: finalData.scheduled_date ? new Date(finalData.scheduled_date) : undefined,
-        isFromTemplate: finalData.is_from_template || false,
-        sourceTemplateId: finalData.source_template_id,
-        supabaseId: finalData.id.toString()
+        id: data.id.toString(),
+        contentId: data.content_id,
+        characterProfile: data.character_profile || '',
+        theme: data.theme || '',
+        audience: data.audience || '',
+        mediaType: data.media_type || '',
+        templateType: data.template_type || '',
+        platform: data.platform || '',
+        voiceStyle: data.voice_style || '',
+        title: data.title || '',
+        description: data.description || '',
+        hashtags: data.hashtags || [],
+        keywords: data.keywords || '',
+        cta: data.cta || '',
+        mediaFiles: data.media_files || [],
+        selectedPlatforms: data.selected_platforms || [],
+        detailedPlatforms: data.selected_platforms || [],
+        status: data.status || 'pending',
+        createdDate: new Date(data.created_at),
+        isFromTemplate: data.is_from_template || false,
+        sourceTemplateId: data.source_template_id,
+        supabaseId: data.id.toString()
       };
 
-      console.log('Post saved/updated successfully. Supabase ID:', contentPost.supabaseId);
+      console.log('Content post saved successfully. Supabase ID:', contentPost.supabaseId);
       return contentPost;
     } catch (error) {
-      console.error('Error saving/updating content post:', error);
+      console.error('Error saving content post:', error);
       throw error;
     } finally {
       saveInProgress = false;
     }
   },
 
-  // Load content posts from content_posts table
-  async loadContentPosts(): Promise<ContentPost[]> {
+  // ⭐⭐⭐ NEW FUNCTION: Add to Schedule - FIX #1 ⭐⭐⭐
+  // This function handles scheduling a post by:
+  // 1. Updating/Inserting into content_posts with status='scheduled'
+  // 2. Inserting into scheduled_posts with posting_status='pending'
+  async addToSchedule(postData: any): Promise<{ success: boolean; data?: any; error?: any }> {
     if (!isSupabaseConfigured()) {
-      throw new Error('Supabase not configured - cannot load from database');
+      throw new Error('Supabase not configured - cannot schedule post');
     }
-    
-    try {
-      const client = getSupabaseClient();
-      const { data, error } = await client
-        .from('content_posts')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
 
-      if (error) throw error;
-
-      const contentPosts: ContentPost[] = (data || []).map(record => ({
-        id: record.id.toString(),
-        contentId: record.content_id || `content-${record.id}`,
-        characterProfile: record.character_profile || '',
-        theme: record.theme || '',
-        audience: record.audience || '',
-        mediaType: record.media_type || '',
-        templateType: record.template_type || '',
-        platform: record.platform || '',
-        voiceStyle: record.voice_style || '',
-        title: record.title || '',
-        description: record.description || '',
-        hashtags: Array.isArray(record.hashtags) ? record.hashtags : [],
-        keywords: record.keywords || '',
-        cta: record.cta || '',
-        mediaFiles: Array.isArray(record.media_files) ? record.media_files : [],
-        selectedPlatforms: Array.isArray(record.selected_platforms) ? record.selected_platforms : [],
-        detailedPlatforms: Array.isArray(record.selected_platforms) ? record.selected_platforms : [],
-        status: record.status || 'pending',
-        createdDate: new Date(record.created_at),
-        scheduledDate: record.scheduled_date ? new Date(record.scheduled_date) : undefined,
-        isFromTemplate: record.is_from_template || false,
-        sourceTemplateId: record.source_template_id || undefined,
-        supabaseId: record.id.toString()
-      }));
-
-      return contentPosts;
-    } catch (error) {
-      console.error('Error loading content posts:', error);
-      return [];
-    }
-  },
-
-  // Update content post - ALWAYS uses UPDATE, never INSERT
-  async updateContentPost(postId: string, updates: Partial<ContentPost>): Promise<ContentPost> {
-    if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
-    
-    console.log(`Updating post with ID: ${postId}`);
-    console.log('Updates received:', updates);
-    
     try {
       const client = getSupabaseClient();
       const { data: { user } } = await client.auth.getUser();
       
-      // ✅ FIX: Use SYSTEM_USER_ID instead of NULL
-      const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
-      const userId = user?.id || SYSTEM_USER_ID;
+      console.log('🎯 SCHEDULING POST - Starting schedule workflow...');
+      console.log('Post data received:', postData);
       
-      // Handle media file updates
-      let updatedMediaFiles = updates.mediaFiles;
-      if (updates.mediaFiles) {
-        updatedMediaFiles = await Promise.all(
-          updates.mediaFiles.map(async (mediaFile) => {
-            if (mediaFile.url.startsWith('blob:')) {
-              try {
-                const response = await fetch(mediaFile.url);
-                const blob = await response.blob();
-                const file = new File([blob], mediaFile.name, { type: blob.type });
-                const supabaseUrl = await this.uploadMediaFile(file, updates.contentId || 'updated', userId || 'anonymous');
-                return {
-                  ...mediaFile,
-                  supabaseUrl: supabaseUrl,
-                  url: supabaseUrl
-                };
-              } catch (uploadError) {
-                console.error('Error uploading new media file:', uploadError);
-                return mediaFile;
-              }
-            }
-            return mediaFile;
-          })
-        );
-      }
+      // ✅ FIX: Ensure user_id and created_by are NEVER NULL
+      const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+      const finalUserId = postData.user_id || user?.id || SYSTEM_USER_ID;
+      const finalCreatedBy = postData.created_by || user?.id || SYSTEM_USER_ID;
+      
+      console.log('Using user_id:', finalUserId);
+      console.log('Using created_by:', finalCreatedBy);
 
-      // Resolve character profile details if updated
-      let updatedCharacterDetails = {};
-      if (updates.characterProfile !== undefined) {
+      // --- Get Character Profile Details ---
+      let characterDetails = {
+        character_avatar: null as string | null,
+        name: null as string | null,
+        username: null as string | null,
+        role: null as string | null,
+        voice_style: postData.voiceStyle || null
+      };
+
+      if (postData.characterProfile) {
         try {
           const characterProfiles = await this.loadCharacterProfiles();
-          const selectedProfile = characterProfiles.find(p => p.id === updates.characterProfile);
+          const selectedProfile = characterProfiles.find((p: any) => p.id === postData.characterProfile);
           if (selectedProfile) {
-            updatedCharacterDetails = {
+            characterDetails = {
               character_avatar: selectedProfile.avatar_id || null,
               name: selectedProfile.name || null,
               username: selectedProfile.username || null,
-              role: selectedProfile.role || null
+              role: selectedProfile.role || null,
+              voice_style: postData.voiceStyle || null
             };
-          } else {
-            updatedCharacterDetails = {
-              character_avatar: null,
-              name: null,
-              username: null,
-              role: null
-            };
+            console.log('✅ Character profile details loaded:', characterDetails);
           }
         } catch (error) {
-          console.error('Error loading updated character profile details:', error);
+          console.error('Error loading character profile:', error);
         }
       }
 
-      // Platform details using SAME PATTERN as character profile
-      let updatedPlatformDetails = {};
+      // --- Get Platform Details ---
+      let platformDetails = {
+        platform_id: null as string | null,
+        social_platform: null as string | null,
+        url: null as string | null,
+        channel_group_id: null as string | null,
+        thread_id: null as string | null,
+        platform_icon: null as string | null,
+        type: null as string | null
+      };
+
+      if (postData.selectedPlatforms && postData.selectedPlatforms.length > 0) {
+        try {
+          const primaryPlatformId = postData.selectedPlatforms[0];
+          console.log('Looking up platform with ID:', primaryPlatformId);
+          
+          const [platforms, telegramChannels] = await Promise.all([
+            this.loadPlatforms(),
+            this.loadTelegramChannels()
+          ]);
+          
+          const selectedPlatform = platforms.find((p: any) => p.id === primaryPlatformId);
+          
+          if (selectedPlatform) {
+            console.log('✅ Found social platform:', selectedPlatform.name);
+            platformDetails = {
+              platform_id: selectedPlatform.id.toString(),
+              social_platform: selectedPlatform.name || null,
+              url: selectedPlatform.url || null,
+              channel_group_id: null,
+              thread_id: null,
+              platform_icon: selectedPlatform.platform_icon || null,
+              type: selectedPlatform.type || 'social'
+            };
+          } else {
+            const selectedTelegram = telegramChannels.find((t: any) => t.id.toString() === primaryPlatformId);
+            if (selectedTelegram) {
+              console.log('✅ Found Telegram channel:', selectedTelegram.name);
+              platformDetails = {
+                platform_id: selectedTelegram.id.toString(),
+                social_platform: selectedTelegram.name || 'Telegram',
+                url: selectedTelegram.url || null,
+                channel_group_id: selectedTelegram.channel_group_id || null,
+                thread_id: selectedTelegram.thread_id || null,
+                platform_icon: 'TG',
+                type: selectedTelegram.thread_id ? 'telegram_group' : 'telegram_channel'
+              };
+            }
+          }
+          console.log('✅ Platform details loaded:', platformDetails);
+        } catch (error) {
+          console.error('Error loading platform details:', error);
+        }
+      }
+
+      // --- Upload media files if needed ---
+      const uploadedMediaFiles = await Promise.all(
+        (postData.mediaFiles || []).map(async (mediaFile: any) => {
+          if (mediaFile.url?.startsWith('blob:')) {
+            try {
+              const response = await fetch(mediaFile.url);
+              const blob = await response.blob();
+              const file = new File([blob], mediaFile.name, { type: blob.type });
+              const supabaseUrl = await this.uploadMediaFile(file, postData.contentId, finalUserId);
+              return {
+                ...mediaFile,
+                supabaseUrl: supabaseUrl,
+                url: supabaseUrl
+              };
+            } catch (uploadError) {
+              console.error('Error uploading media file:', uploadError);
+              return mediaFile;
+            }
+          }
+          return mediaFile;
+        })
+      );
+
+      // ========================================================================
+      // STEP 1: Update or Insert into content_posts
+      // ========================================================================
+      let contentPostId: number;
       
+      if (postData.id) {
+        // UPDATE existing post in content_posts
+        console.log('📝 UPDATING existing post in content_posts with id:', postData.id);
+        
+        const updateData = {
+          status: 'scheduled',
+          scheduled_date: postData.scheduledDate || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          // Update other fields if provided
+          title: postData.title || null,
+          description: postData.description || null,
+          hashtags: postData.hashtags || [],
+          keywords: postData.keywords || null,
+          cta: postData.cta || null,
+          media_files: uploadedMediaFiles,
+          selected_platforms: postData.selectedPlatforms || [],
+          ...characterDetails,
+          ...platformDetails
+        };
+        
+        const { error: updateError } = await client
+          .from('content_posts')
+          .update(updateData)
+          .eq('id', postData.id);
+        
+        if (updateError) {
+          console.error('❌ Error updating content_posts:', updateError);
+          throw updateError;
+        }
+        
+        contentPostId = postData.id;
+        console.log('✅ content_posts updated successfully with status: scheduled');
+        
+      } else {
+        // INSERT new post into content_posts
+        console.log('📝 INSERTING new post into content_posts');
+        
+        const insertData = {
+          content_id: postData.contentId,
+          character_profile: postData.characterProfile || null,
+          theme: postData.theme || null,
+          audience: postData.audience || null,
+          media_type: postData.mediaType || null,
+          template_type: postData.templateType || null,
+          platform: postData.platform || '',
+          title: postData.title || '',
+          description: postData.description || '',
+          hashtags: postData.hashtags || [],
+          keywords: postData.keywords || '',
+          cta: postData.cta || '',
+          media_files: uploadedMediaFiles,
+          selected_platforms: postData.selectedPlatforms || [],
+          status: 'scheduled',
+          is_from_template: postData.isFromTemplate || false,
+          source_template_id: postData.sourceTemplateId || null,
+          scheduled_date: postData.scheduledDate || new Date().toISOString(),
+          user_id: finalUserId,
+          created_by: finalCreatedBy,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          ...characterDetails,
+          ...platformDetails
+        };
+        
+        const { data: newPost, error: insertError } = await client
+          .from('content_posts')
+          .insert(insertData)
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error('❌ Error inserting into content_posts:', insertError);
+          throw insertError;
+        }
+        
+        contentPostId = newPost.id;
+        console.log('✅ New post inserted into content_posts with id:', contentPostId);
+      }
+
+      // ========================================================================
+      // STEP 2: ⭐ INSERT into scheduled_posts (THIS IS THE CRITICAL FIX) ⭐
+      // ========================================================================
+      console.log('🚀 INSERTING into scheduled_posts with content_id:', postData.contentId);
+      
+      // Parse scheduled date and time
+      let scheduledDateTime = postData.scheduledDate;
+      let scheduledTime = null;
+      
+      if (scheduledDateTime) {
+        const date = new Date(scheduledDateTime);
+        scheduledTime = date.toTimeString().split(' ')[0]; // Extract HH:MM:SS
+      }
+      
+      const scheduledPostData = {
+        // Core content fields (38 columns)
+        content_id: postData.contentId,
+        character_profile: postData.characterProfile || null,
+        theme: postData.theme || null,
+        audience: postData.audience || null,
+        media_type: postData.mediaType || null,
+        template_type: postData.templateType || null,
+        platform: postData.platform || '',
+        title: postData.title || '',
+        description: postData.description || '',
+        hashtags: postData.hashtags || [],
+        keywords: postData.keywords || '',
+        cta: postData.cta || '',
+        media_files: uploadedMediaFiles,
+        selected_platforms: postData.selectedPlatforms || [],
+        status: 'scheduled',
+        is_from_template: postData.isFromTemplate || false,
+        source_template_id: postData.sourceTemplateId || null,
+        created_date: new Date().toISOString(),
+        scheduled_date: scheduledDateTime || new Date().toISOString(),
+        user_id: finalUserId,
+        created_by: finalCreatedBy,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        
+        // Character details
+        ...characterDetails,
+        
+        // Platform details
+        ...platformDetails,
+        
+        // Scheduled_posts specific columns
+        posting_status: 'pending', // ⭐ CRITICAL: Set to 'pending' for runner
+        service_type: 'render_cron', // Default service (can be changed)
+        scheduled_time: scheduledTime,
+        timezone: 'UTC', // Default timezone
+        retry_count: 0,
+        failure_reason: null,
+        is_deleted: false,
+        deleted_at: null
+      };
+      
+      console.log('Scheduled post data to insert:', scheduledPostData);
+      
+      const { data: scheduledPost, error: scheduleError } = await client
+        .from('scheduled_posts')
+        .insert(scheduledPostData)
+        .select()
+        .single();
+      
+      if (scheduleError) {
+        console.error('❌ Error inserting into scheduled_posts:', scheduleError);
+        throw scheduleError;
+      }
+      
+      console.log('✅✅✅ POST SCHEDULED SUCCESSFULLY! ✅✅✅');
+      console.log('scheduled_posts row created with id:', scheduledPost.id);
+      console.log('Content ID:', scheduledPost.content_id);
+      console.log('Posting status:', scheduledPost.posting_status);
+      console.log('Scheduled date:', scheduledPost.scheduled_date);
+      
+      return { 
+        success: true, 
+        data: {
+          contentPost: { id: contentPostId },
+          scheduledPost: scheduledPost
+        }
+      };
+      
+    } catch (error) {
+      console.error('❌ Error in addToSchedule:', error);
+      return { success: false, error };
+    }
+  },
+
+  // Update content post
+  async updateContentPost(postId: string, updates: Partial<ContentPost>): Promise<ContentPost> {
+    if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
+    
+    try {
+      const client = getSupabaseClient();
+      
+      // --- Character Profile Details ---
+      let updatedCharacterDetails = {};
+      if (updates.characterProfile !== undefined) {
+        if (updates.characterProfile) {
+          try {
+            const characterProfiles = await this.loadCharacterProfiles();
+            const selectedProfile = characterProfiles.find(p => p.id === updates.characterProfile);
+            if (selectedProfile) {
+              updatedCharacterDetails = {
+                character_avatar: selectedProfile.avatar_id || null,
+                name: selectedProfile.name || null,
+                username: selectedProfile.username || null,
+                role: selectedProfile.role || null
+              };
+            }
+          } catch (error) {
+            console.error('Error loading updated character profile:', error);
+          }
+        } else {
+          // Clear character details
+          updatedCharacterDetails = {
+            character_avatar: null,
+            name: null,
+            username: null,
+            role: null
+          };
+        }
+      }
+
+      // --- Platform Details ---
+      let updatedPlatformDetails = {};
       if (updates.selectedPlatforms !== undefined) {
         if (updates.selectedPlatforms && updates.selectedPlatforms.length > 0) {
           try {
-            const primaryPlatformUrl = updates.selectedPlatforms[0]; // First platform Url
-            console.log('Updating platform to Url:', primaryPlatformUrl);
+            const primaryPlatformUrl = updates.selectedPlatforms[0];
+            console.log('Looking up updated platform with Url:', primaryPlatformUrl);
             
             const [platforms, telegramChannels] = await Promise.all([
               this.loadPlatforms(),
@@ -473,6 +666,36 @@ export const supabaseAPI = {
             thread_id: null
           };
         }
+      }
+
+      // --- Handle media file updates ---
+      let updatedMediaFiles;
+      if (updates.mediaFiles !== undefined) {
+        const { data: { user } } = await client.auth.getUser();
+        const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+        const userId = user?.id || SYSTEM_USER_ID;
+
+        updatedMediaFiles = await Promise.all(
+          (updates.mediaFiles || []).map(async (mediaFile) => {
+            if (mediaFile.url.startsWith('blob:')) {
+              try {
+                const response = await fetch(mediaFile.url);
+                const blob = await response.blob();
+                const file = new File([blob], mediaFile.name, { type: blob.type });
+                const supabaseUrl = await this.uploadMediaFile(file, updates.contentId || 'temp', userId);
+                return {
+                  ...mediaFile,
+                  supabaseUrl: supabaseUrl,
+                  url: supabaseUrl
+                };
+              } catch (uploadError) {
+                console.error('Error uploading updated media file:', uploadError);
+                return mediaFile;
+              }
+            }
+            return mediaFile;
+          })
+        );
       }
 
       // Build update data
