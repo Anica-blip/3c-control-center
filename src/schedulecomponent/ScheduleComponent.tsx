@@ -255,7 +255,8 @@ export default function ScheduleComponent() {
     createTemplate,
     updateTemplate,
     deleteTemplate,
-    incrementUsage
+    incrementUsage,
+    refreshTemplates  // ⭐ FIX #3: Add refreshTemplates
   } = useTemplates();
 
   const [activeTab, setActiveTab] = useState('pending');
@@ -803,16 +804,25 @@ export default function ScheduleComponent() {
     }
   };
 
+// ⭐ FIX #4: Dashboard-only delete with localStorage persistence
 const handleDeletePost = async (postId: string) => {
-  if (!confirm('Are you sure you want to remove this post from the dashboard?')) return;
+  if (!confirm('Are you sure you want to remove this post from the dashboard? (Database will not be affected)')) return;
   
   const operationKey = `delete-${postId}`;
   setOperationLoading(operationKey, true);
   
   try {
-    // Remove from local state ONLY - dashboard display removal
+    // ⭐ FIX #4: Store deleted post ID in localStorage for persistence
+    const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
+    if (!deletedPostsUI.includes(postId)) {
+      deletedPostsUI.push(postId);
+      localStorage.setItem('deleted_posts_ui', JSON.stringify(deletedPostsUI));
+      console.log('✅ Post ID added to UI deletion list:', postId);
+    }
+    
+    // Remove from local state - dashboard display removal
     setScheduledPostsFromDB(prev => prev.filter(p => p.id !== postId));
-    showSuccess('Post removed from dashboard view!');
+    showSuccess('Post removed from dashboard view! (Persists on refresh)');
   } catch (error) {
     showError({
       message: 'Failed to remove post from dashboard. Please try again.',
@@ -857,6 +867,8 @@ const handleDeletePost = async (postId: string) => {
       
       if (result.success) {
         showSuccess('Post saved as template successfully!');
+        // ⭐ FIX #3: Refresh templates list to show the new template
+        await refreshTemplates();
       } else {
         if (result.validationErrors?.length) {
           const errorMsg = result.validationErrors.map(e => e.message).join(', ');
@@ -2554,3 +2566,4 @@ const handleDeletePost = async (postId: string) => {
     </div>
   );
 }
+
