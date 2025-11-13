@@ -305,38 +305,12 @@ export const fetchScheduledPosts = async (userId: string): Promise<ScheduledPost
       ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post))
     ];
 
-    return allScheduledPosts;
-    
-    // Get UI-deleted posts from localStorage
+    // ✅ FIX #3: Get UI-deleted posts from localStorage and filter them out BEFORE returning
     const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
-
-    // Combine all sources and filter out UI-deleted posts
-    const allPosts = [
-      ...(pendingPosts || []).map(post => mapDashboardPostToPendingPost(post)),
-      ...(scheduledPosts || []).map(post => mapDashboardPostToScheduledPost(post)),
-      ...(dashboardPosts || []).map(post => mapDashboardPostToScheduledPost(post))
-    ].filter(post => !deletedPostsUI.includes(post.id));
-
-    // Enrich with platform details for display
-    const enrichedPosts = await Promise.all(
-      allPosts.map(async (post) => {
-        if (post.selected_platforms && post.selected_platforms.length > 0) {
-          try {
-            const platformDetails = await getPlatformDetails(post.selected_platforms);
-            return {
-              ...post,
-              platformDetails
-            };
-          } catch (err) {
-            console.error('Error enriching platform details for post:', post.id, err);
-            return post;
-          }
-        }
-        return post;
-      })
-    );
-
-    return enrichedPosts;
+    const filteredPosts = allScheduledPosts.filter(post => !deletedPostsUI.includes(post.id));
+    
+    console.log(`✅ Fetched ${allScheduledPosts.length} scheduled posts, filtered out ${deletedPostsUI.length} UI-deleted posts`);
+    return filteredPosts;
   } catch (error) {
     console.error('Error fetching posts:', error);
     throw error;
@@ -923,6 +897,7 @@ export const fetchTemplates = async (userId: string): Promise<SavedTemplate[]> =
       .select('*')
       .eq('user_id', userId)
       .eq('is_active', true)
+      .eq('is_deleted', false)  // ✅ FIX #2: Filter out deleted templates
       .order('created_at', { ascending: false });
       
     if (error) throw error;
@@ -942,7 +917,7 @@ export const createTemplate = async (templateData: Omit<SavedTemplate, 'id' | 'c
     const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
     const finalUserId = user?.id || templateData.user_id || SYSTEM_USER_ID;
 
-    // ✅ FIX: Ensure is_active is ALWAYS set to true for template persistence
+    // ✅ FIX #2: Ensure is_active AND is_deleted are ALWAYS set for template persistence
     // Sanitize empty string UUIDs and ensure user_id/created_by are never NULL
     const sanitizedData = {
       ...templateData,
@@ -950,7 +925,8 @@ export const createTemplate = async (templateData: Omit<SavedTemplate, 'id' | 'c
       source_template_id: templateData.source_template_id?.trim() || null,
       user_id: finalUserId,  // ✅ Never NULL
       created_by: finalUserId,  // ✅ Never NULL
-      is_active: true  // ✅ CRITICAL: Always set to true for template to appear after refresh
+      is_active: true,  // ✅ CRITICAL: Always set to true for template to appear after refresh
+      is_deleted: false  // ✅ FIX #2: Ensure template is NOT marked as deleted
     };
 
     const { data, error } = await supabase
