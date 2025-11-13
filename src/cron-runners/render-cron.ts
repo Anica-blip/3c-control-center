@@ -980,11 +980,14 @@ async function processPost(post: ScheduledPost): Promise<void> {
     console.log(`✅ Successfully posted to Telegram`);
     console.log(`External Post ID: ${externalPostId}`);
 
-    // ✅ CRITICAL FIX: Do NOT touch posting_status, ONLY update post_status to 'sent'
+    // ⭐⭐⭐ CRITICAL FIX: Update posting_status to 'sent' to prevent duplicate posts
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
-        post_status: 'sent'
+        posting_status: 'sent',  // ⭐ THIS IS THE KEY FIX
+        post_status: 'sent',
+        posted_at: now.toISOString(),
+        updated_at: now.toISOString()
       })
       .eq('id', post.id)
       .eq('service_type', SERVICE_TYPE);
@@ -992,6 +995,8 @@ async function processPost(post: ScheduledPost): Promise<void> {
     if (updateError) {
       throw new Error(`Failed to update scheduled_posts: ${getErrorMessage(updateError)}`);
     }
+    
+    console.log(`✅ Updated posting_status to 'sent' - Post will not be picked up again`);
 
     // ✅ INSERT INTO dashboard_posts
     // Extract character profile and other fields from post_content
@@ -1047,22 +1052,12 @@ async function processPost(post: ScheduledPost): Promise<void> {
       console.log(`✅ Inserted into dashboard_posts`);
     }
 
-    // ✅ FIX: SOFT-DELETE from scheduled_posts after successful posting
-    // This keeps dashboard clean while preserving data in dashboard_posts
-    const { error: deleteError } = await supabase
-      .from('scheduled_posts')
-      .delete()
-      .eq('id', post.id)
-      .eq('service_type', SERVICE_TYPE);
-
-    if (deleteError) {
-      console.warn(`⚠️ Failed to delete from scheduled_posts: ${getErrorMessage(deleteError)}`);
-      console.warn('Post was successful but cleanup failed. Manual cleanup may be needed.');
-    } else {
-      console.log(`✅ Deleted post ${post.id} from scheduled_posts (preserved in dashboard_posts)`);
-    }
-
+    // ⭐ DO NOT DELETE from scheduled_posts - Keep for history/audit trail
+    // The posting_status='sent' prevents the cron from picking it up again
     console.log(`✅ Post ${post.id} completed successfully`);
+    console.log(`   - posting_status updated to 'sent' (prevents re-processing)`);
+    console.log(`   - Row preserved in scheduled_posts for audit trail`);
+    console.log(`   - Copy inserted into dashboard_posts for analytics`);
 
   } catch (error) {
     const errorMessage = getErrorMessage(error);
@@ -1073,12 +1068,15 @@ async function processPost(post: ScheduledPost): Promise<void> {
     const newAttempts = (post.attempts || 0) + 1;
     const shouldRetry = newAttempts < maxRetries;
 
-    // ✅ CRITICAL FIX: Do NOT touch posting_status, ONLY update post_status to 'failed'
+    // ⭐ CRITICAL FIX: Update posting_status based on retry logic
     const { error: failError } = await supabase
       .from('scheduled_posts')
       .update({
+        posting_status: shouldRetry ? 'pending' : 'failed',  // ⭐ Keep as 'pending' if retrying, else 'failed'
         post_status: 'failed',
-        attempts: newAttempts
+        attempts: newAttempts,
+        failure_reason: errorMessage,
+        updated_at: now.toISOString()
       })
       .eq('id', post.id)
       .eq('service_type', SERVICE_TYPE);
@@ -1087,7 +1085,11 @@ async function processPost(post: ScheduledPost): Promise<void> {
       console.error(`Failed to update error status: ${getErrorMessage(failError)}`);
     }
 
-    console.log(`Post ${post.id} marked as failed (attempt ${newAttempts}/${maxRetries})`);
+    if (shouldRetry) {
+      console.log(`Post ${post.id} marked for retry (attempt ${newAttempts}/${maxRetries})`);
+    } else {
+      console.log(`Post ${post.id} marked as FAILED - max retries reached (${newAttempts}/${maxRetries})`);
+    }
     
     throw error;
   }
