@@ -2566,4 +2566,3 @@ const handleDeletePost = async (postId: string) => {
     </div>
   );
 }
-
