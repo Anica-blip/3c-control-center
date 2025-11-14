@@ -545,6 +545,7 @@ export const supabaseAPI = {
         timezone: null, // ⭐ FIX #2: NULL until user selects in Pending tab
         retry_count: 0,
         failure_reason: null,
+        is_hidden: false, // ⭐ CRITICAL: Must be false for post to appear in UI
         is_deleted: false,
         deleted_at: null
       };
