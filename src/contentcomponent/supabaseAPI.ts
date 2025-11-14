@@ -790,6 +790,66 @@ export const supabaseAPI = {
     }
   },
 
+  // Load content posts from database
+  async loadContentPosts(): Promise<ContentPost[]> {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase not configured - cannot load content posts');
+    }
+
+    try {
+      const client = getSupabaseClient();
+      const { data, error } = await client
+        .from('content_posts')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+
+      // Transform database records to ContentPost format
+      return (data || []).map((post: any) => ({
+        id: post.id.toString(),
+        contentId: post.content_id,
+        characterProfile: post.character_profile,
+        theme: post.theme,
+        audience: post.audience,
+        mediaType: post.media_type,
+        templateType: post.template_type,
+        platform: post.platform,
+        voiceStyle: post.voice_style,
+        title: post.title,
+        description: post.description,
+        hashtags: post.hashtags || [],
+        keywords: post.keywords || '',
+        cta: post.cta || '',
+        mediaFiles: post.media_files || [],
+        selectedPlatforms: post.selected_platforms || [],
+        status: post.status,
+        isFromTemplate: post.is_from_template || false,
+        sourceTemplateId: post.source_template_id,
+        createdDate: new Date(post.created_at),
+        // Include all character details
+        characterAvatar: post.character_avatar,
+        characterName: post.name,
+        characterUsername: post.username,
+        characterRole: post.role,
+        // Include platform details
+        detailedPlatforms: post.selected_platforms?.map((platformId: string) => ({
+          platform_id: platformId,
+          social_platform: post.social_platform,
+          url: post.url,
+          channel_group_id: post.channel_group_id,
+          thread_id: post.thread_id,
+          platform_icon: post.platform_icon,
+          type: post.type
+        })) || []
+      }));
+    } catch (error) {
+      console.error('Error loading content posts:', error);
+      throw error;
+    }
+  },
+
   // Load character profiles
   async loadCharacterProfiles(): Promise<any[]> {
     if (!isSupabaseConfigured()) {
