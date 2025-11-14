@@ -779,8 +779,13 @@ const EnhancedContentCreationForm = ({
     console.log('Form reset complete');
   };
 
-  // UPDATED SAVE HANDLER WITH TELEGRAM VALIDATION AND TEMPLATE INTEGRATION
-  // HELPER: Get primary Telegram URL from selected platforms
+  // TELEGRAM VALIDATION HELPER FUNCTIONS
+  const isTelegramSelected = () => {
+    return selectedPlatforms
+      .map(platformId => activePlatforms.find(p => p.id === platformId))
+      .some(p => p && p.name && p.name.toLowerCase().includes('telegram'));
+  };
+
   const getPrimaryTelegramUrl = () => {
     const telegramPlatform = selectedPlatforms
       .map(platformId => activePlatforms.find(p => p.id === platformId))
