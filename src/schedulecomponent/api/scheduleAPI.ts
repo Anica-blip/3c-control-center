@@ -531,7 +531,9 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       social_platform: null as string | null,
       url: null as string | null,
       channel_group_id: null as string | null,
-      thread_id: null as string | null
+      thread_id: null as string | null,
+      platform_icon: null as string | null,
+      type: null as string | null
     };
 
     const extractPlatformId = (item: any): string => {
@@ -564,17 +566,21 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
             social_platform: selectedPlatform.name || null,
             url: selectedPlatform.url || null,
             channel_group_id: null,
-            thread_id: null
+            thread_id: null,
+            platform_icon: selectedPlatform.platform_icon || null,
+            type: selectedPlatform.type || 'social'
           };
         } else {
           const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
           if (selectedTelegram) {
             platformDetails = {
               platform_id: selectedTelegram.id.toString(),
-              social_platform: selectedTelegram.name || null,
+              social_platform: selectedTelegram.name || 'Telegram',
               url: selectedTelegram.url || null,
               channel_group_id: selectedTelegram.channel_group_id || null,
-              thread_id: selectedTelegram.thread_id || null
+              thread_id: selectedTelegram.thread_id || null,
+              platform_icon: 'TG',
+              type: selectedTelegram.thread_id ? 'telegram_group' : 'telegram_channel'
             };
           }
         }
@@ -621,6 +627,10 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       // ALL content_posts fields
       character_profile: originalPost.character_profile,
       character_avatar: originalPost.character_avatar,
+      name: originalPost.name || null,
+      username: originalPost.username || null,
+      role: originalPost.role || null,
+      voice_style: originalPost.voice_style || null,
       theme: originalPost.theme,
       audience: originalPost.audience,
       media_type: originalPost.media_type,
@@ -661,6 +671,8 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       url: platformDetails.url,
       channel_group_id: platformDetails.channel_group_id,
       thread_id: platformDetails.thread_id,
+      platform_icon: platformDetails.platform_icon,
+      type: platformDetails.type,
       
       // ✅ COMPLETE POST DATA FOR CRON JOB (column name: post_content)
       post_content: {
