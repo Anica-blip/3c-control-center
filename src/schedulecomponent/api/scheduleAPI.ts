@@ -1213,3 +1213,6 @@ export const scheduleAPI = {
   getPlatformDetails,
   fetchExternalServices
 };
+
+// Default export for compatibility
+export default scheduleAPI;
