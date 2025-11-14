@@ -275,31 +275,29 @@ export default function ScheduleComponent() {
   const [characterProfiles, setCharacterProfiles] = useState<Record<string, any>>({});
   const [profilesLoading, setProfilesLoading] = useState<Record<string, boolean>>({});
   
-  // Fetch posts directly from scheduled_posts table
+  // Fetch posts from content_posts (for pending tab) and scheduled_posts (for status/calendar)
+  const [contentPosts, setContentPosts] = useState<ScheduledPost[]>([]);
   const [scheduledPostsFromDB, setScheduledPostsFromDB] = useState<ScheduledPost[]>([]);
   const [loadingScheduledPosts, setLoadingScheduledPosts] = useState(false);
 
   const fetchScheduledPostsFromDB = useCallback(async () => {
     setLoadingScheduledPosts(true);
     try {
-      console.log('🔍 Fetching scheduled posts from database...');
+      console.log('🔍 Fetching posts from database...');
       
-      // ⭐ DATABASE-DRIVEN: Filter using Supabase columns, not localStorage!
-      const { data, error } = await supabase
-        .from('scheduled_posts')
+      // Fetch from content_posts table (for pending tab - posts being edited)
+      const { data: contentData, error: contentError } = await supabase
+        .from('content_posts')
         .select('*')
-        .eq('is_hidden', false)  // Only visible posts
-        .eq('is_deleted', false)  // Only non-deleted posts
-        .order('created_at', { ascending: false });  // Newest first
+        .order('created_at', { ascending: false });
       
-      if (error) {
-        console.error('❌ Error fetching scheduled posts:', error);
+      if (contentError) {
+        console.error('❌ Error fetching content posts:', contentError);
       } else {
-        console.log('✅ Fetched visible posts from scheduled_posts:', data?.length || 0, 'posts');
-        console.log('📊 Raw posts data:', data);
+        console.log('✅ Fetched content_posts:', contentData?.length || 0, 'posts');
         
-        // Fetch platform details for each post
-        const postsWithPlatforms = await Promise.all((data || []).map(async (post) => {
+        // Fetch platform details for content posts
+        const contentWithPlatforms = await Promise.all((contentData || []).map(async (post) => {
           if (post.selected_platforms && Array.isArray(post.selected_platforms)) {
             const platformIds = post.selected_platforms;
             const { data: platformsData, error: platformsError } = await supabase
@@ -314,11 +312,42 @@ export default function ScheduleComponent() {
           return { ...post, platformDetails: [] };
         }));
         
-        console.log('✅ Posts with platform details:', postsWithPlatforms.length);
-        setScheduledPostsFromDB(postsWithPlatforms);
+        setContentPosts(contentWithPlatforms);
+      }
+      
+      // Fetch from scheduled_posts table (for status manager & calendar)
+      const { data: scheduledData, error: scheduledError } = await supabase
+        .from('scheduled_posts')
+        .select('*')
+        .eq('is_hidden', false)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: false });
+      
+      if (scheduledError) {
+        console.error('❌ Error fetching scheduled posts:', scheduledError);
+      } else {
+        console.log('✅ Fetched scheduled_posts:', scheduledData?.length || 0, 'posts');
+        
+        // Fetch platform details for scheduled posts
+        const scheduledWithPlatforms = await Promise.all((scheduledData || []).map(async (post) => {
+          if (post.selected_platforms && Array.isArray(post.selected_platforms)) {
+            const platformIds = post.selected_platforms;
+            const { data: platformsData, error: platformsError } = await supabase
+              .from('platforms')
+              .select('*')
+              .in('id', platformIds);
+            
+            if (!platformsError && platformsData) {
+              return { ...post, platformDetails: platformsData };
+            }
+          }
+          return { ...post, platformDetails: [] };
+        }));
+        
+        setScheduledPostsFromDB(scheduledWithPlatforms);
       }
     } catch (error) {
-      console.error('❌ Error fetching scheduled posts:', error);
+      console.error('❌ Error fetching posts:', error);
     } finally {
       setLoadingScheduledPosts(false);
     }
@@ -335,16 +364,17 @@ export default function ScheduleComponent() {
     await fetchScheduledPostsFromDB();
   }, [refreshPosts, fetchScheduledPostsFromDB]);
 
-  // Combine posts from both sources
+  // Combine posts from all sources
   const allPosts = useMemo(() => {
-    const combined = [...(scheduledPosts || []), ...scheduledPostsFromDB];
+    const combined = [...(scheduledPosts || []), ...contentPosts, ...scheduledPostsFromDB];
     console.log('📊 Combined posts:', {
       fromHook: scheduledPosts?.length || 0,
-      fromDB: scheduledPostsFromDB.length,
+      fromContentPosts: contentPosts.length,
+      fromScheduledPosts: scheduledPostsFromDB.length,
       total: combined.length
     });
     return combined;
-  }, [scheduledPosts, scheduledPostsFromDB]);
+  }, [scheduledPosts, contentPosts, scheduledPostsFromDB]);
 
   const { isDarkMode, theme } = getTheme();
 
@@ -424,47 +454,34 @@ export default function ScheduleComponent() {
     return operationStates[operation] || false;
   }, [operationStates]);
 
-  // Filter posts by whether they have been scheduled (have date + time + service_type)
+  // Pending tab: Shows posts from content_posts table + scheduled_posts with posting_status='scheduled'
   const pendingPosts = useMemo(() => {
-    const pending = allPosts.filter(p => {
-      // ⭐ FIX: Posts WITHOUT all three scheduling fields are pending
-      // This includes NULL, undefined, or empty values
-      const hasScheduledDate = p?.scheduled_date != null && p?.scheduled_date !== '';
-      const hasTimezone = p?.timezone != null && p?.timezone !== '';
-      const hasServiceType = p?.service_type != null && p?.service_type !== '';
-      
-      // Post is pending if it's missing ANY of the three required fields
-      return !hasScheduledDate || !hasTimezone || !hasServiceType;
-    });
+    // Posts from content_posts (being edited before scheduling)
+    const fromContentPosts = contentPosts;
+    
+    // Posts from scheduled_posts with posting_status='scheduled' (ready for time/date/service)
+    const fromScheduledPosts = scheduledPostsFromDB.filter(p => p.posting_status === 'scheduled');
+    
+    const pending = [...fromContentPosts, ...fromScheduledPosts];
     
     console.log('📋 Pending posts:', pending.length, 'posts');
-    console.log('📊 Total posts in allPosts:', allPosts.length);
-    pending.forEach(p => {
-      console.log('  - Post:', p.content_id || p.id, {
-        scheduled_date: p?.scheduled_date || 'NULL',
-        timezone: p?.timezone || 'NULL',
-        service_type: p?.service_type || 'NULL',
-        should_be_pending: true
-      });
-    });
+    console.log('  - From content_posts:', fromContentPosts.length);
+    console.log('  - From scheduled_posts (status=scheduled):', fromScheduledPosts.length);
+    
     return pending;
-  }, [allPosts]);
+  }, [contentPosts, scheduledPostsFromDB]);
 
+  // Status Manager & Calendar: Shows posts from scheduled_posts with posting_status='pending' or 'sent' or 'failed'
   const scheduledPostsFiltered = useMemo(() => {
-    const scheduled = allPosts.filter(p => 
-      // Posts WITH scheduled_date, timezone, AND service_type go to calendar/status
-      p?.scheduled_date && p?.timezone && p?.service_type
+    const scheduled = scheduledPostsFromDB.filter(p => 
+      p.posting_status === 'pending' || p.posting_status === 'sent' || p.posting_status === 'failed'
     );
     console.log('📅 Scheduled posts (Status Manager/Calendar):', scheduled.length, 'posts');
-    scheduled.forEach(p => {
-      console.log('  - Post:', p.content_id || p.id, {
-        scheduled_date: p?.scheduled_date,
-        timezone: p?.timezone,
-        service_type: p?.service_type
-      });
-    });
+    console.log('  - posting_status=pending:', scheduledPostsFromDB.filter(p => p.posting_status === 'pending').length);
+    console.log('  - posting_status=sent:', scheduledPostsFromDB.filter(p => p.posting_status === 'sent').length);
+    console.log('  - posting_status=failed:', scheduledPostsFromDB.filter(p => p.posting_status === 'failed').length);
     return scheduled;
-  }, [allPosts]);
+  }, [scheduledPostsFromDB]);
 
   const publishedPosts = useMemo(() => 
     allPosts.filter(p => p?.status === 'published'),
