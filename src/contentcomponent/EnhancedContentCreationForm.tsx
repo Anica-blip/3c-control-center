@@ -978,49 +978,6 @@ const EnhancedContentCreationForm = ({
       alert('Failed to schedule post. Your content is preserved. Check console for full error details.');
     }
   };
-    
-  const resetForm = () => {
-    console.log('Resetting form...');
-    
-    setSelections({
-      characterProfile: '',
-      theme: '',
-      audience: '',
-      mediaType: '',
-      templateType: '',
-      platform: '',
-      voiceStyle: ''
-    });
-    
-    setContent({
-      title: '',
-      description: '',
-      hashtags: [],
-      keywords: '',
-      cta: ''
-    });
-    
-    mediaFiles.forEach(file => {
-      if (file.url.startsWith('blob:')) {
-        URL.revokeObjectURL(file.url);
-      }
-    });
-    setMediaFiles([]);
-    setSelectedPlatforms([]);
-    setIsEditingPost(false);
-    setIsEditingTemplate(false);
-    setFieldConfig(null);
-    setUrlInput('');
-    setUrlTitle('');
-    setHashtagInput('');
-    
-    console.log('Form reset complete');
-  };
-
-  const generateContentId = () => {
-    // Implementation from original file
-    return `POST-${Date.now()}`;
-  };
   
   const canSave = selections.characterProfile && selections.theme && selections.audience && selections.mediaType && selections.templateType && selections.voiceStyle && content.description;
 
