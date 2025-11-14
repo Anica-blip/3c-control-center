@@ -651,6 +651,10 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       user_id: finalUserId,
       created_by: finalUserId,
       
+      // ✅ CRITICAL: Set visibility flags so post appears in UI
+      is_hidden: false,
+      is_deleted: false,
+      
       // Platform details
       platform_id: isUUID(platformDetails.platform_id) ? platformDetails.platform_id : null,
       social_platform: platformDetails.social_platform,
