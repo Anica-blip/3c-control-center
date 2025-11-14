@@ -6,24 +6,36 @@ import { ScheduledPost, SavedTemplate, PendingPost } from '../types';
 // RUNNER SPECIFICATIONS - CRITICAL FOR CRON JOBS
 // ============================================================================
 /*
-RUNNER WORKFLOW:
+COMPLETE WORKFLOW - STATUS TRANSITIONS:
 
-1. READ FROM scheduled_posts WHERE:
-   - posting_status = 'pending'
-   - scheduled_date <= CURRENT_DATE
-   - scheduled_time <= CURRENT_TIME
+STEP 1: Content Manager → Schedule Manager
+   - User clicks "Schedule Post" in Content Manager
+   - Creates row in scheduled_posts with posting_status = 'scheduled'
+   - Post appears in PENDING TAB (awaiting time + date + service_type)
 
-2. COLUMNS RUNNERS MUST READ:
-   - id (primary key)
-   - content_id, title, description
-   - scheduled_date, scheduled_time, timezone
-   - media_files (JSONB array)
-   - selected_platforms (JSONB array)
-   - platform_id, social_platform, url
-   - channel_group_id, thread_id
-   - posting_status, retry_count
+STEP 2: Pending Tab → Status Manager
+   - User edits post in Pending Tab (uses UPDATE not INSERT)
+   - User adds time + date + service_type
+   - Updates posting_status from 'scheduled' → 'pending'
+   - Post moves to STATUS MANAGER & CALENDAR
 
-3. AFTER POSTING ATTEMPT:
+STEP 3: Runner Execution
+   - Runner reads from scheduled_posts WHERE:
+     * posting_status = 'pending'
+     * scheduled_date <= CURRENT_DATE
+     * scheduled_time <= CURRENT_TIME
+   
+   - Columns runners must read:
+     * id (primary key)
+     * content_id, title, description
+     * scheduled_date, scheduled_time, timezone
+     * media_files (JSONB array)
+     * selected_platforms (JSONB array)
+     * platform_id, social_platform, url
+     * channel_group_id, thread_id
+     * posting_status, retry_count
+
+STEP 4: After Publishing Attempt
    
    IF SUCCESS:
    - UPDATE scheduled_posts SET 
@@ -32,7 +44,8 @@ RUNNER WORKFLOW:
      WHERE id = <post_id>
    
    - INSERT INTO dashboard_posts (copy entire row from scheduled_posts)
-   - DO NOT DELETE from scheduled_posts (keep for history)
+   - Post remains in scheduled_posts with status 'sent'
+   - Post now appears in BOTH Status Manager AND dashboard_posts
    
    IF FAILED:
    - UPDATE scheduled_posts SET 
@@ -41,11 +54,14 @@ RUNNER WORKFLOW:
        retry_count = retry_count + 1,
        updated_at = NOW()
      WHERE id = <post_id>
+   - Post remains in Status Manager as 'failed'
 
-4. IMPORTANT NOTES:
-   - dashboard_posts is READ-ONLY analytics table
-   - Only copy to dashboard_posts when posting_status = 'sent'
-   - scheduled_posts remains source of truth for all scheduling
+CRITICAL NOTES:
+   - posting_status values: 'scheduled' → 'pending' → 'sent' (or 'failed')
+   - dashboard_posts is analytics/history table (READ-ONLY for UI)
+   - scheduled_posts is source of truth for all scheduling
+   - Runner does NOT delete from scheduled_posts after publishing
+   - All edits use UPDATE not INSERT to avoid content_id conflicts
 */
 // ============================================================================
 
@@ -432,16 +448,36 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
     // Add platform details
     Object.assign(updateData, updatedPlatformDetails);
 
-    // Update in content_posts table
-    const { data, error } = await supabase
+    // ⭐ FIX: Check if post exists in content_posts OR scheduled_posts
+    // Try content_posts first
+    const { data: contentData, error: contentError } = await supabase
       .from('content_posts')
       .update(updateData)
       .eq('id', id)
       .select()
       .single();
 
-    if (error) throw error;
-    return mapContentPostToScheduledPost(data);
+    if (!contentError && contentData) {
+      console.log('✅ Updated post in content_posts table');
+      return mapContentPostToScheduledPost(contentData);
+    }
+
+    // If not in content_posts, try scheduled_posts (for posts with posting_status='scheduled')
+    console.log('Post not in content_posts, trying scheduled_posts...');
+    const { data: scheduledData, error: scheduledError } = await supabase
+      .from('scheduled_posts')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (scheduledError) {
+      console.error('Error updating in both tables:', { contentError, scheduledError });
+      throw scheduledError;
+    }
+
+    console.log('✅ Updated post in scheduled_posts table');
+    return mapDashboardPostToScheduledPost(scheduledData);
   } catch (error) {
     console.error('Error updating pending post:', error);
     throw error;
@@ -599,7 +635,7 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       scheduled_time: scheduledTimeOnly, // TIME type: "11:00:00"
       timezone: postData.timezone || 'UTC',
       status: 'scheduled',
-      posting_status: 'pending',  // ✅ RUNNER STATUS: Start as 'pending' for cron job pickup
+      posting_status: 'pending',  // ✅ STATUS TRANSITION: 'scheduled' → 'pending' (when time+date+service added) → 'sent' (runner completes)
       service_type: postData.service_type,
       retry_count: 0,
       
