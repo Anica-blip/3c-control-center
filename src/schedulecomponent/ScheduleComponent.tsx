@@ -286,7 +286,7 @@ export default function ScheduleComponent() {
       const { data, error } = await supabase
         .from('scheduled_posts')
         .select('*')
-        .order('scheduled_date', { ascending: true });
+        .order('created_at', { ascending: false });  // ⭐ FIX: Show newest first!
       
       if (error) {
         console.error('❌ Error fetching scheduled posts:', error);
@@ -294,10 +294,18 @@ export default function ScheduleComponent() {
         console.log('✅ Fetched posts from scheduled_posts:', data?.length || 0, 'posts');
         console.log('📊 Raw posts data:', data);
         
-        // ⭐ Filter out posts that were deleted from dashboard
+        // ⭐ FIX: Only filter deleted posts that are already posted/published
+        // Don't filter pending posts - they should always show!
         const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
-        const filteredData = (data || []).filter(post => !deletedPostsUI.includes(post.id));
-        console.log('📊 After deleted filter:', filteredData.length, 'posts');
+        const filteredData = (data || []).filter(post => {
+          // If post is pending, ALWAYS show it (ignore deleted cache)
+          if (post.posting_status === 'pending' || post.posting_status === null) {
+            return true;
+          }
+          // If post is posted/published, check deleted cache
+          return !deletedPostsUI.includes(post.id);
+        });
+        console.log('📊 After smart filter:', filteredData.length, 'posts (pending posts always shown)');
         
         // Fetch platform details for each post
         const postsWithPlatforms = await Promise.all(filteredData.map(async (post) => {
@@ -1171,6 +1179,44 @@ const handleDeletePost = async (postId: string) => {
             <span style={{ fontSize: '13px', color: theme.textSecondary }}>Failed</span>
           </div>
         </div>
+        
+        {/* ⭐ Clear Deleted Cache Button */}
+        <button
+          onClick={() => {
+            const deletedCount = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]').length;
+            if (deletedCount === 0) {
+              showSuccess('No deleted posts in cache');
+              return;
+            }
+            if (confirm(`Clear ${deletedCount} deleted posts from cache? This will restore hidden posts.`)) {
+              localStorage.removeItem('deleted_posts_ui');
+              showSuccess(`Cleared ${deletedCount} posts from deleted cache!`);
+              refreshAllPosts();
+            }
+          }}
+          style={{
+            marginLeft: 'auto',
+            padding: '6px 12px',
+            fontSize: '12px',
+            backgroundColor: theme.danger + '20',
+            color: theme.danger,
+            border: `1px solid ${theme.danger}`,
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontWeight: '500',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = theme.danger;
+            e.currentTarget.style.color = 'white';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = theme.danger + '20';
+            e.currentTarget.style.color = theme.danger;
+          }}
+        >
+          🗑️ Clear Deleted Cache ({JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]').length})
+        </button>
       </div>
 
       {/* Tab Navigation */}
