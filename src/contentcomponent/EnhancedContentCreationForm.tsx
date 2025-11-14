@@ -138,20 +138,7 @@ const EnhancedContentCreationForm = ({
   const [urlTitle, setUrlTitle] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // TELEGRAM VALIDATION HELPER FUNCTIONS - ADDED FROM CORRECTED CODE
-  const isTelegramSelected = () => {
-    return selectedPlatforms
-      .map(platformId => activePlatforms.find(p => p.id === platformId))
-      .some(p => p && p.name && p.name.toLowerCase().includes('telegram'));
-  };
-
-  const getPrimaryTelegramUrl = () => {
-    // Checks detailedPlatforms for a Telegram URL, else checks mediaFiles for a url type
-    const telegramPlatform = selectedPlatforms
-      .map(platformId => activePlatforms.find(p => p.id === platformId))
-      .find(p => p && p.name && p.name.toLowerCase().includes('telegram'));
-    return telegramPlatform?.url || null;
-  };
+Uncaught ReferenceError: handleAddToSchedule is not defined
   
   // Code mapping functions for content ID generation
   const getThemeCodeLocal = (value: string) => {
@@ -934,30 +921,69 @@ const EnhancedContentCreationForm = ({
     }
   };
     
-    // Create detailed platforms array with full info
-    const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
+  const createDetailedPlatforms = (platformIds: string[]) => {
+    return platformIds.map(id => {
+      const platform = activePlatforms.find(p => p.id === id);
+      if (!platform) return null;
+      
+      return {
+        platform_id: platform.id,
+        social_platform: platform.name,
+        url: platform.url || '',
+        platform_icon: platform.platform_icon || '',
+        type: platform.type || ''
+      };
+    }).filter(Boolean);
+  };
+
+  const parseMarkdownLinks = (text: string): string => {
+    if (!text) return text;
+    const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    return text.replace(markdownLinkRegex, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  };
+
+  const resetForm = () => {
+    console.log('Resetting form...');
     
-    // FIXED ISSUE #1: Parse markdown links in description before saving
-    const parsedDescription = parseMarkdownLinks(content.description);
+    setSelections({
+      characterProfile: '',
+      theme: '',
+      audience: '',
+      mediaType: '',
+      templateType: '',
+      platform: '',
+      voiceStyle: ''
+    });
     
-    // ✅ FIX: Ensure user_id and created_by are NEVER NULL
-    const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+    setContent({
+      title: '',
+      description: '',
+      hashtags: [],
+      keywords: '',
+      cta: ''
+    });
     
-    // FIXED ISSUE #2: Include the 'id' field when editing so parent can UPDATE instead of INSERT
-    const postData: any = {
-      contentId,
-      ...selections,
-      ...content,
-      description: parsedDescription, // Use parsed description with HTML links
-      mediaFiles,
-      selectedPlatforms,
-      detailedPlatforms, // Add detailed platform info
-      status: 'scheduled' as const,
-      isFromTemplate: isEditingTemplate, // CHANGED: Use template status
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id, // ADDED
-      user_id: SYSTEM_USER_ID, // ✅ CRITICAL: Never NULL
-      created_by: SYSTEM_USER_ID // ✅ CRITICAL: Never NULL
-    };
+    mediaFiles.forEach(file => {
+      if (file.url.startsWith('blob:')) {
+        URL.revokeObjectURL(file.url);
+      }
+    });
+    setMediaFiles([]);
+    setSelectedPlatforms([]);
+    setIsEditingPost(false);
+    setIsEditingTemplate(false);
+    setFieldConfig(null);
+    setUrlInput('');
+    setUrlTitle('');
+    setHashtagInput('');
+    
+    console.log('Form reset complete');
+  };
+
+  const generateContentId = () => {
+    // Implementation from original file
+    return `POST-${Date.now()}`;
+  };
     
     // If editing an existing post, include the id so the database can UPDATE
     if (isEditingPost && editingPost?.id) {
