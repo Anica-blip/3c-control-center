@@ -137,8 +137,6 @@ const EnhancedContentCreationForm = ({
   const [urlInput, setUrlInput] = useState('');
   const [urlTitle, setUrlTitle] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-Uncaught ReferenceError: handleAddToSchedule is not defined
   
   // Code mapping functions for content ID generation
   const getThemeCodeLocal = (value: string) => {
