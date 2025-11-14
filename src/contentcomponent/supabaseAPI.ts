@@ -71,7 +71,8 @@ export const supabaseAPI = {
   }, 
 
 // Save content post to content_posts table
-  async saveContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
+// Save content post to content_posts table
+  async saveContentPost(postData: any): Promise<ContentPost> {
     if (!isSupabaseConfigured()) {
       throw new Error('Supabase not configured - cannot save to database');
     }
@@ -101,7 +102,7 @@ export const supabaseAPI = {
       if (postData.characterProfile) {
         try {
           const characterProfiles = await this.loadCharacterProfiles();
-          const selectedProfile = characterProfiles.find(p => p.id === postData.characterProfile);
+          const selectedProfile = characterProfiles.find((p: any) => p.id === postData.characterProfile);
           if (selectedProfile) {
             characterDetails = {
               character_avatar: selectedProfile.avatar_id || null,
@@ -137,7 +138,7 @@ export const supabaseAPI = {
           ]);
           
           // Try to find in social_platforms first
-          const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
+          const selectedPlatform = platforms.find((p: any) => p.id === primaryPlatformId);
           
           if (selectedPlatform) {
             console.log('Found social platform:', selectedPlatform.name);
@@ -150,7 +151,7 @@ export const supabaseAPI = {
             };
           } else {
             // Try to find in telegram_configurations
-            const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
+            const selectedTelegram = telegramChannels.find((t: any) => t.id.toString() === primaryPlatformId);
             if (selectedTelegram) {
               console.log('Found Telegram channel:', selectedTelegram.name);
               platformDetails = {
@@ -169,7 +170,7 @@ export const supabaseAPI = {
 
       // --- Upload media files ---
       const uploadedMediaFiles = await Promise.all(
-        (postData.mediaFiles || []).map(async (mediaFile) => {
+        (postData.mediaFiles || []).map(async (mediaFile: any) => {
           if (mediaFile.url.startsWith('blob:')) {
             try {
               const response = await fetch(mediaFile.url);
@@ -213,6 +214,7 @@ export const supabaseAPI = {
         user_id: userId,
         created_by: userId,
         is_active: true,
+        updated_at: new Date().toISOString(),
         // Character details
         character_avatar: characterDetails.character_avatar,
         name: characterDetails.name,
@@ -228,14 +230,36 @@ export const supabaseAPI = {
 
       console.log('Saving post data to content_posts:', dbData);
 
-      const { data, error } = await client
-        .from('content_posts')
-        .insert(dbData)
-        .select()
-        .single();
+      // ⭐ CRITICAL FIX: Check if this is an UPDATE or INSERT operation
+      let data, error;
+      
+      if (postData.id) {
+        // UPDATE existing post
+        console.log('📝 UPDATING existing post with ID:', postData.id);
+        const updateResult = await client
+          .from('content_posts')
+          .update(dbData)
+          .eq('id', postData.id)
+          .select()
+          .single();
+        
+        data = updateResult.data;
+        error = updateResult.error;
+      } else {
+        // INSERT new post
+        console.log('📝 INSERTING new post');
+        const insertResult = await client
+          .from('content_posts')
+          .insert(dbData)
+          .select()
+          .single();
+        
+        data = insertResult.data;
+        error = insertResult.error;
+      }
 
       if (error) {
-        console.error('Insert error:', error);
+        console.error(postData.id ? 'Update error:' : 'Insert error:', error);
         throw error;
       }
 
