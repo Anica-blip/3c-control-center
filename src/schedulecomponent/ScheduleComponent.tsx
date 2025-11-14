@@ -290,8 +290,12 @@ export default function ScheduleComponent() {
       if (error) {
         console.error('Error fetching scheduled posts:', error);
       } else {
+        // ⭐ Filter out posts that were deleted from dashboard
+        const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
+        const filteredData = (data || []).filter(post => !deletedPostsUI.includes(post.id));
+        
         // Fetch platform details for each post
-        const postsWithPlatforms = await Promise.all((data || []).map(async (post) => {
+        const postsWithPlatforms = await Promise.all(filteredData.map(async (post) => {
           if (post.selected_platforms && Array.isArray(post.selected_platforms)) {
             const platformIds = post.selected_platforms;
             const { data: platformsData, error: platformsError } = await supabase
@@ -804,25 +808,25 @@ export default function ScheduleComponent() {
     }
   };
 
-// ⭐ FIX #4: Dashboard-only delete with localStorage persistence
+// ⭐ DASHBOARD-ONLY DELETE: Permanently hide post from dashboard (persists on refresh)
 const handleDeletePost = async (postId: string) => {
-  if (!confirm('Are you sure you want to remove this post from the dashboard? (Database will not be affected)')) return;
+  if (!confirm('Remove this post from your dashboard permanently? (Database will not be affected)')) return;
   
   const operationKey = `delete-${postId}`;
   setOperationLoading(operationKey, true);
   
   try {
-    // ⭐ FIX #4: Store deleted post ID in localStorage for persistence
+    // Store deleted post ID in localStorage for permanent dashboard removal
     const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
     if (!deletedPostsUI.includes(postId)) {
       deletedPostsUI.push(postId);
       localStorage.setItem('deleted_posts_ui', JSON.stringify(deletedPostsUI));
-      console.log('✅ Post ID added to UI deletion list:', postId);
+      console.log('✅ Post ID added to permanent dashboard deletion list:', postId);
     }
     
     // Remove from local state - dashboard display removal
     setScheduledPostsFromDB(prev => prev.filter(p => p.id !== postId));
-    showSuccess('Post removed from dashboard view! (Persists on refresh)');
+    showSuccess('Post permanently removed from dashboard! (Will not reappear on refresh)');
   } catch (error) {
     showError({
       message: 'Failed to remove post from dashboard. Please try again.',
@@ -858,6 +862,7 @@ const handleDeletePost = async (postId: string) => {
         selected_platforms: post.selected_platforms,
         usage_count: 0,
         is_active: true,
+        is_deleted: false,  // ⭐ CRITICAL: Ensure template is not marked as deleted
         template_version: 1,
         user_id: post.user_id || '',
         created_by: post.created_by || ''
@@ -866,9 +871,10 @@ const handleDeletePost = async (postId: string) => {
       const result = await createTemplate(templateData);
       
       if (result.success) {
-        showSuccess('Post saved as template successfully!');
-        // ⭐ FIX #3: Refresh templates list to show the new template
+        // ⭐ FIX: Refresh templates list AND switch to templates tab to show it
         await refreshTemplates();
+        setActiveTab('templates');  // Switch to templates tab
+        showSuccess('✅ Template saved! Switched to Templates tab.');
       } else {
         if (result.validationErrors?.length) {
           const errorMsg = result.validationErrors.map(e => e.message).join(', ');
