@@ -2850,4 +2850,3 @@ const EnhancedContentCreationForm = ({
   );
 };
 
-export { EnhancedContentCreationForm };
