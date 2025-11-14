@@ -868,11 +868,15 @@ const handleDeletePost = async (postId: string) => {
         created_by: post.created_by || ''
       };
 
+      console.log('📝 Saving template with data:', templateData);
       const result = await createTemplate(templateData);
+      console.log('📝 Template save result:', result);
       
       if (result.success) {
         // ⭐ FIX: Refresh templates list AND switch to templates tab to show it
+        console.log('✅ Template saved successfully, refreshing templates...');
         await refreshTemplates();
+        console.log('✅ Templates refreshed, switching to templates tab');
         setActiveTab('templates');  // Switch to templates tab
         showSuccess('✅ Template saved! Switched to Templates tab.');
       } else {
@@ -1255,6 +1259,21 @@ const handleDeletePost = async (postId: string) => {
                             marginBottom: '12px',
                             flexWrap: 'wrap'
                           }}>
+                            {/* ⭐ Content ID Display */}
+                            {post.content_id && (
+                              <span style={{
+                                fontSize: '11px',
+                                color: theme.text,
+                                fontWeight: 'bold',
+                                fontFamily: 'monospace',
+                                backgroundColor: theme.background,
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                border: `1px solid ${theme.border}`
+                              }}>
+                                {post.content_id}
+                              </span>
+                            )}
                             <span style={{
                               padding: '4px 12px',
                               fontSize: '11px',
@@ -1464,12 +1483,34 @@ const handleDeletePost = async (postId: string) => {
                               alignItems: 'center',
                               gap: '8px'
                             }}>
-                              <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Platforms:</span>
+                              <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Platform:</span>
                               <div style={{ display: 'flex', gap: '4px' }}>
                                 {(post.platformDetails && post.platformDetails.length > 0) ? (
                                   post.platformDetails.map((platform, idx) => (
                                     <PlatformBadge key={idx} platform={platform} />
                                   ))
+                                ) : post.platform_icon ? (
+                                  <span style={{ 
+                                    color: 'white',
+                                    fontSize: '10px',
+                                    fontWeight: 'bold',
+                                    backgroundColor: '#3b82f6',
+                                    padding: '3px 8px',
+                                    borderRadius: '4px',
+                                    fontFamily: 'monospace'
+                                  }}>
+                                    {post.platform_icon}
+                                  </span>
+                                ) : post.selected_platforms && Array.isArray(post.selected_platforms) && post.selected_platforms.length > 0 ? (
+                                  <span style={{ 
+                                    color: theme.text, 
+                                    fontSize: '11px',
+                                    backgroundColor: theme.primary + '20',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px'
+                                  }}>
+                                    {post.selected_platforms.length} platform{post.selected_platforms.length > 1 ? 's' : ''}
+                                  </span>
                                 ) : (
                                   <span style={{ color: theme.textSecondary, fontSize: '11px' }}>
                                     No platforms
