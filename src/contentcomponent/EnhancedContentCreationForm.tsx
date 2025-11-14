@@ -133,6 +133,8 @@ const EnhancedContentCreationForm = ({
   const [isEditingPost, setIsEditingPost] = useState(false);
   // ADD NEW STATE FOR TEMPLATE HANDLING:
   const [isEditingTemplate, setIsEditingTemplate] = useState(false);
+  // ✅ CRITICAL FIX: Track database ID after save to prevent duplicate content_id errors
+  const [savedPostDatabaseId, setSavedPostDatabaseId] = useState<string | null>(null);
   const [hashtagInput, setHashtagInput] = useState('');
   const [fieldConfig, setFieldConfig] = useState<any>(null);
   const [urlInput, setUrlInput] = useState('');
@@ -783,6 +785,8 @@ const EnhancedContentCreationForm = ({
     setIsEditingPost(false);
     setIsEditingTemplate(false);
     setFieldConfig(null);
+    // ✅ CRITICAL FIX: Reset saved database ID when form is reset
+    setSavedPostDatabaseId(null);
     
     // Clear URL inputs
     setUrlInput('');
@@ -838,11 +842,24 @@ const EnhancedContentCreationForm = ({
 
     try {
       console.log('Saving post data:', postData);
+      
+      // ✅ CRITICAL FIX: Call supabaseAPI directly to get the saved post with database ID
+      const savedPost = await supabaseAPI.saveContentPost(postData);
+      
+      // ✅ Store the database ID after save to prevent duplicate content_id errors
+      if (savedPost && savedPost.supabaseId) {
+        setSavedPostDatabaseId(savedPost.supabaseId);
+        console.log('✅ Post saved with database ID:', savedPost.supabaseId);
+      }
+      
+      // Also call the parent's onSave callback for UI updates
       await onSave(postData);
+      
       if (isEditingPost && onEditComplete) {
         onEditComplete();
       } else {
-        resetForm();
+        // Don't reset form - let user schedule it with "Add to Schedule" button
+        alert('✅ Content saved! You can now add it to Schedule Manager.');
       }
     } catch (error) {
       console.error('Save failed:', error);
@@ -886,9 +903,16 @@ const EnhancedContentCreationForm = ({
       created_by: SYSTEM_USER_ID // ✅ CRITICAL: Never NULL
     };
     
-    // If editing an existing post, include the id so the database can UPDATE
-    if (isEditingPost && editingPost?.id) {
+    // ✅ CRITICAL FIX: Use savedPostDatabaseId if available (from previous "Save" button click)
+    // This prevents duplicate content_id errors when user saves first, then schedules
+    if (savedPostDatabaseId) {
+      postData.id = savedPostDatabaseId;
+      console.log('✅ Using saved database ID:', savedPostDatabaseId);
+    } else if (isEditingPost && editingPost?.id) {
       postData.id = editingPost.id;
+      console.log('✅ Using editing post ID:', editingPost.id);
+    } else {
+      console.log('ℹ️ No existing post ID - will create new post');
     }
 
     try {
