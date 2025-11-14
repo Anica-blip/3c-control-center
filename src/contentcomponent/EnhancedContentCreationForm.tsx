@@ -780,8 +780,32 @@ const EnhancedContentCreationForm = ({
   };
 
   // UPDATED SAVE HANDLER WITH TELEGRAM VALIDATION AND TEMPLATE INTEGRATION
+  // HELPER: Get primary Telegram URL from selected platforms
+  const getPrimaryTelegramUrl = () => {
+    const telegramPlatform = selectedPlatforms
+      .map(platformId => activePlatforms.find(p => p.id === platformId))
+      .find(p => p && p.name && p.name.toLowerCase().includes('telegram'));
+    return telegramPlatform?.url || null;
+  };
+
+  // Helper to create platform details in database format
+  const createDetailedPlatformsForDB = (platformIds: string[]) => {
+    return platformIds.map(id => {
+      const platform = activePlatforms.find(p => p.id === id);
+      if (!platform) return null;
+      
+      return {
+        platform_id: platform.id,
+        social_platform: platform.name,
+        url: platform.url || '',
+        platform_icon: platform.platform_icon || '',
+        type: platform.type || ''
+      };
+    }).filter(Boolean);
+  };
+
   const handleSave = async () => {
-    // TELEGRAM URL VALIDATION - ADDED FROM CORRECTED CODE
+    // TELEGRAM URL VALIDATION
     if (isTelegramSelected()) {
       const telegramUrl = getPrimaryTelegramUrl();
       if (!telegramUrl) {
@@ -789,13 +813,49 @@ const EnhancedContentCreationForm = ({
         return;
       }
     }
+    
+    // Create detailed platforms array with full info
+    const detailedPlatforms = createDetailedPlatformsForDB(selectedPlatforms);
+    
+    // Parse markdown links in description before saving
+    const parsedDescription = parseMarkdownLinks(content.description);
+    
+    // System user ID for tracking
+    const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+    
+    // Build post data object
+    const postData: any = {
+      contentId,
+      ...selections,
+      ...content,
+      description: parsedDescription,
+      mediaFiles,
+      selectedPlatforms,
+      detailedPlatforms,
+      status: 'pending' as const,
+      isFromTemplate: isEditingTemplate,
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
+      user_id: SYSTEM_USER_ID,
+      created_by: SYSTEM_USER_ID
+    };
+    
+    // If editing an existing post, include the id so the database can UPDATE
+    if (isEditingPost && editingPost?.id) {
+      postData.id = editingPost.id;
+    }
 
-  const getPrimaryTelegramUrl = () => {
-    // Checks detailedPlatforms for a Telegram URL, else checks mediaFiles for a url type
-    const telegramPlatform = selectedPlatforms
-      .map(platformId => activePlatforms.find(p => p.id === platformId))
-      .find(p => p && p.name && p.name.toLowerCase().includes('telegram'));
-    return telegramPlatform?.url || null;
+    try {
+      console.log('Saving post data:', postData);
+      await onSave(postData);
+      if (isEditingPost && onEditComplete) {
+        onEditComplete();
+      } else {
+        resetForm();
+      }
+    } catch (error) {
+      console.error('Save failed:', error);
+      alert('Failed to save post. Please try again.');
+    }
   };
 
   // ⭐⭐⭐ BULLETPROOF ADD TO SCHEDULE HANDLER - WITH MAXIMUM LOGGING ⭐⭐⭐
@@ -817,7 +877,7 @@ const EnhancedContentCreationForm = ({
     console.log('📌 Step 2: Preparing post data...');
   
     // Create detailed platforms array with full info
-    const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
+    const detailedPlatforms = createDetailedPlatformsForDB(selectedPlatforms);
     
     // FIXED ISSUE #1: Parse markdown links in description before saving
     const parsedDescription = parseMarkdownLinks(content.description);
@@ -919,27 +979,6 @@ const EnhancedContentCreationForm = ({
     }
   };
     
-  const createDetailedPlatforms = (platformIds: string[]) => {
-    return platformIds.map(id => {
-      const platform = activePlatforms.find(p => p.id === id);
-      if (!platform) return null;
-      
-      return {
-        platform_id: platform.id,
-        social_platform: platform.name,
-        url: platform.url || '',
-        platform_icon: platform.platform_icon || '',
-        type: platform.type || ''
-      };
-    }).filter(Boolean);
-  };
-
-  const parseMarkdownLinks = (text: string): string => {
-    if (!text) return text;
-    const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-    return text.replace(markdownLinkRegex, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-  };
-
   const resetForm = () => {
     console.log('Resetting form...');
     
@@ -981,25 +1020,6 @@ const EnhancedContentCreationForm = ({
   const generateContentId = () => {
     // Implementation from original file
     return `POST-${Date.now()}`;
-  };
-    
-    // If editing an existing post, include the id so the database can UPDATE
-    if (isEditingPost && editingPost?.id) {
-      postData.id = editingPost.id;
-    }
-
-    try {
-      console.log('Saving post data:', postData);
-      await onSave(postData);
-      if (isEditingPost && onEditComplete) {
-        onEditComplete();
-      } else {
-        resetForm();
-      }
-    } catch (error) {
-      console.error('Save failed:', error);
-      alert('Failed to save post. Please try again.');
-    }
   };
   
   const canSave = selections.characterProfile && selections.theme && selections.audience && selections.mediaType && selections.templateType && selections.voiceStyle && content.description;
