@@ -283,32 +283,23 @@ export default function ScheduleComponent() {
     setLoadingScheduledPosts(true);
     try {
       console.log('🔍 Fetching scheduled posts from database...');
+      
+      // ⭐ DATABASE-DRIVEN: Filter using Supabase columns, not localStorage!
       const { data, error } = await supabase
         .from('scheduled_posts')
         .select('*')
-        .order('created_at', { ascending: false });  // ⭐ FIX: Show newest first!
+        .eq('is_hidden', false)  // Only visible posts
+        .eq('is_deleted', false)  // Only non-deleted posts
+        .order('created_at', { ascending: false });  // Newest first
       
       if (error) {
         console.error('❌ Error fetching scheduled posts:', error);
       } else {
-        console.log('✅ Fetched posts from scheduled_posts:', data?.length || 0, 'posts');
+        console.log('✅ Fetched visible posts from scheduled_posts:', data?.length || 0, 'posts');
         console.log('📊 Raw posts data:', data);
         
-        // ⭐ FIX: Only filter deleted posts that are already posted/published
-        // Don't filter pending posts - they should always show!
-        const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
-        const filteredData = (data || []).filter(post => {
-          // If post is pending, ALWAYS show it (ignore deleted cache)
-          if (post.posting_status === 'pending' || post.posting_status === null) {
-            return true;
-          }
-          // If post is posted/published, check deleted cache
-          return !deletedPostsUI.includes(post.id);
-        });
-        console.log('📊 After smart filter:', filteredData.length, 'posts (pending posts always shown)');
-        
         // Fetch platform details for each post
-        const postsWithPlatforms = await Promise.all(filteredData.map(async (post) => {
+        const postsWithPlatforms = await Promise.all((data || []).map(async (post) => {
           if (post.selected_platforms && Array.isArray(post.selected_platforms)) {
             const platformIds = post.selected_platforms;
             const { data: platformsData, error: platformsError } = await supabase
@@ -853,28 +844,37 @@ export default function ScheduleComponent() {
     }
   };
 
-// ⭐ DASHBOARD-ONLY DELETE: Permanently hide post from dashboard (persists on refresh)
+// ⭐ DATABASE-DRIVEN DELETE: Hide post using Supabase columns (no localStorage!)
 const handleDeletePost = async (postId: string) => {
-  if (!confirm('Remove this post from your dashboard permanently? (Database will not be affected)')) return;
+  if (!confirm('Hide this post from your dashboard? (Can be restored later)')) return;
   
   const operationKey = `delete-${postId}`;
   setOperationLoading(operationKey, true);
   
   try {
-    // Store deleted post ID in localStorage for permanent dashboard removal
-    const deletedPostsUI = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]');
-    if (!deletedPostsUI.includes(postId)) {
-      deletedPostsUI.push(postId);
-      localStorage.setItem('deleted_posts_ui', JSON.stringify(deletedPostsUI));
-      console.log('✅ Post ID added to permanent dashboard deletion list:', postId);
-    }
+    const { data: { user } } = await supabase.auth.getUser();
     
-    // Remove from local state - dashboard display removal
+    // ⭐ Update database columns instead of localStorage
+    const { error } = await supabase
+      .from('scheduled_posts')
+      .update({
+        is_hidden: true,
+        deleted_at: new Date().toISOString(),
+        deleted_by: user?.id || null
+      })
+      .eq('id', postId);
+    
+    if (error) throw error;
+    
+    console.log('✅ Post hidden in database:', postId);
+    
+    // Remove from local state immediately
     setScheduledPostsFromDB(prev => prev.filter(p => p.id !== postId));
-    showSuccess('Post permanently removed from dashboard! (Will not reappear on refresh)');
+    showSuccess('Post hidden from dashboard! (Stored in database)');
   } catch (error) {
+    console.error('❌ Error hiding post:', error);
     showError({
-      message: 'Failed to remove post from dashboard. Please try again.',
+      message: 'Failed to hide post. Please try again.',
       code: 'DELETE_ERROR',
       type: 'unknown',
       timestamp: new Date(),
@@ -1180,42 +1180,71 @@ const handleDeletePost = async (postId: string) => {
           </div>
         </div>
         
-        {/* ⭐ Clear Deleted Cache Button */}
+        {/* ⭐ Restore Hidden Posts Button (Database-Driven) */}
         <button
-          onClick={() => {
-            const deletedCount = JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]').length;
-            if (deletedCount === 0) {
-              showSuccess('No deleted posts in cache');
-              return;
-            }
-            if (confirm(`Clear ${deletedCount} deleted posts from cache? This will restore hidden posts.`)) {
-              localStorage.removeItem('deleted_posts_ui');
-              showSuccess(`Cleared ${deletedCount} posts from deleted cache!`);
-              refreshAllPosts();
+          onClick={async () => {
+            try {
+              // Count hidden posts in database
+              const { count, error: countError } = await supabase
+                .from('scheduled_posts')
+                .select('*', { count: 'exact', head: true })
+                .eq('is_hidden', true);
+              
+              if (countError) throw countError;
+              
+              if (!count || count === 0) {
+                showSuccess('No hidden posts to restore');
+                return;
+              }
+              
+              if (confirm(`Restore ${count} hidden posts? They will reappear in the dashboard.`)) {
+                const { error } = await supabase
+                  .from('scheduled_posts')
+                  .update({
+                    is_hidden: false,
+                    deleted_at: null,
+                    deleted_by: null
+                  })
+                  .eq('is_hidden', true);
+                
+                if (error) throw error;
+                
+                showSuccess(`Restored ${count} hidden posts!`);
+                await refreshAllPosts();
+              }
+            } catch (error) {
+              console.error('Error restoring posts:', error);
+              showError({
+                message: 'Failed to restore hidden posts',
+                code: 'RESTORE_ERROR',
+                type: 'unknown',
+                timestamp: new Date(),
+                retryable: false
+              });
             }
           }}
           style={{
             marginLeft: 'auto',
             padding: '6px 12px',
             fontSize: '12px',
-            backgroundColor: theme.danger + '20',
-            color: theme.danger,
-            border: `1px solid ${theme.danger}`,
+            backgroundColor: theme.success + '20',
+            color: theme.success,
+            border: `1px solid ${theme.success}`,
             borderRadius: '6px',
             cursor: 'pointer',
             fontWeight: '500',
             transition: 'all 0.2s'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.danger;
+            e.currentTarget.style.backgroundColor = theme.success;
             e.currentTarget.style.color = 'white';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = theme.danger + '20';
-            e.currentTarget.style.color = theme.danger;
+            e.currentTarget.style.backgroundColor = theme.success + '20';
+            e.currentTarget.style.color = theme.success;
           }}
         >
-          🗑️ Clear Deleted Cache ({JSON.parse(localStorage.getItem('deleted_posts_ui') || '[]').length})
+          ♻️ Restore Hidden Posts
         </button>
       </div>
 
