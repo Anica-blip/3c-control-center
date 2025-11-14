@@ -71,8 +71,7 @@ export const supabaseAPI = {
   }, 
 
 // Save content post to content_posts table
-// Save content post to content_posts table
-  async saveContentPost(postData: any): Promise<ContentPost> {
+  async saveContentPost(postData: Omit<ContentPost, 'id' | 'createdDate'>): Promise<ContentPost> {
     if (!isSupabaseConfigured()) {
       throw new Error('Supabase not configured - cannot save to database');
     }
@@ -102,7 +101,7 @@ export const supabaseAPI = {
       if (postData.characterProfile) {
         try {
           const characterProfiles = await this.loadCharacterProfiles();
-          const selectedProfile = characterProfiles.find((p: any) => p.id === postData.characterProfile);
+          const selectedProfile = characterProfiles.find(p => p.id === postData.characterProfile);
           if (selectedProfile) {
             characterDetails = {
               character_avatar: selectedProfile.avatar_id || null,
@@ -138,7 +137,7 @@ export const supabaseAPI = {
           ]);
           
           // Try to find in social_platforms first
-          const selectedPlatform = platforms.find((p: any) => p.id === primaryPlatformId);
+          const selectedPlatform = platforms.find(p => p.id === primaryPlatformId);
           
           if (selectedPlatform) {
             console.log('Found social platform:', selectedPlatform.name);
@@ -151,7 +150,7 @@ export const supabaseAPI = {
             };
           } else {
             // Try to find in telegram_configurations
-            const selectedTelegram = telegramChannels.find((t: any) => t.id.toString() === primaryPlatformId);
+            const selectedTelegram = telegramChannels.find(t => t.id.toString() === primaryPlatformId);
             if (selectedTelegram) {
               console.log('Found Telegram channel:', selectedTelegram.name);
               platformDetails = {
@@ -170,7 +169,7 @@ export const supabaseAPI = {
 
       // --- Upload media files ---
       const uploadedMediaFiles = await Promise.all(
-        (postData.mediaFiles || []).map(async (mediaFile: any) => {
+        (postData.mediaFiles || []).map(async (mediaFile) => {
           if (mediaFile.url.startsWith('blob:')) {
             try {
               const response = await fetch(mediaFile.url);
@@ -214,7 +213,6 @@ export const supabaseAPI = {
         user_id: userId,
         created_by: userId,
         is_active: true,
-        updated_at: new Date().toISOString(),
         // Character details
         character_avatar: characterDetails.character_avatar,
         name: characterDetails.name,
@@ -230,36 +228,14 @@ export const supabaseAPI = {
 
       console.log('Saving post data to content_posts:', dbData);
 
-      // ⭐ CRITICAL FIX: Check if this is an UPDATE or INSERT operation
-      let data, error;
-      
-      if (postData.id) {
-        // UPDATE existing post
-        console.log('📝 UPDATING existing post with ID:', postData.id);
-        const updateResult = await client
-          .from('content_posts')
-          .update(dbData)
-          .eq('id', postData.id)
-          .select()
-          .single();
-        
-        data = updateResult.data;
-        error = updateResult.error;
-      } else {
-        // INSERT new post
-        console.log('📝 INSERTING new post');
-        const insertResult = await client
-          .from('content_posts')
-          .insert(dbData)
-          .select()
-          .single();
-        
-        data = insertResult.data;
-        error = insertResult.error;
-      }
+      const { data, error } = await client
+        .from('content_posts')
+        .insert(dbData)
+        .select()
+        .single();
 
       if (error) {
-        console.error(postData.id ? 'Update error:' : 'Insert error:', error);
+        console.error('Insert error:', error);
         throw error;
       }
 
@@ -518,8 +494,10 @@ export const supabaseAPI = {
       // ========================================================================
       console.log('🚀 INSERTING into scheduled_posts with content_id:', postData.contentId);
       
-      // Parse scheduled date and time
-      let scheduledDateTime = postData.scheduledDate;
+      // ⭐ FIX #2: Leave scheduled_date, timezone, service_type as NULL
+      // This makes the post appear in the PENDING TAB
+      // User will add these values in Schedule Manager's Pending tab
+      let scheduledDateTime = postData.scheduledDate || null;
       let scheduledTime = null;
       
       if (scheduledDateTime) {
@@ -543,11 +521,11 @@ export const supabaseAPI = {
         cta: postData.cta || '',
         media_files: uploadedMediaFiles,
         selected_platforms: postData.selectedPlatforms || [],
-        status: 'scheduled',
+        status: 'pending', // ⭐ FIX: Set to 'pending' not 'scheduled'
         is_from_template: postData.isFromTemplate || false,
         source_template_id: postData.sourceTemplateId || null,
         created_date: new Date().toISOString(),
-        scheduled_date: scheduledDateTime || new Date().toISOString(),
+        scheduled_date: null, // ⭐ FIX #2: NULL until user schedules in Pending tab
         user_id: finalUserId,
         created_by: finalCreatedBy,
         is_active: true,
@@ -562,9 +540,9 @@ export const supabaseAPI = {
         
         // Scheduled_posts specific columns
         posting_status: 'pending', // ⭐ CRITICAL: Set to 'pending' for runner
-        service_type: 'render_cron', // Default service (can be changed)
-        scheduled_time: scheduledTime,
-        timezone: 'UTC', // Default timezone
+        service_type: null, // ⭐ FIX #2: NULL until user selects in Pending tab
+        scheduled_time: null, // ⭐ FIX #2: NULL until user schedules
+        timezone: null, // ⭐ FIX #2: NULL until user selects in Pending tab
         retry_count: 0,
         failure_reason: null,
         is_deleted: false,
@@ -810,66 +788,6 @@ export const supabaseAPI = {
       if (error) throw error;
     } catch (error) {
       console.error('Error deleting content post:', error);
-      throw error;
-    }
-  },
-
-  // Load content posts from database
-  async loadContentPosts(): Promise<ContentPost[]> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase not configured - cannot load content posts');
-    }
-
-    try {
-      const client = getSupabaseClient();
-      const { data, error } = await client
-        .from('content_posts')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-
-      // Transform database records to ContentPost format
-      return (data || []).map((post: any) => ({
-        id: post.id.toString(),
-        contentId: post.content_id,
-        characterProfile: post.character_profile,
-        theme: post.theme,
-        audience: post.audience,
-        mediaType: post.media_type,
-        templateType: post.template_type,
-        platform: post.platform,
-        voiceStyle: post.voice_style,
-        title: post.title,
-        description: post.description,
-        hashtags: post.hashtags || [],
-        keywords: post.keywords || '',
-        cta: post.cta || '',
-        mediaFiles: post.media_files || [],
-        selectedPlatforms: post.selected_platforms || [],
-        status: post.status,
-        isFromTemplate: post.is_from_template || false,
-        sourceTemplateId: post.source_template_id,
-        createdDate: new Date(post.created_at),
-        // Include all character details
-        characterAvatar: post.character_avatar,
-        characterName: post.name,
-        characterUsername: post.username,
-        characterRole: post.role,
-        // Include platform details
-        detailedPlatforms: post.selected_platforms?.map((platformId: string) => ({
-          platform_id: platformId,
-          social_platform: post.social_platform,
-          url: post.url,
-          channel_group_id: post.channel_group_id,
-          thread_id: post.thread_id,
-          platform_icon: post.platform_icon,
-          type: post.type
-        })) || []
-      }));
-    } catch (error) {
-      console.error('Error loading content posts:', error);
       throw error;
     }
   },
