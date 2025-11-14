@@ -277,7 +277,7 @@ export const supabaseAPI = {
   // ⭐⭐⭐ NEW FUNCTION: Add to Schedule - FIX #1 ⭐⭐⭐
   // This function handles scheduling a post by:
   // 1. Updating/Inserting into content_posts with status='scheduled'
-  // 2. Inserting into scheduled_posts with posting_status='pending'
+  // 2. Inserting into scheduled_posts with posting_status='scheduled' (changes to 'pending' when time+date+service added)
   async addToSchedule(postData: any): Promise<{ success: boolean; data?: any; error?: any }> {
     if (!isSupabaseConfigured()) {
       throw new Error('Supabase not configured - cannot schedule post');
@@ -539,7 +539,7 @@ export const supabaseAPI = {
         ...platformDetails,
         
         // Scheduled_posts specific columns
-        posting_status: 'pending', // ⭐ CRITICAL: Set to 'pending' for runner
+        posting_status: 'scheduled', // ⭐ CRITICAL: 'scheduled' = awaiting time/date/service, 'pending' = ready for runner, 'sent' = published
         service_type: null, // ⭐ FIX #2: NULL until user selects in Pending tab
         scheduled_time: null, // ⭐ FIX #2: NULL until user schedules
         timezone: null, // ⭐ FIX #2: NULL until user selects in Pending tab
