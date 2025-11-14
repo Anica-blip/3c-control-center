@@ -25,7 +25,7 @@ const ThemeContext = React.createContext({
 
 const useTheme = () => useContext(ThemeContext);
 
-// Enhanced Content Creation Form - WITH i18n INTEGRATION
+// ⭐⭐⭐ BULLETPROOF VERSION WITH MAXIMUM LOGGING ⭐⭐⭐
 const EnhancedContentCreationForm = ({ 
   onSave, 
   onAddToSchedule, 
@@ -153,7 +153,130 @@ const EnhancedContentCreationForm = ({
       .find(p => p && p.name && p.name.toLowerCase().includes('telegram'));
     return telegramPlatform?.url || null;
   };
-  
+
+  // ⭐⭐⭐ BULLETPROOF ADD TO SCHEDULE HANDLER - WITH MAXIMUM LOGGING ⭐⭐⭐
+  const handleAddToSchedule = async () => {
+    console.log('🎯🎯🎯 ===== FORWARD TO SCHEDULED_POSTS - START ===== 🎯🎯🎯');
+    console.log('📌 Step 1: Validating Telegram requirements...');
+    
+    // TELEGRAM URL VALIDATION
+    if (isTelegramSelected()) {
+      const telegramUrl = getPrimaryTelegramUrl();
+      if (!telegramUrl) {
+        console.error('❌ Telegram validation failed: No URL found');
+        alert('A Telegram URL is required for Telegram posts. Please select a Telegram channel/group that has a valid URL.');
+        return;
+      }
+      console.log('✅ Telegram URL validation passed:', telegramUrl);
+    }
+    
+    console.log('📌 Step 2: Preparing post data...');
+    
+    // Create detailed platforms array with full info
+    const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
+    console.log('Platform details created:', detailedPlatforms);
+    
+    // Parse markdown links in description
+    const parsedDescription = parseMarkdownLinks(content.description);
+    console.log('Description parsed for markdown links');
+    
+    // System user ID for tracking
+    const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+    
+    // Build post data object
+    const postData: any = {
+      contentId,
+      ...selections,
+      ...content,
+      description: parsedDescription,
+      mediaFiles,
+      selectedPlatforms,
+      detailedPlatforms,
+      status: 'scheduled' as const,
+      isFromTemplate: isEditingTemplate,
+      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id,
+      user_id: SYSTEM_USER_ID,
+      created_by: SYSTEM_USER_ID
+    };
+    
+    // If editing an existing post, include the id
+    if (isEditingPost && editingPost?.id) {
+      postData.id = editingPost.id;
+      console.log('📝 Editing mode: Including existing post ID:', editingPost.id);
+    }
+
+    console.log('📌 Step 3: Post data prepared:', {
+      contentId: postData.contentId,
+      status: postData.status,
+      hasDetailedPlatforms: !!postData.detailedPlatforms,
+      platformCount: postData.selectedPlatforms?.length || 0
+    });
+
+    try {
+      console.log('📌 Step 4: Checking if supabaseAPI.addToSchedule exists...');
+      
+      // ⭐ CRITICAL CHECK: Verify function exists
+      if (typeof supabaseAPI.addToSchedule !== 'function') {
+        console.error('❌❌❌ FATAL ERROR: supabaseAPI.addToSchedule is NOT a function!');
+        console.error('Available supabaseAPI methods:', Object.keys(supabaseAPI));
+        alert('CRITICAL ERROR: addToSchedule function not found in supabaseAPI. Check console for details.');
+        return;
+      }
+      
+      console.log('✅ supabaseAPI.addToSchedule function exists');
+      console.log('📌 Step 5: Calling supabaseAPI.addToSchedule()...');
+      console.log('⏳ Waiting for database operation...');
+      
+      // ⭐⭐⭐ THE CRITICAL CALL ⭐⭐⭐
+      const result = await supabaseAPI.addToSchedule(postData);
+      
+      console.log('📌 Step 6: Database operation completed');
+      console.log('Result received:', result);
+      
+      if (result.success) {
+        console.log('✅✅✅ SUCCESS! Post forwarded to scheduled_posts table!');
+        console.log('📊 Database Results:');
+        console.log('  └─ Content Post ID:', result.data?.contentPost?.id);
+        console.log('  └─ Content Post Status:', result.data?.contentPost?.status);
+        console.log('  └─ Scheduled Post ID:', result.data?.scheduledPost?.id);
+        console.log('  └─ Scheduled Post Status:', result.data?.scheduledPost?.posting_status);
+        
+        // ⭐ VERIFICATION: Check if scheduled_posts row was ACTUALLY created
+        if (!result.data?.scheduledPost?.id) {
+          console.warn('⚠️⚠️⚠️ WARNING: No scheduled_posts ID returned!');
+          console.warn('This means the row might NOT have been created in scheduled_posts table!');
+          console.warn('Check if addToSchedule is only updating content_posts!');
+        } else {
+          console.log('✅ VERIFIED: New row created in scheduled_posts table with ID:', result.data.scheduledPost.id);
+        }
+        
+        alert('✅ Post sent to Schedule Manager! Go to the Pending tab to add date/time/service.');
+        resetForm();
+        
+        // Call parent's onAddToSchedule if it exists (for UI updates)
+        if (onAddToSchedule) {
+          console.log('📌 Step 7: Calling parent onAddToSchedule for UI update...');
+          await onAddToSchedule(postData);
+          console.log('✅ Parent callback completed');
+        }
+        
+        console.log('🎯🎯🎯 ===== FORWARD TO SCHEDULED_POSTS - COMPLETE ===== 🎯🎯🎯');
+      } else {
+        console.error('❌❌❌ FAILURE: Database operation reported error');
+        console.error('Error details:', result.error);
+        console.error('Full result object:', result);
+        alert(`Failed to schedule post: ${result.error?.message || 'Unknown error'}. Check console for details.`);
+      }
+    } catch (error: any) {
+      console.error('❌❌❌ EXCEPTION CAUGHT in handleAddToSchedule');
+      console.error('Error type:', error?.name);
+      console.error('Error message:', error?.message);
+      console.error('Error stack:', error?.stack);
+      console.error('Full error object:', error);
+      alert('Failed to schedule post. Your content is preserved. Check console for full error details.');
+    }
+  };
+
   // Code mapping functions for content ID generation
   const getThemeCodeLocal = (value: string) => {
     const codes: Record<string, string> = {
@@ -806,50 +929,6 @@ const EnhancedContentCreationForm = ({
       }
     }
     
-    // Create detailed platforms array with full info
-    const detailedPlatforms = createDetailedPlatforms(selectedPlatforms);
-    
-    // FIXED ISSUE #1: Parse markdown links in description before saving
-    const parsedDescription = parseMarkdownLinks(content.description);
-    
-    // ✅ FIX: Ensure user_id and created_by are NEVER NULL
-    const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
-    
-    // FIXED ISSUE #2: Include the 'id' field when editing so parent can UPDATE instead of INSERT
-    const postData: any = {
-      contentId,
-      ...selections,
-      ...content,
-      description: parsedDescription, // Use parsed description with HTML links
-      mediaFiles,
-      selectedPlatforms,
-      detailedPlatforms, // Add detailed platform info
-      status: 'pending' as const,
-      isFromTemplate: isEditingTemplate, // CHANGED: Use template status
-      sourceTemplateId: loadedTemplate?.source_template_id || loadedTemplate?.template_id, // ADDED
-      user_id: SYSTEM_USER_ID, // ✅ CRITICAL: Never NULL
-      created_by: SYSTEM_USER_ID // ✅ CRITICAL: Never NULL
-    };
-    
-    // If editing an existing post, include the id so the database can UPDATE
-    if (isEditingPost && editingPost?.id) {
-      postData.id = editingPost.id;
-    }
-
-    try {
-      console.log('Saving post data:', postData);
-      await onSave(postData);
-      if (isEditingPost && onEditComplete) {
-        onEditComplete();
-      } else {
-        resetForm();
-      }
-    } catch (error) {
-      console.error('Save failed:', error);
-      alert('Failed to save post. Please try again.');
-    }
-  };
-
   // ⭐ FIX #1: UPDATED ADD TO SCHEDULE HANDLER - NOW CREATES scheduled_posts ROW ⭐
   const handleAddToSchedule = async () => {
     // TELEGRAM URL VALIDATION - ADDED FROM CORRECTED CODE
