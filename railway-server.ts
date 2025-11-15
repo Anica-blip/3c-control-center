@@ -765,7 +765,9 @@ async function processPost(post: ScheduledPost): Promise<void> {
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
-        post_status: 'sent'
+        posting_status: 'sent',  // ⭐ Prevent duplicate posts
+        post_status: 'sent',
+        updated_at: now.toISOString()
       })
       .eq('id', post.id)
       .eq('service_type', SERVICE_TYPE);
