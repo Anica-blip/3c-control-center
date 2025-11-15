@@ -891,17 +891,20 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     console.log(`Looking for posts where:`);
     console.log(`  service_type = '${SERVICE_TYPE}'`);
     console.log(`  posting_status = 'pending'`);
-    console.log(`  scheduled_date < '${currentDate}' OR (scheduled_date = '${currentDate}' AND scheduled_time <= '${currentTime}')`);
+    console.log(`  scheduled_date <= '${currentDate}T${currentTime}+01:00' (WEST timezone)`);
     console.log('--- End Diagnostics ---\n');
 
     // ✅ ACTUAL QUERY: Now find posts ready to process
-    // NOTE: scheduled_date is stored as timestamptz, so we need to cast it to date for comparison
+    // NOTE: scheduled_date is timestamptz, so we compare against full timestamp
+    // Construct the current datetime in ISO format for comparison
+    const currentDateTime = `${currentDate}T${currentTime}+01:00`; // WEST = UTC+1
+    
     const { data, error } = await supabase
       .from('scheduled_posts')
       .select('*')
       .eq('service_type', SERVICE_TYPE)
       .eq('posting_status', 'pending')
-      .or(`scheduled_date::date.lt.${currentDate},and(scheduled_date::date.eq.${currentDate},scheduled_time.lte.${currentTime})`)
+      .lte('scheduled_date', currentDateTime)
       .limit(limit);
 
     if (error) {
@@ -914,8 +917,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
       console.log('⚠️ No pending posts found matching criteria:');
       console.log(`  - service_type: '${SERVICE_TYPE}'`);
       console.log(`  - posting_status: 'pending'`);
-      console.log(`  - scheduled_date <= '${currentDate}'`);
-      console.log(`  - scheduled_time <= '${currentTime}'`);
+      console.log(`  - scheduled_date <= '${currentDateTime}' (WEST timezone)`);
       return [];
     }
 
