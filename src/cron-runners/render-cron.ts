@@ -991,7 +991,6 @@ async function processPost(post: ScheduledPost): Promise<void> {
       .update({
         posting_status: 'sent',  // ⭐ THIS IS THE KEY FIX
         post_status: 'sent',
-        posted_at: now.toISOString(),
         updated_at: now.toISOString()
       })
       .eq('id', post.id)
