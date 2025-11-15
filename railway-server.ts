@@ -694,13 +694,16 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
   const { date: currentDate, time: currentTime } = getCurrentWESTDateTime();
   
   try {
-    // NOTE: scheduled_date is stored as timestamptz, so we need to cast it to date for comparison
+    // NOTE: scheduled_date is timestamptz, so we compare against full timestamp
+    // Construct the current datetime in ISO format for comparison
+    const currentDateTime = `${currentDate}T${currentTime}+01:00`; // WEST = UTC+1
+    
     const { data, error } = await supabase
       .from('scheduled_posts')
       .select('*')
       .eq('service_type', SERVICE_TYPE)
       .eq('posting_status', 'pending')
-      .or(`scheduled_date::date.lt.${currentDate},and(scheduled_date::date.eq.${currentDate},scheduled_time.lte.${currentTime})`)
+      .lte('scheduled_date', currentDateTime)
       .limit(limit);
 
     if (error) {
