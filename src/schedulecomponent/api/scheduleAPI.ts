@@ -449,6 +449,18 @@ export const updatePendingPost = async (id: string, updates: Partial<ScheduledPo
     if (updates.selected_platforms !== undefined) updateData.selected_platforms = updates.selected_platforms;
     if (updates.status) updateData.status = updates.status;
     
+    // ⭐⭐⭐ CRITICAL: Set posting_status and post_status when scheduling
+    if (updates.scheduled_date || updates.scheduled_time || updates.service_type) {
+      updateData.posting_status = 'pending';  // ✅ CRITICAL for runner
+      updateData.post_status = 'pending';     // ✅ CRITICAL for runner
+    }
+    
+    // Add scheduling fields
+    if (updates.scheduled_date) updateData.scheduled_date = updates.scheduled_date;
+    if (updates.scheduled_time) updateData.scheduled_time = updates.scheduled_time;
+    if (updates.service_type) updateData.service_type = updates.service_type;
+    if (updates.timezone) updateData.timezone = updates.timezone;
+    
     // Add platform details
     Object.assign(updateData, updatedPlatformDetails);
 
@@ -648,7 +660,7 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
       scheduled_date: scheduledDateTime, // TIMESTAMP WITH TIME ZONE
       scheduled_time: scheduledTimeOnly, // TIME type: "11:00:00"
       timezone: postData.timezone || 'UTC',
-      status: 'scheduled',
+      post_status: 'pending',  // ✅ CRITICAL: post_status for runner workflow
       posting_status: 'pending',  // ✅ STATUS TRANSITION: 'scheduled' → 'pending' (when time+date+service added) → 'sent' (runner completes)
       service_type: postData.service_type,
       retry_count: 0,
@@ -936,16 +948,47 @@ export const fetchTemplates = async (userId: string): Promise<SavedTemplate[]> =
   try {
     if (!supabase) throw new Error('Supabase client not available');
 
-    const { data, error } = await supabase
+    // Fetch from dashboard_templates table
+    const { data: dashboardTemplates, error: dashboardError } = await supabase
       .from('dashboard_templates')
       .select('*')
       .eq('user_id', userId)
       .eq('is_active', true)
-      .eq('is_deleted', false)  // ✅ FIX #2: Filter out deleted templates
+      .eq('is_deleted', false)
       .order('created_at', { ascending: false });
+    
+    // Also fetch from content_posts where is_template = true (similar to pending posts logic)
+    const { data: contentTemplates, error: contentError } = await supabase
+      .from('content_posts')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_template', true)
+      .order('created_at', { ascending: false });
+    
+    // Combine both sources
+    const allTemplates = [
+      ...(dashboardTemplates || []),
+      ...(contentTemplates || []).map(ct => ({
+        ...ct,
+        template_name: ct.title || ct.template_name || 'Untitled Template',
+        // Map content_posts fields to template fields
+        id: ct.id,
+        user_id: ct.user_id,
+        created_at: ct.created_at,
+        updated_at: ct.updated_at,
+        is_active: true,
+        is_deleted: false,
+        usage_count: 0
+      }))
+    ];
+    
+    console.log('✅ Fetched templates:', {
+      fromDashboard: dashboardTemplates?.length || 0,
+      fromContent: contentTemplates?.length || 0,
+      total: allTemplates.length
+    });
       
-    if (error) throw error;
-    return data || [];
+    return allTemplates;
   } catch (error) {
     console.error('Error fetching templates:', error);
     throw error;
