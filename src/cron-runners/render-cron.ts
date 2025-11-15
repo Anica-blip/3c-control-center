@@ -869,11 +869,13 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
       // Show which ones would match our date/time criteria
       console.log(`\nChecking which posts match date/time criteria:`);
       pendingData.forEach((post: any) => {
-        const postDate = post.scheduled_date;
+        // Extract date portion from timestamptz (format: 2025-11-15T07:00:00+00:00)
+        const postDateFull = post.scheduled_date;
+        const postDate = postDateFull.split('T')[0]; // Extract just the date part (YYYY-MM-DD)
         const postTime = post.scheduled_time;
         const matchesDate = postDate < currentDate || (postDate === currentDate && postTime <= currentTime);
         console.log(`  Post ${post.id}:`);
-        console.log(`    Date: ${postDate} (${postDate < currentDate ? 'BEFORE' : postDate === currentDate ? 'TODAY' : 'FUTURE'})`);
+        console.log(`    Date: ${postDateFull} -> ${postDate} (${postDate < currentDate ? 'BEFORE' : postDate === currentDate ? 'TODAY' : 'FUTURE'})`);
         console.log(`    Time: ${postTime} (${postTime <= currentTime ? 'PAST/NOW' : 'FUTURE'})`);
         console.log(`    Matches? ${matchesDate ? '✅ YES' : '❌ NO'}`);
       });
@@ -893,12 +895,13 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     console.log('--- End Diagnostics ---\n');
 
     // ✅ ACTUAL QUERY: Now find posts ready to process
+    // NOTE: scheduled_date is stored as timestamptz, so we need to cast it to date for comparison
     const { data, error } = await supabase
       .from('scheduled_posts')
       .select('*')
       .eq('service_type', SERVICE_TYPE)
       .eq('posting_status', 'pending')
-      .or(`scheduled_date.lt.${currentDate},and(scheduled_date.eq.${currentDate},scheduled_time.lte.${currentTime})`)
+      .or(`scheduled_date::date.lt.${currentDate},and(scheduled_date::date.eq.${currentDate},scheduled_time.lte.${currentTime})`)
       .limit(limit);
 
     if (error) {
