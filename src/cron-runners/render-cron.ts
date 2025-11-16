@@ -771,55 +771,23 @@ function getCurrentWESTDateTime(): { date: string; time: string } {
 
 /**
  * Query and claim jobs from scheduled_posts table
+ * ✅ UPDATED: Now uses scheduled_date as timestamptz (includes both date and time)
  */
 async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
   const nowUTC = new Date();
   const nowWEST = toWEST(nowUTC);
-  
-  const { date: currentDate, time: currentTime } = getCurrentWESTDateTime();
   
   try {
     console.log(`\n${'='.repeat(60)}`);
     console.log('Querying pending jobs...');
     console.log(`UTC Time: ${nowUTC.toISOString()}`);
     console.log(`WEST Time: ${nowWEST.toISOString()}`);
-    console.log(`Query Date: ${currentDate}, Query Time: ${currentTime}`);
     
     console.log(`\n--- CONNECTION INFO ---`);
     console.log(`Supabase URL: ${supabaseUrl}`);
     console.log(`Table Name: scheduled_posts`);
     console.log(`Service Type Looking For: '${SERVICE_TYPE}'`);
     console.log('--- End Connection Info ---\n');
-
-    // ✅ DIAGNOSTIC: Test network connectivity to Supabase first
-    console.log('--- DIAGNOSTIC: Testing Network Connectivity ---');
-    try {
-      const healthCheckUrl = `${supabaseUrl}/rest/v1/`;
-      console.log(`Testing HTTP connection to: ${healthCheckUrl}`);
-      
-      const healthResponse = await fetch(healthCheckUrl, {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-        }
-      });
-      
-      console.log(`Health check response status: ${healthResponse.status}`);
-      console.log(`Health check response ok: ${healthResponse.ok}`);
-      
-      if (!healthResponse.ok) {
-        const errorText = await healthResponse.text();
-        console.error(`❌ Health check failed with status ${healthResponse.status}`);
-        console.error('Response body:', errorText.substring(0, 500));
-      } else {
-        console.log('✅ Network connectivity to Supabase is working');
-      }
-    } catch (netError) {
-      console.error('❌ Network connectivity test failed:', netError);
-      console.error('This indicates Render cannot reach Supabase at all');
-    }
-    console.log('--- End Network Diagnostic ---\n');
 
     // ✅ DIAGNOSTIC: Test basic connection with OUR service_type only
     console.log('--- DIAGNOSTIC: Testing Supabase Connection ---');
@@ -838,25 +806,10 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     console.log(`✅ Connection successful! Sample of OUR posts (${SERVICE_TYPE}):`);
     console.log(JSON.stringify(sampleData, null, 2));
     
-    // ✅ DIAGNOSTIC: Check posts matching our service_type
-    const { data: serviceData, error: serviceError } = await supabase
-      .from('scheduled_posts')
-      .select('id, service_type, posting_status, scheduled_date, scheduled_time')
-      .eq('service_type', SERVICE_TYPE)
-      .limit(10);
-    
-    console.log(`\n--- Posts with service_type = '${SERVICE_TYPE}' ---`);
-    if (serviceData && serviceData.length > 0) {
-      console.log(`Found ${serviceData.length} posts:`);
-      console.log(JSON.stringify(serviceData, null, 2));
-    } else {
-      console.log('⚠️ No posts found with this service_type');
-    }
-    
     // ✅ DIAGNOSTIC: Check pending posts with our service_type (ignore date/time)
     const { data: pendingData, error: pendingError } = await supabase
       .from('scheduled_posts')
-      .select('id, service_type, posting_status, scheduled_date, scheduled_time')
+      .select('id, service_type, posting_status, scheduled_date')
       .eq('service_type', SERVICE_TYPE)
       .eq('posting_status', 'pending')
       .limit(10);
@@ -869,15 +822,12 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
       // Show which ones would match our date/time criteria
       console.log(`\nChecking which posts match date/time criteria:`);
       pendingData.forEach((post: any) => {
-        // Extract date portion from timestamptz (format: 2025-11-15T07:00:00+00:00)
-        const postDateFull = post.scheduled_date;
-        const postDate = postDateFull.split('T')[0]; // Extract just the date part (YYYY-MM-DD)
-        const postTime = post.scheduled_time;
-        const matchesDate = postDate < currentDate || (postDate === currentDate && postTime <= currentTime);
+        const postScheduledDate = new Date(post.scheduled_date);
+        const isPast = postScheduledDate <= nowWEST;
         console.log(`  Post ${post.id}:`);
-        console.log(`    Date: ${postDateFull} -> ${postDate} (${postDate < currentDate ? 'BEFORE' : postDate === currentDate ? 'TODAY' : 'FUTURE'})`);
-        console.log(`    Time: ${postTime} (${postTime <= currentTime ? 'PAST/NOW' : 'FUTURE'})`);
-        console.log(`    Matches? ${matchesDate ? '✅ YES' : '❌ NO'}`);
+        console.log(`    Scheduled: ${post.scheduled_date}`);
+        console.log(`    Current WEST: ${nowWEST.toISOString()}`);
+        console.log(`    Matches? ${isPast ? '✅ YES (ready to post)' : '❌ NO (future post)'}`);
       });
     } else {
       console.log('⚠️ No PENDING posts found with this service_type AT ALL');
@@ -891,20 +841,18 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
     console.log(`Looking for posts where:`);
     console.log(`  service_type = '${SERVICE_TYPE}'`);
     console.log(`  posting_status = 'pending'`);
-    console.log(`  scheduled_date <= '${currentDate}T${currentTime}+01:00' (WEST timezone)`);
+    console.log(`  scheduled_date <= '${nowWEST.toISOString()}' (WEST timezone)`);
     console.log('--- End Diagnostics ---\n');
 
     // ✅ ACTUAL QUERY: Now find posts ready to process
-    // NOTE: scheduled_date is timestamptz, so we compare against full timestamp
-    // Construct the current datetime in ISO format for comparison
-    const currentDateTime = `${currentDate}T${currentTime}+01:00`; // WEST = UTC+1
-    
+    // NOTE: scheduled_date is now timestamptz (includes both date and time)
+    // We compare directly against the current WEST time
     const { data, error } = await supabase
       .from('scheduled_posts')
       .select('*')
       .eq('service_type', SERVICE_TYPE)
       .eq('posting_status', 'pending')
-      .lte('scheduled_date', currentDateTime)
+      .lte('scheduled_date', nowWEST.toISOString())
       .limit(limit);
 
     if (error) {
@@ -917,7 +865,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
       console.log('⚠️ No pending posts found matching criteria:');
       console.log(`  - service_type: '${SERVICE_TYPE}'`);
       console.log(`  - posting_status: 'pending'`);
-      console.log(`  - scheduled_date <= '${currentDateTime}' (WEST timezone)`);
+      console.log(`  - scheduled_date <= '${nowWEST.toISOString()}' (WEST timezone)`);
       return [];
     }
 
@@ -926,7 +874,7 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
       console.log(`  - ID: ${post.id}`);
       console.log(`    Service: ${post.service_type}`);
       console.log(`    Status: ${post.posting_status}`);
-      console.log(`    Scheduled: ${post.scheduled_date} ${post.scheduled_time}`);
+      console.log(`    Scheduled: ${post.scheduled_date}`);
     });
     console.log('--- End Query Results ---\n');
 
