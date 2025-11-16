@@ -687,23 +687,28 @@ function getCurrentWESTDateTime(): { date: string; time: string } {
 // CORE PROCESSING FUNCTIONS
 // ============================================
 
+/**
+ * Query and claim jobs from scheduled_posts table
+ * ✅ UPDATED: Now uses scheduled_date as timestamptz (includes both date and time)
+ */
 async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
   const nowUTC = new Date();
   const nowWEST = toWEST(nowUTC);
   
-  const { date: currentDate, time: currentTime } = getCurrentWESTDateTime();
-  
   try {
-    // NOTE: scheduled_date is timestamptz, so we compare against full timestamp
-    // Construct the current datetime in ISO format for comparison
-    const currentDateTime = `${currentDate}T${currentTime}+01:00`; // WEST = UTC+1
+    console.log(`\nQuerying pending jobs...`);
+    console.log(`UTC Time: ${nowUTC.toISOString()}`);
+    console.log(`WEST Time: ${nowWEST.toISOString()}`);
     
+    // ✅ ACTUAL QUERY: Now find posts ready to process
+    // NOTE: scheduled_date is now timestamptz (includes both date and time)
+    // We compare directly against the current WEST time
     const { data, error } = await supabase
       .from('scheduled_posts')
       .select('*')
       .eq('service_type', SERVICE_TYPE)
       .eq('posting_status', 'pending')
-      .lte('scheduled_date', currentDateTime)
+      .lte('scheduled_date', nowWEST.toISOString())
       .limit(limit);
 
     if (error) {
@@ -716,7 +721,10 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
       return [];
     }
 
-    console.log(`✅ Found ${data.length} pending posts`);
+    console.log(`✅ Found ${data.length} pending posts ready to process`);
+    data.forEach((post: any) => {
+      console.log(`  - ID: ${post.id}, Scheduled: ${post.scheduled_date}`);
+    });
 
     const claimedIds = data.map((post: any) => post.id);
     
