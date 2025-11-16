@@ -6,18 +6,22 @@ const RAILWAY_GATEWAY_URL = process.env.RAILWAY_GATEWAY_URL || '';
 const CRON_SUPABASE_DB_URL = process.env.CRON_SUPABASE_DB_URL || '';
 const CRON_RUNNER_PASSWORD = process.env.CRON_RUNNER_PASSWORD || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const TELEGRAM_PUBLISHER_BOT_TOKEN = process.env.TELEGRAM_PUBLISHER_BOT_TOKEN || '';
+const SYSTEM_USER_ID = process.env.SYSTEM_USER_ID || 'github-actions';
 
 // ✅ RUNNER IDENTITY
 const RUNNER_NAME = 'GitHub - Workflow';
 const SERVICE_TYPE = 'GitHub - Workflow';
 
 // ✅ VALIDATE CREDENTIALS
-if (!RAILWAY_GATEWAY_URL || !CRON_SUPABASE_DB_URL || !CRON_RUNNER_PASSWORD || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('Missing required environment variables:');
-  console.error('  RAILWAY_GATEWAY_URL:', RAILWAY_GATEWAY_URL ? 'SET' : 'MISSING');
-  console.error('  CRON_SUPABASE_DB_URL:', CRON_SUPABASE_DB_URL ? 'SET' : 'MISSING');
-  console.error('  CRON_RUNNER_PASSWORD:', CRON_RUNNER_PASSWORD ? 'SET' : 'MISSING');
-  console.error('  SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING');
+if (!RAILWAY_GATEWAY_URL || !CRON_SUPABASE_DB_URL || !CRON_RUNNER_PASSWORD || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_PUBLISHER_BOT_TOKEN) {
+  console.error('❌ Missing required environment variables:');
+  console.error('  RAILWAY_GATEWAY_URL:', RAILWAY_GATEWAY_URL ? '✅ SET' : '❌ MISSING');
+  console.error('  CRON_SUPABASE_DB_URL:', CRON_SUPABASE_DB_URL ? '✅ SET' : '❌ MISSING');
+  console.error('  CRON_RUNNER_PASSWORD:', CRON_RUNNER_PASSWORD ? '✅ SET' : '❌ MISSING');
+  console.error('  SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? '✅ SET' : '❌ MISSING');
+  console.error('  TELEGRAM_PUBLISHER_BOT_TOKEN:', TELEGRAM_PUBLISHER_BOT_TOKEN ? '✅ SET' : '❌ MISSING');
+  console.error('  SYSTEM_USER_ID:', SYSTEM_USER_ID ? '✅ SET' : '⚠️ Using default');
   process.exit(1);
 }
 
@@ -40,12 +44,14 @@ async function main(): Promise<void> {
   console.log(`${'='.repeat(60)}\n`);
 
   try {
-    // ✅ PREPARE REQUEST PAYLOAD
+    // ✅ PREPARE REQUEST PAYLOAD (Must match Railway gateway expectations)
     const requestPayload = {
       runner_name: RUNNER_NAME,
       service_type: SERVICE_TYPE,
       db_url: CRON_SUPABASE_DB_URL,
-      service_role_key: SUPABASE_SERVICE_ROLE_KEY
+      service_role_key: SUPABASE_SERVICE_ROLE_KEY,
+      bot_token: TELEGRAM_PUBLISHER_BOT_TOKEN,
+      system_user_id: SYSTEM_USER_ID
     };
 
     console.log('Calling Railway Gateway...');
