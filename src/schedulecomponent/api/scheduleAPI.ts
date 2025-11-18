@@ -572,6 +572,15 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
         // Get platform details for primary platform
         const selectedPlatform = platforms.find(p => String(p.id) === primaryPlatformId);
         
+        console.log('🔍 Platform lookup:', { 
+          primaryPlatformId, 
+          selectedPlatform: selectedPlatform ? {
+            id: selectedPlatform.id,
+            name: selectedPlatform.name,
+            platform_icon: selectedPlatform.platform_icon
+          } : null
+        });
+        
         if (selectedPlatform) {
           platformDetails = {
             platform_id: selectedPlatform.id.toString(),
@@ -582,6 +591,8 @@ export const createScheduledPost = async (postData: Omit<ScheduledPost, 'id' | '
             platform_icon: selectedPlatform.platform_icon || null,
             type: selectedPlatform.type || 'social'
           };
+          
+          console.log('✅ Platform details set:', platformDetails);
         } else {
           const selectedTelegram = telegramChannels.find(t => String(t.id) === primaryPlatformId);
           if (selectedTelegram) {
