@@ -300,13 +300,28 @@ export default function ScheduleComponent() {
         const contentWithPlatforms = await Promise.all((contentData || []).map(async (post) => {
           if (post.selected_platforms && Array.isArray(post.selected_platforms)) {
             const platformIds = post.selected_platforms;
+            // Try social_platforms first, then telegram_channels
             const { data: platformsData, error: platformsError } = await supabase
-              .from('platforms')
+              .from('social_platforms')
               .select('*')
               .in('id', platformIds);
             
-            if (!platformsError && platformsData) {
-              return { ...post, platformDetails: platformsData };
+            const { data: telegramData, error: telegramError } = await supabase
+              .from('telegram_channels')
+              .select('*')
+              .in('id', platformIds);
+            
+            // Add platform_icon to telegram channels if missing
+            const telegramWithIcons = (telegramData || []).map(tg => ({
+              ...tg,
+              platform_icon: tg.platform_icon || 'TG',
+              type: tg.type || (tg.thread_id ? 'telegram_group' : 'telegram_channel')
+            }));
+            
+            const allPlatforms = [...(platformsData || []), ...telegramWithIcons];
+            
+            if (allPlatforms.length > 0) {
+              return { ...post, platformDetails: allPlatforms };
             }
           }
           return { ...post, platformDetails: [] };
@@ -332,13 +347,28 @@ export default function ScheduleComponent() {
         const scheduledWithPlatforms = await Promise.all((scheduledData || []).map(async (post) => {
           if (post.selected_platforms && Array.isArray(post.selected_platforms)) {
             const platformIds = post.selected_platforms;
+            // Try social_platforms first, then telegram_channels
             const { data: platformsData, error: platformsError } = await supabase
-              .from('platforms')
+              .from('social_platforms')
               .select('*')
               .in('id', platformIds);
             
-            if (!platformsError && platformsData) {
-              return { ...post, platformDetails: platformsData };
+            const { data: telegramData, error: telegramError } = await supabase
+              .from('telegram_channels')
+              .select('*')
+              .in('id', platformIds);
+            
+            // Add platform_icon to telegram channels if missing
+            const telegramWithIcons = (telegramData || []).map(tg => ({
+              ...tg,
+              platform_icon: tg.platform_icon || 'TG',
+              type: tg.type || (tg.thread_id ? 'telegram_group' : 'telegram_channel')
+            }));
+            
+            const allPlatforms = [...(platformsData || []), ...telegramWithIcons];
+            
+            if (allPlatforms.length > 0) {
+              return { ...post, platformDetails: allPlatforms };
             }
           }
           return { ...post, platformDetails: [] };
@@ -1101,17 +1131,17 @@ const handleDeletePost = async (postId: string) => {
   return (
     <div style={getContainerStyle(isDarkMode)}>
       {/* Header */}
-      <div style={{ marginBottom: '32px' }}>
+      <div style={{ marginBottom: '24px' }}>
         <h1 style={{
-          fontSize: '28px',
+          fontSize: '24px',
           fontWeight: '700',
           color: theme.text,
-          margin: '0 0 8px 0'
+          margin: '0 0 6px 0'
         }}>
           Schedule Manager
         </h1>
         <p style={{
-          fontSize: '16px',
+          fontSize: '14px',
           color: theme.textSecondary,
           margin: '0'
         }}>
