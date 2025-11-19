@@ -1,15 +1,14 @@
-// Render.com Cron Runner - Direct Database Connection with Telegram Posting
-// Queries scheduled_posts table directly and posts to Telegram
+// Render Cron Job - Direct Supabase Connection
+// Service Type: Render Cron Job
+// Bot Token: TELEGRAM_BOT_TOKEN (Aurion bot)
 // TIMEZONE: WEST (UTC+1)
 
 import { createClient } from '@supabase/supabase-js';
 
 // ✅ ENVIRONMENT VARIABLES - WITH TRIMMING
 const CRON_SUPABASE_DB_URL = (process.env.CRON_SUPABASE_DB_URL || '').trim();
-const CRON_RUNNER_PASSWORD = (process.env.CRON_RUNNER_PASSWORD || '').trim();
 const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 const TELEGRAM_BOT_TOKEN = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
-const AUTHORIZATION = (process.env.AUTHORIZATION || '').trim();
 
 // ✅ RUNNER IDENTITY
 const RUNNER_NAME = 'Render Cron Job';
@@ -25,7 +24,6 @@ if (!CRON_SUPABASE_DB_URL || !SUPABASE_SERVICE_ROLE_KEY || !TELEGRAM_BOT_TOKEN) 
   console.error('  CRON_SUPABASE_DB_URL:', CRON_SUPABASE_DB_URL ? 'SET' : 'MISSING');
   console.error('  SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING');
   console.error('  TELEGRAM_BOT_TOKEN:', TELEGRAM_BOT_TOKEN ? 'SET' : 'MISSING');
-  console.error('  AUTHORIZATION:', AUTHORIZATION ? 'SET (optional)' : 'NOT SET (will use SERVICE_ROLE_KEY)');
   process.exit(1);
 }
 
@@ -48,16 +46,7 @@ const extractSupabaseUrl = (dbUrl: string): string => {
 
 const supabaseUrl = extractSupabaseUrl(CRON_SUPABASE_DB_URL);
 
-// ✅ DIAGNOSTIC: Log connection details (mask sensitive parts)
-console.log('\n--- SUPABASE CONNECTION DIAGNOSTIC ---');
-console.log(`Extracted Supabase URL: ${supabaseUrl}`);
-console.log(`Database URL (masked): ${CRON_SUPABASE_DB_URL.substring(0, 30)}...`);
-console.log(`Service Role Key (masked): ${SUPABASE_SERVICE_ROLE_KEY.substring(0, 20)}...${SUPABASE_SERVICE_ROLE_KEY.slice(-10)}`);
-console.log(`Key length: ${SUPABASE_SERVICE_ROLE_KEY.length} characters`);
-console.log(`Key starts with 'eyJ': ${SUPABASE_SERVICE_ROLE_KEY.startsWith('eyJ')}`);
-console.log('--- End Diagnostic ---\n');
-
-// ✅ CREATE SUPABASE CLIENT - ONLY USE SERVICE_ROLE_KEY FOR SUPABASE AUTH
+// ✅ CREATE SUPABASE CLIENT
 const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
   auth: {
     persistSession: false,
@@ -72,7 +61,7 @@ const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
   }
 });
 
-console.log(`[${new Date().toISOString()}] Render Cron Runner initialized`);
+console.log(`[${new Date().toISOString()}] Render Cron Job initialized`);
 console.log(`Supabase URL: ${supabaseUrl}`);
 console.log(`Service Type Filter: ${SERVICE_TYPE}`);
 console.log(`Timezone: WEST (UTC+${TIMEZONE_OFFSET_HOURS})`);
@@ -94,28 +83,7 @@ interface ScheduledPost {
   attempts: number;
   posting_status: string;
   post_status?: string;
-  character_profile?: string;
-  theme?: string;
-  audience?: string;
-  media_type?: string;
-  template_type?: string;
-  platform?: string;
-  title?: string;
-  description?: string;
-  hashtags?: string[];
-  keywords?: string;
-  cta?: string;
-  media_files?: any[];
-  selected_platforms?: string[];
-  content_id?: string;
-  user_id?: string;
-  created_by?: string;
-  voice_style?: string;
-  character_avatar?: string;
-  name?: string;
-  username?: string;
-  role?: string;
-  platform_id?: string;
+  [key: string]: any;
 }
 
 interface ProcessResult {
@@ -133,46 +101,35 @@ interface TelegramResponse {
 }
 
 // ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String(error.message);
+  }
+  return 'Unknown error occurred';
+}
+
+// ============================================
 // TELEGRAM API FUNCTIONS
 // ============================================
 
-/**
- * Download file from URL as buffer for direct upload
- */
-async function downloadFile(url: string): Promise<{ buffer: Buffer; filename: string }> {
-  const response = await fetch(url);
-  
-  if (!response.ok) {
-    throw new Error(`Failed to download file from ${url}: ${response.statusText}`);
-  }
-  
-  const arrayBuffer = await response.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  
-  // Extract filename from URL
-  const urlParts = url.split('/');
-  const filename = urlParts[urlParts.length - 1];
-  
-  return { buffer, filename };
-}
-
-/**
- * Parse Telegram API response with proper error handling
- */
 async function parseTelegramResponse(response: Response): Promise<TelegramResponse> {
-  // Read response body as text first (only consume stream once)
   const responseText = await response.text();
   
-  // Check if response is ok
   if (!response.ok) {
     console.error(`❌ Telegram API error response (${response.status}):`);
     console.error('Raw response:', responseText);
     
-    // Try to parse as JSON to extract error details
     try {
       const errorJson = JSON.parse(responseText);
-      
-      // Extract the error description from Telegram's JSON response
       const description = errorJson.description || errorJson.error || 'Unknown error';
       const errorCode = errorJson.error_code || response.status;
       
@@ -181,7 +138,6 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
         description: `HTTP ${errorCode}: ${description}`
       };
     } catch (jsonError) {
-      // Not JSON, return raw text
       return {
         ok: false,
         description: `HTTP ${response.status}: ${responseText || 'Empty response body'}`
@@ -189,7 +145,6 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
     }
   }
 
-  // Parse successful response as JSON
   try {
     const json = JSON.parse(responseText);
     return json;
@@ -203,13 +158,6 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
   }
 }
 
-/**
- * Build caption from post_content with proper Telegram HTML formatting
- * FIXES: 
- * - Single asterisk italic (*text*)
- * - Character profile from postContent or top-level fields
- * - Proper link formatting
- */
 function buildCaption(post: ScheduledPost): string {
   const postContent = post.post_content as any;
   
@@ -224,12 +172,10 @@ function buildCaption(post: ScheduledPost): string {
   
   let caption = '';
   
-  // ✅ FIX: Check for character profile in BOTH postContent AND top-level post fields
   const name = postContent.name || post.name;
   const username = postContent.username || post.username;
   const role = postContent.role || post.role;
   
-  // Add character profile header
   if (name) {
     caption += `<b>${name}</b>\n`;
     if (username) {
@@ -242,51 +188,32 @@ function buildCaption(post: ScheduledPost): string {
     caption += `\n`;
   }
   
-  // Helper function to convert markdown to Telegram HTML
   function formatText(text: string): string {
     if (!text) return '';
     
-    // ✅ FIX: Convert markdown links FIRST (before other replacements)
     text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>');
-    
-    // Convert bold **text** to <b>text</b>
     text = text.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-    
-    // ✅ FIX: Convert italic *text* to <i>text</i> (single asterisk - AFTER bold)
-    // Use negative lookahead/lookbehind to avoid matching ** or ***
     text = text.replace(/(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)/g, '<i>$1</i>');
-    
-    // Convert italic _text_ to <i>text</i> (underscore alternative)
     text = text.replace(/(?<!\w)_([^_]+?)_(?!\w)/g, '<i>$1</i>');
-    
-    // Convert underline __text__ to <u>text</u>
     text = text.replace(/__(.+?)__/g, '<u>$1</u>');
-    
-    // Convert strikethrough ~~text~~ to <s>text</s>
     text = text.replace(/~~(.+?)~~/g, '<s>$1</s>');
-    
-    // Convert inline code `text` to <code>text</code>
     text = text.replace(/`(.+?)`/g, '<code>$1</code>');
     
     return text;
   }
   
-  // Add title with formatting
   if (postContent.title) {
     caption += `${formatText(postContent.title)}\n\n`;
   }
   
-  // Add description with formatting
   if (postContent.description) {
     caption += `${formatText(postContent.description)}\n`;
   }
   
-  // Add hashtags
   if (postContent.hashtags && Array.isArray(postContent.hashtags) && postContent.hashtags.length > 0) {
     caption += `\n${postContent.hashtags.map((tag: string) => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`;
   }
   
-  // Add CTA
   if (postContent.cta) {
     caption += `\n\n👉 ${formatText(postContent.cta)}`;
   }
@@ -294,9 +221,6 @@ function buildCaption(post: ScheduledPost): string {
   return caption.trim();
 }
 
-/**
- * Send text message to Telegram
- */
 async function sendTelegramMessage(
   botToken: string,
   chatId: string,
@@ -327,9 +251,22 @@ async function sendTelegramMessage(
   return await parseTelegramResponse(response);
 }
 
-/**
- * Send photo to Telegram with caption (supports URL or direct upload)
- */
+async function downloadFile(url: string): Promise<{ buffer: Buffer; filename: string }> {
+  const response = await fetch(url);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to download file from ${url}: ${response.statusText}`);
+  }
+  
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  
+  const urlParts = url.split('/');
+  const filename = urlParts[urlParts.length - 1];
+  
+  return { buffer, filename };
+}
+
 async function sendTelegramPhoto(
   botToken: string,
   chatId: string,
@@ -340,7 +277,6 @@ async function sendTelegramPhoto(
 ): Promise<TelegramResponse> {
   const url = `https://api.telegram.org/bot${botToken}/sendPhoto`;
   
-  // If sending as URL
   if (typeof photoUrlOrBuffer === 'string') {
     const body: any = {
       chat_id: chatId,
@@ -365,12 +301,9 @@ async function sendTelegramPhoto(
     return await parseTelegramResponse(response);
   }
   
-  // If sending as Buffer (direct upload) - USE BUILT-IN FormData
-  // Convert Buffer to Blob for built-in FormData
   const blob = new Blob([photoUrlOrBuffer], { type: 'image/jpeg' });
   const file = new File([blob], filename || 'photo.jpg', { type: 'image/jpeg' });
   
-  // Use built-in FormData (not form-data npm package)
   const formData = new FormData();
   formData.append('chat_id', chatId);
   formData.append('photo', file);
@@ -384,7 +317,6 @@ async function sendTelegramPhoto(
     }
   }
   
-  // Built-in fetch handles FormData headers automatically
   const response = await fetch(url, {
     method: 'POST',
     body: formData
@@ -393,308 +325,45 @@ async function sendTelegramPhoto(
   return await parseTelegramResponse(response);
 }
 
-/**
- * Send animation (GIF) to Telegram with caption (supports URL or direct upload)
- */
-async function sendTelegramAnimation(
-  botToken: string,
-  chatId: string,
-  animationUrlOrBuffer: string | Buffer,
-  caption: string,
-  threadId?: string,
-  filename?: string
-): Promise<TelegramResponse> {
-  const url = `https://api.telegram.org/bot${botToken}/sendAnimation`;
-  
-  // If sending as URL
-  if (typeof animationUrlOrBuffer === 'string') {
-    const body: any = {
-      chat_id: chatId,
-      animation: animationUrlOrBuffer,
-      caption: caption,
-      parse_mode: 'HTML',
-    };
-    
-    if (threadId) {
-      const threadIdMatch = threadId.match(/(\d+)$/);
-      if (threadIdMatch) {
-        body.message_thread_id = parseInt(threadIdMatch[1]);
-      }
-    }
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    return await parseTelegramResponse(response);
-  }
-  
-  // If sending as Buffer (direct upload) - USE BUILT-IN FormData
-  console.log(`📤 Preparing GIF animation upload:`);
-  console.log(`   Chat ID: ${chatId}`);
-  console.log(`   Filename: ${filename || 'animation.gif'}`);
-  console.log(`   Buffer size: ${animationUrlOrBuffer.length} bytes`);
-  console.log(`   Caption length: ${caption.length} chars`);
-  if (threadId) console.log(`   Thread ID: ${threadId}`);
-  
-  // Convert Buffer to Blob for built-in FormData
-  const blob = new Blob([animationUrlOrBuffer], { type: 'image/gif' });
-  const file = new File([blob], filename || 'animation.gif', { type: 'image/gif' });
-  
-  // Use built-in FormData (not form-data npm package)
-  const formData = new FormData();
-  formData.append('chat_id', chatId);
-  formData.append('animation', file);
-  formData.append('caption', caption);
-  formData.append('parse_mode', 'HTML');
-  
-  if (threadId) {
-    const threadIdMatch = threadId.match(/(\d+)$/);
-    if (threadIdMatch) {
-      formData.append('message_thread_id', threadIdMatch[1]);
-      console.log(`   Message thread ID: ${threadIdMatch[1]}`);
-    }
-  }
-  
-  console.log(`🚀 Sending GIF animation to Telegram API...`);
-  
-  // Built-in fetch handles FormData headers automatically
-  const response = await fetch(url, {
-    method: 'POST',
-    body: formData
-  });
-
-  return await parseTelegramResponse(response);
-}
-
-/**
- * Send video to Telegram with caption (supports URL or direct upload)
- */
-async function sendTelegramVideo(
-  botToken: string,
-  chatId: string,
-  videoUrlOrBuffer: string | Buffer,
-  caption: string,
-  threadId?: string,
-  filename?: string
-): Promise<TelegramResponse> {
-  const url = `https://api.telegram.org/bot${botToken}/sendVideo`;
-  
-  // If sending as URL
-  if (typeof videoUrlOrBuffer === 'string') {
-    const body: any = {
-      chat_id: chatId,
-      video: videoUrlOrBuffer,
-      caption: caption,
-      parse_mode: 'HTML',
-    };
-    
-    if (threadId) {
-      const threadIdMatch = threadId.match(/(\d+)$/);
-      if (threadIdMatch) {
-        body.message_thread_id = parseInt(threadIdMatch[1]);
-      }
-    }
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    return await parseTelegramResponse(response);
-  }
-  
-  // If sending as Buffer (direct upload) - USE BUILT-IN FormData
-  console.log(`📤 Preparing video upload:`);
-  console.log(`   Chat ID: ${chatId}`);
-  console.log(`   Filename: ${filename || 'video.mp4'}`);
-  console.log(`   Buffer size: ${videoUrlOrBuffer.length} bytes`);
-  console.log(`   Caption length: ${caption.length} chars`);
-  if (threadId) console.log(`   Thread ID: ${threadId}`);
-  
-  // Convert Buffer to Blob for built-in FormData
-  const blob = new Blob([videoUrlOrBuffer], { type: 'video/mp4' });
-  const file = new File([blob], filename || 'video.mp4', { type: 'video/mp4' });
-  
-  // Use built-in FormData (not form-data npm package)
-  const formData = new FormData();
-  formData.append('chat_id', chatId);
-  formData.append('video', file);
-  formData.append('caption', caption);
-  formData.append('parse_mode', 'HTML');
-  
-  if (threadId) {
-    const threadIdMatch = threadId.match(/(\d+)$/);
-    if (threadIdMatch) {
-      formData.append('message_thread_id', threadIdMatch[1]);
-      console.log(`   Message thread ID: ${threadIdMatch[1]}`);
-    }
-  }
-  
-  console.log(`🚀 Sending video to Telegram API...`);
-  
-  // Built-in fetch handles FormData headers automatically
-  const response = await fetch(url, {
-    method: 'POST',
-    body: formData
-  });
-
-  return await parseTelegramResponse(response);
-}
-
-/**
- * Send document to Telegram with caption (supports URL or direct upload)
- */
-async function sendTelegramDocument(
-  botToken: string,
-  chatId: string,
-  documentUrlOrBuffer: string | Buffer,
-  caption: string,
-  threadId?: string,
-  filename?: string
-): Promise<TelegramResponse> {
-  const url = `https://api.telegram.org/bot${botToken}/sendDocument`;
-  
-  // If sending as URL
-  if (typeof documentUrlOrBuffer === 'string') {
-    const body: any = {
-      chat_id: chatId,
-      document: documentUrlOrBuffer,
-      caption: caption,
-      parse_mode: 'HTML',
-    };
-    
-    if (threadId) {
-      const threadIdMatch = threadId.match(/(\d+)$/);
-      if (threadIdMatch) {
-        body.message_thread_id = parseInt(threadIdMatch[1]);
-      }
-    }
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    return await parseTelegramResponse(response);
-  }
-  
-  // If sending as Buffer (direct upload) - USE BUILT-IN FormData
-  // Convert Buffer to Blob for built-in FormData
-  const blob = new Blob([documentUrlOrBuffer], { type: 'application/pdf' });
-  const file = new File([blob], filename || 'document.pdf', { type: 'application/pdf' });
-  
-  // Use built-in FormData (not form-data npm package)
-  const formData = new FormData();
-  formData.append('chat_id', chatId);
-  formData.append('document', file);
-  formData.append('caption', caption);
-  formData.append('parse_mode', 'HTML');
-  
-  if (threadId) {
-    const threadIdMatch = threadId.match(/(\d+)$/);
-    if (threadIdMatch) {
-      formData.append('message_thread_id', threadIdMatch[1]);
-    }
-  }
-  
-  // Built-in fetch handles FormData headers automatically
-  const response = await fetch(url, {
-    method: 'POST',
-    body: formData
-  });
-
-  return await parseTelegramResponse(response);
-}
-
-/**
- * Post content to Telegram based on media type
- */
 async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; post_id?: string; error?: string }> {
   try {
     const chatId = post.channel_group_id!;
     const threadId = post.thread_id || undefined;
-    let caption = buildCaption(post);
+    const caption = buildCaption(post);
     
-    // ✅ TELEGRAM CAPTION LIMIT: Max 1024 characters
     if (caption.length > 1024) {
-      console.warn(`⚠️ Caption too long (${caption.length} chars), truncating to 1024 chars`);
-      caption = caption.substring(0, 1021) + '...';
+      throw new Error(`Caption too long (${caption.length} chars). Please shorten content to under 1024 characters.`);
     }
     
-    // ✅ BEST PRACTICE: Check media files with priority order
-    // Priority 1: Separate media_files column (normalized, easier to query)
-    // Priority 2: post_content.media_files (nested JSON, backward compatibility)
     let mediaFiles: any[] = [];
-    let mediaSource = 'none';
     
     if (post.media_files && Array.isArray(post.media_files) && post.media_files.length > 0) {
       mediaFiles = post.media_files;
-      mediaSource = 'media_files column';
-      console.log(`✅ Using media from: ${mediaSource}`);
     } else {
       const postContent = post.post_content as any;
       if (postContent?.media_files && Array.isArray(postContent.media_files) && postContent.media_files.length > 0) {
         mediaFiles = postContent.media_files;
-        mediaSource = 'post_content.media_files';
-        console.log(`✅ Using media from: ${mediaSource}`);
       }
     }
     
     let telegramResult: TelegramResponse;
     
-    // CASE 1: Has media files
     if (mediaFiles.length > 0) {
       const firstMedia = mediaFiles[0];
       const mediaUrl = firstMedia.url || firstMedia.src || firstMedia.supabaseUrl || firstMedia;
-      
-      console.log(`📦 Media file detected:`);
-      console.log(`   Source: ${mediaSource}`);
-      console.log(`   Type: ${firstMedia.type || 'unknown'}`);
-      console.log(`   Name: ${firstMedia.name || 'unknown'}`);
-      console.log(`   Size: ${firstMedia.size ? `${(firstMedia.size / 1024 / 1024).toFixed(2)} MB` : 'unknown'}`);
-      console.log(`   URL: ${mediaUrl}`);
       
       if (typeof mediaUrl !== 'string') {
         throw new Error('Invalid media URL format');
       }
       
-      // Determine media type from file extension OR type field
-      const mediaType = firstMedia.type?.toLowerCase() || '';
-      const isGif = /\.gif$/i.test(mediaUrl);
-      const isVideo = mediaType === 'video' || /\.(mp4|mov|avi|mkv)$/i.test(mediaUrl);
-      const isDocument = mediaType === 'document' || /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(mediaUrl);
-      
-      // ✅ Download file as Buffer and upload to Telegram
-      console.log(`⬇️ Downloading media file as Buffer...`);
       const { buffer, filename } = await downloadFile(mediaUrl);
-      console.log(`✅ Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB as ${filename}`);
-      
-      if (isGif) {
-        console.log(`🎞️ Uploading GIF animation to Telegram: ${filename}`);
-        telegramResult = await sendTelegramAnimation(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
-      } else if (isVideo) {
-        console.log(`📹 Uploading video to Telegram: ${filename}`);
-        telegramResult = await sendTelegramVideo(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
-      } else if (isDocument) {
-        console.log(`📄 Uploading document to Telegram: ${filename}`);
-        telegramResult = await sendTelegramDocument(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
-      } else {
-        console.log(`🖼️ Uploading photo to Telegram: ${filename}`);
-        telegramResult = await sendTelegramPhoto(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
-      }
-    } 
-    // CASE 2: Text-only post
-    else {
-      console.log('💬 Sending text-only message (no media detected)');
+      console.log(`🖼️ Uploading photo to Telegram: ${filename}`);
+      telegramResult = await sendTelegramPhoto(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+    } else {
+      console.log('💬 Sending text-only message');
       telegramResult = await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, caption, threadId);
     }
     
-    // Check Telegram API response
     if (!telegramResult.ok) {
       throw new Error(`Telegram API error: ${telegramResult.description || 'Unknown error'}`);
     }
@@ -717,237 +386,87 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
 }
 
 // ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-/**
- * Get error message from unknown error type
- */
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (typeof error === 'string') {
-    return error;
-  }
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String(error.message);
-  }
-  return 'Unknown error occurred';
-}
-
-/**
- * Convert UTC date to WEST (UTC+1) timezone
- */
-function toWEST(date: Date): Date {
-  const utcTime = date.getTime();
-  const westTime = new Date(utcTime + (TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000));
-  return westTime;
-}
-
-/**
- * Get current date and time in WEST timezone
- */
-function getCurrentWESTDateTime(): { date: string; time: string } {
-  const nowUTC = new Date();
-  const nowWEST = toWEST(nowUTC);
-  
-  const year = nowWEST.getFullYear();
-  const month = String(nowWEST.getMonth() + 1).padStart(2, '0');
-  const day = String(nowWEST.getDate()).padStart(2, '0');
-  const hours = String(nowWEST.getHours()).padStart(2, '0');
-  const minutes = String(nowWEST.getMinutes()).padStart(2, '0');
-  const seconds = String(nowWEST.getSeconds()).padStart(2, '0');
-  
-  return {
-    date: `${year}-${month}-${day}`,
-    time: `${hours}:${minutes}:${seconds}`
-  };
-}
-
-// ============================================
 // CORE PROCESSING FUNCTIONS
 // ============================================
 
 /**
- * Query and claim jobs from scheduled_posts table
+ * ✅ FIXED: Proper scheduled_date + scheduled_time comparison
  */
 async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
-  const nowUTC = new Date();
-  const nowWEST = toWEST(nowUTC);
-  
-  const { date: currentDate, time: currentTime } = getCurrentWESTDateTime();
-  
   try {
+    const nowUTC = new Date();
+    const nowWEST = new Date(nowUTC.getTime() + (TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000));
+    
+    const currentDate = nowWEST.toISOString().split('T')[0]; // YYYY-MM-DD
+    const currentTime = nowWEST.toTimeString().slice(0, 8); // HH:MM:SS
+    
     console.log(`\n${'='.repeat(60)}`);
     console.log('Querying pending jobs...');
-    console.log(`UTC Time: ${nowUTC.toISOString()}`);
-    console.log(`WEST Time: ${nowWEST.toISOString()}`);
-    console.log(`Query Date: ${currentDate}, Query Time: ${currentTime}`);
-    
-    console.log(`\n--- CONNECTION INFO ---`);
-    console.log(`Supabase URL: ${supabaseUrl}`);
-    console.log(`Table Name: scheduled_posts`);
-    console.log(`Service Type Looking For: '${SERVICE_TYPE}'`);
-    console.log('--- End Connection Info ---\n');
+    console.log(`UTC: ${nowUTC.toISOString()}`);
+    console.log(`WEST: ${nowWEST.toISOString()}`);
+    console.log(`Current Date: ${currentDate}`);
+    console.log(`Current Time: ${currentTime}`);
+    console.log(`Service Type: '${SERVICE_TYPE}'`);
+    console.log(`${'='.repeat(60)}\n`);
 
-    // ✅ DIAGNOSTIC: Test network connectivity to Supabase first
-    console.log('--- DIAGNOSTIC: Testing Network Connectivity ---');
-    try {
-      const healthCheckUrl = `${supabaseUrl}/rest/v1/`;
-      console.log(`Testing HTTP connection to: ${healthCheckUrl}`);
-      
-      const healthResponse = await fetch(healthCheckUrl, {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-        }
-      });
-      
-      console.log(`Health check response status: ${healthResponse.status}`);
-      console.log(`Health check response ok: ${healthResponse.ok}`);
-      
-      if (!healthResponse.ok) {
-        const errorText = await healthResponse.text();
-        console.error(`❌ Health check failed with status ${healthResponse.status}`);
-        console.error('Response body:', errorText.substring(0, 500));
-      } else {
-        console.log('✅ Network connectivity to Supabase is working');
-      }
-    } catch (netError) {
-      console.error('❌ Network connectivity test failed:', netError);
-      console.error('This indicates Render cannot reach Supabase at all');
-    }
-    console.log('--- End Network Diagnostic ---\n');
-
-    // ✅ DIAGNOSTIC: Test basic connection with OUR service_type only
-    console.log('--- DIAGNOSTIC: Testing Supabase Connection ---');
-    const { data: sampleData, error: sampleError } = await supabase
-      .from('scheduled_posts')
-      .select('id, service_type, posting_status')
-      .eq('service_type', SERVICE_TYPE)
-      .limit(5);
-    
-    if (sampleError) {
-      console.error('❌ Cannot connect to scheduled_posts table:', sampleError);
-      console.error('Error details:', JSON.stringify(sampleError, null, 2));
-      throw sampleError;
-    }
-    
-    console.log(`✅ Connection successful! Sample of OUR posts (${SERVICE_TYPE}):`);
-    console.log(JSON.stringify(sampleData, null, 2));
-    
-    // ✅ DIAGNOSTIC: Check posts matching our service_type
-    const { data: serviceData, error: serviceError } = await supabase
-      .from('scheduled_posts')
-      .select('id, service_type, posting_status, scheduled_date, scheduled_time')
-      .eq('service_type', SERVICE_TYPE)
-      .limit(10);
-    
-    console.log(`\n--- Posts with service_type = '${SERVICE_TYPE}' ---`);
-    if (serviceData && serviceData.length > 0) {
-      console.log(`Found ${serviceData.length} posts:`);
-      console.log(JSON.stringify(serviceData, null, 2));
-    } else {
-      console.log('⚠️ No posts found with this service_type');
-    }
-    
-    // ✅ DIAGNOSTIC: Check pending posts with our service_type (ignore date/time)
-    const { data: pendingData, error: pendingError } = await supabase
-      .from('scheduled_posts')
-      .select('id, service_type, posting_status, scheduled_date, scheduled_time')
-      .eq('service_type', SERVICE_TYPE)
-      .eq('posting_status', 'pending')
-      .limit(10);
-    
-    console.log(`\n--- PENDING posts with service_type = '${SERVICE_TYPE}' (ALL DATES) ---`);
-    if (pendingData && pendingData.length > 0) {
-      console.log(`Found ${pendingData.length} pending posts (regardless of date/time):`);
-      console.log(JSON.stringify(pendingData, null, 2));
-      
-      // Show which ones would match our date/time criteria
-      console.log(`\nChecking which posts match date/time criteria:`);
-      pendingData.forEach((post: any) => {
-        // Extract date portion from timestamptz (format: 2025-11-15T07:00:00+00:00)
-        const postDateFull = post.scheduled_date;
-        const postDate = postDateFull.split('T')[0]; // Extract just the date part (YYYY-MM-DD)
-        const postTime = post.scheduled_time;
-        const matchesDate = postDate < currentDate || (postDate === currentDate && postTime <= currentTime);
-        console.log(`  Post ${post.id}:`);
-        console.log(`    Date: ${postDateFull} -> ${postDate} (${postDate < currentDate ? 'BEFORE' : postDate === currentDate ? 'TODAY' : 'FUTURE'})`);
-        console.log(`    Time: ${postTime} (${postTime <= currentTime ? 'PAST/NOW' : 'FUTURE'})`);
-        console.log(`    Matches? ${matchesDate ? '✅ YES' : '❌ NO'}`);
-      });
-    } else {
-      console.log('⚠️ No PENDING posts found with this service_type AT ALL');
-      console.log('This means either:');
-      console.log('  1. service_type does not match exactly (check for spaces/typos)');
-      console.log('  2. All posts are in a different posting_status (not pending)');
-      console.log('  3. No posts exist with this service_type');
-    }
-    
-    console.log(`\n--- ACTUAL QUERY PARAMETERS ---`);
-    console.log(`Looking for posts where:`);
-    console.log(`  service_type = '${SERVICE_TYPE}'`);
-    console.log(`  posting_status = 'pending'`);
-    console.log(`  scheduled_date <= '${currentDate}T${currentTime}+01:00' (WEST timezone)`);
-    console.log('--- End Diagnostics ---\n');
-
-    // ✅ ACTUAL QUERY: Now find posts ready to process
-    // NOTE: scheduled_date is timestamptz, so we compare against full timestamp
-    // Construct the current datetime in ISO format for comparison
-    const currentDateTime = `${currentDate}T${currentTime}+01:00`; // WEST = UTC+1
-    
-    const { data, error } = await supabase
+    // ✅ STEP 1: Get all pending posts for this service_type
+    const { data: allPosts, error: queryError } = await supabase
       .from('scheduled_posts')
       .select('*')
       .eq('service_type', SERVICE_TYPE)
-      .eq('posting_status', 'pending')
-      .lte('scheduled_date', currentDateTime)
-      .limit(limit);
+      .eq('posting_status', 'pending');
 
-    if (error) {
-      console.error('Failed to query scheduled_posts:', error);
-      throw error;
+    if (queryError) {
+      console.error('Failed to query scheduled_posts:', queryError);
+      throw queryError;
     }
 
-    console.log('\n--- QUERY RESULTS ---');
-    if (!data || data.length === 0) {
-      console.log('⚠️ No pending posts found matching criteria:');
-      console.log(`  - service_type: '${SERVICE_TYPE}'`);
-      console.log(`  - posting_status: 'pending'`);
-      console.log(`  - scheduled_date <= '${currentDateTime}' (WEST timezone)`);
+    if (!allPosts || allPosts.length === 0) {
+      console.log(`⚠️ No pending posts found for service_type: '${SERVICE_TYPE}'`);
       return [];
     }
 
-    console.log(`✅ Found ${data.length} pending posts ready to process:`);
-    data.forEach((post: any) => {
-      console.log(`  - ID: ${post.id}`);
-      console.log(`    Service: ${post.service_type}`);
-      console.log(`    Status: ${post.posting_status}`);
-      console.log(`    Scheduled: ${post.scheduled_date} ${post.scheduled_time}`);
-    });
-    console.log('--- End Query Results ---\n');
+    console.log(`Found ${allPosts.length} pending posts with service_type '${SERVICE_TYPE}'`);
 
-    const claimedIds = data.map((post: any) => post.id);
-    
-    // ✅ CRITICAL FIX: Do NOT touch posting_status, ONLY update post_status
+    // ✅ STEP 2: Filter in JavaScript for posts that are due
+    const duePosts = allPosts.filter((post: any) => {
+      const postDateFull = post.scheduled_date;
+      const postDate = postDateFull.split('T')[0]; // Extract YYYY-MM-DD
+      const postTime = post.scheduled_time; // HH:MM:SS format
+      
+      const isDue = (postDate < currentDate) || (postDate === currentDate && postTime <= currentTime);
+      
+      if (isDue) {
+        console.log(`✅ DUE: Post ${post.id} - Date: ${postDate}, Time: ${postTime}`);
+      }
+      
+      return isDue;
+    });
+
+    if (duePosts.length === 0) {
+      console.log(`⚠️ No posts are due yet (all scheduled for future)`);
+      return [];
+    }
+
+    console.log(`\n📋 ${duePosts.length} posts are due for processing`);
+
+    // ✅ STEP 3: Claim the due posts (limit to max)
+    const postsToProcess = duePosts.slice(0, limit);
+    const claimedIds = postsToProcess.map((post: any) => post.id);
+
     const { error: updateError } = await supabase
       .from('scheduled_posts')
-      .update({
-        post_status: 'pending'
-      })
+      .update({ post_status: 'pending' })
       .in('id', claimedIds)
       .eq('service_type', SERVICE_TYPE);
 
     if (updateError) {
-      console.error('Failed to update posts to pending:', updateError);
+      console.error('Failed to claim posts:', updateError);
       throw updateError;
     }
 
-    console.log(`Claimed ${claimedIds.length} jobs`);
-    return data as ScheduledPost[];
+    console.log(`✅ Claimed ${claimedIds.length} jobs\n`);
+    return postsToProcess as ScheduledPost[];
 
   } catch (error) {
     console.error('Error in claimJobs:', getErrorMessage(error));
@@ -955,26 +474,19 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
   }
 }
 
-/**
- * Process a single scheduled post
- */
 async function processPost(post: ScheduledPost): Promise<void> {
   const now = new Date();
   console.log(`\n--- Processing Post ${post.id} ---`);
-  console.log(`Platform: ${post.social_platform}`);
-  console.log(`Scheduled: ${post.scheduled_date} ${post.scheduled_time}`);
 
   try {
-    // ✅ VALIDATE POST DATA
     if (!post.channel_group_id) {
-      throw new Error('Missing channel_group_id (Telegram Chat ID)');
+      throw new Error('Missing channel_group_id');
     }
 
     if (!post.post_content && !post.description && !post.title) {
-      throw new Error('Missing post content (title or description required)');
+      throw new Error('Missing post content');
     }
 
-    // ✅ POST TO TELEGRAM
     const postResult = await postToTelegram(post);
 
     if (!postResult.success) {
@@ -982,14 +494,11 @@ async function processPost(post: ScheduledPost): Promise<void> {
     }
 
     const externalPostId = postResult.post_id || 'unknown';
-    console.log(`✅ Successfully posted to Telegram`);
-    console.log(`External Post ID: ${externalPostId}`);
 
-    // ⭐⭐⭐ CRITICAL FIX: Update posting_status to 'sent' to prevent duplicate posts
     const { error: updateError } = await supabase
       .from('scheduled_posts')
       .update({
-        posting_status: 'sent',  // ⭐ THIS IS THE KEY FIX
+        posting_status: 'sent',
         post_status: 'sent',
         updated_at: now.toISOString()
       })
@@ -999,11 +508,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
     if (updateError) {
       throw new Error(`Failed to update scheduled_posts: ${getErrorMessage(updateError)}`);
     }
-    
-    console.log(`✅ Updated posting_status to 'sent' - Post will not be picked up again`);
 
-    // ✅ INSERT INTO dashboard_posts
-    // Extract character profile and other fields from post_content
     const postContent = post.post_content as any;
     
     const dashboardPost = {
@@ -1017,15 +522,11 @@ async function processPost(post: ScheduledPost): Promise<void> {
         : post.url,
       channel_group_id: post.channel_group_id,
       thread_id: post.thread_id,
-      
-      // ✅ FIX: Extract character profile fields
       character_profile: post.character_profile || postContent?.character_profile || null,
       name: post.name || postContent?.name || null,
       username: post.username || postContent?.username || null,
       role: post.role || postContent?.role || null,
       character_avatar: post.character_avatar || postContent?.character_avatar || null,
-      
-      // ✅ FIX: Extract post metadata
       title: post.title || postContent?.title || null,
       description: post.description || postContent?.description || null,
       hashtags: post.hashtags || postContent?.hashtags || null,
@@ -1036,14 +537,14 @@ async function processPost(post: ScheduledPost): Promise<void> {
       voice_style: post.voice_style || postContent?.voice_style || null,
       media_type: post.media_type || postContent?.media_type || null,
       template_type: post.template_type || postContent?.template_type || null,
-      
-      // ✅ FIX: Preserve scheduled time
       scheduled_date: post.scheduled_date,
       scheduled_time: post.scheduled_time,
-      
-      // ✅ FIX: User identification
       user_id: post.user_id || null,
-      created_by: post.created_by || null
+      created_by: post.created_by || null,
+      content_id: post.content_id || null,
+      platform_id: post.platform_id || null,
+      media_files: post.media_files || postContent?.media_files || null,
+      selected_platforms: post.selected_platforms || postContent?.selected_platforms || null
     };
 
     const { error: insertError } = await supabase
@@ -1056,56 +557,55 @@ async function processPost(post: ScheduledPost): Promise<void> {
       console.log(`✅ Inserted into dashboard_posts`);
     }
 
-    // ⭐ DO NOT DELETE from scheduled_posts - Keep for history/audit trail
-    // The posting_status='sent' prevents the cron from picking it up again
+    const { error: deleteError } = await supabase
+      .from('scheduled_posts')
+      .delete()
+      .eq('id', post.id)
+      .eq('service_type', SERVICE_TYPE);
+
+    if (deleteError) {
+      console.warn(`⚠️ Failed to delete from scheduled_posts: ${getErrorMessage(deleteError)}`);
+    } else {
+      console.log(`✅ Deleted post ${post.id} from scheduled_posts`);
+    }
+
     console.log(`✅ Post ${post.id} completed successfully`);
-    console.log(`   - posting_status updated to 'sent' (prevents re-processing)`);
-    console.log(`   - Row preserved in scheduled_posts for audit trail`);
-    console.log(`   - Copy inserted into dashboard_posts for analytics`);
 
   } catch (error) {
     const errorMessage = getErrorMessage(error);
     console.error(`❌ Failed to process post ${post.id}:`, errorMessage);
 
-    // ✅ DETERMINE IF SHOULD RETRY
     const maxRetries = 3;
     const newAttempts = (post.attempts || 0) + 1;
     const shouldRetry = newAttempts < maxRetries;
 
-    // ⭐ CRITICAL FIX: Update posting_status based on retry logic
+    const updateData: any = {
+      post_status: 'failed',
+      attempts: newAttempts
+    };
+    
+    if (!shouldRetry) {
+      updateData.posting_status = 'failed';
+    }
+
     const { error: failError } = await supabase
       .from('scheduled_posts')
-      .update({
-        posting_status: shouldRetry ? 'pending' : 'failed',  // ⭐ Keep as 'pending' if retrying, else 'failed'
-        post_status: 'failed',
-        attempts: newAttempts,
-        failure_reason: errorMessage,
-        updated_at: now.toISOString()
-      })
+      .update(updateData)
       .eq('id', post.id)
       .eq('service_type', SERVICE_TYPE);
 
     if (failError) {
       console.error(`Failed to update error status: ${getErrorMessage(failError)}`);
     }
-
-    if (shouldRetry) {
-      console.log(`Post ${post.id} marked for retry (attempt ${newAttempts}/${maxRetries})`);
-    } else {
-      console.log(`Post ${post.id} marked as FAILED - max retries reached (${newAttempts}/${maxRetries})`);
-    }
     
     throw error;
   }
 }
 
-/**
- * Main execution
- */
-async function main(): Promise<ProcessResult> {
+async function processJobs(): Promise<ProcessResult> {
   const startTime = new Date();
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`Render Cron Job Started: ${startTime.toISOString()}`);
+  console.log(`Processing Started: ${startTime.toISOString()}`);
   console.log(`${'='.repeat(60)}\n`);
 
   const errors: string[] = [];
@@ -1116,7 +616,6 @@ async function main(): Promise<ProcessResult> {
     const posts = await claimJobs(50);
 
     if (posts.length === 0) {
-      console.log('✅ No pending posts to process');
       return {
         total_claimed: 0,
         succeeded: 0,
@@ -1125,8 +624,6 @@ async function main(): Promise<ProcessResult> {
         timestamp: startTime.toISOString()
       };
     }
-
-    console.log(`\n📋 Processing ${posts.length} posts...\n`);
 
     for (const post of posts) {
       try {
@@ -1142,16 +639,10 @@ async function main(): Promise<ProcessResult> {
     const duration = endTime.getTime() - startTime.getTime();
 
     console.log(`\n${'='.repeat(60)}`);
-    console.log(`Render Cron Job Completed`);
-    console.log(`${'='.repeat(60)}`);
+    console.log(`Processing Completed`);
     console.log(`Duration: ${duration}ms`);
-    console.log(`Total Claimed: ${posts.length}`);
     console.log(`✅ Succeeded: ${succeeded}`);
     console.log(`❌ Failed: ${failed}`);
-    if (errors.length > 0) {
-      console.log(`\nErrors:`);
-      errors.forEach(err => console.log(`  - ${err}`));
-    }
     console.log(`${'='.repeat(60)}\n`);
 
     return {
@@ -1163,7 +654,7 @@ async function main(): Promise<ProcessResult> {
     };
 
   } catch (error) {
-    console.error('❌ Fatal error in main execution:', getErrorMessage(error));
+    console.error('❌ Fatal error in processJobs:', getErrorMessage(error));
     
     return {
       total_claimed: 0,
@@ -1175,14 +666,29 @@ async function main(): Promise<ProcessResult> {
   }
 }
 
-// ✅ EXECUTE
-main()
-  .then(result => {
-    const exitCode = result.failed > 0 ? 1 : 0;
-    console.log(`Exiting with code: ${exitCode}`);
-    process.exit(exitCode);
-  })
-  .catch(error => {
-    console.error('Unhandled error:', error);
+// ============================================
+// MAIN EXECUTION
+// ============================================
+
+async function main(): Promise<void> {
+  try {
+    const result = await processJobs();
+    
+    console.log('\n=== FINAL RESULT ===');
+    console.log(`Total Claimed: ${result.total_claimed}`);
+    console.log(`Succeeded: ${result.succeeded}`);
+    console.log(`Failed: ${result.failed}`);
+    
+    if (result.errors.length > 0) {
+      console.log('\nErrors:');
+      result.errors.forEach(err => console.log(`  - ${err}`));
+    }
+    
+    process.exit(result.failed > 0 ? 1 : 0);
+  } catch (error) {
+    console.error('Fatal error:', getErrorMessage(error));
     process.exit(1);
-  });
+  }
+}
+
+main();
