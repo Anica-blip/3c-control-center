@@ -6,11 +6,9 @@ services:
     buildCommand: npm install
     startCommand: npx tsx ./src/cron-runners/render-cron.ts
     envVars:
-      - key: VERCEL_GATEWAY_URL
-        sync: false
       - key: CRON_SUPABASE_DB_URL
         sync: false
-      - key: CRON_RUNNER_PASSWORD
-        sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
         sync: false
