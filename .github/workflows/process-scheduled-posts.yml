@@ -71,7 +71,7 @@ jobs:
         run: |
           echo "Starting GitHub Actions Cron Job at $(date -u)"
           echo "Gateway URL: ${{ secrets.RAILWAY_GATEWAY_URL }}"
-          tsx "./CRON JOBS/github-actions-cron.ts"
+          tsx "./scripts/github-actions-cron.ts"
           
           if [ $? -eq 0 ]; then
             echo "✅ GitHub Actions Cron Job completed successfully"
