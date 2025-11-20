@@ -597,7 +597,7 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
       
       // ✅ FIX #1: Determine media type - CHECK FILE EXTENSION FIRST
       const mediaType = firstMedia.type?.toLowerCase() || '';
-      const isGif = /\.(gif)$/i.test(mediaUrl);
+      const isGif = mediaType === 'animation' || mediaType === 'gif' || /\.(gif)$/i.test(mediaUrl);
       const isVideo = mediaType === 'video' || /\.(mp4|mov|avi|mkv)$/i.test(mediaUrl);
       const isDocument = mediaType === 'document' || /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(mediaUrl);
       
