@@ -2,6 +2,7 @@
 // Service Type: Render Cron Job
 // Bot Token: TELEGRAM_BOT_TOKEN (Aurion bot)
 // TIMEZONE: WEST (UTC+1)
+// ✅ FIXED: Now supports GIF animation via sendAnimation API
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -115,6 +116,55 @@ function getErrorMessage(error: unknown): string {
     return String(error.message);
   }
   return 'Unknown error occurred';
+}
+
+// ============================================
+// MEDIA TYPE DETECTION - NEW!
+// ============================================
+
+/**
+ * ✅ NEW: Detect media type for proper Telegram API selection
+ * Order matters: GIF MUST be checked BEFORE photo!
+ */
+function detectMediaType(firstMedia: any, mediaUrl: string): {
+  isVideo: boolean;
+  isAnimation: boolean;
+  isDocument: boolean;
+  isPhoto: boolean;
+} {
+  const mediaType = (firstMedia.type || '').toLowerCase();
+  const fileName = (firstMedia.name || mediaUrl).toLowerCase();
+  
+  // ✅ CHECK 1: Animated GIF/Animation (MUST BE FIRST!)
+  const isAnimation = 
+    mediaType === 'animation' || 
+    mediaType === 'gif' ||
+    fileName.endsWith('.gif') ||
+    /\.gif$/i.test(mediaUrl);
+  
+  // ✅ CHECK 2: Video
+  const isVideo = 
+    mediaType === 'video' || 
+    /\.(mp4|mov|avi|mkv|webm)$/i.test(mediaUrl);
+  
+  // ✅ CHECK 3: Document
+  const isDocument = 
+    mediaType === 'document' || 
+    /\.(pdf|doc|docx|txt|zip)$/i.test(mediaUrl);
+  
+  // ✅ CHECK 4: Photo (fallback)
+  const isPhoto = 
+    !isAnimation && !isVideo && !isDocument;
+  
+  console.log(`📎 Media type detection:`);
+  console.log(`   Type field: "${mediaType}"`);
+  console.log(`   Filename: "${fileName}"`);
+  console.log(`   isAnimation: ${isAnimation}`);
+  console.log(`   isVideo: ${isVideo}`);
+  console.log(`   isDocument: ${isDocument}`);
+  console.log(`   isPhoto: ${isPhoto}`);
+  
+  return { isVideo, isAnimation, isDocument, isPhoto };
 }
 
 // ============================================
@@ -325,6 +375,83 @@ async function sendTelegramPhoto(
   return await parseTelegramResponse(response);
 }
 
+/**
+ * ✅ NEW: Send ANIMATION/GIF to Telegram
+ */
+async function sendTelegramAnimation(
+  botToken: string,
+  chatId: string,
+  animationBuffer: Buffer,
+  caption: string,
+  threadId?: string,
+  filename?: string
+): Promise<TelegramResponse> {
+  const url = `https://api.telegram.org/bot${botToken}/sendAnimation`;
+  
+  const blob = new Blob([animationBuffer], { type: 'image/gif' });
+  const file = new File([blob], filename || 'animation.gif', { type: 'image/gif' });
+  
+  const formData = new FormData();
+  formData.append('chat_id', chatId);
+  formData.append('animation', file);
+  formData.append('caption', caption);
+  formData.append('parse_mode', 'HTML');
+  
+  if (threadId) {
+    const threadIdMatch = threadId.match(/(\d+)$/);
+    if (threadIdMatch) {
+      formData.append('message_thread_id', threadIdMatch[1]);
+    }
+  }
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    body: formData
+  });
+
+  return await parseTelegramResponse(response);
+}
+
+/**
+ * ✅ NEW: Send VIDEO to Telegram
+ */
+async function sendTelegramVideo(
+  botToken: string,
+  chatId: string,
+  videoBuffer: Buffer,
+  caption: string,
+  threadId?: string,
+  filename?: string
+): Promise<TelegramResponse> {
+  const url = `https://api.telegram.org/bot${botToken}/sendVideo`;
+  
+  const blob = new Blob([videoBuffer], { type: 'video/mp4' });
+  const file = new File([blob], filename || 'video.mp4', { type: 'video/mp4' });
+  
+  const formData = new FormData();
+  formData.append('chat_id', chatId);
+  formData.append('video', file);
+  formData.append('caption', caption);
+  formData.append('parse_mode', 'HTML');
+  
+  if (threadId) {
+    const threadIdMatch = threadId.match(/(\d+)$/);
+    if (threadIdMatch) {
+      formData.append('message_thread_id', threadIdMatch[1]);
+    }
+  }
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    body: formData
+  });
+
+  return await parseTelegramResponse(response);
+}
+
+/**
+ * ✅ UPDATED: Now detects media type and uses correct Telegram API
+ */
 async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; post_id?: string; error?: string }> {
   try {
     const chatId = post.channel_group_id!;
@@ -356,9 +483,24 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
         throw new Error('Invalid media URL format');
       }
       
+      // ✅ DETECT MEDIA TYPE (GIF, VIDEO, PHOTO)
+      const { isVideo, isAnimation, isDocument, isPhoto } = detectMediaType(firstMedia, mediaUrl);
+      
       const { buffer, filename } = await downloadFile(mediaUrl);
-      console.log(`🖼️ Uploading photo to Telegram: ${filename}`);
-      telegramResult = await sendTelegramPhoto(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+      const sizeMB = (buffer.length / 1024 / 1024).toFixed(2);
+      console.log(`⬇️ Downloaded ${sizeMB} MB as ${filename}`);
+      
+      // ✅ USE CORRECT TELEGRAM API METHOD
+      if (isAnimation) {
+        console.log(`🎬 Uploading GIF/Animation to Telegram: ${filename}`);
+        telegramResult = await sendTelegramAnimation(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+      } else if (isVideo) {
+        console.log(`🎥 Uploading video to Telegram: ${filename}`);
+        telegramResult = await sendTelegramVideo(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+      } else {
+        console.log(`🖼️ Uploading photo to Telegram: ${filename}`);
+        telegramResult = await sendTelegramPhoto(TELEGRAM_BOT_TOKEN, chatId, buffer, caption, threadId, filename);
+      }
     } else {
       console.log('💬 Sending text-only message');
       telegramResult = await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, caption, threadId);
