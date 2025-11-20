@@ -213,7 +213,8 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
 }
 
 /**
- * Build caption from post_content with proper Telegram HTML formatting
+ * Build caption from scheduled_posts table columns with proper Telegram HTML formatting
+ * Uses: post_content, name, username, role columns from scheduled_posts
  */
 function buildCaption(post: ScheduledPost): string {
   const postContent = post.post_content as any;
