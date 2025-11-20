@@ -2,7 +2,7 @@ services:
   - type: cron
     name: scheduled-posts
     env: node
-    schedule: "0 6,9,14,17 * * *"
+    schedule: "0 7,10,15,18 * * *"
     buildCommand: npm install
     startCommand: npx tsx ./src/cron-runners/render-cron.ts
     envVars:
