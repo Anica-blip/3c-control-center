@@ -1,8 +1,3 @@
-// ========================================
-// FIXED handleSavePost FUNCTION
-// ========================================
-// Replace lines 157-179 in index.tsx with this:
-
 const handleSavePost = async (postData: Omit<ContentPost, 'id' | 'createdDate'> & { id?: string }) => {
   try {
     setIsSaving(true);
