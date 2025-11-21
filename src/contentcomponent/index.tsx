@@ -192,54 +192,28 @@ export default function ContentComponent() {
     try {
       setIsSaving(true);
       
-      // Save to Supabase with scheduled status
-      const scheduledData = { ...postData, status: 'scheduled' as const };
-      const savedPost = await supabaseAPI.saveContentPost(scheduledData);
+      // Cast to check for id
+      const postDataWithId = postData as any;
       
-      setSavedPosts(prev => [savedPost, ...prev]);
+      // Call addToSchedule which handles content_posts + scheduled_posts flow
+      const result = await supabaseAPI.addToSchedule(postDataWithId);
       
-      // Clear template after scheduling:
+      if (!result.success) {
+        throw new Error('Failed to schedule post');
+      }
+      
+      // Refresh posts list
+      await fetchSupabasePosts();
+      
+      // Clear template and editing state
       clearLoadedTemplate();
-      
-      // Format post for Schedule Manager (convert ContentPost to PendingPost format)
-      const pendingPost = {
-        id: 'pending-' + Date.now(),
-        characterProfile: postData.characterProfile,
-        type: postData.theme.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        template: postData.templateType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        description: postData.description,
-        mediaFiles: postData.mediaFiles,
-        platforms: postData.selectedPlatforms.map(platformId => ({
-          platformId: platformId,
-          platformName: platforms?.find(p => p.id === platformId)?.name || 'Unknown',
-          platformIcon: platforms?.find(p => p.id === platformId)?.name?.substring(0, 2).toUpperCase() || 'UN',
-          status: 'pending' as const
-        })),
-        status: 'pending_schedule' as const,
-        createdDate: new Date(),
-        contentId: postData.contentId // Include the generated content ID
-      };
-      
-      // Send to Schedule Manager - this would typically be done via:
-      // 1. Parent component callback prop
-      // 2. Context/State management
-      // 3. Event system
-      // For now, store in localStorage as bridge between components
-      const existingPending = JSON.parse(localStorage.getItem('pendingSchedulePosts') || '[]');
-      existingPending.unshift(pendingPost);
-      localStorage.setItem('pendingSchedulePosts', JSON.stringify(existingPending));
-      
-      // Dispatch custom event to notify Schedule Manager
-      window.dispatchEvent(new CustomEvent('newPendingPost', { 
-        detail: pendingPost 
-      }));
+      setEditingPost(null);
       
       alert('Content sent to Schedule Manager for scheduling!\n\nYou can now set the date and time in the Schedule Manager > Pending Scheduling tab.');
       
     } catch (error) {
       console.error('Schedule save failed:', error);
       alert('Failed to save content for scheduling. Please try again.\n\nError: ' + (error instanceof Error ? error.message : 'Unknown error'));
-      // Don't reset form data on error - form content is preserved
     } finally {
       setIsSaving(false);
     }
