@@ -1946,7 +1946,7 @@ const handleDeletePost = async (postId: string) => {
                                 <span key={pIdx} style={{
                                   fontSize: '9px',
                                   fontWeight: 'bold',
-                                  backgroundColor: 'rgba(0,0,0,0.3)',
+                                  backgroundColor: getPlatformBadgeColor(icon),
                                   color: 'white',
                                   padding: '2px 4px',
                                   borderRadius: '3px',
@@ -2103,7 +2103,7 @@ const handleDeletePost = async (postId: string) => {
                               <span key={pIdx} style={{
                                 fontSize: '10px',
                                 fontWeight: 'bold',
-                                backgroundColor: 'rgba(0,0,0,0.3)',
+                                backgroundColor: getPlatformBadgeColor(getIconFromPlatform(platform)),
                                 color: 'white',
                                 padding: '3px 6px',
                                 borderRadius: '4px',
@@ -2117,7 +2117,7 @@ const handleDeletePost = async (postId: string) => {
                           <span style={{
                             fontSize: '10px',
                             fontWeight: 'bold',
-                            backgroundColor: 'rgba(0,0,0,0.3)',
+                            backgroundColor: getPlatformBadgeColor(post.platform_icon),
                             color: 'white',
                             padding: '3px 6px',
                             borderRadius: '4px',
@@ -2247,7 +2247,7 @@ const handleDeletePost = async (postId: string) => {
                             <span key={pIdx} style={{
                               fontSize: '11px',
                               fontWeight: 'bold',
-                              backgroundColor: 'rgba(0,0,0,0.3)',
+                              backgroundColor: getPlatformBadgeColor(icon),
                               color: 'white',
                               padding: '4px 7px',
                               borderRadius: '4px',
@@ -2261,7 +2261,7 @@ const handleDeletePost = async (postId: string) => {
                         <span style={{
                           fontSize: '11px',
                           fontWeight: 'bold',
-                          backgroundColor: 'rgba(0,0,0,0.3)',
+                          backgroundColor: getPlatformBadgeColor(post.platform_icon),
                           color: 'white',
                           padding: '4px 7px',
                           borderRadius: '4px',
