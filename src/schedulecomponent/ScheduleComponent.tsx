@@ -2319,6 +2319,10 @@ const handleDeletePost = async (postId: string) => {
         {activeTab === 'status' && (
           <div style={{ padding: '24px' }}>
             <div style={{
+              maxWidth: '1000px',
+              margin: '0 auto'
+            }}>
+            <div style={{
               display: 'flex',
               gap: '8px',
               marginBottom: '24px',
@@ -2640,6 +2644,7 @@ const handleDeletePost = async (postId: string) => {
                   </p>
                 </div>
               )}
+            </div>
             </div>
           </div>
         )}
