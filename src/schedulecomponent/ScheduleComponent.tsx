@@ -758,6 +758,23 @@ export default function ScheduleComponent() {
     }
   };
 
+  const getPlatformBadgeColor = (icon: string | undefined) => {
+    if (!icon) return 'rgba(0,0,0,0.3)';
+    const upper = icon.toUpperCase();
+    if (upper === 'TG') return '#3b82f6';
+    if (upper === 'IG') return '#E4405F';
+    if (upper === 'FB') return '#1877F2';
+    if (upper === 'LI') return '#0A66C2';
+    if (upper === 'TW') return '#0ea5e9';
+    if (upper === 'YT') return '#ef4444';
+    if (upper === 'TK') return '#000000';
+    if (upper === 'PT') return '#BD081C';
+    if (upper === 'WA') return '#25D366';
+    if (upper === 'FR') return '#4b5563';
+    if (upper === 'DS') return '#5865F2';
+    return 'rgba(0,0,0,0.3)';
+  };
+
   const handleSchedulePost = (post: ScheduledPost) => {
     setSelectedPost(post);
     setIsScheduleModalOpen(true);
