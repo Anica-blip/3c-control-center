@@ -1357,7 +1357,11 @@ const handleDeletePost = async (postId: string) => {
         backgroundColor: theme.cardBg,
         borderRadius: '12px',
         border: `1px solid ${theme.border}`,
-        minHeight: '600px'
+        minHeight: '600px',
+        width: '100%',
+        maxWidth: '100%',
+        overflowX: 'hidden',
+        boxSizing: 'border-box'
       }}>
         {activeTab === 'pending' && (
           <div style={{ padding: '24px' }}>
@@ -2378,6 +2382,28 @@ const handleDeletePost = async (postId: string) => {
                                   post.platformDetails.map((platform, idx) => (
                                     <PlatformBadge key={idx} platform={platform} />
                                   ))
+                                ) : post.platform_icon ? (
+                                  <span style={{
+                                    color: 'white',
+                                    fontSize: '10px',
+                                    fontWeight: 'bold',
+                                    backgroundColor: '#3b82f6',
+                                    padding: '3px 8px',
+                                    borderRadius: '4px',
+                                    fontFamily: 'monospace'
+                                  }}>
+                                    {post.platform_icon}
+                                  </span>
+                                ) : post.selected_platforms && Array.isArray(post.selected_platforms) && post.selected_platforms.length > 0 ? (
+                                  <span style={{
+                                    color: theme.text,
+                                    fontSize: '11px',
+                                    backgroundColor: theme.primary + '20',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px'
+                                  }}>
+                                    {post.selected_platforms.length} platform{post.selected_platforms.length > 1 ? 's' : ''}
+                                  </span>
                                 ) : (
                                   <span style={{ color: theme.textSecondary, fontSize: '11px' }}>
                                     No platforms
@@ -2772,3 +2798,4 @@ const handleDeletePost = async (postId: string) => {
     </div>
   );
 }
+
