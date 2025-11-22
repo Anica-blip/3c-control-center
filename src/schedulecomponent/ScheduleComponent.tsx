@@ -1148,8 +1148,11 @@ const handleDeletePost = async (postId: string) => {
   return (
     <div style={{
       ...getContainerStyle(isDarkMode),
-      maxWidth: '1200px',
-      margin: '0 auto'
+      width: '100%',
+      maxWidth: '1100px',
+      margin: '0 auto',
+      overflowX: 'hidden',
+      boxSizing: 'border-box'
     }}>
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
@@ -1977,7 +1980,7 @@ const handleDeletePost = async (postId: string) => {
                             <span style={{
                               fontSize: '9px',
                               fontWeight: 'bold',
-                              backgroundColor: 'rgba(0,0,0,0.3)',
+                              backgroundColor: getPlatformBadgeColor(post.platform_icon),
                               color: 'white',
                               padding: '2px 4px',
                               borderRadius: '3px',
