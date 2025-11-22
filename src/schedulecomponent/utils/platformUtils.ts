@@ -97,3 +97,4 @@ export function formatPlatformList(platforms: PlatformInput[], max: number = 3):
     ? `${visible.join(', ')} +${remaining} more`
     : visible.join(', ');
 }
+
