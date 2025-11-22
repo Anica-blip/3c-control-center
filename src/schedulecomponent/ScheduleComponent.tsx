@@ -1129,7 +1129,11 @@ const handleDeletePost = async (postId: string) => {
   ];
 
   return (
-    <div style={getContainerStyle(isDarkMode)}>
+    <div style={{
+      ...getContainerStyle(isDarkMode),
+      maxWidth: '1200px',
+      margin: '0 auto'
+    }}>
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{
@@ -1928,9 +1932,8 @@ const handleDeletePost = async (postId: string) => {
                         <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
                           {(post.platformDetails && post.platformDetails.length > 0) ? (
                             post.platformDetails.slice(0, 4).map((platform, pIdx) => {
-                              const getIconFromPlatform = (plat: any): string => {
-                                if (plat.platform_icon) return plat.platform_icon;
-                                const url = (plat.url || '').toLowerCase();
+                              const icon = platform.platform_icon || (() => {
+                                const url = (platform.url || '').toLowerCase();
                                 if (url.includes('telegram') || url.includes('t.me')) return 'TG';
                                 if (url.includes('instagram')) return 'IG';
                                 if (url.includes('facebook')) return 'FB';
@@ -1938,7 +1941,7 @@ const handleDeletePost = async (postId: string) => {
                                 if (url.includes('twitter') || url.includes('x.com')) return 'TW';
                                 if (url.includes('youtube')) return 'YT';
                                 return '??';
-                              };
+                              })();
                               return (
                                 <span key={pIdx} style={{
                                   fontSize: '9px',
@@ -1949,10 +1952,34 @@ const handleDeletePost = async (postId: string) => {
                                   borderRadius: '3px',
                                   border: '1px solid rgba(255,255,255,0.4)'
                                 }}>
-                                  {getIconFromPlatform(platform)}
+                                  {icon}
                                 </span>
                               );
                             })
+                          ) : post.platform_icon ? (
+                            <span style={{
+                              fontSize: '9px',
+                              fontWeight: 'bold',
+                              backgroundColor: 'rgba(0,0,0,0.3)',
+                              color: 'white',
+                              padding: '2px 4px',
+                              borderRadius: '3px',
+                              border: '1px solid rgba(255,255,255,0.4)'
+                            }}>
+                              {post.platform_icon}
+                            </span>
+                          ) : post.selected_platforms && Array.isArray(post.selected_platforms) && post.selected_platforms.length > 0 ? (
+                            <span style={{
+                              fontSize: '9px',
+                              fontWeight: 'bold',
+                              backgroundColor: 'rgba(0,0,0,0.3)',
+                              color: 'white',
+                              padding: '2px 4px',
+                              borderRadius: '3px',
+                              border: '1px solid rgba(255,255,255,0.4)'
+                            }}>
+                              {post.selected_platforms.length} platform{post.selected_platforms.length > 1 ? 's' : ''}
+                            </span>
                           ) : null}
                         </div>
                       </div>
@@ -2086,6 +2113,30 @@ const handleDeletePost = async (postId: string) => {
                               </span>
                             );
                           })
+                        ) : post.platform_icon ? (
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: 'bold',
+                            backgroundColor: 'rgba(0,0,0,0.3)',
+                            color: 'white',
+                            padding: '3px 6px',
+                            borderRadius: '4px',
+                            border: '1px solid rgba(255,255,255,0.4)'
+                          }}>
+                            {post.platform_icon}
+                          </span>
+                        ) : post.selected_platforms && Array.isArray(post.selected_platforms) && post.selected_platforms.length > 0 ? (
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: 'bold',
+                            backgroundColor: 'rgba(0,0,0,0.3)',
+                            color: 'white',
+                            padding: '3px 6px',
+                            borderRadius: '4px',
+                            border: '1px solid rgba(255,255,255,0.4)'
+                          }}>
+                            {post.selected_platforms.length} platform{post.selected_platforms.length > 1 ? 's' : ''}
+                          </span>
                         ) : (
                           <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '9px' }}>No platforms</span>
                         )}
@@ -2182,9 +2233,8 @@ const handleDeletePost = async (postId: string) => {
                     <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '2px' }}>
                       {(post.platformDetails && post.platformDetails.length > 0) ? (
                         post.platformDetails.map((platform, pIdx) => {
-                          const getIconFromPlatform = (plat: any): string => {
-                            if (plat.platform_icon) return plat.platform_icon;
-                            const url = (plat.url || '').toLowerCase();
+                          const icon = platform.platform_icon || (() => {
+                            const url = (platform.url || '').toLowerCase();
                             if (url.includes('telegram') || url.includes('t.me')) return 'TG';
                             if (url.includes('instagram')) return 'IG';
                             if (url.includes('facebook')) return 'FB';
@@ -2192,7 +2242,7 @@ const handleDeletePost = async (postId: string) => {
                             if (url.includes('twitter') || url.includes('x.com')) return 'TW';
                             if (url.includes('youtube')) return 'YT';
                             return '??';
-                          };
+                          })();
                           return (
                             <span key={pIdx} style={{
                               fontSize: '11px',
@@ -2203,10 +2253,34 @@ const handleDeletePost = async (postId: string) => {
                               borderRadius: '4px',
                               border: '1px solid rgba(255,255,255,0.4)'
                             }}>
-                              {getIconFromPlatform(platform)}
+                              {icon}
                             </span>
                           );
                         })
+                      ) : post.platform_icon ? (
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          backgroundColor: 'rgba(0,0,0,0.3)',
+                          color: 'white',
+                          padding: '4px 7px',
+                          borderRadius: '4px',
+                          border: '1px solid rgba(255,255,255,0.4)'
+                        }}>
+                          {post.platform_icon}
+                        </span>
+                      ) : post.selected_platforms && Array.isArray(post.selected_platforms) && post.selected_platforms.length > 0 ? (
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          backgroundColor: 'rgba(0,0,0,0.3)',
+                          color: 'white',
+                          padding: '4px 7px',
+                          borderRadius: '4px',
+                          border: '1px solid rgba(255,255,255,0.4)'
+                        }}>
+                          {post.selected_platforms.length} platform{post.selected_platforms.length > 1 ? 's' : ''}
+                        </span>
                       ) : (
                         <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '10px' }}>No platforms</span>
                       )}
@@ -2798,4 +2872,3 @@ const handleDeletePost = async (postId: string) => {
     </div>
   );
 }
-
