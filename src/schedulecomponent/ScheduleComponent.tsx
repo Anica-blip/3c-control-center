@@ -248,16 +248,190 @@ export default function ScheduleComponent() {
     refreshPosts
   } = useScheduledPosts();
 
-  const {
-    templates: savedTemplates,
-    loading: templatesLoading,
-    error: templatesError,
-    createTemplate,
-    updateTemplate,
-    deleteTemplate,
-    incrementUsage,
-    refreshTemplates  // ⭐ FIX #3: Add refreshTemplates
-  } = useTemplates();
+  // ⭐ FIX #22: Fetch templates directly from dashboard_templates table
+  const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState<ApiError | null>(null);
+
+  // Fetch templates from dashboard_templates table
+  const fetchTemplates = useCallback(async () => {
+    setTemplatesLoading(true);
+    setTemplatesError(null);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { data, error } = await supabase
+        .from('dashboard_templates')
+        .select('*')
+        .eq('user_id', user?.id || '')
+        .eq('is_deleted', false)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Error fetching templates:', error);
+        setTemplatesError({
+          message: 'Failed to load templates',
+          code: 'FETCH_TEMPLATES_ERROR',
+          type: 'database',
+          timestamp: new Date(),
+          retryable: true
+        });
+        setSavedTemplates([]);
+      } else {
+        console.log('✅ Fetched templates from dashboard_templates:', data?.length || 0);
+        setSavedTemplates(data || []);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching templates:', error);
+      setTemplatesError({
+        message: 'Failed to load templates',
+        code: 'FETCH_TEMPLATES_ERROR',
+        type: 'unknown',
+        timestamp: new Date(),
+        retryable: true
+      });
+      setSavedTemplates([]);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }, []);
+
+  // Fetch templates on mount and when switching to templates tab
+  useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
+
+  // Create template in dashboard_templates
+  const createTemplate = useCallback(async (templateData: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { data, error } = await supabase
+        .from('dashboard_templates')
+        .insert([{
+          ...templateData,
+          user_id: user?.id || '',
+          created_by: user?.id || '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('❌ Error creating template:', error);
+        return { 
+          success: false, 
+          error: {
+            message: 'Failed to save template',
+            code: 'CREATE_TEMPLATE_ERROR',
+            type: 'database',
+            timestamp: new Date(),
+            retryable: true
+          }
+        };
+      }
+      
+      console.log('✅ Template created in dashboard_templates:', data);
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Error creating template:', error);
+      return { 
+        success: false, 
+        error: {
+          message: 'Failed to save template',
+          code: 'CREATE_TEMPLATE_ERROR',
+          type: 'unknown',
+          timestamp: new Date(),
+          retryable: true
+        }
+      };
+    }
+  }, []);
+
+  // Update template
+  const updateTemplate = useCallback(async (templateId: string, updates: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('dashboard_templates')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', templateId)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('❌ Error updating template:', error);
+        return { success: false, error };
+      }
+      
+      console.log('✅ Template updated:', data);
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Error updating template:', error);
+      return { success: false, error };
+    }
+  }, []);
+
+  // Delete template
+  const deleteTemplate = useCallback(async (templateId: string) => {
+    try {
+      const { error } = await supabase
+        .from('dashboard_templates')
+        .update({
+          is_deleted: true,
+          deleted_at: new Date().toISOString()
+        })
+        .eq('id', templateId);
+      
+      if (error) {
+        console.error('❌ Error deleting template:', error);
+        showError({
+          message: 'Failed to delete template',
+          code: 'DELETE_TEMPLATE_ERROR',
+          type: 'database',
+          timestamp: new Date(),
+          retryable: true
+        });
+      } else {
+        console.log('✅ Template marked as deleted');
+        await fetchTemplates(); // Refresh list
+        showSuccess('Template deleted successfully!');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting template:', error);
+      showError({
+        message: 'Failed to delete template',
+        code: 'DELETE_TEMPLATE_ERROR',
+        type: 'unknown',
+        timestamp: new Date(),
+        retryable: true
+      });
+    }
+  }, [fetchTemplates]);
+
+  // Increment usage count
+  const incrementUsage = useCallback(async (templateId: string) => {
+    try {
+      const { error } = await supabase
+        .rpc('increment_template_usage', { template_id: templateId });
+      
+      if (error) {
+        console.error('❌ Error incrementing usage:', error);
+        // Non-critical, just log
+      } else {
+        console.log('✅ Template usage incremented');
+      }
+    } catch (error) {
+      console.error('❌ Error incrementing usage:', error);
+    }
+  }, []);
+
+  const refreshTemplates = fetchTemplates;
 
   const [activeTab, setActiveTab] = useState('pending');
   const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month'>('month');
