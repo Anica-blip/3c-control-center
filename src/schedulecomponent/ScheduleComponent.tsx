@@ -261,10 +261,22 @@ export default function ScheduleComponent() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
+      // ✅ FIX: Use system UUID fallback instead of empty string
+      const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+      const userId = user?.id || SYSTEM_USER_ID;
+      
+      // ✅ Only query if we have a valid authenticated user
+      if (!user?.id) {
+        console.log('⚠️ No authenticated user, skipping template fetch');
+        setSavedTemplates([]);
+        setTemplatesLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('dashboard_templates')
         .select('*')
-        .eq('user_id', user?.id || '')
+        .eq('user_id', userId)  // ✅ Now always a valid UUID
         .eq('is_deleted', false)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
@@ -308,12 +320,16 @@ export default function ScheduleComponent() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
+      // ✅ FIX: Use system UUID fallback instead of empty string
+      const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+      const userId = user?.id || SYSTEM_USER_ID;
+      
       const { data, error } = await supabase
         .from('dashboard_templates')
         .insert([{
           ...templateData,
-          user_id: user?.id || '',
-          created_by: user?.id || '',
+          user_id: userId,  // ✅ Never NULL or empty string
+          created_by: userId,  // ✅ Never NULL or empty string
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }])
@@ -1128,6 +1144,10 @@ const handleDeletePost = async (postId: string) => {
     setOperationLoading(operationKey, true);
     
     try {
+      // Extract character profile details from post_content if available
+      const senderProfile = post.post_content?.text_post?.sender_profile;
+      
+      // ✅ ENHANCED: Capture ALL fields including new ones requested
       const templateData = {
         template_name: post.title || 'Saved Template',
         character_profile: post.character_profile,
@@ -1137,21 +1157,36 @@ const handleDeletePost = async (postId: string) => {
         media_type: post.media_type || '',
         template_type: post.template_type || '',
         platform: post.platform || '',
+        voice_style: (post as any).voice_style || '',  // ✅ NEW
         title: post.title || '',
         description: post.description,
         hashtags: post.hashtags || [],
         keywords: post.keywords || '',
         cta: post.cta || '',
+        media_files: post.media_files || [],  // ✅ NEW
         selected_platforms: post.selected_platforms,
         usage_count: 0,
         is_active: true,
         is_deleted: false,  // ⭐ CRITICAL: Ensure template is not marked as deleted
         template_version: 1,
+        source_template_id: post.source_template_id || null,  // ✅ NEW
+        // Character profile details - ✅ NEW
+        name: senderProfile?.name || '',
+        username: senderProfile?.username || '',
+        role: senderProfile?.role || '',
+        // Platform details - ✅ NEW
+        social_platform: (post as any).social_platform || null,
+        channel_group_id: (post as any).channel_group_id || null,
+        thread_id: (post as any).thread_id || null,
+        url: (post as any).url || null,
+        platform_id: (post as any).platform_id || null,
+        platform_icon: (post as any).platform_icon || null,
+        type: (post as any).type || null,
         user_id: post.user_id || '',
         created_by: post.created_by || ''
       };
 
-      console.log('📝 Saving template with data:', templateData);
+      console.log('📝 Saving template with ENHANCED data:', templateData);
       const result = await createTemplate(templateData);
       console.log('📝 Template save result:', result);
       
@@ -1161,7 +1196,7 @@ const handleDeletePost = async (postId: string) => {
         await refreshTemplates();
         console.log('✅ Templates refreshed, switching to templates tab');
         setActiveTab('templates');  // Switch to templates tab
-        showSuccess('✅ Template saved! Switched to Templates tab.');
+        showSuccess('✅ Template saved with all details! Switched to Templates tab.');
       } else {
         if (result.validationErrors?.length) {
           const errorMsg = result.validationErrors.map(e => e.message).join(', ');
