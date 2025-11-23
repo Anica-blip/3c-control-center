@@ -1323,7 +1323,7 @@ const handleDeletePost = async (postId: string) => {
       {/* Tab Navigation */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr 1fr 1fr',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
         gap: '8px',
         marginBottom: '32px'
       }}>
@@ -1334,7 +1334,7 @@ const handleDeletePost = async (postId: string) => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
-                padding: '20px 24px',
+                padding: '16px 12px',
                 backgroundColor: '#4a90e2',
                 cursor: 'pointer',
                 borderRadius: '12px',
@@ -1344,16 +1344,20 @@ const handleDeletePost = async (postId: string) => {
                 transform: activeTab === tab.id ? 'scale(1.02)' : 'scale(1)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px'
+                gap: '8px',
+                minWidth: 0
               }}
             >
-              <IconComponent size={20} style={{ color: '#ffffff', flexShrink: 0 }} />
-              <div style={{ textAlign: 'left', flex: 1 }}>
+              <IconComponent size={18} style={{ color: '#ffffff', flexShrink: 0 }} />
+              <div style={{ textAlign: 'left', flex: 1, minWidth: 0, overflow: 'hidden' }}>
                 <div style={{
-                  fontSize: '15px',
+                  fontSize: '13px',
                   fontWeight: '600',
                   color: '#ffffff',
-                  lineHeight: '1.2'
+                  lineHeight: '1.2',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
                 }}>
                   {tab.label}
                 </div>
@@ -1362,12 +1366,13 @@ const handleDeletePost = async (postId: string) => {
                 <span style={{
                   backgroundColor: 'rgba(255,255,255,0.2)',
                   color: '#ffffff',
-                  padding: '4px 8px',
+                  padding: '3px 8px',
                   borderRadius: '12px',
-                  fontSize: '12px',
+                  fontSize: '11px',
                   fontWeight: '700',
-                  minWidth: '20px',
-                  textAlign: 'center'
+                  minWidth: '18px',
+                  textAlign: 'center',
+                  flexShrink: 0
                 }}>
                   {tab.count}
                 </span>
@@ -2350,13 +2355,17 @@ const handleDeletePost = async (postId: string) => {
                     border: `1px solid ${theme.border}`,
                     borderRadius: '6px',
                     cursor: 'pointer',
-                    fontSize: '14px',
-                    textTransform: 'capitalize'
+                    fontSize: '13px',
+                    textTransform: 'capitalize',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
                   }}
                 >
                   {status} 
                   {status !== 'all' && (
-                    <span style={{ marginLeft: '4px', opacity: 0.8 }}>
+                    <span style={{ opacity: 0.8 }}>
                       ({scheduledPostsFiltered.filter(p => status === 'all' || p?.status === status).length})
                     </span>
                   )}
