@@ -4,7 +4,7 @@ import { useScheduledPosts, useTemplates } from './hooks/useScheduleData';
 import ScheduleModal from './components/ScheduleModal';
 import EditModal from './components/EditModal';
 import { getTheme, getContainerStyle, getCSSAnimations } from './utils/styleUtils';
-import { Calendar, Clock, Edit3, Trash2, RefreshCw, AlertCircle, CheckCircle, Play, X, ChevronLeft, ChevronRight, Save, XCircle, WifiOff, FileText, ExternalLink, Image, Video } from 'lucide-react';
+import { Calendar, Clock, Edit3, Trash2, RefreshCw, AlertCircle, CheckCircle, Play, X, ChevronLeft, ChevronRight, Save, XCircle, WifiOff, FileText, ExternalLink, Image, Video, User } from 'lucide-react';
 import { ScheduledPost, SavedTemplate, ErrorNotification, ApiError } from './types';
 import { supabase } from './config';
 import { updatePendingPost } from './api/scheduleAPI';
@@ -265,13 +265,7 @@ export default function ScheduleComponent() {
       const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
       const userId = user?.id || SYSTEM_USER_ID;
       
-      // ✅ Only query if we have a valid authenticated user
-      if (!user?.id) {
-        console.log('⚠️ No authenticated user, skipping template fetch');
-        setSavedTemplates([]);
-        setTemplatesLoading(false);
-        return;
-      }
+      console.log('🔍 Fetching templates for user:', userId);
 
       const { data, error } = await supabase
         .from('dashboard_templates')
@@ -292,7 +286,10 @@ export default function ScheduleComponent() {
         });
         setSavedTemplates([]);
       } else {
-        console.log('✅ Fetched templates from dashboard_templates:', data?.length || 0);
+        console.log('✅ Fetched templates from dashboard_templates:', data?.length || 0, 'templates');
+        if (data && data.length > 0) {
+          console.log('📋 Template IDs:', data.map(t => ({id: t.id, name: t.template_name})));
+        }
         setSavedTemplates(data || []);
       }
     } catch (error) {
@@ -1275,6 +1272,130 @@ const handleDeletePost = async (postId: string) => {
         timestamp: new Date(),
         retryable: true
       }, () => handleUseTemplate(template));
+    } finally {
+      setOperationLoading(operationKey, false);
+    }
+  };
+
+  // ⭐ NEW: Move template to content_posts table
+  const handleMoveTemplateToContent = async (template: SavedTemplate) => {
+    if (!confirm('Move this template to Content Posts? This will create a new post in the Pending tab.')) return;
+    
+    const operationKey = `move-template-${template.id}`;
+    setOperationLoading(operationKey, true);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+      const userId = user?.id || SYSTEM_USER_ID;
+
+      // Create new post in content_posts with ALL template fields
+      const contentPostData = {
+        content_id: `template-move-${Date.now()}`,
+        character_profile: template.character_profile,
+        character_avatar: template.character_avatar || '',
+        theme: template.theme,
+        audience: template.audience,
+        media_type: template.media_type,
+        template_type: template.template_type,
+        platform: template.platform,
+        voice_style: template.voice_style || '',
+        title: template.title,
+        description: template.description,
+        hashtags: template.hashtags || [],
+        keywords: template.keywords,
+        cta: template.cta,
+        media_files: template.media_files || [],
+        selected_platforms: template.selected_platforms,
+        status: 'pending',
+        is_from_template: true,
+        source_template_id: template.id,
+        user_id: userId,
+        created_by: userId,
+        // Platform details
+        social_platform: template.social_platform || null,
+        channel_group_id: template.channel_group_id || null,
+        thread_id: template.thread_id || null,
+        url: template.url || null,
+        platform_id: template.platform_id || null,
+        platform_icon: template.platform_icon || null,
+        type: template.type || null
+      };
+
+      console.log('📦 Moving template to content_posts:', contentPostData);
+
+      const { data, error } = await supabase
+        .from('content_posts')
+        .insert(contentPostData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log('✅ Template moved to content_posts:', data);
+      
+      // Increment template usage count
+      await supabase
+        .from('dashboard_templates')
+        .update({ 
+          usage_count: (template.usage_count || 0) + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', template.id);
+
+      // Refresh posts and switch to pending tab
+      await refreshAllPosts();
+      setActiveTab('pending');
+      showSuccess('✅ Template moved to Pending tab!');
+    } catch (error) {
+      console.error('❌ Error moving template:', error);
+      showError({
+        message: 'Failed to move template. Please try again.',
+        code: 'MOVE_TEMPLATE_ERROR',
+        type: 'unknown',
+        timestamp: new Date(),
+        retryable: true
+      }, () => handleMoveTemplateToContent(template));
+    } finally {
+      setOperationLoading(operationKey, false);
+    }
+  };
+
+  // ⭐ NEW: Delete template from dashboard_templates (soft delete)
+  const handleDeleteTemplate = async (templateId: string) => {
+    if (!confirm('Delete this template? This cannot be undone.')) return;
+    
+    const operationKey = `delete-template-${templateId}`;
+    setOperationLoading(operationKey, true);
+    
+    try {
+      console.log('🗑️ Deleting template:', templateId);
+
+      const { error } = await supabase
+        .from('dashboard_templates')
+        .update({
+          is_deleted: true,
+          is_active: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', templateId);
+
+      if (error) throw error;
+
+      console.log('✅ Template deleted successfully');
+      
+      // Refresh templates list
+      await fetchTemplates();
+      showSuccess('✅ Template deleted successfully!');
+    } catch (error) {
+      console.error('❌ Error deleting template:', error);
+      showError({
+        message: 'Failed to delete template. Please try again.',
+        code: 'DELETE_TEMPLATE_ERROR',
+        type: 'unknown',
+        timestamp: new Date(),
+        retryable: true
+      }, () => handleDeleteTemplate(templateId));
     } finally {
       setOperationLoading(operationKey, false);
     }
@@ -2817,7 +2938,30 @@ const handleDeletePost = async (postId: string) => {
 
         {activeTab === 'saved' && (
           <div style={{ padding: '24px' }}>
-            {(savedTemplates || []).length === 0 ? (
+            {templatesLoading ? (
+              <div style={{
+                backgroundColor: theme.background,
+                border: `1px solid ${theme.border}`,
+                borderRadius: '8px',
+                padding: '32px',
+                textAlign: 'center'
+              }}>
+                <RefreshCw style={{
+                  height: '48px',
+                  width: '48px',
+                  color: theme.textSecondary,
+                  margin: '0 auto 16px auto',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                <p style={{
+                  color: theme.textSecondary,
+                  fontSize: '14px',
+                  margin: '0'
+                }}>
+                  Loading templates...
+                </p>
+              </div>
+            ) : (savedTemplates || []).length === 0 ? (
               <div style={{
                 backgroundColor: theme.background,
                 border: `1px solid ${theme.border}`,
@@ -2849,198 +2993,358 @@ const handleDeletePost = async (postId: string) => {
               </div>
             ) : (
               <div style={{ display: 'grid', gap: '16px' }}>
-                {(savedTemplates || []).map((template) => (
-                  <div
-                    key={template.id}
-                    style={{
-                      padding: '20px',
-                      backgroundColor: theme.cardBg,
-                      border: `1px solid ${theme.border}`,
-                      borderRadius: '8px',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'space-between'
-                    }}>
-                      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          marginBottom: '12px'
-                        }}>
+                {(savedTemplates || []).map((template) => {
+                  const profileData = characterProfiles[template.character_profile as string];
+                  const isProfileLoading = profilesLoading[template.character_profile as string];
+                  
+                  return (
+                    <div
+                      key={template.id}
+                      style={{
+                        backgroundColor: theme.cardBg,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: '8px',
+                        padding: '20px',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between'
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                          {/* Header with badges */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            marginBottom: '12px',
+                            flexWrap: 'wrap'
+                          }}>
+                            <span style={{
+                              padding: '4px 12px',
+                              fontSize: '11px',
+                              backgroundColor: theme.primaryBg,
+                              color: theme.primary,
+                              borderRadius: '12px',
+                              fontWeight: 'bold'
+                            }}>
+                              Template
+                            </span>
+                            <span style={{
+                              padding: '4px 8px',
+                              fontSize: '11px',
+                              backgroundColor: theme.successBg,
+                              color: theme.success,
+                              borderRadius: '12px',
+                              fontWeight: 'bold'
+                            }}>
+                              Used {template.usage_count || 0} times
+                            </span>
+                            {template.created_at && (
+                              <span style={{
+                                fontSize: '12px',
+                                color: theme.textSecondary,
+                                fontWeight: 'bold'
+                              }}>
+                                Created {new Date(template.created_at).toLocaleDateString('en-GB')}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Character profile info */}
+                          {(profileData || template.name) && (
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              marginBottom: '12px',
+                              padding: '8px',
+                              backgroundColor: theme.background,
+                              borderRadius: '6px'
+                            }}>
+                              {profileData?.avatar_url || template.character_avatar ? (
+                                <img 
+                                  src={profileData?.avatar_url || template.character_avatar}
+                                  alt="Avatar"
+                                  style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
+                                    objectFit: 'cover'
+                                  }}
+                                />
+                              ) : (
+                                <User style={{ height: '32px', width: '32px', color: theme.textSecondary }} />
+                              )}
+                              <div>
+                                <div style={{
+                                  fontSize: '13px',
+                                  fontWeight: 'bold',
+                                  color: theme.text
+                                }}>
+                                  {profileData?.name || template.name || 'Unknown'}
+                                </div>
+                                {(profileData?.username || template.username) && (
+                                  <div style={{
+                                    fontSize: '11px',
+                                    color: theme.textSecondary
+                                  }}>
+                                    @{profileData?.username || template.username}
+                                  </div>
+                                )}
+                                {(profileData?.role || template.role) && (
+                                  <div style={{
+                                    fontSize: '10px',
+                                    color: theme.primary,
+                                    fontWeight: '600'
+                                  }}>
+                                    {profileData?.role || template.role}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Title */}
                           <h4 style={{
                             fontSize: '16px',
                             fontWeight: 'bold',
                             color: theme.text,
-                            margin: '0',
-                            wordBreak: 'break-word',
-                            overflowWrap: 'break-word'
-                          }}>
-                            {template.template_name}
-                          </h4>
-                          <span style={{
-                            padding: '4px 8px',
-                            fontSize: '11px',
-                            backgroundColor: theme.primaryBg,
-                            color: theme.primary,
-                            borderRadius: '12px',
-                            fontWeight: 'bold'
-                          }}>
-                            Used {template.usage_count || 0} times
-                          </span>
-                          {template.template_type && (
-                            <span style={{
-                              padding: '4px 8px',
-                              fontSize: '11px',
-                              backgroundColor: theme.background,
-                              color: theme.textSecondary,
-                              borderRadius: '12px',
-                              fontWeight: 'bold'
-                            }}>
-                              {template.template_type}
-                            </span>
-                          )}
-                        </div>
-                        
-                        {template.description && (
-                          <p style={{
-                            fontSize: '14px',
-                            color: theme.text,
                             margin: '0 0 12px 0',
-                            lineHeight: '1.4',
                             wordBreak: 'break-word',
                             overflowWrap: 'break-word'
                           }}>
-                            {truncateDescription(template.description)}
-                          </p>
-                        )}
-                        
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '16px',
-                          fontSize: '12px'
-                        }}>
-                          {template.selected_platforms && template.selected_platforms.length > 0 && (
+                            {template.template_name || template.title}
+                          </h4>
+
+                          {/* Description */}
+                          {template.description && (
+                            <p style={{
+                              fontSize: '14px',
+                              color: theme.text,
+                              margin: '0 0 12px 0',
+                              lineHeight: '1.5',
+                              wordBreak: 'break-word',
+                              overflowWrap: 'break-word',
+                              maxHeight: '100px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 4,
+                              WebkitBoxOrient: 'vertical'
+                            }}>
+                              {template.description}
+                            </p>
+                          )}
+
+                          {/* Media files indicator */}
+                          {template.media_files && template.media_files.length > 0 && (
                             <div style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '6px'
+                              gap: '8px',
+                              padding: '8px',
+                              backgroundColor: theme.background,
+                              borderRadius: '6px',
+                              marginBottom: '12px'
                             }}>
-                              <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Platforms:</span>
-                              <div style={{ display: 'flex', gap: '4px' }}>
-                                {template.selected_platforms.map((platformId, idx) => {
-                                  const platform = getPlatformIcon(platformId);
-                                  return (
-                                    <span
-                                      key={idx}
-                                      style={{
-                                        padding: '2px 6px',
-                                        borderRadius: '4px',
-                                        color: 'white',
-                                        fontSize: '10px',
-                                        fontWeight: 'bold',
-                                        backgroundColor: platform.color
-                                      }}
-                                    >
-                                      {platform.icon}
-                                    </span>
-                                  );
-                                })}
-                              </div>
+                              {template.media_files[0].type === 'image' && <Image style={{ height: '16px', width: '16px', color: theme.primary }} />}
+                              {template.media_files[0].type === 'video' && <Video style={{ height: '16px', width: '16px', color: theme.primary }} />}
+                              {template.media_files[0].type === 'pdf' && <FileText style={{ height: '16px', width: '16px', color: theme.primary }} />}
+                              <span style={{ fontSize: '12px', color: theme.text, fontWeight: 'bold' }}>
+                                Media Files ({template.media_files.length})
+                              </span>
                             </div>
                           )}
-                          
-                          {template.theme && (
+
+                          {/* Hashtags */}
+                          {template.hashtags && template.hashtags.length > 0 && (
                             <div style={{
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              gap: '6px',
+                              marginBottom: '12px'
+                            }}>
+                              {template.hashtags.slice(0, 5).map((tag, idx) => (
+                                <span key={idx} style={{
+                                  fontSize: '11px',
+                                  color: theme.primary,
+                                  backgroundColor: isDarkMode ? '#1e3a8a20' : '#dbeafe',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  fontWeight: 'bold'
+                                }}>
+                                  #{tag}
+                                </span>
+                              ))}
+                              {template.hashtags.length > 5 && (
+                                <span style={{
+                                  fontSize: '11px',
+                                  color: theme.textSecondary,
+                                  padding: '4px 8px'
+                                }}>
+                                  +{template.hashtags.length - 5} more
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Platform & Service info */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px',
+                            fontSize: '12px',
+                            flexWrap: 'wrap'
+                          }}>
+                            {/* Platforms */}
+                            {template.selected_platforms && template.selected_platforms.length > 0 && (
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}>
+                                <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Platforms:</span>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  {template.selected_platforms.slice(0, 3).map((platformId, idx) => {
+                                    const platform = getPlatformIcon(platformId);
+                                    return (
+                                      <span
+                                        key={idx}
+                                        style={{
+                                          padding: '2px 6px',
+                                          borderRadius: '4px',
+                                          color: 'white',
+                                          fontSize: '10px',
+                                          fontWeight: 'bold',
+                                          backgroundColor: platform.color
+                                        }}
+                                      >
+                                        {platform.icon}
+                                      </span>
+                                    );
+                                  })}
+                                  {template.selected_platforms.length > 3 && (
+                                    <span style={{
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      fontSize: '10px',
+                                      color: theme.textSecondary
+                                    }}>
+                                      +{template.selected_platforms.length - 3}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Theme */}
+                            {template.theme && (
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}>
+                                <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Theme:</span>
+                                <span style={{ color: theme.text, fontWeight: 'bold' }}>
+                                  {template.theme.replace(/_/g, ' ')}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Media type */}
+                            {template.media_type && (
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}>
+                                <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Type:</span>
+                                <span style={{ color: theme.text, fontWeight: 'bold' }}>
+                                  {template.media_type.replace(/_/g, ' ')}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px',
+                          marginLeft: '16px'
+                        }}>
+                          <button
+                            onClick={() => handleMoveTemplateToContent(template)}
+                            disabled={isOperationLoading(`move-template-${template.id}`)}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: isOperationLoading(`move-template-${template.id}`) ? theme.textSecondary : theme.primary,
+                              color: 'white',
+                              fontSize: '12px',
+                              borderRadius: '6px',
+                              fontWeight: 'bold',
+                              border: 'none',
+                              cursor: isOperationLoading(`move-template-${template.id}`) ? 'not-allowed' : 'pointer',
                               display: 'flex',
                               alignItems: 'center',
                               gap: '6px',
-                              minWidth: 0
-                            }}>
-                              <span style={{ color: theme.textSecondary, fontWeight: 'bold', flexShrink: 0 }}>Theme:</span>
-                              <span style={{ 
-                                color: theme.text, 
-                                fontWeight: 'bold',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap'
-                              }}>{template.theme}</span>
-                            </div>
-                          )}
+                              whiteSpace: 'nowrap'
+                            }}
+                            title="Move to Content Posts (Pending tab)"
+                          >
+                            {isOperationLoading(`move-template-${template.id}`) ? (
+                              <>
+                                <RefreshCw style={{ height: '12px', width: '12px', animation: 'spin 1s linear infinite' }} />
+                                Moving...
+                              </>
+                            ) : (
+                              <>
+                                <Play style={{ height: '12px', width: '12px' }} />
+                                Move
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteTemplate(template.id)}
+                            disabled={isOperationLoading(`delete-template-${template.id}`)}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: 'transparent',
+                              color: theme.danger,
+                              fontSize: '12px',
+                              borderRadius: '6px',
+                              fontWeight: 'bold',
+                              border: `1px solid ${theme.danger}`,
+                              cursor: isOperationLoading(`delete-template-${template.id}`) ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              whiteSpace: 'nowrap'
+                            }}
+                            title="Delete template"
+                          >
+                            {isOperationLoading(`delete-template-${template.id}`) ? (
+                              <>
+                                <RefreshCw style={{ height: '12px', width: '12px', animation: 'spin 1s linear infinite' }} />
+                                Deleting...
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 style={{ height: '12px', width: '12px' }} />
+                                Delete
+                              </>
+                            )}
+                          </button>
                         </div>
                       </div>
-                      
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        marginLeft: '16px'
-                      }}>
-                        <button
-                          onClick={() => handleUseTemplate(template)}
-                          disabled={isOperationLoading(`use-template-${template.id}`)}
-                          style={{
-                            padding: '8px 16px',
-                            backgroundColor: isOperationLoading(`use-template-${template.id}`) ? theme.textSecondary : theme.primary,
-                            color: 'white',
-                            fontSize: '12px',
-                            borderRadius: '6px',
-                            fontWeight: 'bold',
-                            border: 'none',
-                            cursor: isOperationLoading(`use-template-${template.id}`) ? 'not-allowed' : 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                          }}
-                        >
-                          {isOperationLoading(`use-template-${template.id}`) && (
-                            <RefreshCw style={{ height: '12px', width: '12px', animation: 'spin 1s linear infinite' }} />
-                          )}
-                          {isOperationLoading(`use-template-${template.id}`) ? 'Using...' : 'Use Template'}
-                        </button>
-                        
-                        <button
-                          onClick={() => setEditingTemplate(template)}
-                          style={{
-                            padding: '6px',
-                            color: theme.textSecondary,
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                          title="Edit template"
-                        >
-                          <Edit3 style={{ height: '14px', width: '14px' }} />
-                        </button>
-                        
-                        <button
-                          onClick={() => {
-                            if (confirm('Are you sure you want to delete this template?')) {
-                              deleteTemplate(template.id);
-                            }
-                          }}
-                          style={{
-                            padding: '6px',
-                            color: theme.danger,
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                          title="Delete template"
-                        >
-                          <Trash2 style={{ height: '14px', width: '14px' }} />
-                        </button>
-                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
