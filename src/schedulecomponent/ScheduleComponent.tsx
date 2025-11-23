@@ -1759,7 +1759,7 @@ const handleDeletePost = async (postId: string) => {
           <ChevronLeft style={{ height: '16px', width: '16px' }} />
         </button>
         <h3 style={{
-          fontSize: '18px',
+          fontSize: '14px',
           fontWeight: 'bold',
           color: theme.text,
           margin: '0'
@@ -1787,13 +1787,13 @@ const handleDeletePost = async (postId: string) => {
             key={view}
             onClick={() => setCalendarView(view)}
             style={{
-              padding: '8px 16px',
+              padding: '6px 12px',
               backgroundColor: calendarView === view ? theme.primary : 'transparent',
               color: calendarView === view ? 'white' : theme.text,
               border: `1px solid ${theme.border}`,
               borderRadius: '6px',
               cursor: 'pointer',
-              fontSize: '14px',
+              fontSize: '12px',
               textTransform: 'capitalize'
             }}
           >
@@ -1996,7 +1996,7 @@ const handleDeletePost = async (postId: string) => {
               }}
             >
               <div style={{
-                fontSize: '14px',
+                fontSize: '12px',
                 fontWeight: isToday ? 'bold' : 'normal',
                 color: isToday ? theme.primary : theme.text,
                 marginBottom: '12px',
@@ -2039,7 +2039,7 @@ const handleDeletePost = async (postId: string) => {
                       <div style={{
                         fontWeight: 'bold',
                         color: 'white',
-                        fontSize: '13px'
+                        fontSize: '11px'
                       }}>
                         {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
                           hour: '2-digit', 
@@ -2146,7 +2146,7 @@ const handleDeletePost = async (postId: string) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '13px',
+              fontSize: '11px',
               fontWeight: 'bold',
               color: theme.textSecondary,
               borderRight: `2px solid ${theme.border}`
@@ -2184,7 +2184,7 @@ const handleDeletePost = async (postId: string) => {
                     <div style={{
                       fontWeight: 'bold',
                       color: 'white',
-                      fontSize: '14px'
+                      fontSize: '12px'
                     }}>
                       {post.scheduled_date && new Date(post.scheduled_date).toLocaleTimeString('en-GB', { 
                         hour: '2-digit', 
@@ -2195,7 +2195,7 @@ const handleDeletePost = async (postId: string) => {
                     <div style={{
                       color: 'white',
                       fontWeight: '600',
-                      fontSize: '12px'
+                      fontSize: '10px'
                     }}>
                       {profileData?.name || 'No profile'}
                     </div>
