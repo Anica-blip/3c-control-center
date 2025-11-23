@@ -1251,79 +1251,12 @@ const handleDeletePost = async (postId: string) => {
             <span style={{ fontSize: '13px', color: theme.textSecondary }}>Failed</span>
           </div>
         </div>
-        
-        {/* ⭐ Restore Hidden Posts Button (Database-Driven) */}
-        <button
-          onClick={async () => {
-            try {
-              // Count hidden posts in database
-              const { count, error: countError } = await supabase
-                .from('scheduled_posts')
-                .select('*', { count: 'exact', head: true })
-                .eq('is_hidden', true);
-              
-              if (countError) throw countError;
-              
-              if (!count || count === 0) {
-                showSuccess('No hidden posts to restore');
-                return;
-              }
-              
-              if (confirm(`Restore ${count} hidden posts? They will reappear in the dashboard.`)) {
-                const { error } = await supabase
-                  .from('scheduled_posts')
-                  .update({
-                    is_hidden: false,
-                    deleted_at: null,
-                    deleted_by: null
-                  })
-                  .eq('is_hidden', true);
-                
-                if (error) throw error;
-                
-                showSuccess(`Restored ${count} hidden posts!`);
-                await refreshAllPosts();
-              }
-            } catch (error) {
-              console.error('Error restoring posts:', error);
-              showError({
-                message: 'Failed to restore hidden posts',
-                code: 'RESTORE_ERROR',
-                type: 'unknown',
-                timestamp: new Date(),
-                retryable: false
-              });
-            }
-          }}
-          style={{
-            marginLeft: 'auto',
-            padding: '6px 12px',
-            fontSize: '12px',
-            backgroundColor: theme.success + '20',
-            color: theme.success,
-            border: `1px solid ${theme.success}`,
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontWeight: '500',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.success;
-            e.currentTarget.style.color = 'white';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = theme.success + '20';
-            e.currentTarget.style.color = theme.success;
-          }}
-        >
-          ♻️ Restore Hidden Posts
-        </button>
       </div>
 
       {/* Tab Navigation */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gridTemplateColumns: 'repeat(4, 1fr)',
         gap: '8px',
         marginBottom: '32px'
       }}>
@@ -1334,7 +1267,7 @@ const handleDeletePost = async (postId: string) => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
-                padding: '16px 12px',
+                padding: '12px 8px',
                 backgroundColor: '#4a90e2',
                 cursor: 'pointer',
                 borderRadius: '12px',
@@ -1344,14 +1277,15 @@ const handleDeletePost = async (postId: string) => {
                 transform: activeTab === tab.id ? 'scale(1.02)' : 'scale(1)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                justifyContent: 'center',
+                gap: '6px',
                 minWidth: 0
               }}
             >
-              <IconComponent size={18} style={{ color: '#ffffff', flexShrink: 0 }} />
+              <IconComponent size={16} style={{ color: '#ffffff', flexShrink: 0 }} />
               <div style={{ textAlign: 'left', flex: 1, minWidth: 0, overflow: 'hidden' }}>
                 <div style={{
-                  fontSize: '13px',
+                  fontSize: '12px',
                   fontWeight: '600',
                   color: '#ffffff',
                   lineHeight: '1.2',
@@ -1366,11 +1300,11 @@ const handleDeletePost = async (postId: string) => {
                 <span style={{
                   backgroundColor: 'rgba(255,255,255,0.2)',
                   color: '#ffffff',
-                  padding: '3px 8px',
-                  borderRadius: '12px',
-                  fontSize: '11px',
+                  padding: '2px 6px',
+                  borderRadius: '10px',
+                  fontSize: '10px',
                   fontWeight: '700',
-                  minWidth: '18px',
+                  minWidth: '16px',
                   textAlign: 'center',
                   flexShrink: 0
                 }}>
