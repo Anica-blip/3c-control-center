@@ -1152,7 +1152,8 @@ const handleDeletePost = async (postId: string) => {
       maxWidth: '1100px',
       margin: '0 auto',
       overflowX: 'hidden',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      wordBreak: 'break-word'
     }}>
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
@@ -1431,14 +1432,15 @@ const handleDeletePost = async (postId: string) => {
                       backgroundColor: theme.cardBg,
                       border: `1px solid ${theme.border}`,
                       borderRadius: '8px',
-                      padding: '20px'
+                      padding: '20px',
+                      overflow: 'hidden'
                     }}>
                       <div style={{
                         display: 'flex',
                         alignItems: 'flex-start',
                         justifyContent: 'space-between'
                       }}>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -1456,8 +1458,15 @@ const handleDeletePost = async (postId: string) => {
                                 backgroundColor: theme.background,
                                 padding: '4px 8px',
                                 borderRadius: '4px',
-                                border: `1px solid ${theme.border}`
-                              }}>
+                                border: `1px solid ${theme.border}`,
+                                maxWidth: '250px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                display: 'inline-block'
+                              }}
+                              title={post.content_id}
+                              >
                                 {post.content_id}
                               </span>
                             )}
@@ -1564,7 +1573,9 @@ const handleDeletePost = async (postId: string) => {
                             fontSize: '14px',
                             lineHeight: '1.5',
                             fontWeight: 'bold',
-                            margin: '0 0 16px 0'
+                            margin: '0 0 16px 0',
+                            wordBreak: 'break-word',
+                            overflowWrap: 'break-word'
                           }}>
                             {truncateDescription(post.description)}
                           </p>
@@ -2368,7 +2379,8 @@ const handleDeletePost = async (postId: string) => {
                         backgroundColor: theme.cardBg,
                         border: `1px solid ${theme.border}`,
                         borderRadius: '8px',
-                        ...getStatusColor(post.status)
+                        ...getStatusColor(post.status),
+                        overflow: 'hidden'
                       }}
                     >
                       <div style={{
@@ -2376,7 +2388,7 @@ const handleDeletePost = async (postId: string) => {
                         alignItems: 'flex-start',
                         justifyContent: 'space-between'
                       }}>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -2456,7 +2468,9 @@ const handleDeletePost = async (postId: string) => {
                             fontSize: '13px',
                             color: theme.text,
                             margin: '0 0 10px 0',
-                            lineHeight: '1.4'
+                            lineHeight: '1.4',
+                            wordBreak: 'break-word',
+                            overflowWrap: 'break-word'
                           }}>
                             {truncateDescription(post.description, 100)}
                           </p>
@@ -2690,7 +2704,8 @@ const handleDeletePost = async (postId: string) => {
                       padding: '20px',
                       backgroundColor: theme.cardBg,
                       border: `1px solid ${theme.border}`,
-                      borderRadius: '8px'
+                      borderRadius: '8px',
+                      overflow: 'hidden'
                     }}
                   >
                     <div style={{
@@ -2698,7 +2713,7 @@ const handleDeletePost = async (postId: string) => {
                       alignItems: 'flex-start',
                       justifyContent: 'space-between'
                     }}>
-                      <div style={{ flex: 1 }}>
+                      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -2709,7 +2724,9 @@ const handleDeletePost = async (postId: string) => {
                             fontSize: '16px',
                             fontWeight: 'bold',
                             color: theme.text,
-                            margin: '0'
+                            margin: '0',
+                            wordBreak: 'break-word',
+                            overflowWrap: 'break-word'
                           }}>
                             {template.template_name}
                           </h4>
@@ -2742,7 +2759,9 @@ const handleDeletePost = async (postId: string) => {
                             fontSize: '14px',
                             color: theme.text,
                             margin: '0 0 12px 0',
-                            lineHeight: '1.4'
+                            lineHeight: '1.4',
+                            wordBreak: 'break-word',
+                            overflowWrap: 'break-word'
                           }}>
                             {truncateDescription(template.description)}
                           </p>
@@ -2788,10 +2807,17 @@ const handleDeletePost = async (postId: string) => {
                             <div style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '6px'
+                              gap: '6px',
+                              minWidth: 0
                             }}>
-                              <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Theme:</span>
-                              <span style={{ color: theme.text, fontWeight: 'bold' }}>{template.theme}</span>
+                              <span style={{ color: theme.textSecondary, fontWeight: 'bold', flexShrink: 0 }}>Theme:</span>
+                              <span style={{ 
+                                color: theme.text, 
+                                fontWeight: 'bold',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}>{template.theme}</span>
                             </div>
                           )}
                         </div>
