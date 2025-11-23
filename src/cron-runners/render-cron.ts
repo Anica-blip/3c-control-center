@@ -686,7 +686,12 @@ async function processPost(post: ScheduledPost): Promise<void> {
       content_id: post.content_id || null,
       platform_id: post.platform_id || null,
       media_files: post.media_files || postContent?.media_files || null,
-      selected_platforms: post.selected_platforms || postContent?.selected_platforms || null
+      selected_platforms: post.selected_platforms || postContent?.selected_platforms || null,
+      platform: post.platform || null,
+      service_type: post.service_type || null,
+      platform_icon: post.platform_icon || null,
+      type: post.type || null,
+      status: post.status || null
     };
 
     const { error: insertError } = await supabase
