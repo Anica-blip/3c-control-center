@@ -178,18 +178,34 @@ export interface SavedTemplate {
   media_type: string;
   template_type: string;
   platform: string;
+  voice_style?: string;
   title: string;
   description: string;
   hashtags: string[];
   keywords: string;
   cta: string;
+  media_files?: MediaFile[];
   selected_platforms: string[];
   usage_count: number;
   is_active: boolean;
+  is_deleted?: boolean;
   template_version: number;
   persona_target?: string;
   audience_segment?: string;
   campaign_type?: string;
+  source_template_id?: string;
+  // Character profile details
+  name?: string;
+  username?: string;
+  role?: string;
+  // Platform details
+  social_platform?: string;
+  channel_group_id?: string;
+  thread_id?: string;
+  url?: string;
+  platform_id?: string;
+  platform_icon?: string;
+  type?: string;
   user_id: string;
   created_by: string;
   created_at: Date;
