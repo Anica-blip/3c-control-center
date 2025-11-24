@@ -170,6 +170,7 @@ export interface ScheduledPost {
 
 export interface SavedTemplate {
   id: string;
+  content_id?: string;  // ⭐ Stores original content_id for pattern preservation
   template_name: string;
   character_profile: string;
   character_avatar?: string;
