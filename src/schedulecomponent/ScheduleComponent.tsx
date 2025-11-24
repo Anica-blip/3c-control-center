@@ -1146,6 +1146,7 @@ const handleDeletePost = async (postId: string) => {
       
       // ✅ ENHANCED: Capture ALL fields including new ones requested
       const templateData = {
+        content_id: post.content_id,  // ⭐ Store original content_id for pattern preservation
         template_name: post.title || 'Saved Template',
         character_profile: post.character_profile,
         character_avatar: post.character_avatar || '',
@@ -1289,9 +1290,32 @@ const handleDeletePost = async (postId: string) => {
       const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
       const userId = user?.id || SYSTEM_USER_ID;
 
+      // ⭐ Generate new content_id preserving original pattern
+      let newContentId: string;
+      if (template.content_id) {
+        // Extract pattern (everything before last hyphen)
+        const parts = template.content_id.split('-');
+        if (parts.length > 1) {
+          // Remove last part (old number)
+          const pattern = parts.slice(0, -1).join('-');
+          // Generate new 6-digit number from timestamp
+          const timestamp = Date.now().toString().slice(-6);
+          newContentId = `${pattern}-${timestamp}`;
+          console.log(`🔢 Generated content_id: ${template.content_id} → ${newContentId}`);
+        } else {
+          // Fallback if no hyphens found
+          const timestamp = Date.now().toString().slice(-6);
+          newContentId = `${template.content_id}-${timestamp}`;
+        }
+      } else {
+        // Fallback if no content_id stored
+        newContentId = `template-move-${Date.now()}`;
+        console.log('⚠️ No content_id pattern found, using fallback:', newContentId);
+      }
+
       // Create new post in content_posts with ALL template fields
       const contentPostData = {
-        content_id: `template-move-${Date.now()}`,
+        content_id: newContentId,  // ⭐ Preserves pattern, new timestamp
         character_profile: template.character_profile,
         character_avatar: template.character_avatar || '',
         theme: template.theme,
@@ -3379,3 +3403,4 @@ const handleDeletePost = async (postId: string) => {
     </div>
   );
 }
+
