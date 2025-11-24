@@ -1151,31 +1151,34 @@ const handleDeletePost = async (postId: string) => {
   }
 };
 
-// ⭐ DELETE PENDING POST: For posts in content_posts table (Pending tab)
+// ⭐ DELETE PENDING POST: Soft delete from content_posts (hide from dashboard, don't delete from Supabase)
 const handleDeletePendingPost = async (postId: string) => {
-  if (!confirm('Delete this post? This will remove it from your pending posts.')) return;
+  if (!confirm('Hide this post from your dashboard? (Can be restored later)')) return;
   
   const operationKey = `delete-${postId}`;
   setOperationLoading(operationKey, true);
   
   try {
-    // Delete from content_posts table
+    // ⭐ Soft delete: Update is_hidden flag, DON'T delete from Supabase
     const { error } = await supabase
       .from('content_posts')
-      .delete()
+      .update({
+        is_hidden: true,
+        deleted_at: new Date().toISOString()
+      })
       .eq('id', postId);
     
     if (error) throw error;
     
-    console.log('✅ Post deleted from content_posts:', postId);
+    console.log('✅ Post hidden from dashboard (content_posts):', postId);
     
-    // Refresh pending posts
+    // Refresh pending posts to remove hidden post from view
     await refreshAllPosts();
-    showSuccess('Post deleted successfully!');
+    showSuccess('Post hidden from dashboard!');
   } catch (error) {
-    console.error('❌ Error deleting pending post:', error);
+    console.error('❌ Error hiding pending post:', error);
     showError({
-      message: 'Failed to delete post. Please try again.',
+      message: 'Failed to hide post. Please try again.',
       code: 'DELETE_PENDING_ERROR',
       type: 'unknown',
       timestamp: new Date(),
@@ -3189,7 +3192,7 @@ const handleDeletePendingPost = async (postId: string) => {
                                     fontSize: '11px',
                                     color: theme.textSecondary
                                   }}>
-                                    @{profileData?.username || template.username}
+                                    {profileData?.username || template.username}
                                   </div>
                                 )}
                                 {(profileData?.role || template.role) && (
@@ -3297,8 +3300,8 @@ const handleDeletePendingPost = async (postId: string) => {
                             fontSize: '12px',
                             flexWrap: 'wrap'
                           }}>
-                            {/* Platforms */}
-                            {template.selected_platforms && template.selected_platforms.length > 0 && (
+                            {/* Platforms - with fallback for platform_icon */}
+                            {(template.selected_platforms && template.selected_platforms.length > 0) ? (
                               <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -3336,7 +3339,26 @@ const handleDeletePendingPost = async (postId: string) => {
                                   )}
                                 </div>
                               </div>
-                            )}
+                            ) : template.platform_icon ? (
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}>
+                                <span style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Platforms:</span>
+                                <span style={{
+                                  fontSize: '11px',
+                                  fontWeight: 'bold',
+                                  backgroundColor: getPlatformBadgeColor(template.platform_icon),
+                                  color: 'white',
+                                  padding: '4px 7px',
+                                  borderRadius: '4px',
+                                  border: '1px solid rgba(255,255,255,0.4)'
+                                }}>
+                                  {template.platform_icon}
+                                </span>
+                              </div>
+                            ) : null}
 
                             {/* Theme */}
                             {template.theme && (
