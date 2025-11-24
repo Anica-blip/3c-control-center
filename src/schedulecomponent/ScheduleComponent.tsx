@@ -1038,7 +1038,11 @@ export default function ScheduleComponent() {
         created_by: selectedPost.created_by,
         description: selectedPost.description || '',
         character_profile: selectedPost.character_profile || '',
-        character_avatar: selectedPost.character_avatar || ''
+        character_avatar: selectedPost.character_avatar || '',
+        // ⭐ Add character details as direct columns for scheduled_posts table
+        name: senderProfile?.name || '',
+        username: senderProfile?.username || '',
+        role: senderProfile?.role || ''
       };
 
       const result = await createPost(scheduledPostData);
@@ -1121,14 +1125,14 @@ const handleDeletePost = async (postId: string) => {
       .from('scheduled_posts')
       .update({
         is_hidden: true,
-        deleted_at: new Date().toISOString(),
-        deleted_by: user?.id || null
+        deleted_at: new Date().toISOString()
+        // ⭐ Note: deleted_by column removed - add to schema if audit trail needed
       })
       .eq('id', postId);
     
     if (error) throw error;
     
-    console.log('✅ Post hidden in database:', postId);
+    console.log('✅ Post hidden in database (scheduled_posts):', postId);
     
     // Remove from local state immediately
     setScheduledPostsFromDB(prev => prev.filter(p => p.id !== postId));
@@ -1142,6 +1146,41 @@ const handleDeletePost = async (postId: string) => {
       timestamp: new Date(),
       retryable: true
     }, () => handleDeletePost(postId));
+  } finally {
+    setOperationLoading(operationKey, false);
+  }
+};
+
+// ⭐ DELETE PENDING POST: For posts in content_posts table (Pending tab)
+const handleDeletePendingPost = async (postId: string) => {
+  if (!confirm('Delete this post? This will remove it from your pending posts.')) return;
+  
+  const operationKey = `delete-${postId}`;
+  setOperationLoading(operationKey, true);
+  
+  try {
+    // Delete from content_posts table
+    const { error } = await supabase
+      .from('content_posts')
+      .delete()
+      .eq('id', postId);
+    
+    if (error) throw error;
+    
+    console.log('✅ Post deleted from content_posts:', postId);
+    
+    // Refresh pending posts
+    await refreshAllPosts();
+    showSuccess('Post deleted successfully!');
+  } catch (error) {
+    console.error('❌ Error deleting pending post:', error);
+    showError({
+      message: 'Failed to delete post. Please try again.',
+      code: 'DELETE_PENDING_ERROR',
+      type: 'unknown',
+      timestamp: new Date(),
+      retryable: true
+    }, () => handleDeletePendingPost(postId));
   } finally {
     setOperationLoading(operationKey, false);
   }
@@ -2092,7 +2131,7 @@ const handleDeletePost = async (postId: string) => {
                             {isOperationLoading(`schedule-${post.id}`) ? 'Scheduling...' : 'Schedule'}
                           </button>
                           <button
-                            onClick={() => handleDeletePost(post.id)}
+                            onClick={() => handleDeletePendingPost(post.id)}
                             disabled={isOperationLoading(`delete-${post.id}`)}
                             style={{
                               padding: '8px',
