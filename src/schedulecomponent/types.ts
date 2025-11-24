@@ -166,6 +166,10 @@ export interface ScheduledPost {
   created_by: string;
   is_from_template?: boolean;
   source_template_id?: string;
+  // ⭐ Character details as direct columns (for scheduled_posts table)
+  name?: string;
+  username?: string;
+  role?: string;
 }
 
 export interface SavedTemplate {
@@ -286,4 +290,3 @@ export interface DashboardPlatformAssignment {
   created_at: Date;
   updated_at: Date;
 }
-
