@@ -829,6 +829,17 @@ export default function ScheduleComponent() {
     });
   }, [scheduledPostsFiltered.length, fetchCharacterProfile]);
 
+  // ⭐ Load character profiles for saved templates
+  useEffect(() => {
+    if (!savedTemplates?.length) return;
+    
+    savedTemplates.forEach(template => {
+      if (template?.character_profile && typeof template.character_profile === 'string' && isUUID(template.character_profile)) {
+        fetchCharacterProfile(template.character_profile);
+      }
+    });
+  }, [savedTemplates.length, fetchCharacterProfile]);
+
   const platforms = [
     { id: '1', name: 'Telegram', icon: 'TG', color: '#3b82f6' },
     { id: '2', name: 'YouTube', icon: 'YT', color: '#ef4444' },
@@ -1141,8 +1152,29 @@ const handleDeletePost = async (postId: string) => {
     setOperationLoading(operationKey, true);
     
     try {
-      // Extract character profile details from post_content if available
-      const senderProfile = post.post_content?.text_post?.sender_profile;
+      // ⭐ FETCH character profile data BEFORE saving template
+      let characterData = { name: '', username: '', role: '' };
+      
+      if (post.character_profile && isUUID(post.character_profile)) {
+        try {
+          const { data: profileData, error } = await supabase
+            .from('character_profiles')
+            .select('name, username, role')
+            .eq('id', post.character_profile)
+            .single();
+          
+          if (!error && profileData) {
+            characterData = {
+              name: profileData.name || '',
+              username: profileData.username || '',
+              role: profileData.role || ''
+            };
+            console.log('✅ Fetched character profile for template:', characterData);
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not fetch character profile:', error);
+        }
+      }
       
       // ✅ ENHANCED: Capture ALL fields including new ones requested
       const templateData = {
@@ -1155,24 +1187,24 @@ const handleDeletePost = async (postId: string) => {
         media_type: post.media_type || '',
         template_type: post.template_type || '',
         platform: post.platform || '',
-        voice_style: (post as any).voice_style || '',  // ✅ NEW
+        voice_style: (post as any).voice_style || '',
         title: post.title || '',
         description: post.description,
         hashtags: post.hashtags || [],
         keywords: post.keywords || '',
         cta: post.cta || '',
-        media_files: post.media_files || [],  // ✅ NEW
+        media_files: post.media_files || [],
         selected_platforms: post.selected_platforms,
         usage_count: 0,
         is_active: true,
-        is_deleted: false,  // ⭐ CRITICAL: Ensure template is not marked as deleted
+        is_deleted: false,
         template_version: 1,
-        source_template_id: post.source_template_id || null,  // ✅ NEW
-        // Character profile details - ✅ NEW
-        name: senderProfile?.name || '',
-        username: senderProfile?.username || '',
-        role: senderProfile?.role || '',
-        // Platform details - ✅ NEW
+        source_template_id: post.source_template_id || null,
+        // ⭐ Character profile details from DATABASE (not post_content)
+        name: characterData.name,
+        username: characterData.username,
+        role: characterData.role,
+        // Platform details
         social_platform: (post as any).social_platform || null,
         channel_group_id: (post as any).channel_group_id || null,
         thread_id: (post as any).thread_id || null,
@@ -1184,17 +1216,20 @@ const handleDeletePost = async (postId: string) => {
         created_by: post.created_by || ''
       };
 
-      console.log('📝 Saving template with ENHANCED data:', templateData);
+      console.log('📝 Saving template with ENHANCED data (character from DB):', templateData);
       const result = await createTemplate(templateData);
       console.log('📝 Template save result:', result);
       
       if (result.success) {
-        // ⭐ FIX: Refresh templates list AND switch to templates tab to show it
         console.log('✅ Template saved successfully, refreshing templates...');
-        await refreshTemplates();
-        console.log('✅ Templates refreshed, switching to templates tab');
-        setActiveTab('templates');  // Switch to templates tab
-        showSuccess('✅ Template saved with all details! Switched to Templates tab.');
+        
+        // ⭐ Wait for templates to refresh BEFORE switching tabs
+        await fetchTemplates();
+        
+        console.log('✅ Templates refreshed, switching to Saved Templates tab');
+        setActiveTab('saved');  // ⭐ FIX: Use 'saved' not 'templates'
+        
+        showSuccess('✅ Template saved with all details!');
       } else {
         if (result.validationErrors?.length) {
           const errorMsg = result.validationErrors.map(e => e.message).join(', ');
@@ -3403,4 +3438,3 @@ const handleDeletePost = async (postId: string) => {
     </div>
   );
 }
-
