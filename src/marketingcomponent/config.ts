@@ -6,28 +6,28 @@ import { createClient } from '@supabase/supabase-js';
  * Supabase Configuration
  * 
  * Environment Variables Required:
- * - REACT_APP_SUPABASE_URL: Your Supabase project URL
- * - REACT_APP_SUPABASE_ANON_KEY: Your Supabase anonymous/public key
+ * - VITE_SUPABASE_URL: Your Supabase project URL
+ * - VITE_SUPABASE_ANON_KEY: Your Supabase anonymous/public key
  * 
  * Make sure these are set in your .env file:
- * REACT_APP_SUPABASE_URL=https://your-project.supabase.co
- * REACT_APP_SUPABASE_ANON_KEY=your-anon-key
+ * VITE_SUPABASE_URL=https://your-project.supabase.co
+ * VITE_SUPABASE_ANON_KEY=your-anon-key
  */
 
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Validate environment variables
 if (!supabaseUrl) {
   throw new Error(
-    'Missing REACT_APP_SUPABASE_URL environment variable. ' +
+    'Missing VITE_SUPABASE_URL environment variable. ' +
     'Please add it to your .env file.'
   );
 }
 
 if (!supabaseAnonKey) {
   throw new Error(
-    'Missing REACT_APP_SUPABASE_ANON_KEY environment variable. ' +
+    'Missing VITE_SUPABASE_ANON_KEY environment variable. ' +
     'Please add it to your .env file.'
   );
 }
