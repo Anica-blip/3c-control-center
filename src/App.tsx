@@ -3,7 +3,7 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import ContentComponent from './contentcomponent';
 import ChatManagerPublic from './webchat';
 import ScheduleComponent from './schedulecomponent';
-import MarketingComponent from './marketingcomponent';
+import MarketingComponent from './marketingcomponent/MarketingComponent';
 import SettingsComponent from './settingscomponent';
 import AdminComponents from './admincomponents';
 import { useI18n } from './i18n.tsx';
@@ -1531,3 +1531,4 @@ const AiChatManagerComponent = () => {
 };
 
 export default App;
+
