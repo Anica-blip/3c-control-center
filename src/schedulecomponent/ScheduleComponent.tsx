@@ -1413,6 +1413,10 @@ const handleDeletePendingPost = async (postId: string) => {
         source_template_id: template.id,
         user_id: userId,
         created_by: userId,
+        // ⭐ Character details (MUST be copied from template!)
+        name: template.name || '',
+        username: template.username || '',
+        role: template.role || '',
         // Platform details
         social_platform: template.social_platform || null,
         channel_group_id: template.channel_group_id || null,
