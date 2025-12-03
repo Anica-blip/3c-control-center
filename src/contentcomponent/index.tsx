@@ -315,13 +315,12 @@ export default function ContentComponent() {
       }}>
         {/* Tabs */}
         <div style={{
-          backgroundColor: isDarkMode ? '#1e293b' : 'white',
-          boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
+          padding: '20px',
           borderRadius: '8px',
-          border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
-          overflow: 'hidden'
+          border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
         }}>
-          <div style={{ display: 'flex' }}>
+          <div style={{ display: 'flex', gap: '12px' }}>
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -331,30 +330,19 @@ export default function ContentComponent() {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    padding: '16px 24px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    flex: 1,
                     justifyContent: 'center',
+                    gap: '8px',
+                    padding: '12px 24px',
+                    fontSize: '14px',
+                    fontWeight: activeTab === tab.id ? 'bold' : 'normal',
+                    flex: 1,
                     border: 'none',
+                    borderRadius: '8px',
                     cursor: 'pointer',
-                    backgroundColor: activeTab === tab.id ? (isDarkMode ? '#60a5fa' : '#3b82f6') : 'transparent',
+                    backgroundColor: activeTab === tab.id ? '#3b82f6' : (isDarkMode ? '#475569' : '#e5e7eb'),
                     color: activeTab === tab.id ? 'white' : (isDarkMode ? '#94a3b8' : '#6b7280'),
                     transition: 'all 0.2s ease',
                     fontFamily: 'inherit'
-                  }}
-                  onMouseOver={(e) => {
-                    if (activeTab !== tab.id) {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? '#334155' : '#f9fafb';
-                      e.currentTarget.style.color = isDarkMode ? '#f8fafc' : '#111827';
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    if (activeTab !== tab.id) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = isDarkMode ? '#94a3b8' : '#6b7280';
-                    }
                   }}
                 >
                   <Icon style={{ height: '20px', width: '20px' }} />
@@ -412,4 +400,5 @@ export default function ContentComponent() {
     </div>
   );
 }
+
 
