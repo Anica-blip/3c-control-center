@@ -554,6 +554,7 @@ function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
           <button
             onClick={() => setActiveTab('templates')}
             style={{
+              flex: 1,
               padding: '12px 24px',
               backgroundColor: activeTab === 'templates' ? theme.background : 'transparent',
               color: activeTab === 'templates' ? theme.textPrimary : theme.textSecondary,
@@ -569,6 +570,7 @@ function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
           <button
             onClick={() => setActiveTab('libraries')}
             style={{
+              flex: 1,
               padding: '12px 24px',
               backgroundColor: activeTab === 'libraries' ? theme.background : 'transparent',
               color: activeTab === 'libraries' ? theme.textPrimary : theme.textSecondary,
@@ -584,6 +586,7 @@ function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
           <button
             onClick={() => setActiveTab('brand')}
             style={{
+              flex: 1,
               padding: '12px 24px',
               backgroundColor: activeTab === 'brand' ? theme.background : 'transparent',
               color: activeTab === 'brand' ? theme.textPrimary : theme.textSecondary,
@@ -615,24 +618,7 @@ function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
 
 function AdminTemplatesTab({ theme }: { theme: any }) {
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null);
-  const [templates, setTemplates] = useState([
-    {
-      id: 1,
-      name: "Social Media Post",
-      category: "Social",
-      description: "Instagram/Facebook post template",
-      fields: ["title", "description", "hashtags", "image"],
-      lastModified: "2025-01-15"
-    },
-    {
-      id: 2,
-      name: "Blog Article", 
-      category: "Content",
-      description: "Standard blog post structure",
-      fields: ["headline", "introduction", "body", "conclusion", "tags"],
-      lastModified: "2025-01-10"
-    }
-  ]);
+  const [templates, setTemplates] = useState([]);
 
   const [showBuilder, setShowBuilder] = useState(false);
   const [newTemplate, setNewTemplate] = useState({
@@ -1073,6 +1059,11 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
               
               <div style={{ display: 'grid', gap: '12px' }}>
                 {[
+                  {
+                    name: 'Interactive Pdf',
+                    desc: 'Build and manage interactive PDF documents',
+                    url: 'https://builder.3c-public-library.org'
+                  },
                   {
                     name: 'Content Template Engine',
                     desc: 'Comprehensive template creation and management',
