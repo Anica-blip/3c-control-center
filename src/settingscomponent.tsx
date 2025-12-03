@@ -1028,7 +1028,7 @@ const deleteExternalService = async (id) => {
                               </div>
                             ) : (
                               <>
-                                <div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{
                                     fontWeight: 'bold',
                                     color: isDarkMode ? '#93c5fd' : '#1e40af',
@@ -1038,7 +1038,11 @@ const deleteExternalService = async (id) => {
                                   </div>
                                   <div style={{
                                     fontSize: '12px',
-                                    color: isDarkMode ? '#9ca3af' : '#6b7280'
+                                    color: isDarkMode ? '#9ca3af' : '#6b7280',
+                                    wordBreak: 'break-all',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
                                   }}>
                                     {platform.url}
                                   </div>
@@ -1418,7 +1422,7 @@ const deleteExternalService = async (id) => {
                               </div>
                             ) : (
                               <>
-                                <div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{
                                     fontWeight: 'bold',
                                     color: isDarkMode ? '#67e8f9' : '#0e7490',
@@ -1428,7 +1432,11 @@ const deleteExternalService = async (id) => {
                                   </div>
                                   <div style={{
                                     fontSize: '12px',
-                                    color: isDarkMode ? '#9ca3af' : '#6b7280'
+                                    color: isDarkMode ? '#9ca3af' : '#6b7280',
+                                    wordBreak: 'break-all',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
                                   }}>
                                     ID: {telegram.channel_group}
                                     {telegram.thread_id && ` • Thread: ${telegram.thread_id}`}
@@ -2381,7 +2389,7 @@ const deleteExternalService = async (id) => {
                                 >
                                   →
                                 </a>
-                                <div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{
                                     fontWeight: 'bold',
                                     color: isDarkMode ? '#6ee7b7' : '#047857',
@@ -2391,7 +2399,11 @@ const deleteExternalService = async (id) => {
                                   </div>
                                   <div style={{
                                     fontSize: '12px',
-                                    color: isDarkMode ? '#9ca3af' : '#6b7280'
+                                    color: isDarkMode ? '#9ca3af' : '#6b7280',
+                                    wordBreak: 'break-all',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
                                   }}>
                                     {service.url}
                                   </div>
