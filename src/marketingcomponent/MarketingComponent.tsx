@@ -685,23 +685,61 @@ const MarketingComponent: React.FC = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div style={getTabContainerStyle(isDarkMode)}>
+      <div style={{ 
+        backgroundColor: theme.headerBackground, 
+        padding: '20px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        overflowX: 'auto'
+      }}>
         {tabGroups.map(group => (
-          <div key={group.name} style={{ display: 'flex', gap: '8px' }}>
-            {group.tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={getTabButtonStyle(isDarkMode, activeTab === tab.id, group.color)}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div key={group.name}>
+            <h3 style={{
+              fontSize: '12px',
+              fontWeight: 'bold',
+              color: theme.textSecondary,
+              textTransform: 'uppercase',
+              marginBottom: '8px',
+              letterSpacing: '0.5px'
+            }}>
+              {group.name}
+            </h3>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              {group.tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: activeTab === tab.id ? group.color : theme.buttonSecondary,
+                    color: activeTab === tab.id ? 'white' : theme.textSecondary,
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: activeTab === tab.id ? 'bold' : 'normal',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    transition: 'all 0.2s ease',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Tab Content */}
+      {/* Tab Content Container with Width Constraints */}
+      <div style={{
+        maxWidth: '1400px',
+        width: '100%',
+        margin: '0 auto',
+        padding: '24px 20px',
+        boxSizing: 'border-box',
+        overflowX: 'hidden'
+      }}>
       
       {/* TAB 1: PERSONAS */}
       {activeTab === 'personas' && (
@@ -1618,6 +1656,8 @@ const MarketingComponent: React.FC = () => {
           </div>
         </div>
       )}
+
+      </div> {/* End Tab Content Container */}
 
       {/* CSS Animations */}
       <style>{getAnimationStyles()}</style>
