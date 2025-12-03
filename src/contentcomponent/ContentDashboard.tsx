@@ -209,7 +209,7 @@ export const ContentDashboard: React.FC<ContentDashboardProps> = ({
         </div>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Tab Navigation - INDIVIDUAL ROUNDED BARS */}
       <div style={{
         backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
         padding: '20px 24px'
@@ -220,36 +220,36 @@ export const ContentDashboard: React.FC<ContentDashboardProps> = ({
           display: 'flex',
           gap: '12px'
         }}>
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '12px 24px',
-                  backgroundColor: activeTab === tab.id 
-                    ? '#3b82f6'
-                    : (isDarkMode ? '#475569' : '#e5e7eb'),
-                  color: activeTab === tab.id 
-                    ? 'white'
-                    : (isDarkMode ? '#94a3b8' : '#6b7280'),
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: activeTab === tab.id ? 'bold' : 'normal',
-                  fontFamily: 'inherit',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-              </button>
-            ))}
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '12px 24px',
+                backgroundColor: activeTab === tab.id 
+                  ? '#3b82f6'
+                  : (isDarkMode ? '#475569' : '#e5e7eb'),
+                color: activeTab === tab.id 
+                  ? 'white'
+                  : (isDarkMode ? '#94a3b8' : '#6b7280'),
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: activeTab === tab.id ? 'bold' : 'normal',
+                fontFamily: 'inherit',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -299,4 +299,3 @@ export const ContentDashboard: React.FC<ContentDashboardProps> = ({
 };
 
 export default ContentDashboard;
-
