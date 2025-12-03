@@ -1041,7 +1041,7 @@ const deleteExternalService = async (id) => {
                                   <div style={{
                                     fontSize: '12px',
                                     color: isDarkMode ? '#9ca3af' : '#6b7280',
-                                    wordBreak: 'break-all',
+                                    
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap'
@@ -1437,7 +1437,7 @@ const deleteExternalService = async (id) => {
                                   <div style={{
                                     fontSize: '12px',
                                     color: isDarkMode ? '#9ca3af' : '#6b7280',
-                                    wordBreak: 'break-all',
+                                    
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap'
@@ -2406,7 +2406,6 @@ const deleteExternalService = async (id) => {
                                   <div style={{
                                     fontSize: '12px',
                                     color: isDarkMode ? '#9ca3af' : '#6b7280',
-                                    wordBreak: 'break-all',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap'
