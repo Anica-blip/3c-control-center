@@ -54,9 +54,6 @@ const EnhancedContentCreationForm = ({
   // ADD i18n HOOK
   const { t } = useI18n();
 
-  // Tab state for main navigation
-  const [activeTab, setActiveTab] = useState<'create' | 'library' | 'database'>('create');
-
 // Platform state management - separate from props
   const [loadedPlatforms, setLoadedPlatforms] = useState<SocialPlatform[]>([]);
   const [isLoadingPlatformsState, setIsLoadingPlatformsState] = useState(false);
@@ -967,77 +964,10 @@ const EnhancedContentCreationForm = ({
       boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
       border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`,
       borderRadius: '8px',
-      padding: '0',
+      padding: '24px',
       marginBottom: '24px',
       fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
-      {/* Tab Navigation */}
-      <div style={{ 
-        backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
-        padding: '20px',
-        borderTopLeftRadius: '8px',
-        borderTopRightRadius: '8px',
-        borderBottom: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`
-      }}>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={() => setActiveTab('create')}
-            style={{
-              flex: 1,
-              padding: '12px 24px',
-              backgroundColor: activeTab === 'create' ? '#3b82f6' : (isDarkMode ? '#475569' : '#e5e7eb'),
-              color: activeTab === 'create' ? 'white' : (isDarkMode ? '#94a3b8' : '#6b7280'),
-              border: 'none',
-              borderRadius: '8px',
-              fontWeight: activeTab === 'create' ? 'bold' : 'normal',
-              cursor: 'pointer',
-              fontSize: '14px',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            Create New Content
-          </button>
-          <button
-            onClick={() => setActiveTab('library')}
-            style={{
-              flex: 1,
-              padding: '12px 24px',
-              backgroundColor: activeTab === 'library' ? '#3b82f6' : (isDarkMode ? '#475569' : '#e5e7eb'),
-              color: activeTab === 'library' ? 'white' : (isDarkMode ? '#94a3b8' : '#6b7280'),
-              border: 'none',
-              borderRadius: '8px',
-              fontWeight: activeTab === 'library' ? 'bold' : 'normal',
-              cursor: 'pointer',
-              fontSize: '14px',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            Template Library
-          </button>
-          <button
-            onClick={() => setActiveTab('database')}
-            style={{
-              flex: 1,
-              padding: '12px 24px',
-              backgroundColor: activeTab === 'database' ? '#3b82f6' : (isDarkMode ? '#475569' : '#e5e7eb'),
-              color: activeTab === 'database' ? 'white' : (isDarkMode ? '#94a3b8' : '#6b7280'),
-              border: 'none',
-              borderRadius: '8px',
-              fontWeight: activeTab === 'database' ? 'bold' : 'normal',
-              cursor: 'pointer',
-              fontSize: '14px',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            Supabase Database
-          </button>
-        </div>
-      </div>
-
-      {/* Tab Content - Wrap existing content in conditional */}
-      <div style={{ padding: '24px' }}>
-      {activeTab === 'create' && (
-      <>
       {/* UPDATED HEADER SECTION WITH TEMPLATE STATUS */}
       <div style={{
         borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
@@ -2839,85 +2769,9 @@ const EnhancedContentCreationForm = ({
           )}
         </div>
       )}
-      </>
-      )}
-
-      {/* Template Library Tab */}
-      {activeTab === 'library' && (
-        <div style={{
-          padding: '40px',
-          textAlign: 'center'
-        }}>
-          <h2 style={{
-            fontSize: '24px',
-            fontWeight: '600',
-            color: isDarkMode ? '#60a5fa' : '#3b82f6',
-            marginBottom: '16px'
-          }}>
-            📚 Template Library
-          </h2>
-          <p style={{
-            color: isDarkMode ? '#94a3b8' : '#6b7280',
-            fontSize: '16px',
-            marginBottom: '24px'
-          }}>
-            Browse and manage your content templates
-          </p>
-          <div style={{
-            padding: '60px',
-            backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
-            borderRadius: '12px',
-            border: `2px dashed ${isDarkMode ? '#475569' : '#d1d5db'}`
-          }}>
-            <p style={{
-              color: isDarkMode ? '#64748b' : '#9ca3af',
-              fontSize: '14px'
-            }}>
-              Template Library content will be displayed here
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Supabase Database Tab */}
-      {activeTab === 'database' && (
-        <div style={{
-          padding: '40px',
-          textAlign: 'center'
-        }}>
-          <h2 style={{
-            fontSize: '24px',
-            fontWeight: '600',
-            color: isDarkMode ? '#60a5fa' : '#3b82f6',
-            marginBottom: '16px'
-          }}>
-            🗄️ Supabase Database
-          </h2>
-          <p style={{
-            color: isDarkMode ? '#94a3b8' : '#6b7280',
-            fontSize: '16px',
-            marginBottom: '24px'
-          }}>
-            View and manage your content database
-          </p>
-          <div style={{
-            padding: '60px',
-            backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
-            borderRadius: '12px',
-            border: `2px dashed ${isDarkMode ? '#475569' : '#d1d5db'}`
-          }}>
-            <p style={{
-              color: isDarkMode ? '#64748b' : '#9ca3af',
-              fontSize: '14px'
-            }}>
-              Database content will be displayed here
-            </p>
-          </div>
-        </div>
-      )}
-      </div>
     </div>
   );
 };
 
 export { EnhancedContentCreationForm };
+      
