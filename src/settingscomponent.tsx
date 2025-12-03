@@ -757,8 +757,8 @@ const deleteExternalService = async (id) => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  padding: '12px 24px',
-                  fontSize: '14px',
+                  padding: '12px 20px',
+                  fontSize: '13px',
                   fontWeight: activeTab === tab.id ? 'bold' : 'normal',
                   transition: 'all 0.2s ease',
                   borderRadius: '8px',
@@ -769,10 +769,11 @@ const deleteExternalService = async (id) => {
                     ? 'white'
                     : (isDarkMode ? '#94a3b8' : '#6b7280'),
                   border: 'none',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                <span style={{ fontSize: '18px' }}>{tab.icon}</span>
+                <span style={{ fontSize: '16px' }}>{tab.icon}</span>
                 <span>{tab.label}</span>
               </button>
             ))}
@@ -2401,13 +2402,13 @@ const deleteExternalService = async (id) => {
                                   onClick={() => setEditingExternalService(service)}
                                   disabled={loading}
                                   style={{
-                                    padding: '8px 12px',
+                                    padding: '6px 10px',
                                     backgroundColor: loading ? '#9ca3af' : '#f59e0b',
                                     color: '#ffffff',
                                     border: 'none',
                                     borderRadius: '4px',
                                     cursor: loading ? 'not-allowed' : 'pointer',
-                                    fontSize: '12px',
+                                    fontSize: '11px',
                                     fontWeight: 'bold'
                                   }}
                                 >
@@ -2417,13 +2418,13 @@ const deleteExternalService = async (id) => {
                                   onClick={() => deleteExternalService(service.id)}
                                   disabled={loading}
                                   style={{
-                                    padding: '8px 12px',
+                                    padding: '6px 10px',
                                     backgroundColor: loading ? '#9ca3af' : '#ef4444',
                                     color: '#ffffff',
                                     border: 'none',
                                     borderRadius: '4px',
                                     cursor: loading ? 'not-allowed' : 'pointer',
-                                    fontSize: '12px',
+                                    fontSize: '11px',
                                     fontWeight: 'bold'
                                   }}
                                 >
