@@ -855,6 +855,72 @@ const MarketingComponent: React.FC = () => {
             </p>
           </div>
 
+          {/* Google Search Integration */}
+          <div style={{ 
+            marginBottom: '32px', 
+            padding: '20px', 
+            border: `2px solid ${theme.primary}`, 
+            borderRadius: '12px', 
+            backgroundColor: isDarkMode ? '#1e293b' : '#f0f9ff' 
+          }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '12px', color: theme.text }}>
+              🔍 Google Search for Keywords & Hashtags
+            </h3>
+            <p style={{ fontSize: '14px', color: theme.textSecondary, marginBottom: '16px' }}>
+              Search Google directly for keyword research and hashtag trends
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <a
+                href="https://www.google.com/search?q=keyword+research"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: '16px',
+                  backgroundColor: isDarkMode ? '#334155' : 'white',
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  color: theme.primary,
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  textAlign: 'center',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                🔎 Search Keywords on Google
+              </a>
+              <a
+                href="https://www.google.com/search?q=trending+hashtags"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: '16px',
+                  backgroundColor: isDarkMode ? '#334155' : 'white',
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  color: theme.primary,
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  textAlign: 'center',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                # Search Hashtags on Google
+              </a>
+            </div>
+          </div>
+
           {/* Keywords Section */}
           <div style={{ marginBottom: '40px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: theme.text }}>Keywords</h3>
@@ -1390,6 +1456,100 @@ const MarketingComponent: React.FC = () => {
             <p style={getSectionDescriptionStyle(isDarkMode)}>
               Store research findings and audience insights
             </p>
+          </div>
+
+          {/* SparkToro Research Board */}
+          <div style={{ 
+            marginBottom: '32px', 
+            padding: '20px', 
+            border: `2px solid #8b5cf6`, 
+            borderRadius: '12px', 
+            backgroundColor: isDarkMode ? '#1e1b4b' : '#faf5ff' 
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 4px 0', color: theme.text }}>
+                  🎯 SparkToro Research Board
+                </h3>
+                <p style={{ fontSize: '14px', color: theme.textSecondary, margin: '0' }}>
+                  Audience intelligence and research from SparkToro
+                </p>
+              </div>
+              <a
+                href="https://sparktoro.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#8b5cf6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Open SparkToro →
+              </a>
+            </div>
+
+            {/* SparkToro Entry Form */}
+            <div style={{ 
+              marginTop: '16px',
+              padding: '16px', 
+              backgroundColor: isDarkMode ? '#0f172a' : 'white',
+              borderRadius: '8px',
+              border: `1px solid ${theme.border}`
+            }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: theme.text }}>
+                Add SparkToro Research Entry
+              </h4>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                <input
+                  type="text"
+                  placeholder="Research Topic (e.g., 'Tech Content Creators')"
+                  style={getInputStyle(isDarkMode)}
+                />
+                <textarea
+                  placeholder="Key Findings from SparkToro..."
+                  rows={3}
+                  style={getTextareaStyle(isDarkMode)}
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <input
+                    type="text"
+                    placeholder="Audience Size"
+                    style={getInputStyle(isDarkMode)}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Source URL (optional)"
+                    style={getInputStyle(isDarkMode)}
+                  />
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <button
+                    style={{
+                      ...getPrimaryButtonStyle(isDarkMode, false),
+                      backgroundColor: '#8b5cf6'
+                    }}
+                  >
+                    + Add Research Entry
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* SparkToro Entries List */}
+            <div style={{ marginTop: '16px' }}>
+              <div style={getEmptyStateStyle(isDarkMode)}>
+                <p style={{ margin: '0', color: theme.textSecondary }}>
+                  No SparkToro research entries yet. Add your audience research findings above.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Add Research Insight Form */}
