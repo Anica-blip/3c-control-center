@@ -550,19 +550,20 @@ function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
         backgroundColor: theme.headerBackground, 
         padding: '0 20px' 
       }}>
-        <div style={{ display: 'flex', gap: '0' }}>
+        <div style={{ display: 'flex', gap: '12px' }}>
           <button
             onClick={() => setActiveTab('templates')}
             style={{
               flex: 1,
               padding: '12px 24px',
-              backgroundColor: activeTab === 'templates' ? theme.background : 'transparent',
-              color: activeTab === 'templates' ? theme.textPrimary : theme.textSecondary,
+              backgroundColor: activeTab === 'templates' ? '#3b82f6' : theme.buttonSecondary,
+              color: activeTab === 'templates' ? 'white' : theme.textSecondary,
               border: 'none',
-              borderBottom: activeTab === 'templates' ? '2px solid #3b82f6' : '2px solid transparent',
+              borderRadius: '8px',
               fontWeight: activeTab === 'templates' ? 'bold' : 'normal',
               cursor: 'pointer',
-              fontSize: '14px'
+              fontSize: '14px',
+              transition: 'all 0.2s ease'
             }}
           >
             Manage Templates
@@ -572,13 +573,14 @@ function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
             style={{
               flex: 1,
               padding: '12px 24px',
-              backgroundColor: activeTab === 'libraries' ? theme.background : 'transparent',
-              color: activeTab === 'libraries' ? theme.textPrimary : theme.textSecondary,
+              backgroundColor: activeTab === 'libraries' ? '#3b82f6' : theme.buttonSecondary,
+              color: activeTab === 'libraries' ? 'white' : theme.textSecondary,
               border: 'none',
-              borderBottom: activeTab === 'libraries' ? '2px solid #3b82f6' : '2px solid transparent',
+              borderRadius: '8px',
               fontWeight: activeTab === 'libraries' ? 'bold' : 'normal',
               cursor: 'pointer',
-              fontSize: '14px'
+              fontSize: '14px',
+              transition: 'all 0.2s ease'
             }}
           >
             Libraries
@@ -588,13 +590,14 @@ function AdminComponents({ isDarkMode = false }: { isDarkMode?: boolean }) {
             style={{
               flex: 1,
               padding: '12px 24px',
-              backgroundColor: activeTab === 'brand' ? theme.background : 'transparent',
-              color: activeTab === 'brand' ? theme.textPrimary : theme.textSecondary,
+              backgroundColor: activeTab === 'brand' ? '#3b82f6' : theme.buttonSecondary,
+              color: activeTab === 'brand' ? 'white' : theme.textSecondary,
               border: 'none',
-              borderBottom: activeTab === 'brand' ? '2px solid #3b82f6' : '2px solid transparent',
+              borderRadius: '8px',
               fontWeight: activeTab === 'brand' ? 'bold' : 'normal',
               cursor: 'pointer',
-              fontSize: '14px'
+              fontSize: '14px',
+              transition: 'all 0.2s ease'
             }}
           >
             Brand Kit
@@ -910,137 +913,6 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
         </div>
       ) : (
         <>
-          {/* Template Library */}
-          <div style={{ 
-            padding: '25px', 
-            border: `1px solid ${theme.borderColor}`, 
-            borderRadius: '12px', 
-            backgroundColor: theme.cardBackground,
-            marginBottom: '30px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-          }}>
-            <h3 style={{ 
-              marginBottom: '25px', 
-              color: theme.textPrimary, 
-              fontSize: '18px', 
-              fontWeight: 'bold' 
-            }}>
-              Template Library
-            </h3>
-            
-            <div style={{ display: 'grid', gap: '16px' }}>
-              {templates.map(template => (
-                <div 
-                  key={template.id}
-                  style={{ 
-                    padding: '20px', 
-                    border: `1px solid ${theme.borderColor}`, 
-                    borderRadius: '8px', 
-                    backgroundColor: theme.background,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onClick={() => setSelectedTemplate(selectedTemplate === template.id ? null : template.id)}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ flex: '1' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                        <h4 style={{ margin: '0', color: theme.textPrimary, fontSize: '16px', fontWeight: 'bold' }}>
-                          {template.name}
-                        </h4>
-                        <span style={{ 
-                          padding: '4px 12px', 
-                          backgroundColor: '#dbeafe', 
-                          color: '#1e40af', 
-                          borderRadius: '16px', 
-                          fontSize: '12px',
-                          fontWeight: 'bold'
-                        }}>
-                          {template.category}
-                        </span>
-                      </div>
-                      <p style={{ 
-                        margin: '0 0 12px 0', 
-                        color: theme.textSecondary, 
-                        fontSize: '14px',
-                        lineHeight: '1.5'
-                      }}>
-                        {template.description}
-                      </p>
-                      <div style={{ fontSize: '12px', color: theme.textSecondary }}>
-                        Last modified: {template.lastModified} • {template.fields.length} fields
-                      </div>
-                    </div>
-                    
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button style={{ 
-                        padding: '8px 16px', 
-                        backgroundColor: theme.buttonPrimary, 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '6px', 
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}>
-                        Edit
-                      </button>
-                      <button style={{ 
-                        padding: '8px 16px', 
-                        backgroundColor: '#10b981', 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '6px', 
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}>
-                        Use
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {selectedTemplate === template.id && (
-                    <div style={{ 
-                      marginTop: '20px', 
-                      padding: '16px', 
-                      backgroundColor: theme.headerBackground, 
-                      borderRadius: '8px',
-                      border: `1px solid ${theme.borderColor}`
-                    }}>
-                      <h5 style={{ 
-                        margin: '0 0 12px 0', 
-                        color: theme.textPrimary, 
-                        fontSize: '14px', 
-                        fontWeight: 'bold' 
-                      }}>
-                        Template Fields:
-                      </h5>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {template.fields.map((field, index) => (
-                          <span 
-                            key={index}
-                            style={{ 
-                              padding: '6px 12px', 
-                              backgroundColor: theme.buttonSecondary, 
-                              color: theme.buttonSecondaryText, 
-                              borderRadius: '12px', 
-                              fontSize: '12px',
-                              fontWeight: 'bold',
-                              border: `1px solid ${theme.borderColor}`
-                            }}
-                          >
-                            {field}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* External Tools Section */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
             {/* LEFT SIDE: External Builder Tools */}
@@ -1060,14 +932,19 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
               <div style={{ display: 'grid', gap: '12px' }}>
                 {[
                   {
-                    name: 'Interactive Pdf',
-                    desc: 'Build and manage interactive PDF documents',
-                    url: 'https://builder.3c-public-library.org'
-                  },
-                  {
                     name: 'Content Template Engine',
                     desc: 'Comprehensive template creation and management',
                     url: 'https://3c-content-template-engine.vercel.app/'
+                  },
+                  {
+                    name: 'Content Library',
+                    desc: 'Access and manage your content library',
+                    url: 'https://3c-content-library.vercel.app/'
+                  },
+                  {
+                    name: 'Interactive Pdf',
+                    desc: 'Build and manage interactive PDF documents',
+                    url: 'https://builder.3c-public-library.org'
                   },
                   {
                     name: 'Featured Content Templates',
@@ -1083,11 +960,6 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                     name: 'SM Content Generator',
                     desc: 'Generate social media post content',
                     url: 'https://anica-blip.github.io/3c-smpost-generator/'
-                  },
-                  {
-                    name: 'Content Library',
-                    desc: 'Access and manage your content library',
-                    url: 'https://3c-content-library.vercel.app/'
                   }
                 ].map((tool, index) => (
                   <a 
@@ -1198,7 +1070,6 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
 
 function AdminLibrariesTab({ theme }: { theme: any }) {
   const [notionConnected, setNotionConnected] = useState(false);
-  const [wasabiConnected, setWasabiConnected] = useState(false);
   const [canvaConnected, setCanvaConnected] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
 
@@ -1225,19 +1096,6 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
     }
   };
 
-  const handleWasabiToggle = () => {
-    if (wasabiConnected) {
-      setWasabiConnected(false);
-      showNotification('Wasabi storage disconnected', 'info');
-    } else {
-      showNotification('Connecting to Wasabi Cloud...', 'info');
-      setTimeout(() => {
-        setWasabiConnected(true);
-        showNotification('Wasabi Cloud Storage connected!', 'success');
-      }, 1500);
-    }
-  };
-
   const handleCanvaToggle = () => {
     if (canvaConnected) {
       setCanvaConnected(false);
@@ -1249,17 +1107,6 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
         showNotification('Canva workspace connected!', 'success');
       }, 1500);
     }
-  };
-
-  const handleWasabiBrowse = () => {
-    showNotification('Opening Wasabi file browser...', 'info');
-    if (typeof window !== 'undefined') {
-      window.open('https://console.wasabisys.com', '_blank');
-    }
-  };
-
-  const handleWasabiUpload = () => {
-    showNotification('Upload functionality ready for implementation!', 'info');
   };
 
   const IntegrationCard = ({ 
@@ -1438,105 +1285,90 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
           )}
         </IntegrationCard>
 
-        {/* WASABI INTEGRATION */}
+        {/* CLOUDFLARE R2 BUCKET */}
         <IntegrationCard
-          title="Wasabi Cloud Storage"
-          subtitle="Internal assets & public member content storage"
-          emoji=""
-          connected={wasabiConnected}
-          onToggle={handleWasabiToggle}
+          title="Cloudflare R2 Bucket"
+          subtitle="Object storage for 3C library files"
+          emoji="☁️"
+          connected={true}
+          onToggle={() => showNotification('Cloudflare R2 is always connected', 'info')}
           gradientColor={theme.gradientRed}
         >
-          {wasabiConnected ? (
-            <div>
-              <h4 style={{ color: theme.textPrimary, marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
-                Storage Connected
-              </h4>
-              <div style={{ fontSize: '14px', color: theme.textSecondary, marginBottom: '20px' }}>
-                Internal Assets • Member Content • Media Library
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div style={{
-                  padding: '20px', 
-                  backgroundColor: 'rgba(255,255,255,0.1)', 
-                  borderRadius: '8px',
-                  border: `1px solid ${theme.borderColor}`
-                }}>
-                  <p style={{ margin: '0 0 12px 0', fontSize: '12px', fontWeight: 'bold', color: theme.textPrimary }}>
-                    Storage Usage:
-                  </p>
-                  <div style={{ fontSize: '16px', color: theme.textPrimary, fontWeight: 'bold', marginBottom: '8px' }}>
-                    2.4 GB / 50 GB
-                  </div>
-                  <div style={{ 
-                    width: '100%', 
-                    height: '8px', 
-                    backgroundColor: theme.borderColor, 
-                    borderRadius: '4px', 
-                    overflow: 'hidden'
-                  }}>
-                    <div style={{ 
-                      width: '4.8%', 
-                      height: '100%', 
-                      backgroundColor: '#10b981' 
-                    }}></div>
-                  </div>
-                </div>
-                <div style={{
-                  padding: '20px', 
-                  backgroundColor: 'rgba(255,255,255,0.1)', 
-                  borderRadius: '8px',
-                  border: `1px solid ${theme.borderColor}`
-                }}>
-                  <p style={{ margin: '0 0 12px 0', fontSize: '12px', fontWeight: 'bold', color: theme.textPrimary }}>
-                    Quick Actions:
-                  </p>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button 
-                      onClick={handleWasabiBrowse}
-                      style={{
-                        padding: '8px 16px',
-                        fontSize: '12px',
-                        backgroundColor: '#3b82f6',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      Browse
-                    </button>
-                    <button 
-                      onClick={handleWasabiUpload}
-                      style={{
-                        padding: '8px 16px',
-                        fontSize: '12px',
-                        backgroundColor: '#10b981',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      Upload
-                    </button>
-                  </div>
-                </div>
-              </div>
+          <div>
+            <h4 style={{ color: theme.textPrimary, marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+              Storage Connected
+            </h4>
+            <div style={{ fontSize: '14px', color: theme.textSecondary, marginBottom: '20px' }}>
+              3C Library Files • Media Assets • Document Storage
             </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '40px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📦</div>
-              <p style={{ color: theme.textPrimary, fontSize: '16px', marginBottom: '8px', fontWeight: 'bold' }}>
-                Connect Wasabi Cloud Storage
+            <div style={{
+              padding: '20px', 
+              backgroundColor: 'rgba(255,255,255,0.1)', 
+              borderRadius: '8px',
+              border: `1px solid ${theme.borderColor}`
+            }}>
+              <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
+                Dashboard Link:
               </p>
-              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0' }}>
-                Secure cloud storage for your assets and member content
-              </p>
+              <a
+                href="https://dash.cloudflare.com/5c482ede9d3c6e016b77a9cb86ed3a29/r2/default/buckets/3c-library-files"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ 
+                  fontSize: '12px', 
+                  color: '#3b82f6', 
+                  textDecoration: 'underline',
+                  fontWeight: 'bold',
+                  wordBreak: 'break-all'
+                }}
+              >
+                Cloudflare R2 Dashboard - 3c-library-files
+              </a>
             </div>
-          )}
+          </div>
+        </IntegrationCard>
+
+        {/* SUPABASE LIBRARY */}
+        <IntegrationCard
+          title="Supabase Library"
+          subtitle="Database and backend services"
+          emoji="🗄️"
+          connected={true}
+          onToggle={() => showNotification('Supabase is always connected', 'info')}
+          gradientColor={theme.gradientGreen}
+        >
+          <div>
+            <h4 style={{ color: theme.textPrimary, marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
+              Database Connected
+            </h4>
+            <div style={{ fontSize: '14px', color: theme.textSecondary, marginBottom: '20px' }}>
+              Content Database • User Management • API Services
+            </div>
+            <div style={{
+              padding: '20px', 
+              backgroundColor: 'rgba(255,255,255,0.1)', 
+              borderRadius: '8px',
+              border: `1px solid ${theme.borderColor}`
+            }}>
+              <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
+                Project Dashboard:
+              </p>
+              <a
+                href="https://supabase.com/dashboard/project/cgxjqsbrditbteqhdyus/editor/189435"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ 
+                  fontSize: '12px', 
+                  color: '#3b82f6', 
+                  textDecoration: 'underline',
+                  fontWeight: 'bold',
+                  wordBreak: 'break-all'
+                }}
+              >
+                Supabase Dashboard - cgxjqsbrditbteqhdyus
+              </a>
+            </div>
+          </div>
         </IntegrationCard>
 
         {/* CANVA INTEGRATION */}
