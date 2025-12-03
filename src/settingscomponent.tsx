@@ -735,7 +735,14 @@ const deleteExternalService = async (id) => {
           border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
           marginBottom: '32px'
         }}>
-          <div style={{ display: 'flex', borderBottom: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb' }}>
+          <div style={{ 
+            backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
+            padding: '20px',
+            borderTopLeftRadius: '8px',
+            borderTopRightRadius: '8px',
+            display: 'flex', 
+            gap: '12px' 
+          }}>
             {[
               { id: 'platforms', icon: '📱', label: 'Social Platforms' },
               { id: 'characters', icon: '👥', label: 'Character Profiles' },
@@ -745,18 +752,22 @@ const deleteExternalService = async (id) => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 style={{
+                  flex: 1,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  padding: '16px 32px',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '12px 24px',
                   fontSize: '14px',
-                  fontWeight: 'bold',
+                  fontWeight: activeTab === tab.id ? 'bold' : 'normal',
                   transition: 'all 0.2s ease',
-                  borderBottom: activeTab === tab.id ? '2px solid #3b82f6' : '2px solid transparent',
-                  backgroundColor: activeTab === tab.id ? (isDarkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.1)') : 'transparent',
+                  borderRadius: '8px',
+                  backgroundColor: activeTab === tab.id 
+                    ? '#3b82f6'
+                    : (isDarkMode ? '#475569' : '#e5e7eb'),
                   color: activeTab === tab.id 
-                    ? (isDarkMode ? '#ffffff' : '#111827')
-                    : (isDarkMode ? '#9ca3af' : '#6b7280'),
+                    ? 'white'
+                    : (isDarkMode ? '#94a3b8' : '#6b7280'),
                   border: 'none',
                   cursor: 'pointer'
                 }}
