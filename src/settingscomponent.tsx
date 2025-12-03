@@ -2363,7 +2363,7 @@ const deleteExternalService = async (id) => {
                             </div>
                           ) : (
                             <>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1', minWidth: 0 }}>
                                 <a
                                   href={service.url}
                                   target="_blank"
