@@ -209,47 +209,61 @@ export const ContentDashboard: React.FC<ContentDashboardProps> = ({
         </div>
       </div>
 
-      {/* Tab Navigation - INDIVIDUAL ROUNDED BARS */}
+      {/* Tab Navigation */}
       <div style={{
-        backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
-        padding: '20px 24px'
+        backgroundColor: isDarkMode ? '#1e293b' : 'white',
+        borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+        padding: '0 24px'
       }}>
         <div style={{
           maxWidth: '1200px',
-          margin: '0 auto',
-          display: 'flex',
-          gap: '12px'
+          margin: '0 auto'
         }}>
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                padding: '12px 24px',
-                backgroundColor: activeTab === tab.id 
-                  ? '#3b82f6'
-                  : (isDarkMode ? '#475569' : '#e5e7eb'),
-                color: activeTab === tab.id 
-                  ? 'white'
-                  : (isDarkMode ? '#94a3b8' : '#6b7280'),
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: activeTab === tab.id ? 'bold' : 'normal',
-                fontFamily: 'inherit',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {tab.icon}
-              <span>{tab.label}</span>
-            </button>
-          ))}
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            overflowX: 'auto'
+          }}>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '16px 20px',
+                  backgroundColor: 'transparent',
+                  color: activeTab === tab.id 
+                    ? (isDarkMode ? '#60a5fa' : '#3b82f6')
+                    : (isDarkMode ? '#94a3b8' : '#6b7280'),
+                  border: 'none',
+                  borderBottom: activeTab === tab.id 
+                    ? `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
+                    : '2px solid transparent',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  fontFamily: 'inherit',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  if (activeTab !== tab.id) {
+                    e.currentTarget.style.color = isDarkMode ? '#cbd5e1' : '#374151';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (activeTab !== tab.id) {
+                    e.currentTarget.style.color = isDarkMode ? '#94a3b8' : '#6b7280';
+                  }
+                }}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
