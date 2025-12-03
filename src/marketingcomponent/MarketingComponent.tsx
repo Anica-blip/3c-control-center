@@ -59,13 +59,6 @@ const MarketingComponent: React.FC = () => {
   // THEME STATE
   // ============================================================================
   const { theme, isDarkMode } = getTheme();
-  const [darkMode, setDarkMode] = useState(isDarkMode);
-
-  const handleToggleDarkMode = () => {
-    const newMode = toggleDarkMode();
-    setDarkMode(newMode);
-    window.location.reload(); // Reload to apply theme
-  };
 
   // ============================================================================
   // TAB STATE
@@ -649,39 +642,23 @@ const MarketingComponent: React.FC = () => {
     <div style={getContainerStyle(isDarkMode)}>
       {/* Header */}
       <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
         marginBottom: '32px' 
       }}>
-        <div>
-          <h1 style={{ 
-            fontSize: '32px', 
-            fontWeight: '700', 
-            color: theme.text, 
-            margin: '0 0 8px 0' 
-          }}>
-            Marketing Intelligence Center
-          </h1>
-          <p style={{ 
-            fontSize: '16px', 
-            color: theme.textSecondary, 
-            margin: '0' 
-          }}>
-            Manage personas, keywords, strategies, and analytics
-          </p>
-        </div>
-        <button
-          onClick={handleToggleDarkMode}
-          style={{
-            ...getIconButtonStyle(isDarkMode),
-            padding: '12px 20px',
-            fontSize: '14px',
-            fontWeight: '600'
-          }}
-        >
-          {isDarkMode ? '☀️ Light' : '🌙 Dark'}
-        </button>
+        <h1 style={{ 
+          fontSize: '32px', 
+          fontWeight: '700', 
+          color: theme.text, 
+          margin: '0 0 8px 0' 
+        }}>
+          Marketing Intelligence Center
+        </h1>
+        <p style={{ 
+          fontSize: '16px', 
+          color: theme.textSecondary, 
+          margin: '0' 
+        }}>
+          Manage personas, keywords, strategies, and analytics
+        </p>
       </div>
 
       {/* Tab Navigation */}
@@ -760,18 +737,18 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newPersona.name} 
                 onChange={(e) => setNewPersona({...newPersona, name: e.target.value})}
-                style={getSelectStyle(isDarkMode)}
+                style={{...getSelectStyle(isDarkMode), color: theme.text}}
               >
-                <option value="">Select Persona</option>
-                {PERSONA_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Persona</option>
+                {PERSONA_OPTIONS.map(p => <option key={p} value={p} style={{ backgroundColor: theme.background, color: theme.text }}>{p}</option>)}
               </select>
               <select 
                 value={newPersona.audience_segment} 
                 onChange={(e) => setNewPersona({...newPersona, audience_segment: e.target.value})}
-                style={getSelectStyle(isDarkMode)}
+                style={{...getSelectStyle(isDarkMode), color: theme.text}}
               >
-                <option value="">Select Audience</option>
-                {AUDIENCE_OPTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+                <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Audience</option>
+                {AUDIENCE_OPTIONS.map(a => <option key={a.value} value={a.value} style={{ backgroundColor: theme.background, color: theme.text }}>{a.label}</option>)}
               </select>
               <input 
                 type="text"
@@ -979,12 +956,12 @@ const MarketingComponent: React.FC = () => {
                 <select 
                   value={newTag.category} 
                   onChange={(e) => setNewTag({...newTag, category: e.target.value as 'hashtag' | 'topic' | 'campaign' | 'other'})}
-                  style={getSelectStyle(isDarkMode)}
+                  style={{...getSelectStyle(isDarkMode), color: theme.text}}
                 >
-                  <option value="hashtag">Hashtag</option>
-                  <option value="topic">Topic</option>
-                  <option value="campaign">Campaign</option>
-                  <option value="other">Other</option>
+                  <option value="hashtag" style={{ backgroundColor: theme.background, color: theme.text }}>Hashtag</option>
+                  <option value="topic" style={{ backgroundColor: theme.background, color: theme.text }}>Topic</option>
+                  <option value="campaign" style={{ backgroundColor: theme.background, color: theme.text }}>Campaign</option>
+                  <option value="other" style={{ backgroundColor: theme.background, color: theme.text }}>Other</option>
                 </select>
                 <input 
                   type="text"
@@ -1071,12 +1048,12 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newStrategy.status} 
                 onChange={(e) => setNewStrategy({...newStrategy, status: e.target.value})}
-                style={getSelectStyle(isDarkMode)}
+                style={{...getSelectStyle(isDarkMode), color: theme.text}}
               >
-                <option value="draft">Draft</option>
-                <option value="review">Review</option>
-                <option value="approved">Approved</option>
-                <option value="archived">Archived</option>
+                <option value="draft" style={{ backgroundColor: theme.background, color: theme.text }}>Draft</option>
+                <option value="review" style={{ backgroundColor: theme.background, color: theme.text }}>Review</option>
+                <option value="approved" style={{ backgroundColor: theme.background, color: theme.text }}>Approved</option>
+                <option value="archived" style={{ backgroundColor: theme.background, color: theme.text }}>Archived</option>
               </select>
               <input 
                 type="text"
@@ -1106,18 +1083,18 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newStrategy.persona} 
                 onChange={(e) => setNewStrategy({...newStrategy, persona: e.target.value})}
-                style={getSelectStyle(isDarkMode)}
+                style={{...getSelectStyle(isDarkMode), color: theme.text}}
               >
-                <option value="">Select Persona</option>
-                {PERSONA_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Persona</option>
+                {PERSONA_OPTIONS.map(p => <option key={p} value={p} style={{ backgroundColor: theme.background, color: theme.text }}>{p}</option>)}
               </select>
               <select 
                 value={newStrategy.audienceSegment} 
                 onChange={(e) => setNewStrategy({...newStrategy, audienceSegment: e.target.value})}
-                style={getSelectStyle(isDarkMode)}
+                style={{...getSelectStyle(isDarkMode), color: theme.text}}
               >
-                <option value="">Select Audience</option>
-                {AUDIENCE_OPTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+                <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Audience</option>
+                {AUDIENCE_OPTIONS.map(a => <option key={a.value} value={a.value} style={{ backgroundColor: theme.background, color: theme.text }}>{a.label}</option>)}
               </select>
             </div>
             <div style={{ marginTop: '20px', textAlign: 'right' }}>
@@ -1207,20 +1184,20 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newChannel.priorityLevel} 
                 onChange={(e) => setNewChannel({...newChannel, priorityLevel: e.target.value as 'high' | 'medium' | 'low'})}
-                style={getSelectStyle(isDarkMode)}
+                style={{...getSelectStyle(isDarkMode), color: theme.text}}
               >
-                <option value="high">High Priority</option>
-                <option value="medium">Medium Priority</option>
-                <option value="low">Low Priority</option>
+                <option value="high" style={{ backgroundColor: theme.background, color: theme.text }}>High Priority</option>
+                <option value="medium" style={{ backgroundColor: theme.background, color: theme.text }}>Medium Priority</option>
+                <option value="low" style={{ backgroundColor: theme.background, color: theme.text }}>Low Priority</option>
               </select>
               <select 
                 value={newChannel.status} 
                 onChange={(e) => setNewChannel({...newChannel, status: e.target.value as 'Active' | 'Inactive' | 'Paused'})}
-                style={getSelectStyle(isDarkMode)}
+                style={{...getSelectStyle(isDarkMode), color: theme.text}}
               >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Paused">Paused</option>
+                <option value="Active" style={{ backgroundColor: theme.background, color: theme.text }}>Active</option>
+                <option value="Inactive" style={{ backgroundColor: theme.background, color: theme.text }}>Inactive</option>
+                <option value="Paused" style={{ backgroundColor: theme.background, color: theme.text }}>Paused</option>
               </select>
             </div>
             <div style={{ marginTop: '16px' }}>
@@ -1309,28 +1286,28 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newIntel.priorityLevel} 
                 onChange={(e) => setNewIntel({...newIntel, priorityLevel: e.target.value})}
-                style={getSelectStyle(isDarkMode)}
+                style={{...getSelectStyle(isDarkMode), color: theme.text}}
               >
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
+                <option value="critical" style={{ backgroundColor: theme.background, color: theme.text }}>Critical</option>
+                <option value="high" style={{ backgroundColor: theme.background, color: theme.text }}>High</option>
+                <option value="medium" style={{ backgroundColor: theme.background, color: theme.text }}>Medium</option>
+                <option value="low" style={{ backgroundColor: theme.background, color: theme.text }}>Low</option>
               </select>
               <select 
                 value={newIntel.persona} 
                 onChange={(e) => setNewIntel({...newIntel, persona: e.target.value})}
-                style={getSelectStyle(isDarkMode)}
+                style={{...getSelectStyle(isDarkMode), color: theme.text}}
               >
-                <option value="">Select Persona (optional)</option>
-                {PERSONA_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Persona (optional)</option>
+                {PERSONA_OPTIONS.map(p => <option key={p} value={p} style={{ backgroundColor: theme.background, color: theme.text }}>{p}</option>)}
               </select>
               <select 
                 value={newIntel.audienceSegment} 
                 onChange={(e) => setNewIntel({...newIntel, audienceSegment: e.target.value})}
-                style={getSelectStyle(isDarkMode)}
+                style={{...getSelectStyle(isDarkMode), color: theme.text}}
               >
-                <option value="">Select Audience (optional)</option>
-                {AUDIENCE_OPTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+                <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Audience (optional)</option>
+                {AUDIENCE_OPTIONS.map(a => <option key={a.value} value={a.value} style={{ backgroundColor: theme.background, color: theme.text }}>{a.label}</option>)}
               </select>
             </div>
             <div style={{ marginTop: '16px' }}>
@@ -1424,27 +1401,27 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newResearchInsight.persona} 
                 onChange={(e) => setNewResearchInsight({...newResearchInsight, persona: e.target.value})}
-                style={getSelectStyle(isDarkMode)}
+                style={{...getSelectStyle(isDarkMode), color: theme.text}}
               >
-                <option value="">Select Persona (optional)</option>
-                {PERSONA_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Persona (optional)</option>
+                {PERSONA_OPTIONS.map(p => <option key={p} value={p} style={{ backgroundColor: theme.background, color: theme.text }}>{p}</option>)}
               </select>
               <select 
                 value={newResearchInsight.audienceSegment} 
                 onChange={(e) => setNewResearchInsight({...newResearchInsight, audienceSegment: e.target.value})}
-                style={getSelectStyle(isDarkMode)}
+                style={{...getSelectStyle(isDarkMode), color: theme.text}}
               >
-                <option value="">Select Audience (optional)</option>
-                {AUDIENCE_OPTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+                <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Audience (optional)</option>
+                {AUDIENCE_OPTIONS.map(a => <option key={a.value} value={a.value} style={{ backgroundColor: theme.background, color: theme.text }}>{a.label}</option>)}
               </select>
               <select 
                 value={newResearchInsight.reviewStatus} 
                 onChange={(e) => setNewResearchInsight({...newResearchInsight, reviewStatus: e.target.value as 'new' | 'reviewed' | 'archived'})}
-                style={getSelectStyle(isDarkMode)}
+                style={{...getSelectStyle(isDarkMode), color: theme.text}}
               >
-                <option value="new">New</option>
-                <option value="reviewed">Reviewed</option>
-                <option value="archived">Archived</option>
+                <option value="new" style={{ backgroundColor: theme.background, color: theme.text }}>New</option>
+                <option value="reviewed" style={{ backgroundColor: theme.background, color: theme.text }}>Reviewed</option>
+                <option value="archived" style={{ backgroundColor: theme.background, color: theme.text }}>Archived</option>
               </select>
             </div>
             <div style={{ marginTop: '16px' }}>
@@ -1529,15 +1506,15 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newTool.category} 
                 onChange={(e) => setNewTool({...newTool, category: e.target.value})}
-                style={getSelectStyle(isDarkMode)}
+                style={{...getSelectStyle(isDarkMode), color: theme.text}}
               >
-                <option value="">Select category</option>
-                <option value="SEO">SEO</option>
-                <option value="Social Media">Social Media</option>
-                <option value="Audience Research">Audience Research</option>
-                <option value="Video Analytics">Video Analytics</option>
-                <option value="Hashtag Analysis">Hashtag Analysis</option>
-                <option value="Other">Other</option>
+                <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select category</option>
+                <option value="SEO" style={{ backgroundColor: theme.background, color: theme.text }}>SEO</option>
+                <option value="Social Media" style={{ backgroundColor: theme.background, color: theme.text }}>Social Media</option>
+                <option value="Audience Research" style={{ backgroundColor: theme.background, color: theme.text }}>Audience Research</option>
+                <option value="Video Analytics" style={{ backgroundColor: theme.background, color: theme.text }}>Video Analytics</option>
+                <option value="Hashtag Analysis" style={{ backgroundColor: theme.background, color: theme.text }}>Hashtag Analysis</option>
+                <option value="Other" style={{ backgroundColor: theme.background, color: theme.text }}>Other</option>
               </select>
             </div>
             <div style={{ marginTop: '16px', ...getFormGridStyle() }}>
@@ -1551,10 +1528,10 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newTool.status} 
                 onChange={(e) => setNewTool({...newTool, status: e.target.value as 'Active' | 'Inactive'})}
-                style={getSelectStyle(isDarkMode)}
+                style={{...getSelectStyle(isDarkMode), color: theme.text}}
               >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
+                <option value="Active" style={{ backgroundColor: theme.background, color: theme.text }}>Active</option>
+                <option value="Inactive" style={{ backgroundColor: theme.background, color: theme.text }}>Inactive</option>
               </select>
             </div>
             <div style={{ marginTop: '16px' }}>
