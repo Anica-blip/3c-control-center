@@ -212,16 +212,15 @@ export const ContentDashboard: React.FC<ContentDashboardProps> = ({
       {/* Tab Navigation */}
       <div style={{
         backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
-        padding: '20px 24px',
-        borderBottom: 'none'
+        padding: '20px 24px'
       }}>
         <div style={{
           maxWidth: '1200px',
           margin: '0 auto',
           display: 'flex',
-          gap: '0'
+          gap: '12px'
         }}>
-            {tabs.map((tab, index) => (
+            {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -244,8 +243,7 @@ export const ContentDashboard: React.FC<ContentDashboardProps> = ({
                   fontSize: '14px',
                   fontWeight: activeTab === tab.id ? 'bold' : 'normal',
                   fontFamily: 'inherit',
-                  transition: 'all 0.2s ease',
-                  marginLeft: index === 0 ? '0' : '12px'
+                  transition: 'all 0.2s ease'
                 }}
               >
                 {tab.icon}
