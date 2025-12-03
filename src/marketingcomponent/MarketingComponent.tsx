@@ -1233,20 +1233,24 @@ const MarketingComponent: React.FC = () => {
               Add New Channel
             </h4>
             <div style={getFormGridStyle()}>
-              <input 
-                type="text"
-                placeholder="Channel Name"
-                value={newChannel.channelName}
+              <select 
+                value={newChannel.channelName} 
                 onChange={(e) => setNewChannel({...newChannel, channelName: e.target.value})}
-                style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
-              />
-              <input 
-                type="text"
-                placeholder="Platform Type"
-                value={newChannel.platformType}
-                onChange={(e) => setNewChannel({...newChannel, platformType: e.target.value})}
-                style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
-              />
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
+              >
+                <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Platform</option>
+                <option value="Instagram" style={{ backgroundColor: theme.background, color: theme.text }}>Instagram</option>
+                <option value="Facebook" style={{ backgroundColor: theme.background, color: theme.text }}>Facebook</option>
+                <option value="Linkedin" style={{ backgroundColor: theme.background, color: theme.text }}>Linkedin</option>
+                <option value="Twitter/X" style={{ backgroundColor: theme.background, color: theme.text }}>Twitter/X</option>
+                <option value="YouTube" style={{ backgroundColor: theme.background, color: theme.text }}>YouTube</option>
+                <option value="TikTok" style={{ backgroundColor: theme.background, color: theme.text }}>TikTok</option>
+                <option value="Telegram" style={{ backgroundColor: theme.background, color: theme.text }}>Telegram</option>
+                <option value="Pinterest" style={{ backgroundColor: theme.background, color: theme.text }}>Pinterest</option>
+                <option value="WhatsApp" style={{ backgroundColor: theme.background, color: theme.text }}>WhatsApp</option>
+                <option value="Discord" style={{ backgroundColor: theme.background, color: theme.text }}>Discord</option>
+                <option value="Forum" style={{ backgroundColor: theme.background, color: theme.text }}>Forum</option>
+              </select>
               <select 
                 value={newChannel.priorityLevel} 
                 onChange={(e) => setNewChannel({...newChannel, priorityLevel: e.target.value as 'high' | 'medium' | 'low'})}
