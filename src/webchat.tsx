@@ -415,6 +415,14 @@ function ChatManagerPublic() {
     autoReply: false
   });
   
+  // Manual email list state
+  const [manualEmails, setManualEmails] = React.useState([
+    { id: 1, email: 'customer1@example.com', label: 'Customer Support' },
+    { id: 2, email: 'sales@example.com', label: 'Sales Team' }
+  ]);
+  const [newEmail, setNewEmail] = React.useState('');
+  const [newEmailLabel, setNewEmailLabel] = React.useState('');
+  
   const [aiConfig, setAiConfig] = React.useState({
     primaryAI: 'Jan AI',
     backupAI: 'OpenAI GPT-4',
@@ -423,10 +431,60 @@ function ChatManagerPublic() {
   });
   
   const [notifications, setNotifications] = React.useState([
-    { id: 1, type: 'new_message', message: 'New chat from visitor on website', time: '2 min ago', unread: true },
-    { id: 2, type: 'email', message: 'Support email received', time: '15 min ago', unread: true },
-    { id: 3, type: 'system', message: 'AI backup switched to OpenAI', time: '1 hour ago', unread: false }
+    { id: 1, type: 'webchat', message: 'New chat from visitor on website', time: '2 min ago', unread: true, source: 'Webchat Public' },
+    { id: 2, type: 'email', message: 'Support email received from customer1@example.com', time: '15 min ago', unread: true, source: 'Email' },
+    { id: 3, type: 'webchat', message: 'Chat session ended - customer feedback received', time: '1 hour ago', unread: false, source: 'Webchat Public' },
+    { id: 4, type: 'email', message: 'New inquiry from sales@example.com', time: '2 hours ago', unread: false, source: 'Email' }
   ]);
+
+  // Email management functions
+  const handleAddEmail = () => {
+    if (!newEmail.trim() || !newEmailLabel.trim()) {
+      alert('Please fill in both email and label fields');
+      return;
+    }
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+    
+    const emailExists = manualEmails.some(e => e.email.toLowerCase() === newEmail.toLowerCase());
+    if (emailExists) {
+      alert('This email already exists in the list');
+      return;
+    }
+    
+    const newEmailObj = {
+      id: Date.now(),
+      email: newEmail.trim(),
+      label: newEmailLabel.trim()
+    };
+    
+    setManualEmails([...manualEmails, newEmailObj]);
+    setNewEmail('');
+    setNewEmailLabel('');
+  };
+  
+  const handleDeleteEmail = (id) => {
+    if (confirm('Are you sure you want to remove this email?')) {
+      setManualEmails(manualEmails.filter(e => e.id !== id));
+    }
+  };
+  
+  const handleMarkAsRead = (id) => {
+    setNotifications(notifications.map(n => 
+      n.id === id ? { ...n, unread: false } : n
+    ));
+  };
+  
+  const handleDeleteNotification = (id) => {
+    setNotifications(notifications.filter(n => n.id !== id));
+  };
+  
+  const unreadCount = notifications.filter(n => n.unread).length;
 
   const containerStyle = {
     padding: '20px',
@@ -437,29 +495,26 @@ function ChatManagerPublic() {
 
   const tabsContainerStyle = {
     display: 'flex',
-    gap: '0',
+    gap: '12px',
     marginBottom: '32px',
-    borderBottom: `2px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-    backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
-    borderRadius: '8px 8px 0 0',
-    overflow: 'hidden',
-    boxShadow: isDarkMode 
-      ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-      : '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+    backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
+    borderRadius: '8px',
+    padding: '20px'
   };
 
   const getTabStyle = (tabId) => ({
-    padding: '16px 24px',
-    backgroundColor: activeTab === tabId ? '#3b82f6' : 'transparent',
-    color: activeTab === tabId ? '#ffffff' : (isDarkMode ? '#d1d5db' : '#6b7280'),
+    padding: '12px 24px',
+    backgroundColor: activeTab === tabId ? '#3b82f6' : (isDarkMode ? '#475569' : '#e5e7eb'),
+    color: activeTab === tabId ? '#ffffff' : (isDarkMode ? '#94a3b8' : '#6b7280'),
     border: 'none',
-    borderBottom: activeTab === tabId ? '3px solid #2563eb' : '3px solid transparent',
+    borderRadius: '8px',
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: activeTab === tabId ? 'bold' : 'normal',
     transition: 'all 0.2s ease',
     flex: '1',
-    textAlign: 'center'
+    textAlign: 'center',
+    whiteSpace: 'nowrap'
   });
 
   const contentCardStyle = {
@@ -496,24 +551,13 @@ function ChatManagerPublic() {
       <div style={tabsContainerStyle}>
         {[
           { id: 'chat', label: '💬 Live Chat', icon: '💬' },
-          { id: 'email', label: '📧 Email Config', icon: '📧' },
-          { id: 'ai', label: '🤖 AI Setup', icon: '🤖' },
+          { id: 'email', label: '📧 Email Configuration', icon: '📧' },
           { id: 'notifications', label: '🔔 Notifications', icon: '🔔' }
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             style={getTabStyle(tab.id)}
-            onMouseOver={(e) => {
-              if (activeTab !== tab.id) {
-                e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f3f4f6';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (activeTab !== tab.id) {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }
-            }}
           >
             {tab.label}
           </button>
@@ -565,17 +609,349 @@ function ChatManagerPublic() {
         </div>
       )}
 
-      {/* Other tabs would be styled similarly... */}
-      {activeTab !== 'chat' && (
+      {/* Email Configuration Tab */}
+      {activeTab === 'email' && (
         <div style={contentCardStyle}>
-          <h3 style={sectionTitleStyle}>
-            {activeTab === 'email' && '📧 Email Configuration'}
-            {activeTab === 'ai' && '🤖 AI Assistant Configuration'}
-            {activeTab === 'notifications' && '🔔 Notification Center'}
-          </h3>
-          <p style={{ color: isDarkMode ? '#d1d5db' : '#6b7280' }}>
-            Content for {activeTab} tab with consistent styling...
+          <h3 style={sectionTitleStyle}>📧 Email Configuration</h3>
+          <p style={{ color: isDarkMode ? '#d1d5db' : '#6b7280', marginBottom: '24px' }}>
+            Manage email addresses for notifications and support inquiries
           </p>
+
+          {/* Add Email Form */}
+          <div style={{
+            padding: '20px',
+            backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
+            borderRadius: '8px',
+            border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+            marginBottom: '24px'
+          }}>
+            <h4 style={{ 
+              color: isDarkMode ? '#f9fafb' : '#111827',
+              marginBottom: '16px',
+              fontSize: '16px',
+              fontWeight: 'bold'
+            }}>
+              ➕ Add New Email
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '12px', alignItems: 'end' }}>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#d1d5db' : '#374151',
+                  marginBottom: '6px'
+                }}>
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  placeholder="email@example.com"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+                    color: isDarkMode ? '#f9fafb' : '#111827',
+                    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
+                    borderRadius: '6px',
+                    outline: 'none'
+                  }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') handleAddEmail();
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#d1d5db' : '#374151',
+                  marginBottom: '6px'
+                }}>
+                  Label *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., Customer Support"
+                  value={newEmailLabel}
+                  onChange={(e) => setNewEmailLabel(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+                    color: isDarkMode ? '#f9fafb' : '#111827',
+                    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
+                    borderRadius: '6px',
+                    outline: 'none'
+                  }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') handleAddEmail();
+                  }}
+                />
+              </div>
+              <button
+                onClick={handleAddEmail}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#3b82f6',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+              >
+                ➕ Add Email
+              </button>
+            </div>
+          </div>
+
+          {/* Email List */}
+          <div>
+            <h4 style={{ 
+              color: isDarkMode ? '#f9fafb' : '#111827',
+              marginBottom: '16px',
+              fontSize: '16px',
+              fontWeight: 'bold'
+            }}>
+              📋 Email List ({manualEmails.length})
+            </h4>
+            {manualEmails.length === 0 ? (
+              <div style={{
+                padding: '40px',
+                textAlign: 'center',
+                backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
+                borderRadius: '8px',
+                border: `2px dashed ${isDarkMode ? '#374151' : '#d1d5db'}`
+              }}>
+                <p style={{ 
+                  color: isDarkMode ? '#9ca3af' : '#6b7280',
+                  fontSize: '14px',
+                  margin: 0
+                }}>
+                  No emails added yet. Use the form above to add your first email.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {manualEmails.map(emailItem => (
+                  <div key={emailItem.id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '16px',
+                    backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
+                    borderRadius: '8px',
+                    border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                    overflow: 'hidden',
+                    minWidth: 0
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        backgroundColor: '#3b82f6',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '18px',
+                        flexShrink: 0
+                      }}>
+                        📧
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontWeight: 'bold',
+                          color: isDarkMode ? '#f9fafb' : '#111827',
+                          marginBottom: '4px'
+                        }}>
+                          {emailItem.label}
+                        </div>
+                        <div style={{
+                          fontSize: '12px',
+                          color: isDarkMode ? '#9ca3af' : '#6b7280',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {emailItem.email}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteEmail(emailItem.id)}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#ef4444',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        flexShrink: 0
+                      }}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Tab */}
+      {activeTab === 'notifications' && (
+        <div style={contentCardStyle}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+            <div>
+              <h3 style={{ ...sectionTitleStyle, margin: 0 }}>🔔 Notifications</h3>
+              <p style={{ color: isDarkMode ? '#d1d5db' : '#6b7280', fontSize: '14px', margin: '4px 0 0 0' }}>
+                Activity from Webchat Public and Email notifications
+              </p>
+            </div>
+            {unreadCount > 0 && (
+              <div style={{
+                padding: '6px 12px',
+                backgroundColor: '#ef4444',
+                color: '#ffffff',
+                borderRadius: '20px',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}>
+                {unreadCount} Unread
+              </div>
+            )}
+          </div>
+
+          {notifications.length === 0 ? (
+            <div style={{
+              padding: '60px 20px',
+              textAlign: 'center',
+              backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
+              borderRadius: '8px',
+              border: `2px dashed ${isDarkMode ? '#374151' : '#d1d5db'}`
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔔</div>
+              <p style={{ 
+                color: isDarkMode ? '#9ca3af' : '#6b7280',
+                fontSize: '16px',
+                fontWeight: '600',
+                margin: '0 0 8px 0'
+              }}>
+                No notifications yet
+              </p>
+              <p style={{ 
+                color: isDarkMode ? '#6b7280' : '#9ca3af',
+                fontSize: '14px',
+                margin: 0
+              }}>
+                You'll see activity from Webchat Public and Email here
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {notifications.map(notification => (
+                <div key={notification.id} style={{
+                  padding: '16px',
+                  backgroundColor: notification.unread 
+                    ? (isDarkMode ? '#1e293b' : '#eff6ff')
+                    : (isDarkMode ? '#111827' : '#f9fafb'),
+                  borderRadius: '8px',
+                  border: `1px solid ${notification.unread 
+                    ? (isDarkMode ? '#3b82f6' : '#93c5fd')
+                    : (isDarkMode ? '#374151' : '#e5e7eb')}`,
+                  borderLeft: `4px solid ${notification.type === 'webchat' ? '#3b82f6' : '#f59e0b'}`
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: '12px' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <div style={{
+                          padding: '4px 8px',
+                          backgroundColor: notification.type === 'webchat' ? '#3b82f6' : '#f59e0b',
+                          color: '#ffffff',
+                          borderRadius: '4px',
+                          fontSize: '10px',
+                          fontWeight: 'bold',
+                          textTransform: 'uppercase'
+                        }}>
+                          {notification.source}
+                        </div>
+                        <span style={{
+                          fontSize: '12px',
+                          color: isDarkMode ? '#9ca3af' : '#6b7280'
+                        }}>
+                          {notification.time}
+                        </span>
+                        {notification.unread && (
+                          <div style={{
+                            width: '8px',
+                            height: '8px',
+                            backgroundColor: '#ef4444',
+                            borderRadius: '50%'
+                          }} />
+                        )}
+                      </div>
+                      <p style={{
+                        color: isDarkMode ? '#f9fafb' : '#111827',
+                        fontSize: '14px',
+                        margin: 0,
+                        lineHeight: '1.5'
+                      }}>
+                        {notification.message}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                      {notification.unread && (
+                        <button
+                          onClick={() => handleMarkAsRead(notification.id)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#10b981',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✓ Mark Read
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDeleteNotification(notification.id)}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: '#ef4444',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
