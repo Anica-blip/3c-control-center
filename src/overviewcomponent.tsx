@@ -19,19 +19,19 @@ import {
   Palette,
   Globe
 } from 'lucide-react';
+import { supabase } from './supabaseAPI';
 
 // Types for dashboard data
 interface DashboardMetrics {
   contentCreated: number;
   postsScheduled: number;
   activeCampaigns: number;
-  totalViews: number;
   systemStatus: 'operational' | 'warning' | 'maintenance';
 }
 
 interface RecentActivity {
   id: string;
-  type: 'content' | 'schedule' | 'marketing' | 'system';
+  type: 'content' | 'schedule' | 'published' | 'system';
   message: string;
   timestamp: Date;
   status: 'success' | 'pending' | 'error';
@@ -47,45 +47,154 @@ interface QuickAction {
 }
 
 const OverviewComponent: React.FC = () => {
-  // Mock data - will be replaced with real Supabase data later
   const [metrics, setMetrics] = useState<DashboardMetrics>({
-    contentCreated: 47,
-    postsScheduled: 23,
-    activeCampaigns: 8,
-    totalViews: 12847,
+    contentCreated: 0,
+    postsScheduled: 0,
+    activeCampaigns: 0,
     systemStatus: 'operational'
   });
 
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([
-    {
-      id: '1',
-      type: 'content',
-      message: 'New blog post "AI in Content Creation" published',
-      timestamp: new Date(Date.now() - 300000),
-      status: 'success'
-    },
-    {
-      id: '2', 
-      type: 'schedule',
-      message: 'Instagram post scheduled for tomorrow 9:00 AM',
-      timestamp: new Date(Date.now() - 600000),
-      status: 'pending'
-    },
-    {
-      id: '3',
-      type: 'marketing',
-      message: 'Campaign "Winter Launch" metrics updated',
-      timestamp: new Date(Date.now() - 900000),
-      status: 'success'
-    },
-    {
-      id: '4',
-      type: 'system',
-      message: 'Supabase connection established',
-      timestamp: new Date(Date.now() - 1200000),
-      status: 'success'
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load real data from Supabase
+  useEffect(() => {
+    loadDashboardData();
+    // Refresh every 60 seconds
+    const interval = setInterval(loadDashboardData, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      // 1. Get Content Created count (this month)
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const { count: contentCount, error: contentError } = await supabase
+        .from('content_posts')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfMonth.toISOString());
+
+      if (contentError) console.error('Error loading content count:', contentError);
+
+      // 2. Get Posts Scheduled count (pending posts)
+      const { count: scheduledCount, error: scheduledError } = await supabase
+        .from('scheduled_posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('posting_status', 'pending');
+
+      if (scheduledError) console.error('Error loading scheduled count:', scheduledError);
+
+      // 3. Get Active Campaigns count (distinct campaigns from recent dashboard posts)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data: campaignData, error: campaignError } = await supabase
+        .from('dashboard_posts')
+        .select('campaign_id, persona_target')
+        .gte('created_at', thirtyDaysAgo.toISOString());
+
+      if (campaignError) console.error('Error loading campaigns:', campaignError);
+
+      // Count distinct campaigns (using campaign_id or persona_target as fallback)
+      const distinctCampaigns = new Set(
+        (campaignData || [])
+          .map(post => post.campaign_id || post.persona_target)
+          .filter(Boolean)
+      );
+
+      // Update metrics
+      setMetrics({
+        contentCreated: contentCount || 0,
+        postsScheduled: scheduledCount || 0,
+        activeCampaigns: distinctCampaigns.size,
+        systemStatus: 'operational'
+      });
+
+      // 4. Load Recent Activity from all 3 tables
+      await loadRecentActivity();
+
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      setMetrics(prev => ({ ...prev, systemStatus: 'warning' }));
+    } finally {
+      setIsLoading(false);
     }
-  ]);
+  };
+
+  const loadRecentActivity = async () => {
+    try {
+      const activities: RecentActivity[] = [];
+
+      // Get recent content posts
+      const { data: contentPosts, error: contentError } = await supabase
+        .from('content_posts')
+        .select('content_id, title, created_at')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (!contentError && contentPosts) {
+        contentPosts.forEach(post => {
+          activities.push({
+            id: `content-${post.content_id}`,
+            type: 'content',
+            message: `New content created: "${post.title || 'Untitled'}"`,
+            timestamp: new Date(post.created_at),
+            status: 'success'
+          });
+        });
+      }
+
+      // Get recent scheduled posts
+      const { data: scheduledPosts, error: scheduledError } = await supabase
+        .from('scheduled_posts')
+        .select('id, title, platform, scheduled_date, created_at')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (!scheduledError && scheduledPosts) {
+        scheduledPosts.forEach(post => {
+          const scheduleDate = new Date(post.scheduled_date);
+          activities.push({
+            id: `schedule-${post.id}`,
+            type: 'schedule',
+            message: `Post scheduled for ${post.platform || 'platform'} at ${scheduleDate.toLocaleString()}`,
+            timestamp: new Date(post.created_at),
+            status: 'pending'
+          });
+        });
+      }
+
+      // Get recent published posts
+      const { data: publishedPosts, error: publishedError } = await supabase
+        .from('dashboard_posts')
+        .select('id, title, platform, campaign_id, persona_target, created_at')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (!publishedError && publishedPosts) {
+        publishedPosts.forEach(post => {
+          const campaign = post.campaign_id || post.persona_target || 'General';
+          activities.push({
+            id: `published-${post.id}`,
+            type: 'published',
+            message: `Post published to ${post.platform || 'platform'} - Campaign: ${campaign}`,
+            timestamp: new Date(post.created_at),
+            status: 'success'
+          });
+        });
+      }
+
+      // Sort all activities by timestamp (most recent first) and take top 15
+      activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      setRecentActivity(activities.slice(0, 15));
+
+    } catch (error) {
+      console.error('Error loading recent activity:', error);
+    }
+  };
 
   const quickActions: QuickAction[] = [
     {
@@ -126,7 +235,7 @@ const OverviewComponent: React.FC = () => {
     switch (type) {
       case 'content': return <Edit3 style={{ height: '16px', width: '16px' }} />;
       case 'schedule': return <Calendar style={{ height: '16px', width: '16px' }} />;
-      case 'marketing': return <TrendingUp style={{ height: '16px', width: '16px' }} />;
+      case 'published': return <Send style={{ height: '16px', width: '16px' }} />;
       case 'system': return <Database style={{ height: '16px', width: '16px' }} />;
       default: return <Zap style={{ height: '16px', width: '16px' }} />;
     }
@@ -383,53 +492,6 @@ const OverviewComponent: React.FC = () => {
             margin: '0'
           }}>
             Currently running
-          </p>
-        </div>
-
-        {/* Total Views */}
-        <div style={{
-          background: 'linear-gradient(135deg, #fed7aa 0%, #fdba74 100%)',
-          borderRadius: '16px',
-          padding: '24px',
-          border: '2px solid #f59e0b',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '16px'
-          }}>
-            <div style={{
-              padding: '12px',
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              boxShadow: '0 2px 4px rgba(245, 158, 11, 0.1)'
-            }}>
-              <Eye style={{ height: '24px', width: '24px', color: '#f59e0b' }} />
-            </div>
-            <span style={{
-              fontSize: '32px',
-              fontWeight: 'bold',
-              color: '#92400e'
-            }}>
-              {metrics.totalViews.toLocaleString()}
-            </span>
-          </div>
-          <h3 style={{
-            fontSize: '18px',
-            fontWeight: '600',
-            color: '#92400e',
-            margin: '0 0 4px 0'
-          }}>
-            Total Views
-          </h3>
-          <p style={{
-            color: '#92400e',
-            fontSize: '14px',
-            margin: '0'
-          }}>
-            Across all platforms
           </p>
         </div>
       </div>
