@@ -213,7 +213,7 @@ export const ContentDashboard: React.FC<ContentDashboardProps> = ({
       <div style={{
         backgroundColor: isDarkMode ? '#1e293b' : 'white',
         borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
-        padding: '0 24px'
+        padding: '20px 24px'
       }}>
         <div style={{
           maxWidth: '1200px',
@@ -221,42 +221,35 @@ export const ContentDashboard: React.FC<ContentDashboardProps> = ({
         }}>
           <div style={{
             display: 'flex',
-            gap: '8px',
-            overflowX: 'auto'
+            gap: '12px',
+            flexWrap: 'wrap'
           }}>
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 style={{
+                  flex: 1,
+                  minWidth: '180px',
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: '8px',
-                  padding: '16px 20px',
-                  backgroundColor: 'transparent',
+                  padding: '12px 24px',
+                  backgroundColor: activeTab === tab.id 
+                    ? '#3b82f6'
+                    : (isDarkMode ? '#475569' : '#e5e7eb'),
                   color: activeTab === tab.id 
-                    ? (isDarkMode ? '#60a5fa' : '#3b82f6')
+                    ? 'white'
                     : (isDarkMode ? '#94a3b8' : '#6b7280'),
                   border: 'none',
-                  borderBottom: activeTab === tab.id 
-                    ? `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
-                    : '2px solid transparent',
+                  borderRadius: '8px',
                   cursor: 'pointer',
                   fontSize: '14px',
-                  fontWeight: '600',
+                  fontWeight: activeTab === tab.id ? 'bold' : 'normal',
                   fontFamily: 'inherit',
                   whiteSpace: 'nowrap',
                   transition: 'all 0.2s ease'
-                }}
-                onMouseOver={(e) => {
-                  if (activeTab !== tab.id) {
-                    e.currentTarget.style.color = isDarkMode ? '#cbd5e1' : '#374151';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (activeTab !== tab.id) {
-                    e.currentTarget.style.color = isDarkMode ? '#94a3b8' : '#6b7280';
-                  }
                 }}
               >
                 {tab.icon}
