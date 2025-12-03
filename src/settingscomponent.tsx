@@ -957,7 +957,9 @@ const deleteExternalService = async (id) => {
                             border: isDarkMode ? '1px solid #374151' : '1px solid #93c5fd',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'space-between'
+                            justifyContent: 'space-between',
+                            overflow: 'hidden',
+                            minWidth: 0
                           }}>
                             {editingPlatform && editingPlatform.id === platform.id ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1' }}>
@@ -1333,7 +1335,9 @@ const deleteExternalService = async (id) => {
                             border: isDarkMode ? '1px solid #374151' : '1px solid #67e8f9',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'space-between'
+                            justifyContent: 'space-between',
+                            overflow: 'hidden',
+                            minWidth: 0
                           }}>
                             {editingTelegram && editingTelegram.id === telegram.id ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1' }}>
@@ -2286,7 +2290,9 @@ const deleteExternalService = async (id) => {
                           border: isDarkMode ? '1px solid #374151' : '1px solid #6ee7b7',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'space-between'
+                          justifyContent: 'space-between',
+                          overflow: 'hidden',
+                          minWidth: 0
                         }}>
                           {editingExternalService && editingExternalService.id === service.id ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1' }}>
