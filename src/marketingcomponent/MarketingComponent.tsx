@@ -737,7 +737,7 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newPersona.name} 
                 onChange={(e) => setNewPersona({...newPersona, name: e.target.value})}
-                style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
               >
                 <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Persona</option>
                 {PERSONA_OPTIONS.map(p => <option key={p} value={p} style={{ backgroundColor: theme.background, color: theme.text }}>{p}</option>)}
@@ -745,7 +745,7 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newPersona.audience_segment} 
                 onChange={(e) => setNewPersona({...newPersona, audience_segment: e.target.value})}
-                style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
               >
                 <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Audience</option>
                 {AUDIENCE_OPTIONS.map(a => <option key={a.value} value={a.value} style={{ backgroundColor: theme.background, color: theme.text }}>{a.label}</option>)}
@@ -755,14 +755,14 @@ const MarketingComponent: React.FC = () => {
                 placeholder="User Role"
                 value={newPersona.user_role}
                 onChange={(e) => setNewPersona({...newPersona, user_role: e.target.value})}
-                style={getInputStyle(isDarkMode)}
+                style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
               />
               <input 
                 type="text"
                 placeholder="Last Edited By"
                 value={newPersona.last_edited_by}
                 onChange={(e) => setNewPersona({...newPersona, last_edited_by: e.target.value})}
-                style={getInputStyle(isDarkMode)}
+                style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
               />
             </div>
             <div style={{ marginTop: '16px' }}>
@@ -771,7 +771,7 @@ const MarketingComponent: React.FC = () => {
                 value={newPersona.description}
                 onChange={(e) => setNewPersona({...newPersona, description: e.target.value})}
                 rows={3}
-                style={getTextareaStyle(isDarkMode)}
+                style={{...getTextareaStyle(isDarkMode), padding: '10px 12px', fontSize: '14px', minHeight: '100px'}}
               />
             </div>
             <div style={{ marginTop: '16px' }}>
@@ -780,7 +780,7 @@ const MarketingComponent: React.FC = () => {
                 value={newPersona.key_messages}
                 onChange={(e) => setNewPersona({...newPersona, key_messages: e.target.value})}
                 rows={3}
-                style={getTextareaStyle(isDarkMode)}
+                style={{...getTextareaStyle(isDarkMode), padding: '10px 12px', fontSize: '14px', minHeight: '100px'}}
               />
             </div>
             <div style={{ marginTop: '20px', textAlign: 'right' }}>
@@ -933,21 +933,21 @@ const MarketingComponent: React.FC = () => {
                   placeholder="Keyword"
                   value={newKeyword.keyword}
                   onChange={(e) => setNewKeyword({...newKeyword, keyword: e.target.value})}
-                  style={getInputStyle(isDarkMode)}
+                  style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
                 />
                 <input 
                   type="text"
                   placeholder="Category (optional)"
                   value={newKeyword.category}
                   onChange={(e) => setNewKeyword({...newKeyword, category: e.target.value})}
-                  style={getInputStyle(isDarkMode)}
+                  style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
                 />
                 <input 
                   type="text"
                   placeholder="Added By"
                   value={newKeyword.addedBy}
                   onChange={(e) => setNewKeyword({...newKeyword, addedBy: e.target.value})}
-                  style={getInputStyle(isDarkMode)}
+                  style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
                 />
               </div>
               <div style={{ marginTop: '16px', display: 'flex', gap: '12px', justifyContent: 'space-between' }}>
@@ -956,7 +956,7 @@ const MarketingComponent: React.FC = () => {
                   accept=".csv"
                   onChange={handleCsvUpload}
                   disabled={csvUploading}
-                  style={getFileInputStyle(isDarkMode)}
+                  style={{...getFileInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
                 />
                 <button 
                   onClick={handleAddKeyword}
@@ -1017,12 +1017,12 @@ const MarketingComponent: React.FC = () => {
                   placeholder="Tag"
                   value={newTag.tag}
                   onChange={(e) => setNewTag({...newTag, tag: e.target.value})}
-                  style={getInputStyle(isDarkMode)}
+                  style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
                 />
                 <select 
                   value={newTag.category} 
                   onChange={(e) => setNewTag({...newTag, category: e.target.value as 'hashtag' | 'topic' | 'campaign' | 'other'})}
-                  style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                  style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
                 >
                   <option value="hashtag" style={{ backgroundColor: theme.background, color: theme.text }}>Hashtag</option>
                   <option value="topic" style={{ backgroundColor: theme.background, color: theme.text }}>Topic</option>
@@ -1034,7 +1034,7 @@ const MarketingComponent: React.FC = () => {
                   placeholder="Added By"
                   value={newTag.addedBy}
                   onChange={(e) => setNewTag({...newTag, addedBy: e.target.value})}
-                  style={getInputStyle(isDarkMode)}
+                  style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
                 />
               </div>
               <div style={{ marginTop: '16px', textAlign: 'right' }}>
@@ -1109,12 +1109,12 @@ const MarketingComponent: React.FC = () => {
                 placeholder="Content Title"
                 value={newStrategy.contentTitle}
                 onChange={(e) => setNewStrategy({...newStrategy, contentTitle: e.target.value})}
-                style={getInputStyle(isDarkMode)}
+                style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
               />
               <select 
                 value={newStrategy.status} 
                 onChange={(e) => setNewStrategy({...newStrategy, status: e.target.value})}
-                style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
               >
                 <option value="draft" style={{ backgroundColor: theme.background, color: theme.text }}>Draft</option>
                 <option value="review" style={{ backgroundColor: theme.background, color: theme.text }}>Review</option>
@@ -1126,7 +1126,7 @@ const MarketingComponent: React.FC = () => {
                 placeholder="AI Rating (1-10)"
                 value={newStrategy.aiSuggestionRating}
                 onChange={(e) => setNewStrategy({...newStrategy, aiSuggestionRating: e.target.value})}
-                style={getInputStyle(isDarkMode)}
+                style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
               />
             </div>
             <div style={{ marginTop: '16px', ...getFormGridStyle() }}>
@@ -1135,21 +1135,21 @@ const MarketingComponent: React.FC = () => {
                 placeholder="Hashtags (comma-separated)"
                 value={newStrategy.hashtags}
                 onChange={(e) => setNewStrategy({...newStrategy, hashtags: e.target.value})}
-                style={getInputStyle(isDarkMode)}
+                style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
               />
               <input 
                 type="text"
                 placeholder="Tags (comma-separated)"
                 value={newStrategy.tags}
                 onChange={(e) => setNewStrategy({...newStrategy, tags: e.target.value})}
-                style={getInputStyle(isDarkMode)}
+                style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
               />
             </div>
             <div style={{ marginTop: '16px', ...getFormGridStyle() }}>
               <select 
                 value={newStrategy.persona} 
                 onChange={(e) => setNewStrategy({...newStrategy, persona: e.target.value})}
-                style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
               >
                 <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Persona</option>
                 {PERSONA_OPTIONS.map(p => <option key={p} value={p} style={{ backgroundColor: theme.background, color: theme.text }}>{p}</option>)}
@@ -1157,7 +1157,7 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newStrategy.audienceSegment} 
                 onChange={(e) => setNewStrategy({...newStrategy, audienceSegment: e.target.value})}
-                style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
               >
                 <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Audience</option>
                 {AUDIENCE_OPTIONS.map(a => <option key={a.value} value={a.value} style={{ backgroundColor: theme.background, color: theme.text }}>{a.label}</option>)}
@@ -1238,19 +1238,19 @@ const MarketingComponent: React.FC = () => {
                 placeholder="Channel Name"
                 value={newChannel.channelName}
                 onChange={(e) => setNewChannel({...newChannel, channelName: e.target.value})}
-                style={getInputStyle(isDarkMode)}
+                style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
               />
               <input 
                 type="text"
                 placeholder="Platform Type"
                 value={newChannel.platformType}
                 onChange={(e) => setNewChannel({...newChannel, platformType: e.target.value})}
-                style={getInputStyle(isDarkMode)}
+                style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
               />
               <select 
                 value={newChannel.priorityLevel} 
                 onChange={(e) => setNewChannel({...newChannel, priorityLevel: e.target.value as 'high' | 'medium' | 'low'})}
-                style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
               >
                 <option value="high" style={{ backgroundColor: theme.background, color: theme.text }}>High Priority</option>
                 <option value="medium" style={{ backgroundColor: theme.background, color: theme.text }}>Medium Priority</option>
@@ -1259,7 +1259,7 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newChannel.status} 
                 onChange={(e) => setNewChannel({...newChannel, status: e.target.value as 'Active' | 'Inactive' | 'Paused'})}
-                style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
               >
                 <option value="Active" style={{ backgroundColor: theme.background, color: theme.text }}>Active</option>
                 <option value="Inactive" style={{ backgroundColor: theme.background, color: theme.text }}>Inactive</option>
@@ -1272,7 +1272,7 @@ const MarketingComponent: React.FC = () => {
                 value={newChannel.priorityChangeLog}
                 onChange={(e) => setNewChannel({...newChannel, priorityChangeLog: e.target.value})}
                 rows={2}
-                style={getTextareaStyle(isDarkMode)}
+                style={{...getTextareaStyle(isDarkMode), padding: '10px 12px', fontSize: '14px', minHeight: '100px'}}
               />
             </div>
             <div style={{ marginTop: '20px', textAlign: 'right' }}>
@@ -1352,7 +1352,7 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newIntel.priorityLevel} 
                 onChange={(e) => setNewIntel({...newIntel, priorityLevel: e.target.value})}
-                style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
               >
                 <option value="critical" style={{ backgroundColor: theme.background, color: theme.text }}>Critical</option>
                 <option value="high" style={{ backgroundColor: theme.background, color: theme.text }}>High</option>
@@ -1362,7 +1362,7 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newIntel.persona} 
                 onChange={(e) => setNewIntel({...newIntel, persona: e.target.value})}
-                style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
               >
                 <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Persona (optional)</option>
                 {PERSONA_OPTIONS.map(p => <option key={p} value={p} style={{ backgroundColor: theme.background, color: theme.text }}>{p}</option>)}
@@ -1370,7 +1370,7 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newIntel.audienceSegment} 
                 onChange={(e) => setNewIntel({...newIntel, audienceSegment: e.target.value})}
-                style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
               >
                 <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Audience (optional)</option>
                 {AUDIENCE_OPTIONS.map(a => <option key={a.value} value={a.value} style={{ backgroundColor: theme.background, color: theme.text }}>{a.label}</option>)}
@@ -1382,7 +1382,7 @@ const MarketingComponent: React.FC = () => {
                 value={newIntel.insightEntry}
                 onChange={(e) => setNewIntel({...newIntel, insightEntry: e.target.value})}
                 rows={4}
-                style={getTextareaStyle(isDarkMode)}
+                style={{...getTextareaStyle(isDarkMode), padding: '10px 12px', fontSize: '14px', minHeight: '100px'}}
               />
             </div>
             <div style={{ marginTop: '16px' }}>
@@ -1391,7 +1391,7 @@ const MarketingComponent: React.FC = () => {
                 accept="audio/*"
                 onChange={handleAudioUpload}
                 disabled={uploadingAudio}
-                style={getFileInputStyle(isDarkMode)}
+                style={{...getFileInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
               />
               {uploadingAudio && <p style={{ color: theme.textSecondary, marginTop: '8px' }}>Uploading audio...</p>}
               {newIntel.audioFilename && <p style={{ color: theme.success, marginTop: '8px' }}>✓ Audio uploaded</p>}
@@ -1510,23 +1510,23 @@ const MarketingComponent: React.FC = () => {
                 <input
                   type="text"
                   placeholder="Research Topic (e.g., 'Tech Content Creators')"
-                  style={getInputStyle(isDarkMode)}
+                  style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
                 />
                 <textarea
                   placeholder="Key Findings from SparkToro..."
                   rows={3}
-                  style={getTextareaStyle(isDarkMode)}
+                  style={{...getTextareaStyle(isDarkMode), padding: '10px 12px', fontSize: '14px', minHeight: '100px'}}
                 />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <input
                     type="text"
                     placeholder="Audience Size"
-                    style={getInputStyle(isDarkMode)}
+                    style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
                   />
                   <input
                     type="text"
                     placeholder="Source URL (optional)"
-                    style={getInputStyle(isDarkMode)}
+                    style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
                   />
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -1561,7 +1561,7 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newResearchInsight.persona} 
                 onChange={(e) => setNewResearchInsight({...newResearchInsight, persona: e.target.value})}
-                style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
               >
                 <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Persona (optional)</option>
                 {PERSONA_OPTIONS.map(p => <option key={p} value={p} style={{ backgroundColor: theme.background, color: theme.text }}>{p}</option>)}
@@ -1569,7 +1569,7 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newResearchInsight.audienceSegment} 
                 onChange={(e) => setNewResearchInsight({...newResearchInsight, audienceSegment: e.target.value})}
-                style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
               >
                 <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select Audience (optional)</option>
                 {AUDIENCE_OPTIONS.map(a => <option key={a.value} value={a.value} style={{ backgroundColor: theme.background, color: theme.text }}>{a.label}</option>)}
@@ -1577,7 +1577,7 @@ const MarketingComponent: React.FC = () => {
               <select 
                 value={newResearchInsight.reviewStatus} 
                 onChange={(e) => setNewResearchInsight({...newResearchInsight, reviewStatus: e.target.value as 'new' | 'reviewed' | 'archived'})}
-                style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
               >
                 <option value="new" style={{ backgroundColor: theme.background, color: theme.text }}>New</option>
                 <option value="reviewed" style={{ backgroundColor: theme.background, color: theme.text }}>Reviewed</option>
@@ -1590,7 +1590,7 @@ const MarketingComponent: React.FC = () => {
                 value={newResearchInsight.insight}
                 onChange={(e) => setNewResearchInsight({...newResearchInsight, insight: e.target.value})}
                 rows={4}
-                style={getTextareaStyle(isDarkMode)}
+                style={{...getTextareaStyle(isDarkMode), padding: '10px 12px', fontSize: '14px', minHeight: '100px'}}
               />
             </div>
             <div style={{ marginTop: '20px', textAlign: 'right' }}>
@@ -1661,12 +1661,12 @@ const MarketingComponent: React.FC = () => {
                 placeholder="Tool name"
                 value={newTool.name}
                 onChange={(e) => setNewTool({...newTool, name: e.target.value})}
-                style={getInputStyle(isDarkMode)}
+                style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
               />
               <select 
                 value={newTool.category} 
                 onChange={(e) => setNewTool({...newTool, category: e.target.value})}
-                style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
               >
                 <option value="" style={{ backgroundColor: theme.background, color: theme.text }}>Select category</option>
                 <option value="SEO" style={{ backgroundColor: theme.background, color: theme.text }}>SEO</option>
@@ -1683,12 +1683,12 @@ const MarketingComponent: React.FC = () => {
                 placeholder="Tool URL"
                 value={newTool.url}
                 onChange={(e) => setNewTool({...newTool, url: e.target.value})}
-                style={getInputStyle(isDarkMode)}
+                style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
               />
               <select 
                 value={newTool.status} 
                 onChange={(e) => setNewTool({...newTool, status: e.target.value as 'Active' | 'Inactive'})}
-                style={{...getSelectStyle(isDarkMode), color: theme.text}}
+                style={{...getSelectStyle(isDarkMode), color: theme.text, height: '44px', padding: '10px 12px', fontSize: '14px'}}
               >
                 <option value="Active" style={{ backgroundColor: theme.background, color: theme.text }}>Active</option>
                 <option value="Inactive" style={{ backgroundColor: theme.background, color: theme.text }}>Inactive</option>
@@ -1700,7 +1700,7 @@ const MarketingComponent: React.FC = () => {
                 value={newTool.notes}
                 onChange={(e) => setNewTool({...newTool, notes: e.target.value})}
                 rows={3}
-                style={getTextareaStyle(isDarkMode)}
+                style={{...getTextareaStyle(isDarkMode), padding: '10px 12px', fontSize: '14px', minHeight: '100px'}}
               />
             </div>
             <div style={{ marginTop: '20px', textAlign: 'right' }}>
@@ -1782,7 +1782,7 @@ const MarketingComponent: React.FC = () => {
             <input 
               type="text"
               placeholder="Search archived items..." 
-              style={getInputStyle(isDarkMode)}
+              style={{...getInputStyle(isDarkMode), height: '44px', padding: '10px 12px', fontSize: '14px'}}
             />
           </div>
 
