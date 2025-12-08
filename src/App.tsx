@@ -1,7 +1,7 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 
 import ContentComponent from './contentcomponent';
-import ChatManagerPublic from './webchat';
+import ChatManagerPublic from './webchatcomponent/webchat';
 import ScheduleComponent from './schedulecomponent';
 import MarketingComponent from './marketingcomponent/MarketingComponent';
 import SettingsComponent from './settingscomponent';
