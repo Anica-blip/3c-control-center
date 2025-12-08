@@ -1,4 +1,12 @@
 import React from 'react';
+import { createClient } from '@supabase/supabase-js';
+
+// =============================================================================
+// SUPABASE CLIENT SETUP
+// =============================================================================
+const supabaseUrl = 'https://uqyqpwhkzlhqxcqajhkn.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // =============================================================================
 // AURION WEBCHAT COMPONENT - NO AUTO-SCROLL VERSION
@@ -21,16 +29,6 @@ function AurionWebchat({
   const [isLoading, setIsLoading] = React.useState(false);
   const [chatSessionId, setChatSessionId] = React.useState(null);
   const messagesEndRef = React.useRef(null);
-
-  // ✅ REMOVED: Auto-scroll behavior - Let user scroll manually
-  // const scrollToBottom = () => {
-  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  // };
-
-  // ✅ REMOVED: Auto-scroll on new messages
-  // React.useEffect(() => {
-  //   scrollToBottom();
-  // }, [messages]);
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
@@ -353,7 +351,6 @@ function AurionWebchat({
           </div>
         )}
         
-        {/* ✅ KEPT: Reference for manual scrolling if needed later */}
         <div ref={messagesEndRef} />
       </div>
 
@@ -399,7 +396,7 @@ function AurionWebchat({
 }
 
 // =============================================================================
-// CHAT MANAGER PUBLIC COMPONENT - SAME AS BEFORE
+// CHAT MANAGER PUBLIC COMPONENT - WITH REAL SUPABASE INTEGRATION
 // =============================================================================
 
 function ChatManagerPublic() {
@@ -408,20 +405,17 @@ function ChatManagerPublic() {
     return localStorage.getItem('darkMode') === 'true';
   });
   
-  const [emailConfig, setEmailConfig] = React.useState({
-    mainEmail: '3c.innertherapy@gmail.com',
-    supportEmail: '3c-helpline@post.com',
-    notificationsEnabled: true,
-    autoReply: false
-  });
-  
-  // Manual email list state
-  const [manualEmails, setManualEmails] = React.useState([
-    { id: 1, email: 'customer1@example.com', label: 'Customer Support' },
-    { id: 2, email: 'sales@example.com', label: 'Sales Team' }
-  ]);
+  // ✅ REAL DATABASE STATE - Email accounts
+  const [manualEmails, setManualEmails] = React.useState([]);
   const [newEmail, setNewEmail] = React.useState('');
   const [newEmailLabel, setNewEmailLabel] = React.useState('');
+  const [emailsLoading, setEmailsLoading] = React.useState(false);
+  const [emailsError, setEmailsError] = React.useState(null);
+  
+  // ✅ REAL DATABASE STATE - Notification counts
+  const [notificationCounts, setNotificationCounts] = React.useState([]);
+  const [notificationsLoading, setNotificationsLoading] = React.useState(false);
+  const [notificationsError, setNotificationsError] = React.useState(null);
   
   const [aiConfig, setAiConfig] = React.useState({
     primaryAI: 'Jan AI',
@@ -429,16 +423,70 @@ function ChatManagerPublic() {
     claudeEnabled: true,
     apiEndpoint: 'http://localhost:8080'
   });
-  
-  const [notifications, setNotifications] = React.useState([
-    { id: 1, type: 'webchat', message: 'New chat from visitor on website', time: '2 min ago', unread: true, source: 'Webchat Public' },
-    { id: 2, type: 'email', message: 'Support email received from customer1@example.com', time: '15 min ago', unread: true, source: 'Email' },
-    { id: 3, type: 'webchat', message: 'Chat session ended - customer feedback received', time: '1 hour ago', unread: false, source: 'Webchat Public' },
-    { id: 4, type: 'email', message: 'New inquiry from sales@example.com', time: '2 hours ago', unread: false, source: 'Email' }
-  ]);
 
-  // Email management functions
-  const handleAddEmail = () => {
+  // ✅ LOAD EMAIL ACCOUNTS FROM SUPABASE ON MOUNT
+  React.useEffect(() => {
+    loadEmailAccounts();
+  }, []);
+
+  // ✅ LOAD NOTIFICATION COUNTS FROM SUPABASE ON MOUNT
+  React.useEffect(() => {
+    loadNotificationCounts();
+    
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      loadNotificationCounts();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // ✅ FUNCTION: Load email accounts from Supabase
+  const loadEmailAccounts = async () => {
+    setEmailsLoading(true);
+    setEmailsError(null);
+    
+    try {
+      const { data, error } = await supabase
+        .from('webchat_email_accounts')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      setManualEmails(data || []);
+    } catch (error) {
+      console.error('Error loading email accounts:', error);
+      setEmailsError('Failed to load email accounts');
+    } finally {
+      setEmailsLoading(false);
+    }
+  };
+
+  // ✅ FUNCTION: Load notification counts from Supabase
+  const loadNotificationCounts = async () => {
+    setNotificationsLoading(true);
+    setNotificationsError(null);
+    
+    try {
+      const { data, error } = await supabase
+        .from('webchat_notification_counts')
+        .select('*')
+        .order('source_name', { ascending: true });
+      
+      if (error) throw error;
+      
+      setNotificationCounts(data || []);
+    } catch (error) {
+      console.error('Error loading notification counts:', error);
+      setNotificationsError('Failed to load notifications');
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
+  // ✅ FUNCTION: Add email account to Supabase
+  const handleAddEmail = async () => {
     if (!newEmail.trim() || !newEmailLabel.trim()) {
       alert('Please fill in both email and label fields');
       return;
@@ -451,40 +499,100 @@ function ChatManagerPublic() {
       return;
     }
     
+    // Check for duplicates
     const emailExists = manualEmails.some(e => e.email.toLowerCase() === newEmail.toLowerCase());
     if (emailExists) {
       alert('This email already exists in the list');
       return;
     }
     
-    const newEmailObj = {
-      id: Date.now(),
-      email: newEmail.trim(),
-      label: newEmailLabel.trim()
-    };
-    
-    setManualEmails([...manualEmails, newEmailObj]);
-    setNewEmail('');
-    setNewEmailLabel('');
-  };
-  
-  const handleDeleteEmail = (id) => {
-    if (confirm('Are you sure you want to remove this email?')) {
-      setManualEmails(manualEmails.filter(e => e.id !== id));
+    try {
+      // Detect provider from email domain
+      const domain = newEmail.split('@')[1].toLowerCase();
+      let provider = 'other';
+      if (domain.includes('gmail')) provider = 'gmail';
+      else if (domain.includes('outlook') || domain.includes('hotmail')) provider = 'outlook';
+      
+      const { data, error } = await supabase
+        .from('webchat_email_accounts')
+        .insert([
+          {
+            email: newEmail.trim(),
+            label: newEmailLabel.trim(),
+            provider: provider
+          }
+        ])
+        .select();
+      
+      if (error) throw error;
+      
+      // Add to local state
+      if (data && data.length > 0) {
+        setManualEmails([data[0], ...manualEmails]);
+        
+        // Also create a notification count entry for this email
+        await supabase
+          .from('webchat_notification_counts')
+          .insert([
+            {
+              source_type: 'email',
+              source_id: data[0].id,
+              source_name: newEmailLabel.trim(),
+              unread_count: 0
+            }
+          ]);
+        
+        // Refresh notification counts
+        loadNotificationCounts();
+      }
+      
+      // Clear form
+      setNewEmail('');
+      setNewEmailLabel('');
+      
+      alert('Email account added successfully!');
+    } catch (error) {
+      console.error('Error adding email account:', error);
+      alert('Failed to add email account. Please try again.');
     }
   };
   
-  const handleMarkAsRead = (id) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, unread: false } : n
-    ));
+  // ✅ FUNCTION: Delete email account from Supabase
+  const handleDeleteEmail = async (id) => {
+    if (!confirm('Are you sure you want to remove this email account?')) {
+      return;
+    }
+    
+    try {
+      // Delete from database
+      const { error } = await supabase
+        .from('webchat_email_accounts')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      // Also delete associated notification count
+      await supabase
+        .from('webchat_notification_counts')
+        .delete()
+        .eq('source_id', id);
+      
+      // Remove from local state
+      setManualEmails(manualEmails.filter(e => e.id !== id));
+      
+      // Refresh notification counts
+      loadNotificationCounts();
+      
+      alert('Email account removed successfully!');
+    } catch (error) {
+      console.error('Error deleting email account:', error);
+      alert('Failed to delete email account. Please try again.');
+    }
   };
-  
-  const handleDeleteNotification = (id) => {
-    setNotifications(notifications.filter(n => n.id !== id));
-  };
-  
-  const unreadCount = notifications.filter(n => n.unread).length;
+
+  // ✅ CALCULATE TOTAL UNREAD COUNT
+  const totalUnreadCount = notificationCounts.reduce((sum, item) => sum + (item.unread_count || 0), 0);
 
   const containerStyle = {
     padding: '20px',
@@ -498,247 +606,468 @@ function ChatManagerPublic() {
     gap: '12px',
     marginBottom: '32px',
     backgroundColor: isDarkMode ? '#334155' : '#f8fafc',
-    borderRadius: '8px',
-    padding: '20px'
+    padding: '8px',
+    borderRadius: '12px',
+    border: `1px solid ${isDarkMode ? '#475569' : '#e2e8f0'}`,
+    boxShadow: isDarkMode 
+      ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+      : '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
   };
 
-  const getTabStyle = (tabId) => ({
-    padding: '12px 24px',
-    backgroundColor: activeTab === tabId ? '#3b82f6' : (isDarkMode ? '#475569' : '#e5e7eb'),
-    color: activeTab === tabId ? '#ffffff' : (isDarkMode ? '#94a3b8' : '#6b7280'),
+  const tabStyle = (isActive) => ({
+    flex: 1,
+    padding: '14px 20px',
+    backgroundColor: isActive 
+      ? (isDarkMode ? '#1e293b' : '#ffffff')
+      : 'transparent',
+    color: isActive 
+      ? (isDarkMode ? '#f8fafc' : '#0f172a')
+      : (isDarkMode ? '#94a3b8' : '#64748b'),
     border: 'none',
     borderRadius: '8px',
     cursor: 'pointer',
+    fontWeight: isActive ? 'bold' : 'normal',
     fontSize: '14px',
-    fontWeight: activeTab === tabId ? 'bold' : 'normal',
     transition: 'all 0.2s ease',
-    flex: '1',
-    textAlign: 'center',
-    whiteSpace: 'nowrap'
+    boxShadow: isActive 
+      ? (isDarkMode 
+        ? '0 2px 4px rgba(0, 0, 0, 0.3)' 
+        : '0 2px 4px rgba(0, 0, 0, 0.1)')
+      : 'none'
   });
 
   const contentCardStyle = {
-    backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+    backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
     borderRadius: '12px',
-    padding: '24px',
+    padding: '28px',
+    border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
     boxShadow: isDarkMode 
-      ? '0 10px 25px -3px rgba(0, 0, 0, 0.3)' 
-      : '0 10px 25px -3px rgba(0, 0, 0, 0.1)',
-    border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
+      ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+      : '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
   };
 
   const sectionTitleStyle = {
     fontSize: '18px',
     fontWeight: 'bold',
-    marginBottom: '16px',
-    color: isDarkMode ? '#f9fafb' : '#111827'
-  };
-
-  const inputStyle = {
-    width: '100%',
-    padding: '12px 16px',
-    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
-    borderRadius: '8px',
-    fontSize: '14px',
-    backgroundColor: isDarkMode ? '#374151' : '#ffffff',
-    color: isDarkMode ? '#f9fafb' : '#1f2937',
-    outline: 'none',
-    transition: 'border-color 0.2s ease'
+    marginBottom: '20px',
+    color: isDarkMode ? '#f8fafc' : '#0f172a'
   };
 
   return (
     <div style={containerStyle}>
-      <div style={tabsContainerStyle}>
-        {[
-          { id: 'chat', label: '💬 Live Chat', icon: '💬' },
-          { id: 'email', label: '📧 Email Configuration', icon: '📧' },
-          { id: 'notifications', label: '🔔 Notifications', icon: '🔔' }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={getTabStyle(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Header */}
+      <div style={{ 
+        marginBottom: '32px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <div>
+          <h1 style={{ 
+            fontSize: '28px', 
+            fontWeight: 'bold',
+            margin: '0 0 8px 0',
+            color: isDarkMode ? '#f8fafc' : '#0f172a'
+          }}>
+            🎛️ 3C Control Center
+          </h1>
+          <p style={{ 
+            color: isDarkMode ? '#94a3b8' : '#64748b',
+            margin: 0,
+            fontSize: '14px'
+          }}>
+            Backend monitoring dashboard for all 3C operations
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            const newMode = !isDarkMode;
+            setIsDarkMode(newMode);
+            localStorage.setItem('darkMode', String(newMode));
+          }}
+          style={{
+            padding: '10px 18px',
+            backgroundColor: isDarkMode ? '#334155' : '#f1f5f9',
+            color: isDarkMode ? '#f8fafc' : '#0f172a',
+            border: `1px solid ${isDarkMode ? '#475569' : '#cbd5e1'}`,
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '600',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          {isDarkMode ? '☀️ Light' : '🌙 Dark'}
+        </button>
       </div>
 
-      {/* Live Chat Tab - NO AUTO-SCROLL */}
+      {/* Navigation Tabs */}
+      <div style={tabsContainerStyle}>
+        <button
+          onClick={() => setActiveTab('chat')}
+          style={tabStyle(activeTab === 'chat')}
+        >
+          💬 Live Chat
+        </button>
+        <button
+          onClick={() => setActiveTab('ai-config')}
+          style={tabStyle(activeTab === 'ai-config')}
+        >
+          🤖 AI Configuration
+        </button>
+        <button
+          onClick={() => setActiveTab('email-config')}
+          style={tabStyle(activeTab === 'email-config')}
+        >
+          📧 Email Configuration
+        </button>
+        <button
+          onClick={() => setActiveTab('notifications')}
+          style={tabStyle(activeTab === 'notifications')}
+        >
+          🔔 Notifications {totalUnreadCount > 0 && `(${totalUnreadCount})`}
+        </button>
+      </div>
+
+      {/* Chat Tab */}
       {activeTab === 'chat' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '32px' }}>
-          <div style={contentCardStyle}>
-            <h3 style={sectionTitleStyle}>💬 Aurion Chat Interface</h3>
-            <p style={{ color: isDarkMode ? '#d1d5db' : '#6b7280', marginBottom: '20px' }}>
-              This is your integrated Aurion webchat system for customer support
-            </p>
-            
-            <div style={{
-              padding: '20px',
-              backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
-              borderRadius: '8px',
-              marginBottom: '20px',
-              border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
-            }}>
-              <h4 style={{ margin: '0 0 16px 0', color: isDarkMode ? '#f9fafb' : '#111827' }}>📊 Chat Statistics</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                {[
-                  { value: '12', label: 'Active Chats', color: '#3b82f6' },
-                  { value: '89%', label: 'Resolution Rate', color: '#10b981' },
-                  { value: '3.2m', label: 'Avg Response', color: '#f59e0b' }
-                ].map((stat, index) => (
-                  <div key={index} style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: stat.color, marginBottom: '4px' }}>
-                      {stat.value}
-                    </div>
-                    <div style={{ fontSize: '12px', color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
-                      {stat.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        <div style={contentCardStyle}>
+          <h3 style={sectionTitleStyle}>💬 Live Chat Monitor</h3>
+          <p style={{ 
+            color: isDarkMode ? '#94a3b8' : '#64748b',
+            marginBottom: '24px',
+            fontSize: '14px'
+          }}>
+            Monitor live chat conversations with Aurion AI Assistant
+          </p>
+          <AurionWebchat isDarkMode={isDarkMode} />
+        </div>
+      )}
+
+      {/* AI Configuration Tab */}
+      {activeTab === 'ai-config' && (
+        <div style={contentCardStyle}>
+          <h3 style={sectionTitleStyle}>🤖 AI Configuration</h3>
           
-          <div>
-            <AurionWebchat 
-              apiEndpoint={aiConfig.apiEndpoint}
-              isDarkMode={isDarkMode}
-            />
+          <div style={{ display: 'grid', gap: '20px' }}>
+            <div>
+              <label style={{ 
+                display: 'block',
+                marginBottom: '8px',
+                color: isDarkMode ? '#e2e8f0' : '#334155',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}>
+                Primary AI Model
+              </label>
+              <select
+                value={aiConfig.primaryAI}
+                onChange={(e) => setAiConfig({...aiConfig, primaryAI: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+                  color: isDarkMode ? '#f8fafc' : '#0f172a',
+                  border: `1px solid ${isDarkMode ? '#334155' : '#cbd5e1'}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                <option>Jan AI</option>
+                <option>OpenAI GPT-4</option>
+                <option>Claude Sonnet</option>
+                <option>Anthropic Claude</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ 
+                display: 'block',
+                marginBottom: '8px',
+                color: isDarkMode ? '#e2e8f0' : '#334155',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}>
+                Backup AI Model
+              </label>
+              <select
+                value={aiConfig.backupAI}
+                onChange={(e) => setAiConfig({...aiConfig, backupAI: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+                  color: isDarkMode ? '#f8fafc' : '#0f172a',
+                  border: `1px solid ${isDarkMode ? '#334155' : '#cbd5e1'}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                <option>OpenAI GPT-4</option>
+                <option>Jan AI</option>
+                <option>Claude Sonnet</option>
+                <option>Anthropic Claude</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ 
+                display: 'block',
+                marginBottom: '8px',
+                color: isDarkMode ? '#e2e8f0' : '#334155',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}>
+                API Endpoint
+              </label>
+              <input
+                type="text"
+                value={aiConfig.apiEndpoint}
+                onChange={(e) => setAiConfig({...aiConfig, apiEndpoint: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+                  color: isDarkMode ? '#f8fafc' : '#0f172a',
+                  border: `1px solid ${isDarkMode ? '#334155' : '#cbd5e1'}`,
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+                placeholder="http://localhost:8080"
+              />
+            </div>
+
+            <div style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '16px',
+              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+              borderRadius: '8px',
+              border: `1px solid ${isDarkMode ? '#334155' : '#cbd5e1'}`
+            }}>
+              <input
+                type="checkbox"
+                checked={aiConfig.claudeEnabled}
+                onChange={(e) => setAiConfig({...aiConfig, claudeEnabled: e.target.checked})}
+                style={{ 
+                  width: '18px',
+                  height: '18px',
+                  cursor: 'pointer'
+                }}
+              />
+              <label style={{ 
+                color: isDarkMode ? '#e2e8f0' : '#334155',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}>
+                Enable Claude Integration
+              </label>
+            </div>
+
+            <button
+              style={{
+                padding: '12px',
+                backgroundColor: '#3b82f6',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                marginTop: '8px'
+              }}
+              onClick={() => alert('AI configuration saved!')}
+            >
+              💾 Save Configuration
+            </button>
           </div>
         </div>
       )}
 
       {/* Email Configuration Tab */}
-      {activeTab === 'email' && (
+      {activeTab === 'email-config' && (
         <div style={contentCardStyle}>
           <h3 style={sectionTitleStyle}>📧 Email Configuration</h3>
-          <p style={{ color: isDarkMode ? '#d1d5db' : '#6b7280', marginBottom: '24px' }}>
-            Manage email addresses for notifications and support inquiries
+          <p style={{ 
+            color: isDarkMode ? '#94a3b8' : '#64748b',
+            marginBottom: '24px',
+            fontSize: '14px'
+          }}>
+            Add email accounts to monitor for notifications
           </p>
 
           {/* Add Email Form */}
           <div style={{
             padding: '20px',
-            backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
+            backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
             borderRadius: '8px',
-            border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+            border: `1px solid ${isDarkMode ? '#334155' : '#cbd5e1'}`,
             marginBottom: '24px'
           }}>
-            <h4 style={{ 
-              color: isDarkMode ? '#f9fafb' : '#111827',
-              marginBottom: '16px',
+            <h4 style={{
               fontSize: '16px',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              marginBottom: '16px',
+              color: isDarkMode ? '#f8fafc' : '#0f172a'
             }}>
-              ➕ Add New Email
+              ➕ Add New Email Account
             </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '12px', alignItems: 'end' }}>
+            
+            <div style={{ display: 'grid', gap: '12px' }}>
               <div>
-                <label style={{
+                <label style={{ 
                   display: 'block',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  color: isDarkMode ? '#d1d5db' : '#374151',
-                  marginBottom: '6px'
+                  marginBottom: '6px',
+                  color: isDarkMode ? '#e2e8f0' : '#334155',
+                  fontSize: '13px',
+                  fontWeight: '600'
                 }}>
-                  Email Address *
+                  Email Address
                 </label>
                 <input
                   type="email"
-                  placeholder="email@example.com"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="example@gmail.com"
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    fontSize: '14px',
-                    backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
-                    color: isDarkMode ? '#f9fafb' : '#111827',
-                    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
+                    backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                    color: isDarkMode ? '#f8fafc' : '#0f172a',
+                    border: `1px solid ${isDarkMode ? '#475569' : '#cbd5e1'}`,
                     borderRadius: '6px',
-                    outline: 'none'
-                  }}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') handleAddEmail();
+                    fontSize: '14px'
                   }}
                 />
               </div>
+
               <div>
-                <label style={{
+                <label style={{ 
                   display: 'block',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  color: isDarkMode ? '#d1d5db' : '#374151',
-                  marginBottom: '6px'
+                  marginBottom: '6px',
+                  color: isDarkMode ? '#e2e8f0' : '#334155',
+                  fontSize: '13px',
+                  fontWeight: '600'
                 }}>
-                  Label *
+                  Label / Description
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g., Customer Support"
                   value={newEmailLabel}
                   onChange={(e) => setNewEmailLabel(e.target.value)}
+                  placeholder="Main Support"
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    fontSize: '14px',
-                    backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
-                    color: isDarkMode ? '#f9fafb' : '#111827',
-                    border: `1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}`,
+                    backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                    color: isDarkMode ? '#f8fafc' : '#0f172a',
+                    border: `1px solid ${isDarkMode ? '#475569' : '#cbd5e1'}`,
                     borderRadius: '6px',
-                    outline: 'none'
-                  }}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') handleAddEmail();
+                    fontSize: '14px'
                   }}
                 />
               </div>
+
               <button
                 onClick={handleAddEmail}
+                disabled={!newEmail.trim() || !newEmailLabel.trim()}
                 style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#3b82f6',
+                  padding: '10px 16px',
+                  backgroundColor: (!newEmail.trim() || !newEmailLabel.trim()) 
+                    ? (isDarkMode ? '#475569' : '#cbd5e1')
+                    : '#10b981',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '14px',
                   fontWeight: 'bold',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s'
+                  cursor: (!newEmail.trim() || !newEmailLabel.trim()) ? 'not-allowed' : 'pointer',
+                  marginTop: '8px'
                 }}
-                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
               >
-                ➕ Add Email
+                ➕ Add Email Account
               </button>
             </div>
           </div>
 
           {/* Email List */}
           <div>
-            <h4 style={{ 
-              color: isDarkMode ? '#f9fafb' : '#111827',
-              marginBottom: '16px',
+            <h4 style={{
               fontSize: '16px',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              marginBottom: '16px',
+              color: isDarkMode ? '#f8fafc' : '#0f172a'
             }}>
-              📋 Email List ({manualEmails.length})
+              📋 Monitored Email Accounts
             </h4>
-            {manualEmails.length === 0 ? (
+            
+            {emailsLoading ? (
               <div style={{
                 padding: '40px',
                 textAlign: 'center',
-                backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
+                backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
                 borderRadius: '8px',
-                border: `2px dashed ${isDarkMode ? '#374151' : '#d1d5db'}`
+                border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
               }}>
                 <p style={{ 
-                  color: isDarkMode ? '#9ca3af' : '#6b7280',
+                  color: isDarkMode ? '#94a3b8' : '#64748b',
                   fontSize: '14px',
                   margin: 0
                 }}>
-                  No emails added yet. Use the form above to add your first email.
+                  Loading email accounts...
+                </p>
+              </div>
+            ) : emailsError ? (
+              <div style={{
+                padding: '40px',
+                textAlign: 'center',
+                backgroundColor: isDarkMode ? '#450a0a' : '#fee2e2',
+                borderRadius: '8px',
+                border: `2px dashed ${isDarkMode ? '#991b1b' : '#ef4444'}`
+              }}>
+                <p style={{ 
+                  color: isDarkMode ? '#fca5a5' : '#dc2626',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  margin: '0 0 8px 0'
+                }}>
+                  Error loading emails
+                </p>
+                <button
+                  onClick={loadEmailAccounts}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#ef4444',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    marginTop: '8px'
+                  }}
+                >
+                  🔄 Retry
+                </button>
+              </div>
+            ) : manualEmails.length === 0 ? (
+              <div style={{
+                padding: '40px',
+                textAlign: 'center',
+                backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+                borderRadius: '8px',
+                border: `2px dashed ${isDarkMode ? '#334155' : '#cbd5e1'}`
+              }}>
+                <p style={{ 
+                  color: isDarkMode ? '#94a3b8' : '#64748b',
+                  fontSize: '14px',
+                  margin: 0
+                }}>
+                  No email accounts added yet. Use the form above to add your first email.
                 </p>
               </div>
             ) : (
@@ -749,9 +1078,9 @@ function ChatManagerPublic() {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '16px',
-                    backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
+                    backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
                     borderRadius: '8px',
-                    border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                    border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
                     overflow: 'hidden',
                     minWidth: 0
                   }}>
@@ -772,14 +1101,15 @@ function ChatManagerPublic() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
                           fontWeight: 'bold',
-                          color: isDarkMode ? '#f9fafb' : '#111827',
-                          marginBottom: '4px'
+                          color: isDarkMode ? '#f8fafc' : '#0f172a',
+                          marginBottom: '4px',
+                          fontSize: '14px'
                         }}>
                           {emailItem.label}
                         </div>
                         <div style={{
                           fontSize: '12px',
-                          color: isDarkMode ? '#9ca3af' : '#6b7280',
+                          color: isDarkMode ? '#94a3b8' : '#64748b',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'
@@ -818,138 +1148,195 @@ function ChatManagerPublic() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
             <div>
               <h3 style={{ ...sectionTitleStyle, margin: 0 }}>🔔 Notifications</h3>
-              <p style={{ color: isDarkMode ? '#d1d5db' : '#6b7280', fontSize: '14px', margin: '4px 0 0 0' }}>
-                Activity from Webchat Public and Email notifications
+              <p style={{ color: isDarkMode ? '#94a3b8' : '#64748b', fontSize: '14px', margin: '4px 0 0 0' }}>
+                Unread counts from all monitored sources
               </p>
             </div>
-            {unreadCount > 0 && (
-              <div style={{
-                padding: '6px 12px',
-                backgroundColor: '#ef4444',
-                color: '#ffffff',
-                borderRadius: '20px',
-                fontSize: '12px',
-                fontWeight: 'bold'
-              }}>
-                {unreadCount} Unread
-              </div>
-            )}
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              {totalUnreadCount > 0 && (
+                <div style={{
+                  padding: '6px 12px',
+                  backgroundColor: '#ef4444',
+                  color: '#ffffff',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: 'bold'
+                }}>
+                  {totalUnreadCount} Total Unread
+                </div>
+              )}
+              <button
+                onClick={loadNotificationCounts}
+                disabled={notificationsLoading}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: isDarkMode ? '#334155' : '#f1f5f9',
+                  color: isDarkMode ? '#f8fafc' : '#0f172a',
+                  border: `1px solid ${isDarkMode ? '#475569' : '#cbd5e1'}`,
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: notificationsLoading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {notificationsLoading ? '⏳ Refreshing...' : '🔄 Refresh'}
+              </button>
+            </div>
           </div>
 
-          {notifications.length === 0 ? (
+          {notificationsLoading && notificationCounts.length === 0 ? (
             <div style={{
               padding: '60px 20px',
               textAlign: 'center',
-              backgroundColor: isDarkMode ? '#111827' : '#f9fafb',
+              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
               borderRadius: '8px',
-              border: `2px dashed ${isDarkMode ? '#374151' : '#d1d5db'}`
+              border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`
             }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔔</div>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
               <p style={{ 
-                color: isDarkMode ? '#9ca3af' : '#6b7280',
+                color: isDarkMode ? '#94a3b8' : '#64748b',
+                fontSize: '16px',
+                fontWeight: '600',
+                margin: 0
+              }}>
+                Loading notifications...
+              </p>
+            </div>
+          ) : notificationsError ? (
+            <div style={{
+              padding: '60px 20px',
+              textAlign: 'center',
+              backgroundColor: isDarkMode ? '#450a0a' : '#fee2e2',
+              borderRadius: '8px',
+              border: `2px dashed ${isDarkMode ? '#991b1b' : '#ef4444'}`
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+              <p style={{ 
+                color: isDarkMode ? '#fca5a5' : '#dc2626',
                 fontSize: '16px',
                 fontWeight: '600',
                 margin: '0 0 8px 0'
               }}>
-                No notifications yet
+                Error loading notifications
+              </p>
+              <button
+                onClick={loadNotificationCounts}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#ef4444',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  marginTop: '12px'
+                }}
+              >
+                🔄 Retry
+              </button>
+            </div>
+          ) : notificationCounts.length === 0 ? (
+            <div style={{
+              padding: '60px 20px',
+              textAlign: 'center',
+              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+              borderRadius: '8px',
+              border: `2px dashed ${isDarkMode ? '#334155' : '#cbd5e1'}`
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔔</div>
+              <p style={{ 
+                color: isDarkMode ? '#94a3b8' : '#64748b',
+                fontSize: '16px',
+                fontWeight: '600',
+                margin: '0 0 8px 0'
+              }}>
+                No notification sources yet
               </p>
               <p style={{ 
-                color: isDarkMode ? '#6b7280' : '#9ca3af',
+                color: isDarkMode ? '#64748b' : '#94a3b8',
                 fontSize: '14px',
                 margin: 0
               }}>
-                You'll see activity from Webchat Public and Email here
+                Add email accounts in the Email Configuration tab to start monitoring
               </p>
             </div>
           ) : (
             <div style={{ display: 'grid', gap: '12px' }}>
-              {notifications.map(notification => (
+              {notificationCounts.map(notification => (
                 <div key={notification.id} style={{
-                  padding: '16px',
-                  backgroundColor: notification.unread 
+                  padding: '20px',
+                  backgroundColor: notification.unread_count > 0
                     ? (isDarkMode ? '#1e293b' : '#eff6ff')
-                    : (isDarkMode ? '#111827' : '#f9fafb'),
+                    : (isDarkMode ? '#0f172a' : '#f8fafc'),
                   borderRadius: '8px',
-                  border: `1px solid ${notification.unread 
+                  border: `1px solid ${notification.unread_count > 0
                     ? (isDarkMode ? '#3b82f6' : '#93c5fd')
-                    : (isDarkMode ? '#374151' : '#e5e7eb')}`,
-                  borderLeft: `4px solid ${notification.type === 'webchat' ? '#3b82f6' : '#f59e0b'}`
+                    : (isDarkMode ? '#334155' : '#e5e7eb')}`,
+                  borderLeft: `4px solid ${notification.source_type === 'webchat' ? '#3b82f6' : '#f59e0b'}`
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                         <div style={{
-                          padding: '4px 8px',
-                          backgroundColor: notification.type === 'webchat' ? '#3b82f6' : '#f59e0b',
+                          padding: '6px 12px',
+                          backgroundColor: notification.source_type === 'webchat' ? '#3b82f6' : '#f59e0b',
                           color: '#ffffff',
-                          borderRadius: '4px',
-                          fontSize: '10px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
                           fontWeight: 'bold',
                           textTransform: 'uppercase'
                         }}>
-                          {notification.source}
+                          {notification.source_type === 'webchat' ? '💬 Live Chat' : '📧 Email'}
                         </div>
                         <span style={{
-                          fontSize: '12px',
-                          color: isDarkMode ? '#9ca3af' : '#6b7280'
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: isDarkMode ? '#f8fafc' : '#0f172a'
                         }}>
-                          {notification.time}
+                          {notification.source_name}
                         </span>
-                        {notification.unread && (
-                          <div style={{
-                            width: '8px',
-                            height: '8px',
-                            backgroundColor: '#ef4444',
-                            borderRadius: '50%'
-                          }} />
-                        )}
                       </div>
-                      <p style={{
-                        color: isDarkMode ? '#f9fafb' : '#111827',
-                        fontSize: '14px',
-                        margin: 0,
-                        lineHeight: '1.5'
+                      <div style={{
+                        fontSize: '12px',
+                        color: isDarkMode ? '#94a3b8' : '#64748b',
+                        marginBottom: '4px'
                       }}>
-                        {notification.message}
-                      </p>
+                        Last checked: {new Date(notification.last_checked).toLocaleString()}
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                      {notification.unread && (
-                        <button
-                          onClick={() => handleMarkAsRead(notification.id)}
-                          style={{
-                            padding: '6px 12px',
-                            backgroundColor: '#10b981',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            fontWeight: 'bold',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          ✓ Mark Read
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDeleteNotification(notification.id)}
-                        style={{
-                          padding: '6px 12px',
-                          backgroundColor: '#ef4444',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        🗑️
-                      </button>
+                    <div style={{
+                      padding: '12px 20px',
+                      backgroundColor: notification.unread_count > 0 ? '#ef4444' : '#10b981',
+                      color: '#ffffff',
+                      borderRadius: '8px',
+                      fontSize: '20px',
+                      fontWeight: 'bold',
+                      minWidth: '80px',
+                      textAlign: 'center',
+                      flexShrink: 0
+                    }}>
+                      {notification.unread_count}
                     </div>
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Auto-refresh indicator */}
+          {!notificationsLoading && notificationCounts.length > 0 && (
+            <div style={{
+              marginTop: '24px',
+              padding: '12px',
+              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+              borderRadius: '6px',
+              border: `1px solid ${isDarkMode ? '#334155' : '#e5e7eb'}`,
+              textAlign: 'center',
+              fontSize: '12px',
+              color: isDarkMode ? '#64748b' : '#94a3b8'
+            }}>
+              🔄 Auto-refreshing every 30 seconds
             </div>
           )}
         </div>
@@ -959,3 +1346,4 @@ function ChatManagerPublic() {
 }
 
 export default ChatManagerPublic;
+
