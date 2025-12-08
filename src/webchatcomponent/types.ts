@@ -31,14 +31,6 @@ export interface ChatMessage {
   isError?: boolean;
 }
 
-// AI Configuration
-export interface AIConfig {
-  primaryAI: string;
-  backupAI: string;
-  claudeEnabled: boolean;
-  apiEndpoint: string;
-}
-
 // Email credentials (not stored in frontend, used by Edge Function)
 export interface EmailCredentials {
   id: string;
@@ -68,4 +60,3 @@ export interface AurionWebchatProps {
 export interface ChatManagerPublicProps {
   isDarkMode: boolean;
 }
-
