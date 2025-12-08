@@ -32,6 +32,8 @@ export const EMAIL_PROVIDERS = {
     imapSecure: true,
     webUrl: 'https://www.mail.com/',
     icon: '📬',
+    // Note: Mail.com offers multiple domains (@mail.com, @post.com, @email.com, @usa.com, etc.)
+    // All use the same IMAP server
   },
   other: {
     name: 'Other',
@@ -76,7 +78,15 @@ export const detectEmailProvider = (email: string): 'gmail' | 'mailcom' | 'other
   const domain = email.split('@')[1]?.toLowerCase() || '';
   
   if (domain.includes('gmail')) return 'gmail';
-  if (domain.includes('mail.com')) return 'mailcom';
+  
+  // Mail.com offers multiple domains (mail.com, post.com, email.com, etc.)
+  if (domain.includes('mail.com') || 
+      domain.includes('post.com') || 
+      domain.includes('email.com') ||
+      domain.includes('usa.com') ||
+      domain.includes('myself.com')) {
+    return 'mailcom';
+  }
   
   return 'other';
 };
