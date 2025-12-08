@@ -5,7 +5,7 @@
 // Supabase Configuration
 export const SUPABASE_CONFIG = {
   url: import.meta.env.VITE_SUPABASE_URL || 'https://uqyqpwhkzlhqxcqajhkn.supabase.co',
-  anonKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
+  anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
 };
 
 // Database Table Names
@@ -93,4 +93,3 @@ export const getProviderWebUrl = (provider: 'gmail' | 'mailcom' | 'other', email
   
   return config.webUrl;
 };
-
