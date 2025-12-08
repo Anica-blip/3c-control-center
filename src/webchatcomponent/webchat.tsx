@@ -17,7 +17,6 @@ import {
 import { AURION_CONFIG, REFRESH_INTERVALS } from './config';
 import type {
   ChatMessage,
-  AIConfig,
   EmailAccount,
   NotificationCount,
   AurionWebchatProps,
@@ -423,14 +422,6 @@ function ChatManagerPublic({ isDarkMode }: ChatManagerPublicProps) {
   const [notificationCounts, setNotificationCounts] = React.useState<NotificationCount[]>([]);
   const [notificationsLoading, setNotificationsLoading] = React.useState(false);
   const [notificationsError, setNotificationsError] = React.useState<string | null>(null);
-  
-  // AI Configuration state
-  const [aiConfig, setAiConfig] = React.useState<AIConfig>({
-    primaryAI: 'Jan AI',
-    backupAI: 'OpenAI GPT-4',
-    claudeEnabled: true,
-    apiEndpoint: AURION_CONFIG.defaultEndpoint
-  });
 
   // Load email accounts on mount
   React.useEffect(() => {
@@ -623,12 +614,6 @@ function ChatManagerPublic({ isDarkMode }: ChatManagerPublicProps) {
           💬 Live Chat
         </button>
         <button
-          onClick={() => setActiveTab('ai-config')}
-          style={tabStyle(activeTab === 'ai-config')}
-        >
-          🤖 AI Configuration
-        </button>
-        <button
           onClick={() => setActiveTab('email-config')}
           style={tabStyle(activeTab === 'email-config')}
         >
@@ -654,150 +639,6 @@ function ChatManagerPublic({ isDarkMode }: ChatManagerPublicProps) {
             Monitor live chat conversations with Aurion AI Assistant
           </p>
           <AurionWebchat isDarkMode={isDarkMode} />
-        </div>
-      )}
-
-      {/* AI Configuration Tab */}
-      {activeTab === 'ai-config' && (
-        <div style={contentCardStyle}>
-          <h3 style={sectionTitleStyle}>🤖 AI Configuration</h3>
-          
-          <div style={{ display: 'grid', gap: '20px' }}>
-            <div>
-              <label style={{ 
-                display: 'block',
-                marginBottom: '8px',
-                color: isDarkMode ? '#e2e8f0' : '#334155',
-                fontSize: '14px',
-                fontWeight: '600'
-              }}>
-                Primary AI Model
-              </label>
-              <select
-                value={aiConfig.primaryAI}
-                onChange={(e) => setAiConfig({...aiConfig, primaryAI: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-                  color: isDarkMode ? '#f8fafc' : '#0f172a',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#cbd5e1'}`,
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  cursor: 'pointer'
-                }}
-              >
-                <option>Jan AI</option>
-                <option>OpenAI GPT-4</option>
-                <option>Claude Sonnet</option>
-                <option>Anthropic Claude</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ 
-                display: 'block',
-                marginBottom: '8px',
-                color: isDarkMode ? '#e2e8f0' : '#334155',
-                fontSize: '14px',
-                fontWeight: '600'
-              }}>
-                Backup AI Model
-              </label>
-              <select
-                value={aiConfig.backupAI}
-                onChange={(e) => setAiConfig({...aiConfig, backupAI: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-                  color: isDarkMode ? '#f8fafc' : '#0f172a',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#cbd5e1'}`,
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  cursor: 'pointer'
-                }}
-              >
-                <option>OpenAI GPT-4</option>
-                <option>Jan AI</option>
-                <option>Claude Sonnet</option>
-                <option>Anthropic Claude</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ 
-                display: 'block',
-                marginBottom: '8px',
-                color: isDarkMode ? '#e2e8f0' : '#334155',
-                fontSize: '14px',
-                fontWeight: '600'
-              }}>
-                API Endpoint
-              </label>
-              <input
-                type="text"
-                value={aiConfig.apiEndpoint}
-                onChange={(e) => setAiConfig({...aiConfig, apiEndpoint: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-                  color: isDarkMode ? '#f8fafc' : '#0f172a',
-                  border: `1px solid ${isDarkMode ? '#334155' : '#cbd5e1'}`,
-                  borderRadius: '8px',
-                  fontSize: '14px'
-                }}
-                placeholder="http://localhost:8080"
-              />
-            </div>
-
-            <div style={{ 
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '16px',
-              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-              borderRadius: '8px',
-              border: `1px solid ${isDarkMode ? '#334155' : '#cbd5e1'}`
-            }}>
-              <input
-                type="checkbox"
-                checked={aiConfig.claudeEnabled}
-                onChange={(e) => setAiConfig({...aiConfig, claudeEnabled: e.target.checked})}
-                style={{ 
-                  width: '18px',
-                  height: '18px',
-                  cursor: 'pointer'
-                }}
-              />
-              <label style={{ 
-                color: isDarkMode ? '#e2e8f0' : '#334155',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}>
-                Enable Claude Integration
-              </label>
-            </div>
-
-            <button
-              style={{
-                padding: '12px',
-                backgroundColor: '#3b82f6',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                marginTop: '8px'
-              }}
-              onClick={() => alert('AI configuration saved!')}
-            >
-              💾 Save Configuration
-            </button>
-          </div>
         </div>
       )}
 
