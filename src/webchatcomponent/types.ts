@@ -66,5 +66,6 @@ export interface AurionWebchatProps {
 }
 
 export interface ChatManagerPublicProps {
-  // Reserved for future props if needed
+  isDarkMode: boolean;
 }
+
