@@ -61,7 +61,14 @@ export const openEmailInBrowser = (
 ): void => {
   const url = getProviderWebUrl(provider, email);
   if (url) {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    // Use window.location as fallback if popup is blocked
+    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      // Popup blocked, try direct navigation
+      window.location.href = url;
+    }
+  } else {
+    console.error('No URL configured for provider:', provider);
   }
 };
 
