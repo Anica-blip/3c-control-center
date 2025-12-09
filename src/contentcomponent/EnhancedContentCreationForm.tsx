@@ -3,18 +3,25 @@ import { Upload, X, Image, Video, FileText, Settings, ExternalLink, Plus, User, 
 import { ContentPost, MediaFile, SocialPlatform, CharacterProfile } from './types';
 import { SavedPostsList } from './SavedPostsList';
 import { supabaseAPI } from './supabaseAPI';
+
+// Screenshot and URL preview functions (NEW location)
+import { fetchUrlPreview } from './screenshot-api';
+
+// Code mapping and utility functions
 import { 
-  fetchUrlPreview, 
   getThemeCode, 
   getAudienceCode, 
   getMediaCode, 
   getTemplateTypeCode, 
   getCharacterCode, 
-  getVoiceStyleCode 
+  getVoiceStyleCode,
+  generateTextPreviewImage
 } from './utils';
-// ADD NEW IMPORT FOR TEMPLATE LIBRARY INTEGRATION
+
+// Template library integration
 import { PendingLibraryTemplate, templateEventEmitter } from './TemplateLibrary';
-// ADD i18n IMPORT
+
+// i18n
 import { useI18n } from '../i18n';
 
 // Theme Context (assuming this comes from your App.tsx)
