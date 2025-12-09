@@ -78,49 +78,83 @@ async function getImapUnreadCount(
   username: string,
   password: string
 ): Promise<number> {
-  try {
-    const conn = await Deno.connectTls({ hostname: host, port: port });
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
-
-    const sendCommand = async (command: string): Promise<string> => {
-      await conn.write(encoder.encode(command + '\r\n'));
-      const buffer = new Uint8Array(4096);
-      let response = '';
-      let attempts = 0;
-      const maxAttempts = 10;
+  // Wrap in timeout to prevent hanging
+  const timeoutPromise = new Promise<number>((_, reject) => {
+    setTimeout(() => reject(new Error('IMAP connection timeout (30s)')), 30000);
+  });
+  
+  const imapPromise = async (): Promise<number> => {
+    let conn: Deno.TlsConn | null = null;
+    try {
+      console.log(`  Connecting to ${host}:${port}...`);
+      conn = await Deno.connectTls({ hostname: host, port: port });
+      console.log(`  Connected! Authenticating...`);
       
-      while (attempts < maxAttempts) {
-        const n = await conn.read(buffer);
-        if (n === null) break;
-        response += decoder.decode(buffer.subarray(0, n));
-        if (response.includes('a001 OK') || response.includes('a002 OK') || 
-            response.includes('a003 OK') || response.includes('a004 OK')) {
-          break;
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+
+      const sendCommand = async (command: string): Promise<string> => {
+        await conn!.write(encoder.encode(command + '\r\n'));
+        const buffer = new Uint8Array(4096);
+        let response = '';
+        let attempts = 0;
+        const maxAttempts = 5; // Reduced from 10
+        
+        while (attempts < maxAttempts) {
+          const n = await conn!.read(buffer);
+          if (n === null) break;
+          response += decoder.decode(buffer.subarray(0, n));
+          if (response.includes('a001 OK') || response.includes('a002 OK') || 
+              response.includes('a003 OK') || response.includes('a004 OK')) {
+            break;
+          }
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
         }
-        attempts++;
+        return response;
+      };
+
+      await sendCommand('');
+      console.log(`  Logging in...`);
+      const loginResponse = await sendCommand(`a001 LOGIN "${username}" "${password}"`);
+      if (!loginResponse.includes('a001 OK')) {
+        throw new Error('IMAP login failed');
       }
-      return response;
-    };
 
-    await sendCommand('');
-    const loginResponse = await sendCommand(`a001 LOGIN "${username}" "${password}"`);
-    if (!loginResponse.includes('a001 OK')) throw new Error('IMAP login failed');
+      console.log(`  Selecting INBOX...`);
+      const selectResponse = await sendCommand('a002 SELECT INBOX');
+      if (!selectResponse.includes('a002 OK')) {
+        throw new Error('IMAP SELECT INBOX failed');
+      }
 
-    const selectResponse = await sendCommand('a002 SELECT INBOX');
-    if (!selectResponse.includes('a002 OK')) throw new Error('IMAP SELECT INBOX failed');
+      console.log(`  Searching for unread...`);
+      const searchResponse = await sendCommand('a003 SEARCH UNSEEN');
+      await sendCommand('a004 LOGOUT');
+      
+      if (conn) {
+        conn.close();
+        conn = null;
+      }
 
-    const searchResponse = await sendCommand('a003 SEARCH UNSEEN');
-    await sendCommand('a004 LOGOUT');
-    conn.close();
+      const searchMatch = searchResponse.match(/\* SEARCH(.*?)(?:\r|\n|a003)/s);
+      if (!searchMatch) return 0;
 
-    const searchMatch = searchResponse.match(/\* SEARCH(.*?)(?:\r|\n|a003)/s);
-    if (!searchMatch) return 0;
-
-    const messageIds = searchMatch[1].trim().split(/\s+/).filter(id => id && /^\d+$/.test(id));
-    return messageIds.length;
+      const messageIds = searchMatch[1].trim().split(/\s+/).filter(id => id && /^\d+$/.test(id));
+      console.log(`  Found ${messageIds.length} unread messages`);
+      return messageIds.length;
+      
+    } catch (error) {
+      if (conn) {
+        try { conn.close(); } catch {}
+      }
+      throw error;
+    }
+  };
+  
+  try {
+    return await Promise.race([imapPromise(), timeoutPromise]);
   } catch (error) {
-    console.error('IMAP connection error:', error);
+    console.error('  IMAP error:', error);
     throw error;
   }
 }
@@ -188,14 +222,16 @@ Deno.serve(async (req: Request) => {
 
     console.log('🔍 Starting email count check...');
 
-    const { data: emailAccounts, error: fetchError } = await supabase
+    const emailAccountsResponse = await supabase
       .from(DB_TABLES.emailAccounts)
       .select('*')
       .order('created_at', { ascending: true });
 
-    if (fetchError) {
-      throw new Error(`Failed to fetch email accounts: ${fetchError.message}`);
+    if (emailAccountsResponse.error) {
+      throw new Error(`Failed to fetch email accounts: ${emailAccountsResponse.error.message}`);
     }
+
+    const emailAccounts = emailAccountsResponse.data;
 
     if (!emailAccounts || emailAccounts.length === 0) {
       console.log('📭 No email accounts configured');
@@ -241,7 +277,7 @@ Deno.serve(async (req: Request) => {
       if (result.success) {
         console.log(`✅ ${account.email}: ${result.unreadCount} unread`);
 
-        const { error: updateError } = await supabase
+        const updateResponse = await supabase
           .from(DB_TABLES.notificationCounts)
           .update({
             unread_count: result.unreadCount,
@@ -251,8 +287,8 @@ Deno.serve(async (req: Request) => {
           .eq('source_id', account.id)
           .eq('source_type', 'email');
 
-        if (updateError) {
-          console.error(`⚠️ Failed to update count for ${account.email}:`, updateError.message);
+        if (updateResponse.error) {
+          console.error(`⚠️ Failed to update count for ${account.email}:`, updateResponse.error.message);
         }
       } else {
         console.error(`❌ ${account.email}: ${result.error}`);
@@ -292,4 +328,3 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
-
