@@ -1,9 +1,16 @@
 name: Check Email Counts
 
-# Runs every 10 minutes
+# Runs 3 times per day: 12am, 8am, 4pm UTC (much less resource usage)
+# Requires: SUPABASE_SERVICE_KEY secret in GitHub
+# Email passwords stored as: EMAIL_PASSWORD_[EMAIL_FORMAT]
+# Format: Replace - with _DASH_, @ with _AT_, . with _DOT_
+# Example: 3c-helpline@post.com → EMAIL_PASSWORD_3C_DASH_HELPLINE_AT_POST_DOT_COM
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '0 0,8,16 * * *'  # At midnight, 8am, and 4pm UTC
+  
+  # Allow manual triggering for testing
+  workflow_dispatch:
   
   # Allow manual triggering for testing
   workflow_dispatch:
