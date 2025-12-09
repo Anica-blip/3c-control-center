@@ -59,16 +59,15 @@ export const openEmailInBrowser = (
   provider: 'gmail' | 'mailcom' | 'other',
   email?: string
 ): void => {
+  console.log('🔗 Opening email provider:', provider, email);
+  
   const url = getProviderWebUrl(provider, email);
+  console.log('🔗 URL to open:', url);
+  
   if (url) {
-    // Use window.location as fallback if popup is blocked
-    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
-    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-      // Popup blocked, try direct navigation
-      window.location.href = url;
-    }
+    window.open(url, '_blank', 'noopener,noreferrer');
   } else {
-    console.error('No URL configured for provider:', provider);
+    console.error('❌ No URL configured for provider:', provider);
   }
 };
 
@@ -302,3 +301,4 @@ export const throttle = <T extends (...args: any[]) => any>(
     }
   };
 };
+
