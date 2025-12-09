@@ -11,9 +11,6 @@ on:
   
   # Allow manual triggering for testing
   workflow_dispatch:
-  
-  # Allow manual triggering for testing
-  workflow_dispatch:
 
 jobs:
   check-emails:
