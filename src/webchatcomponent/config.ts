@@ -30,10 +30,10 @@ export const EMAIL_PROVIDERS = {
     imapHost: 'imap.mail.com',
     imapPort: 993,
     imapSecure: true,
-    webUrl: 'https://www.mail.com/',
+    webUrl: 'https://mail.com/int/',
     icon: '📬',
     // Note: Mail.com offers multiple domains (@mail.com, @post.com, @email.com, @usa.com, etc.)
-    // All use the same IMAP server
+    // All use the same IMAP server and login page
   },
   other: {
     name: 'Other',
@@ -103,4 +103,5 @@ export const getProviderWebUrl = (provider: 'gmail' | 'mailcom' | 'other', email
   
   return config.webUrl;
 };
+
 
