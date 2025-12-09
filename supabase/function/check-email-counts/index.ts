@@ -116,18 +116,21 @@ async function getImapUnreadCount(
         const buffer = new Uint8Array(4096);
         let response = '';
         let attempts = 0;
-        const maxAttempts = 5;
+        const maxAttempts = 20; // Increased from 5
         
         while (attempts < maxAttempts) {
           const n = await conn!.read(buffer);
           if (n === null) break;
           response += decoder.decode(buffer.subarray(0, n));
+          
+          // Check if we have a complete response
           if (response.includes('a001 OK') || response.includes('a002 OK') || 
-              response.includes('a003 OK') || response.includes('a004 OK')) {
+              response.includes('a003 OK') || response.includes('a004 OK') ||
+              response.includes('a001 NO') || response.includes('a001 BAD')) {
             break;
           }
           attempts++;
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 200)); // Increased from 100ms
         }
         return response;
       };
@@ -137,9 +140,13 @@ async function getImapUnreadCount(
       
       console.log(`  Logging in...`);
       const loginResponse = await sendCommand(`a001 LOGIN "${username}" "${password}"`);
+      console.log(`  Login response received (${loginResponse.length} chars)`);
+      
       if (!loginResponse.includes('a001 OK')) {
-        throw new Error('IMAP login failed');
+        console.error(`  Login failed. Response snippet: ${loginResponse.substring(0, 200)}`);
+        throw new Error('IMAP login failed - check credentials');
       }
+      console.log(`  Login successful!`);
 
       console.log(`  Selecting INBOX...`);
       const selectResponse = await sendCommand('a002 SELECT INBOX');
@@ -284,6 +291,8 @@ Deno.serve(async (req: Request) => {
         });
         continue;
       }
+      
+      console.log(`  ✅ Password found for ${account.email} (length: ${password.length} chars)`);
 
       const credentials: EmailCredentials = {
         email: account.email,
