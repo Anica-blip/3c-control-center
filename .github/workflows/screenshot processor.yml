@@ -1,0 +1,171 @@
+name: Screenshot Processor (External URLs)
+
+# Triggered by Cloudflare Worker for external webpage screenshots
+# Uses Puppeteer to capture screenshots and upload to R2
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL to screenshot'
+        required: true
+        type: string
+      width:
+        description: 'Screenshot width'
+        required: false
+        default: '1200'
+        type: string
+      height:
+        description: 'Screenshot height'
+        required: false
+        default: '630'
+        type: string
+
+jobs:
+  capture-screenshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install Puppeteer
+        run: |
+          npm install puppeteer @supabase/supabase-js aws-sdk
+      
+      - name: Capture Screenshot
+        env:
+          TARGET_URL: ${{ github.event.inputs.url }}
+          WIDTH: ${{ github.event.inputs.width }}
+          HEIGHT: ${{ github.event.inputs.height }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          node << 'EOF'
+          const puppeteer = require('puppeteer');
+          const { createClient } = require('@supabase/supabase-js');
+          const AWS = require('aws-sdk');
+          
+          async function main() {
+            const url = process.env.TARGET_URL;
+            const width = parseInt(process.env.WIDTH) || 1200;
+            const height = parseInt(process.env.HEIGHT) || 630;
+            
+            console.log(`📸 Capturing screenshot: ${url} (${width}x${height})`);
+            
+            try {
+              // Launch browser
+              const browser = await puppeteer.launch({
+                headless: 'new',
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+              });
+              
+              const page = await browser.newPage();
+              await page.setViewport({ width, height });
+              
+              // Navigate and wait
+              await page.goto(url, {
+                waitUntil: 'networkidle2',
+                timeout: 30000
+              });
+              
+              // Wait for content to render
+              await page.waitForTimeout(2000);
+              
+              // Take screenshot
+              const screenshot = await page.screenshot({
+                type: 'png',
+                fullPage: false
+              });
+              
+              await browser.close();
+              
+              console.log('✅ Screenshot captured');
+              
+              // Upload to R2
+              const s3 = new AWS.S3({
+                endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+                accessKeyId: process.env.R2_ACCESS_KEY_ID,
+                secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+                signatureVersion: 'v4',
+                region: 'auto'
+              });
+              
+              const urlHash = url.split('').reduce((a,b) => {
+                a = ((a << 5) - a) + b.charCodeAt(0);
+                return a & a;
+              }, 0);
+              
+              const filename = `screenshots/external/${Math.abs(urlHash).toString(36)}-${Date.now()}.png`;
+              
+              await s3.upload({
+                Bucket: process.env.R2_BUCKET_NAME,
+                Key: filename,
+                Body: screenshot,
+                ContentType: 'image/png'
+              }).promise();
+              
+              const publicUrl = `https://files.${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${process.env.R2_BUCKET_NAME}/${filename}`;
+              
+              console.log(`✅ Uploaded to R2: ${publicUrl}`);
+              
+              // Update Supabase
+              const supabase = createClient(
+                process.env.SUPABASE_URL,
+                process.env.SUPABASE_SERVICE_KEY
+              );
+              
+              await supabase
+                .from('screenshots')
+                .upsert({
+                  url: url,
+                  screenshot_url: publicUrl,
+                  screenshot_key: filename,
+                  generation_status: 'completed',
+                  generation_method: 'puppeteer',
+                  width: width,
+                  height: height
+                }, { onConflict: 'url' });
+              
+              console.log('✅ Supabase updated');
+              console.log(`🎉 Screenshot complete: ${publicUrl}`);
+              
+            } catch (error) {
+              console.error('❌ Screenshot failed:', error.message);
+              
+              // Mark as failed in Supabase
+              const supabase = createClient(
+                process.env.SUPABASE_URL,
+                process.env.SUPABASE_SERVICE_KEY
+              );
+              
+              await supabase
+                .from('screenshots')
+                .upsert({
+                  url: url,
+                  generation_status: 'failed',
+                  generation_error: error.message,
+                  generation_attempts: 1
+                }, { onConflict: 'url' });
+              
+              process.exit(1);
+            }
+          }
+          
+          main();
+          EOF
+      
+      - name: Log completion
+        if: always()
+        run: |
+          echo "Screenshot processing completed at $(date)"
