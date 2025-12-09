@@ -1,49 +1,184 @@
 // =============================================================================
-// EDGE FUNCTION: CHECK EMAIL COUNTS
-// =============================================================================
-// This function checks unread email counts for all configured email accounts
-// and updates the webchat_notification_counts table.
-//
-// Triggered by: GitHub Actions (every 10 minutes)
+// EDGE FUNCTION: CHECK EMAIL COUNTS (SINGLE FILE VERSION)
 // =============================================================================
 
-import { createClient } from '@supabase/supabase-js';
-import { checkEmailUnread, type EmailCredentials, type EmailCheckResult } from './emailProviders.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
-// Supabase client setup
+// =============================================================================
+// EMAIL PROVIDERS - IMAP LOGIC
+// =============================================================================
+
+interface EmailProviderConfig {
+  imapHost: string;
+  imapPort: number;
+  imapSecure: boolean;
+}
+
+interface EmailCredentials {
+  email: string;
+  password: string;
+  provider: 'gmail' | 'mailcom' | 'other';
+}
+
+interface EmailCheckResult {
+  success: boolean;
+  email: string;
+  unreadCount: number;
+  error?: string;
+}
+
+const EMAIL_PROVIDERS: Record<string, EmailProviderConfig> = {
+  gmail: {
+    imapHost: 'imap.gmail.com',
+    imapPort: 993,
+    imapSecure: true,
+  },
+  mailcom: {
+    imapHost: 'imap.mail.com',
+    imapPort: 993,
+    imapSecure: true,
+  },
+};
+
+async function checkGmailUnread(email: string, password: string): Promise<EmailCheckResult> {
+  try {
+    const config = EMAIL_PROVIDERS.gmail;
+    const unreadCount = await getImapUnreadCount(config.imapHost, config.imapPort, email, password);
+    return { success: true, email, unreadCount };
+  } catch (error) {
+    console.error(`Error checking Gmail (${email}):`, error);
+    return {
+      success: false,
+      email,
+      unreadCount: 0,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+async function checkMailcomUnread(email: string, password: string): Promise<EmailCheckResult> {
+  try {
+    const config = EMAIL_PROVIDERS.mailcom;
+    const unreadCount = await getImapUnreadCount(config.imapHost, config.imapPort, email, password);
+    return { success: true, email, unreadCount };
+  } catch (error) {
+    console.error(`Error checking Mail.com (${email}):`, error);
+    return {
+      success: false,
+      email,
+      unreadCount: 0,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+async function getImapUnreadCount(
+  host: string,
+  port: number,
+  username: string,
+  password: string
+): Promise<number> {
+  try {
+    const conn = await Deno.connectTls({ hostname: host, port: port });
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+
+    const sendCommand = async (command: string): Promise<string> => {
+      await conn.write(encoder.encode(command + '\r\n'));
+      const buffer = new Uint8Array(4096);
+      let response = '';
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      while (attempts < maxAttempts) {
+        const n = await conn.read(buffer);
+        if (n === null) break;
+        response += decoder.decode(buffer.subarray(0, n));
+        if (response.includes('a001 OK') || response.includes('a002 OK') || 
+            response.includes('a003 OK') || response.includes('a004 OK')) {
+          break;
+        }
+        attempts++;
+      }
+      return response;
+    };
+
+    await sendCommand('');
+    const loginResponse = await sendCommand(`a001 LOGIN "${username}" "${password}"`);
+    if (!loginResponse.includes('a001 OK')) throw new Error('IMAP login failed');
+
+    const selectResponse = await sendCommand('a002 SELECT INBOX');
+    if (!selectResponse.includes('a002 OK')) throw new Error('IMAP SELECT INBOX failed');
+
+    const searchResponse = await sendCommand('a003 SEARCH UNSEEN');
+    await sendCommand('a004 LOGOUT');
+    conn.close();
+
+    const searchMatch = searchResponse.match(/\* SEARCH(.*?)(?:\r|\n|a003)/s);
+    if (!searchMatch) return 0;
+
+    const messageIds = searchMatch[1].trim().split(/\s+/).filter(id => id && /^\d+$/.test(id));
+    return messageIds.length;
+  } catch (error) {
+    console.error('IMAP connection error:', error);
+    throw error;
+  }
+}
+
+async function checkEmailUnread(credentials: EmailCredentials): Promise<EmailCheckResult> {
+  const email = credentials.email.toLowerCase();
+  const domain = email.split('@')[1] || '';
+  
+  const isMailcomDomain = domain.includes('mail.com') || domain.includes('post.com') || 
+                          domain.includes('email.com') || domain.includes('usa.com') ||
+                          domain.includes('myself.com');
+  
+  if (credentials.provider === 'gmail') {
+    return checkGmailUnread(credentials.email, credentials.password);
+  } else if (credentials.provider === 'mailcom' || isMailcomDomain) {
+    return checkMailcomUnread(credentials.email, credentials.password);
+  } else {
+    return {
+      success: false,
+      email: credentials.email,
+      unreadCount: 0,
+      error: `Unsupported provider: ${credentials.provider}`,
+    };
+  }
+}
+
+// =============================================================================
+// MAIN EDGE FUNCTION
+// =============================================================================
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Database table names
-const TABLES = {
+const DB_TABLES = {
   emailAccounts: 'webchat_email_accounts',
   notificationCounts: 'webchat_notification_counts',
 };
 
-/**
- * Get email credentials from environment variables
- * Credentials are stored as: EMAIL_PASSWORD_[INDEX] or EMAIL_PASSWORD_[EMAIL_HASH]
- */
-function getEmailPassword(email: string, index: number): string | null {
-  // Try with index first
-  const passwordByIndex = Deno.env.get(`EMAIL_PASSWORD_${index}`);
-  if (passwordByIndex) return passwordByIndex;
+function getEmailPassword(email: string): string | null {
+  const emailKey = email
+    .replace(/-/g, '_DASH_')
+    .replace(/@/g, '_AT_')
+    .replace(/\./g, '_DOT_')
+    .toUpperCase();
+  const secretName = `EMAIL_PASSWORD_${emailKey}`;
+  const password = Deno.env.get(secretName);
   
-  // Try with email hash (simplified - replace @ and . with _)
-  const emailKey = email.replace(/@/g, '_AT_').replace(/\./g, '_DOT_').toUpperCase();
-  const passwordByEmail = Deno.env.get(`EMAIL_PASSWORD_${emailKey}`);
-  if (passwordByEmail) return passwordByEmail;
+  if (!password) {
+    console.log(`⚠️ No password found for ${email}`);
+    console.log(`   Expected secret name: ${secretName}`);
+  }
   
-  return null;
+  return password;
 }
 
-/**
- * Main handler function
- */
 Deno.serve(async (req: Request) => {
   try {
-    // Only allow POST requests
     if (req.method !== 'POST') {
       return new Response(
         JSON.stringify({ error: 'Method not allowed' }),
@@ -53,9 +188,8 @@ Deno.serve(async (req: Request) => {
 
     console.log('🔍 Starting email count check...');
 
-    // 1. Fetch all email accounts from database
     const { data: emailAccounts, error: fetchError } = await supabase
-      .from(TABLES.emailAccounts)
+      .from(DB_TABLES.emailAccounts)
       .select('*')
       .order('created_at', { ascending: true });
 
@@ -77,18 +211,15 @@ Deno.serve(async (req: Request) => {
 
     console.log(`📧 Found ${emailAccounts.length} email account(s) to check`);
 
-    // 2. Check each email account
     const results: EmailCheckResult[] = [];
     
-    for (let i = 0; i < emailAccounts.length; i++) {
-      const account = emailAccounts[i];
-      console.log(`\n📨 Checking ${i + 1}/${emailAccounts.length}: ${account.email}`);
+    for (const account of emailAccounts) {
+      console.log(`\n📨 Checking: ${account.email}`);
 
-      // Get password from environment
-      const password = getEmailPassword(account.email, i);
+      const password = getEmailPassword(account.email);
       
       if (!password) {
-        console.error(`❌ No password found for ${account.email}`);
+        console.error(`❌ No password configured for ${account.email}`);
         results.push({
           success: false,
           email: account.email,
@@ -98,7 +229,6 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      // Check email via IMAP
       const credentials: EmailCredentials = {
         email: account.email,
         password: password,
@@ -111,9 +241,8 @@ Deno.serve(async (req: Request) => {
       if (result.success) {
         console.log(`✅ ${account.email}: ${result.unreadCount} unread`);
 
-        // 3. Update notification count in database
         const { error: updateError } = await supabase
-          .from(TABLES.notificationCounts)
+          .from(DB_TABLES.notificationCounts)
           .update({
             unread_count: result.unreadCount,
             last_checked: new Date().toISOString(),
@@ -130,7 +259,6 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // 4. Return results
     const successCount = results.filter(r => r.success).length;
     const totalUnread = results.reduce((sum, r) => sum + r.unreadCount, 0);
 
@@ -149,25 +277,19 @@ Deno.serve(async (req: Request) => {
         },
         results: results,
       }),
-      { 
-        status: 200, 
-        headers: { 'Content-Type': 'application/json' } 
-      }
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('❌ Error in Edge Function:', error);
-    
     return new Response(
       JSON.stringify({
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString(),
       }),
-      { 
-        status: 500, 
-        headers: { 'Content-Type': 'application/json' } 
-      }
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 });
+
