@@ -30,10 +30,10 @@ export const EMAIL_PROVIDERS = {
     imapHost: 'imap.mail.com',
     imapPort: 993,
     imapSecure: true,
-    webUrl: 'https://mail.com/int/',
+    webUrl: 'https://navigator-lxa.mail.com/mail?sid=05638da18073629fbf20b58ef01a1673488c9825065a8754ac6a73b6e0b3c67380f37385a9d98c51867fa3e7730c988d',
     icon: '📬',
     // Note: Mail.com offers multiple domains (@mail.com, @post.com, @email.com, @usa.com, etc.)
-    // All use the same IMAP server and login page
+    // All use the same IMAP server. Navigator URL may remember login session.
   },
   other: {
     name: 'Other',
