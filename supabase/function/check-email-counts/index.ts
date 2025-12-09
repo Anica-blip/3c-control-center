@@ -93,12 +93,30 @@ async function getImapUnreadCount(
       const encoder = new TextEncoder();
       const decoder = new TextDecoder();
 
+      // Read initial server greeting (no command, just read)
+      const readGreeting = async (): Promise<string> => {
+        const buffer = new Uint8Array(4096);
+        let response = '';
+        let attempts = 0;
+        
+        while (attempts < 3) {
+          const n = await conn!.read(buffer);
+          if (n === null) break;
+          response += decoder.decode(buffer.subarray(0, n));
+          // Greetings usually end with "ready" or newline
+          if (response.includes('\n')) break;
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        return response;
+      };
+
       const sendCommand = async (command: string): Promise<string> => {
         await conn!.write(encoder.encode(command + '\r\n'));
         const buffer = new Uint8Array(4096);
         let response = '';
         let attempts = 0;
-        const maxAttempts = 5; // Reduced from 10
+        const maxAttempts = 5;
         
         while (attempts < maxAttempts) {
           const n = await conn!.read(buffer);
@@ -109,12 +127,14 @@ async function getImapUnreadCount(
             break;
           }
           attempts++;
-          await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
         return response;
       };
 
-      await sendCommand('');
+      const greeting = await readGreeting();
+      console.log(`  Server greeting received`);
+      
       console.log(`  Logging in...`);
       const loginResponse = await sendCommand(`a001 LOGIN "${username}" "${password}"`);
       if (!loginResponse.includes('a001 OK')) {
