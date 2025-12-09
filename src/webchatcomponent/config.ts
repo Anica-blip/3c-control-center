@@ -47,8 +47,8 @@ export const EMAIL_PROVIDERS = {
 
 // Auto-refresh intervals (in milliseconds)
 export const REFRESH_INTERVALS = {
-  notificationCounts: 30000, // 30 seconds
-  emailCheck: 600000, // 10 minutes (Edge Function trigger frequency)
+  notificationCounts: 30000, // 30 seconds (UI refresh)
+  emailCheck: 28800000, // 8 hours (Edge Function trigger frequency - 3x daily)
 };
 
 // Aurion Chat Configuration
@@ -103,3 +103,4 @@ export const getProviderWebUrl = (provider: 'gmail' | 'mailcom' | 'other', email
   
   return config.webUrl;
 };
+
