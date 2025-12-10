@@ -4,19 +4,18 @@ import { ContentPost, MediaFile, SocialPlatform, CharacterProfile } from './type
 import { SavedPostsList } from './SavedPostsList';
 import { supabaseAPI } from './supabaseAPI';
 
-// Screenshot and URL preview functions (NEW location)
-import { fetchUrlPreview } from './screenshot-api';
+// Screenshot and URL preview (NEW file)
+import { fetchUrlPreview } from './screenshot-api.ts';
 
-// Code mapping and utility functions
+// Code mapping functions
 import { 
   getThemeCode, 
   getAudienceCode, 
   getMediaCode, 
   getTemplateTypeCode, 
   getCharacterCode, 
-  getVoiceStyleCode,
-  generateTextPreviewImage
-} from './utils';
+  getVoiceStyleCode 
+} from './utils.ts';
 
 // Template library integration
 import { PendingLibraryTemplate, templateEventEmitter } from './TemplateLibrary';
