@@ -5,7 +5,7 @@ import { SavedPostsList } from './SavedPostsList';
 import { supabaseAPI } from './supabaseAPI';
 
 // Screenshot and URL preview (NEW file)
-import { fetchUrlPreview } from './screenshot-api.ts';
+import { fetchUrlPreview } from './screenshotapi.ts';
 
 // Code mapping functions
 import { 
