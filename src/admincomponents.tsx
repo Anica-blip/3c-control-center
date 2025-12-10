@@ -939,7 +939,7 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                   {
                     name: 'Content Library',
                     desc: 'Access and manage your content library',
-                    url: 'https://3c-content-library.vercel.app/'
+                    url: 'https://3c-public-library.org'
                   },
                   {
                     name: 'Interactive Pdf',
