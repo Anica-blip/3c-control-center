@@ -1,7 +1,7 @@
 # Cloudflare Worker Configuration for 3C Control Center Screenshot Service
 # This file tells Cloudflare how to deploy your worker from GitHub
 
-name = "3c-screenshot-service"
+name = "3c-control-center"
 main = "screenshot-worker.js"
 compatibility_date = "2024-12-09"
 
@@ -29,4 +29,5 @@ command = ""
 # Secrets (R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ACCOUNT_ID,
 #          SUPABASE_URL, SUPABASE_SERVICE_KEY)
 # are set in Cloudflare Worker Settings → Variables
+
 
