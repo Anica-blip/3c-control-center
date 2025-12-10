@@ -4,7 +4,7 @@
 // Calls Cloudflare Worker for screenshot generation
 // Replaces old localhost-based screenshot service
 
-const SCREENSHOT_SERVICE_URL = 'https://3c-control-center.YOUR_SUBDOMAIN.workers.dev';
+const SCREENSHOT_SERVICE_URL = '3c-control-center.3c-innertherapy.workers.dev';
 // TODO: Replace YOUR_SUBDOMAIN with your actual Cloudflare subdomain
 // Find it in: Cloudflare Dashboard → Workers → 3c-control-center → Settings → Triggers
 
