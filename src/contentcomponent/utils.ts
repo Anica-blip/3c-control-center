@@ -2,7 +2,7 @@
 // CONTENT COMPONENT UTILITIES
 // =====================================================
 // Code mapping functions for content creation form
-// Screenshot functions are now in screenshot-api.ts
+// Screenshot functions are now in screenshotapi.ts
 
 // =====================================================
 // CODE MAPPING FUNCTIONS
