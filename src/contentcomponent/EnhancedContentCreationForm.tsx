@@ -4,7 +4,7 @@ import { ContentPost, MediaFile, SocialPlatform, CharacterProfile } from './type
 import { SavedPostsList } from './SavedPostsList';
 import { supabaseAPI } from './supabaseAPI';
 
-// Screenshot and URL preview (NEW file)
+// Screenshot and URL preview
 import { fetchUrlPreview } from './screenshotapi.ts';
 
 // Code mapping functions
