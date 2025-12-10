@@ -12,7 +12,7 @@ export default {
     if (url.pathname === '/health') {
       return new Response(JSON.stringify({ 
         status: 'ok', 
-        service: '3c-screenshot-service' 
+        service: '3c-control-center' 
       }), {
         headers: { 'Content-Type': 'application/json' }
       });
