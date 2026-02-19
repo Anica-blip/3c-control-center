@@ -126,7 +126,23 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
         console.error('Failed to load draft:', e);
       }
     }
+    
+    // Load last Content Prompt from memory
+    const savedPrompt = localStorage.getItem('janLastContentPrompt');
+    if (savedPrompt && !currentDocument.contentPrompt) {
+      setCurrentDocument(prev => ({
+        ...prev,
+        contentPrompt: savedPrompt
+      }));
+    }
   }, []);
+
+  // Save Content Prompt to memory when it changes
+  useEffect(() => {
+    if (currentDocument.contentPrompt) {
+      localStorage.setItem('janLastContentPrompt', currentDocument.contentPrompt);
+    }
+  }, [currentDocument.contentPrompt]);
 
   const handleSendMessage = () => {
     if (!chatInput.trim()) return;
@@ -153,8 +169,29 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
   const generateJanResponse = (userMsg: string, doc: JanDocument): string => {
     const lowerMsg = userMsg.toLowerCase();
     const persona = doc.character;
+    const contentPrompt = doc.contentPrompt;
     const casualGreetings = ['Hey Chef!', 'Yo Chef!', 'What\'s up Chef!', 'Hey there!', 'Alright Chef!'];
     const randomGreeting = casualGreetings[Math.floor(Math.random() * casualGreetings.length)];
+
+    // Detect iteration requests (expand/refine existing) vs recreation (start over)
+    const isIterationRequest = lowerMsg.includes('add more') || lowerMsg.includes('expand') || 
+                                lowerMsg.includes('can you add') || lowerMsg.includes('more context') ||
+                                lowerMsg.includes('refine') || lowerMsg.includes('improve') ||
+                                lowerMsg.includes('enhance') || lowerMsg.includes('develop this') ||
+                                lowerMsg.includes('elaborate');
+    
+    const isRecreationRequest = lowerMsg.includes('start over') || lowerMsg.includes('start fresh') ||
+                                 lowerMsg.includes('another way') || lowerMsg.includes('different approach') ||
+                                 lowerMsg.includes('rewrite') || lowerMsg.includes('from scratch');
+
+    // Handle iteration vs recreation
+    if (isIterationRequest) {
+      return `${randomGreeting} Got it! I'll expand on what we have without recreating everything. I'll add more depth to the existing content while keeping the structure we've built. What specific area should I focus on?`;
+    }
+
+    if (isRecreationRequest) {
+      return `${randomGreeting} Understood! I'll start fresh with a completely new approach. Let me know what direction you want to take this time, and I'll create something different from scratch.`;
+    }
 
     if (lowerMsg.includes('rise and shine') || lowerMsg.includes('wake up')) {
       const sampleCount = samples.length;
@@ -166,9 +203,15 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
       return `${randomGreeting} I've got your back! I can help with:\n\n📝 Content creation & writing\n🎯 Brainstorming ideas\n📚 Training course development\n✨ Deep research & analysis\n💡 Strategy planning\n\nWhat do you need? Let's dive in!`;
     }
 
+    // Read Content Prompt for style/structure instructions
+    if ((lowerMsg.includes('create') || lowerMsg.includes('write') || lowerMsg.includes('content')) && contentPrompt) {
+      const sampleContext = samples.length > 0 ? ` I can reference ${samples.length} saved sample${samples.length > 1 ? 's' : ''} to match your style.` : '';
+      return `Perfect! I've read your Content Prompt instructions:\n\n"${contentPrompt}"\n\n${persona ? `Writing as ${persona}` : 'Pick a persona'} with ${doc.brandVoice || 'the brand voice'} tone.${sampleContext}\n\nI'll follow these guidelines exactly. Ready when you are - share your content and I'll structure it accordingly!`;
+    }
+
     if (lowerMsg.includes('create') || lowerMsg.includes('write') || lowerMsg.includes('content')) {
       const sampleContext = samples.length > 0 ? ` I can reference ${samples.length} saved sample${samples.length > 1 ? 's' : ''} to match your style.` : '';
-      return `Let's create something awesome! ${persona ? `Writing as ${persona}` : 'Pick a persona from the sidebar'} - what's the topic and who's the audience?${sampleContext}`;
+      return `Let's create something awesome! ${persona ? `Writing as ${persona}` : 'Pick a persona from the sidebar'} - what's the topic and who's the audience?${sampleContext}\n\nTip: Add your style preferences in the Content Prompt field above (length, format, what to avoid, etc.) and I'll follow them exactly!`;
     }
 
     if (lowerMsg.includes('sample') || lowerMsg.includes('example') || lowerMsg.includes('last time')) {
@@ -189,7 +232,8 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     ];
 
     const contextNote = persona ? ` (Working with ${persona}'s voice btw)` : '';
-    return casualResponses[Math.floor(Math.random() * casualResponses.length)] + contextNote;
+    const promptReminder = !contentPrompt ? '\n\n💡 Tip: Fill in the Content Prompt field with your style preferences (length, format, what to avoid) and I\'ll follow them exactly!' : '';
+    return casualResponses[Math.floor(Math.random() * casualResponses.length)] + contextNote + promptReminder;
   };
 
   const handleNewDocument = () => {
