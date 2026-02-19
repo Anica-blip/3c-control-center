@@ -521,7 +521,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
                 value={currentDocument.contentPrompt}
                 onChange={(e) => setCurrentDocument({...currentDocument, contentPrompt: e.target.value})}
                 style={{
-                  width: '100%',
+                  width: '85%',
                   padding: '10px',
                   backgroundColor: theme.bg,
                   color: theme.text,
