@@ -1374,7 +1374,7 @@ function App() {
           )}
 
           {/* NEW: AI Chat Manager section */}
-          {activeSection === 'ai-chat-manager' && <AIChatComponent />}
+          {activeSection === 'ai-chat-manager' && <AIChatComponent isDarkMode={isDarkMode} />}
         </div>
       </div>
     </ThemeContext.Provider>
