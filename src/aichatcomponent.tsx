@@ -239,7 +239,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
         maxWidth: '1400px',
         margin: '0 auto'
       }}>
-        {/* Dashboard Header */}
+        {/* Dashboard Header with Jan's Profile Image */}
         <div style={{
           backgroundColor: isDarkMode ? '#1e293b' : 'white',
           boxShadow: isDarkMode 
@@ -251,22 +251,35 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
           border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h1 style={{
-                fontSize: '20px',
-                fontWeight: 'bold',
-                color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                margin: '0 0 8px 0'
-              }}>
-                🤖 Jan - AI Assistant
-              </h1>
-              <p style={{
-                color: isDarkMode ? '#94a3b8' : '#6b7280',
-                fontSize: '14px',
-                margin: '0'
-              }}>
-                Your Right-Hand for Content Creation & Strategy
-              </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <img 
+                src={janProfile} 
+                alt="Jan Profile" 
+                style={{
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
+                }}
+              />
+              <div>
+                <h1 style={{
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                  margin: '0 0 4px 0'
+                }}>
+                  Jan - AI Assistant
+                </h1>
+                <p style={{
+                  color: isDarkMode ? '#94a3b8' : '#6b7280',
+                  fontSize: '14px',
+                  margin: '0'
+                }}>
+                  Your Right-Hand for Content Creation & Strategy
+                </p>
+              </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{
@@ -287,18 +300,18 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
           </div>
         </div>
 
-        {/* Main Layout */}
-        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-          {/* Left Sidebar */}
-          <aside style={{
-            width: '280px',
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px'
-          }}>
-            {/* Character Profile - 3 in one row */}
-            <div style={{ marginBottom: '16px' }}>
+        {/* Control Panel - Dropdowns in Horizontal Rows */}
+        <div style={{
+          backgroundColor: theme.bgSecondary,
+          borderRadius: '8px',
+          padding: '20px',
+          marginBottom: '20px',
+          boxShadow: theme.shadow
+        }}>
+          {/* Row 1: Persona + Brand Voice + Theme/Label */}
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
+            {/* Persona */}
+            <div style={{ flex: '1 1 300px', minWidth: '250px' }}>
               <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
                 👤 Persona
               </h3>
@@ -309,13 +322,13 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
                     onClick={() => setCurrentDocument({...currentDocument, character: char})}
                     style={{
                       flex: 1,
-                      padding: '8px 4px',
-                      backgroundColor: currentDocument.character === char ? theme.primary : theme.bgSecondary,
+                      padding: '10px 8px',
+                      backgroundColor: currentDocument.character === char ? theme.primary : theme.bg,
                       color: currentDocument.character === char ? 'white' : theme.text,
-                      border: `1px solid ${currentDocument.character === char ? theme.primary : theme.border}`,
+                      border: `2px solid ${currentDocument.character === char ? theme.primary : theme.border}`,
                       borderRadius: '6px',
                       cursor: 'pointer',
-                      fontSize: '12px',
+                      fontSize: '13px',
                       fontWeight: '600',
                       transition: 'all 0.2s'
                     }}
@@ -327,7 +340,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
             </div>
 
             {/* Brand Voice */}
-            <div style={{ marginBottom: '16px' }}>
+            <div style={{ flex: '1 1 250px', minWidth: '200px' }}>
               <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
                 🎨 Brand Voice
               </h3>
@@ -336,12 +349,13 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
                 onChange={(e) => setCurrentDocument({...currentDocument, brandVoice: e.target.value})}
                 style={{
                   width: '100%',
-                  padding: '8px',
+                  padding: '10px',
                   backgroundColor: theme.bg,
                   color: theme.text,
-                  border: `1px solid ${theme.border}`,
+                  border: `2px solid ${theme.border}`,
                   borderRadius: '6px',
-                  fontSize: '13px'
+                  fontSize: '13px',
+                  fontWeight: '500'
                 }}
               >
                 <option value="">Select brand voice...</option>
@@ -353,7 +367,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
             </div>
 
             {/* Theme/Label */}
-            <div style={{ marginBottom: '16px' }}>
+            <div style={{ flex: '1 1 250px', minWidth: '200px' }}>
               <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
                 🏷️ Theme/Label
               </h3>
@@ -362,12 +376,13 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
                 onChange={(e) => setCurrentDocument({...currentDocument, themeLabel: e.target.value})}
                 style={{
                   width: '100%',
-                  padding: '8px',
+                  padding: '10px',
                   backgroundColor: theme.bg,
                   color: theme.text,
-                  border: `1px solid ${theme.border}`,
+                  border: `2px solid ${theme.border}`,
                   borderRadius: '6px',
-                  fontSize: '13px'
+                  fontSize: '13px',
+                  fontWeight: '500'
                 }}
               >
                 <option value="">Select theme...</option>
@@ -385,9 +400,12 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
                 <option value="Assessment">Assessment</option>
               </select>
             </div>
+          </div>
 
+          {/* Row 2: Target Audience + Template Type + Content Prompt */}
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
             {/* Target Audience */}
-            <div style={{ marginBottom: '16px' }}>
+            <div style={{ flex: '1 1 250px', minWidth: '200px' }}>
               <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
                 🎯 Target Audience
               </h3>
@@ -396,12 +414,13 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
                 onChange={(e) => setCurrentDocument({...currentDocument, targetAudience: e.target.value})}
                 style={{
                   width: '100%',
-                  padding: '8px',
+                  padding: '10px',
                   backgroundColor: theme.bg,
                   color: theme.text,
-                  border: `1px solid ${theme.border}`,
+                  border: `2px solid ${theme.border}`,
                   borderRadius: '6px',
-                  fontSize: '13px'
+                  fontSize: '13px',
+                  fontWeight: '500'
                 }}
               >
                 <option value="">Select audience...</option>
@@ -416,7 +435,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
             </div>
 
             {/* Template Type */}
-            <div style={{ marginBottom: '16px' }}>
+            <div style={{ flex: '1 1 250px', minWidth: '200px' }}>
               <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
                 📄 Template Type
               </h3>
@@ -425,12 +444,13 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
                 onChange={(e) => setCurrentDocument({...currentDocument, templateType: e.target.value})}
                 style={{
                   width: '100%',
-                  padding: '8px',
+                  padding: '10px',
                   backgroundColor: theme.bg,
                   color: theme.text,
-                  border: `1px solid ${theme.border}`,
+                  border: `2px solid ${theme.border}`,
                   borderRadius: '6px',
-                  fontSize: '13px'
+                  fontSize: '13px',
+                  fontWeight: '500'
                 }}
               >
                 <option value="">Select template...</option>
@@ -447,174 +467,128 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
             </div>
 
             {/* Content Prompt */}
-            <div style={{ marginBottom: '16px' }}>
+            <div style={{ flex: '2 1 400px', minWidth: '300px' }}>
               <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
                 💭 Content Prompt
               </h3>
-              <textarea
+              <input
+                type="text"
                 placeholder="Describe what you want to create..."
                 value={currentDocument.contentPrompt}
                 onChange={(e) => setCurrentDocument({...currentDocument, contentPrompt: e.target.value})}
-                rows={3}
                 style={{
                   width: '100%',
-                  padding: '8px',
+                  padding: '10px',
                   backgroundColor: theme.bg,
                   color: theme.text,
-                  border: `1px solid ${theme.border}`,
+                  border: `2px solid ${theme.border}`,
                   borderRadius: '6px',
                   fontSize: '13px',
-                  resize: 'vertical'
+                  fontWeight: '500'
                 }}
               />
             </div>
+          </div>
 
-            {/* Stats */}
-            <div style={{
-              padding: '12px',
-              backgroundColor: theme.bgTertiary,
-              borderRadius: '6px',
-              fontSize: '12px',
-              marginBottom: '16px'
-            }}>
-              <div style={{ marginBottom: '6px' }}>
-                <strong>Words:</strong> {currentDocument.wordCount}
-              </div>
-              <div>
-                <strong>Reading Time:</strong> {currentDocument.readingTime} min
-              </div>
-            </div>
-
+          {/* Row 3: Reference Samples + Stats + Actions */}
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
             {/* Reference Samples */}
-            <div style={{ marginBottom: '16px' }}>
+            <div style={{ flex: '2 1 400px', minWidth: '300px' }}>
               <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
                 📚 Reference Samples
               </h3>
-              <p style={{ fontSize: '11px', color: theme.textMuted, marginBottom: '8px' }}>
-                Save final published content as examples
-              </p>
-              
-              {/* Template Selector */}
-              <select
-                value={selectedTemplate}
-                onChange={(e) => setSelectedTemplate(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  backgroundColor: theme.bg,
-                  color: theme.text,
-                  border: `1px solid ${theme.border}`,
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  marginBottom: '8px'
-                }}
-              >
-                <option value="">Select template...</option>
-                {templates.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({t.timesUsed} saved)
-                  </option>
-                ))}
-              </select>
-
-              {/* Sample List */}
-              {selectedTemplate && (
-                <div style={{
-                  backgroundColor: theme.bgTertiary,
-                  borderRadius: '6px',
-                  padding: '8px',
-                  marginBottom: '8px',
-                  maxHeight: '150px',
-                  overflowY: 'auto'
-                }}>
-                  {samples.length > 0 ? (
-                    <div>
-                      <div style={{ fontSize: '11px', color: theme.textMuted, marginBottom: '6px' }}>
-                        {samples.length} sample{samples.length > 1 ? 's' : ''} saved
-                      </div>
-                      {samples.map(sample => (
-                        <div
-                          key={sample.id}
-                          onClick={() => {
-                            setCurrentSample(sample);
-                            setShowViewSample(true);
-                          }}
-                          style={{
-                            padding: '6px',
-                            backgroundColor: theme.bg,
-                            borderRadius: '4px',
-                            marginBottom: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.primary + '20'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.bg}
-                        >
-                          <div style={{ fontWeight: '600', marginBottom: '2px' }}>{sample.title}</div>
-                          <div style={{ fontSize: '10px', color: theme.textMuted }}>
-                            {new Date(sample.createdAt).toLocaleDateString()}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: '11px', color: theme.textMuted, textAlign: 'center', padding: '8px' }}>
-                      No samples yet. Add one after publishing!
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <button
-                onClick={() => {
-                  if (selectedTemplate) {
-                    setShowAddSample(true);
-                  }
-                }}
-                disabled={!selectedTemplate}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  backgroundColor: selectedTemplate ? theme.primary : theme.bgTertiary,
-                  color: selectedTemplate ? 'white' : theme.textMuted,
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  cursor: selectedTemplate ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.2s'
-                }}
-              >
-                + Add Sample
-              </button>
-            </div>
-          </aside>
-
-          {/* Main Editor */}
-          <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: '400px' }}>
-            {/* Toolbar */}
-            <div style={{
-              padding: '16px 24px',
-              backgroundColor: theme.bgSecondary,
-              borderBottom: `1px solid ${theme.border}`,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  onClick={handleNewDocument}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <select
+                  value={selectedTemplate}
+                  onChange={(e) => setSelectedTemplate(e.target.value)}
                   style={{
-                    padding: '10px 16px',
+                    flex: 1,
+                    padding: '10px',
                     backgroundColor: theme.bg,
                     color: theme.text,
                     border: `2px solid ${theme.border}`,
-                    borderRadius: '8px',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: '500'
+                  }}
+                >
+                  <option value="">Select template...</option>
+                  {templates.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.timesUsed} saved)
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => {
+                    if (selectedTemplate) {
+                      setShowAddSample(true);
+                    }
+                  }}
+                  disabled={!selectedTemplate}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: selectedTemplate ? theme.primary : theme.bgTertiary,
+                    color: selectedTemplate ? 'white' : theme.textMuted,
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: selectedTemplate ? 'pointer' : 'not-allowed',
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  + Add Sample
+                </button>
+              </div>
+              {selectedTemplate && samples.length > 0 && (
+                <div style={{ marginTop: '8px', fontSize: '12px', color: theme.textMuted }}>
+                  {samples.length} sample{samples.length > 1 ? 's' : ''} available - click to view
+                </div>
+              )}
+            </div>
+
+            {/* Stats */}
+            <div style={{ flex: '1 1 200px', minWidth: '150px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
+                📊 Stats
+              </h3>
+              <div style={{
+                padding: '10px',
+                backgroundColor: theme.bgTertiary,
+                borderRadius: '6px',
+                fontSize: '12px',
+                display: 'flex',
+                gap: '16px'
+              }}>
+                <div>
+                  <strong>Words:</strong> {currentDocument.wordCount}
+                </div>
+                <div>
+                  <strong>Reading:</strong> {currentDocument.readingTime} min
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ flex: '1 1 250px', minWidth: '200px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
+                ⚡ Actions
+              </h3>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={handleNewDocument}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    backgroundColor: theme.bg,
+                    color: theme.text,
+                    border: `2px solid ${theme.border}`,
+                    borderRadius: '6px',
                     cursor: 'pointer',
                     fontWeight: '600',
-                    fontSize: '14px'
+                    fontSize: '13px'
                   }}
                 >
                   📄 New
@@ -622,56 +596,66 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
                 <button
                   onClick={handleSaveDocument}
                   style={{
-                    padding: '10px 16px',
+                    flex: 1,
+                    padding: '10px',
                     background: theme.primaryGradient,
                     color: 'white',
                     border: 'none',
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     cursor: 'pointer',
                     fontWeight: '600',
-                    fontSize: '14px'
+                    fontSize: '13px'
                   }}
                 >
                   💾 Save
                 </button>
-                <select
-                  value={currentDocument.status}
-                  onChange={(e) => setCurrentDocument({...currentDocument, status: e.target.value})}
-                  style={{
-                    padding: '10px 16px',
-                    backgroundColor: theme.bg,
-                    color: theme.text,
-                    border: `2px solid ${theme.border}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }}
-                >
-                  <option value="Not started">Not started</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Complete">Complete</option>
-                  <option value="Published">Published</option>
-                </select>
               </div>
-              <button
-                onClick={() => setShowPreview(!showPreview)}
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Area - Editor + Chat Side by Side */}
+        <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap' }}>
+          {/* Editor */}
+          <div style={{ 
+            flex: '1 1 500px', 
+            minWidth: '400px',
+            backgroundColor: theme.bg,
+            borderRadius: '8px',
+            boxShadow: theme.shadow,
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: `2px solid ${theme.border}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: theme.text }}>
+                ✍️ Content Editor
+              </h3>
+              <select
+                value={currentDocument.status}
+                onChange={(e) => setCurrentDocument({...currentDocument, status: e.target.value})}
                 style={{
-                  padding: '10px 16px',
-                  backgroundColor: showPreview ? theme.primary : theme.bg,
-                  color: showPreview ? 'white' : theme.text,
-                  border: `2px solid ${showPreview ? theme.primary : theme.border}`,
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  fontSize: '14px'
+                  padding: '8px 12px',
+                  backgroundColor: theme.bgSecondary,
+                  color: theme.text,
+                  border: `2px solid ${theme.border}`,
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: '600'
                 }}
               >
-                👁️ {showPreview ? 'Hide' : 'Show'} Preview
-              </button>
+                <option value="Not started">Not started</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Complete">Complete</option>
+                <option value="Published">Published</option>
+              </select>
             </div>
-
-            {/* Editor Workspace */}
-            <div style={{ flex: 1, padding: '32px', overflowY: 'auto', backgroundColor: theme.bg }}>
+            <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
               <input
                 type="text"
                 placeholder="Document Title..."
@@ -679,14 +663,14 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
                 onChange={(e) => setCurrentDocument({...currentDocument, title: e.target.value})}
                 style={{
                   width: '100%',
-                  padding: '16px',
-                  fontSize: '32px',
+                  padding: '12px',
+                  fontSize: '24px',
                   fontWeight: '700',
                   backgroundColor: 'transparent',
                   color: theme.text,
                   border: 'none',
                   borderBottom: `2px solid ${theme.border}`,
-                  marginBottom: '24px',
+                  marginBottom: '20px',
                   outline: 'none'
                 }}
               />
@@ -696,105 +680,150 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
                 onChange={(e) => setCurrentDocument({...currentDocument, content: e.target.value})}
                 style={{
                   width: '100%',
-                  minHeight: '400px',
-                  padding: '16px',
-                  fontSize: '16px',
+                  minHeight: '300px',
+                  padding: '12px',
+                  fontSize: '15px',
                   lineHeight: '1.6',
                   backgroundColor: 'transparent',
                   color: theme.text,
                   border: 'none',
                   outline: 'none',
-                  resize: 'none',
+                  resize: 'vertical',
                   fontFamily: 'inherit'
                 }}
               />
             </div>
-          </main>
+          </div>
 
-          {/* Chat Panel */}
-          <aside style={{
-            width: '380px',
-            backgroundColor: theme.bgSecondary,
-            borderLeft: `1px solid ${theme.border}`,
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            <div style={{
+          {/* Samples Viewer (if template selected) */}
+          {selectedTemplate && samples.length > 0 && (
+            <div style={{ 
+              flex: '0 1 350px',
+              minWidth: '300px',
+              backgroundColor: theme.bgSecondary,
+              borderRadius: '8px',
+              boxShadow: theme.shadow,
               padding: '20px',
-              borderBottom: `1px solid ${theme.border}`,
-              backgroundColor: theme.primaryGradient
+              maxHeight: '500px',
+              overflowY: 'auto'
             }}>
-              <h3 style={{ margin: '0', color: 'white', fontSize: '18px', fontWeight: '600' }}>
-                💬 Chat with Jan
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: theme.text }}>
+                📚 Saved Samples
               </h3>
-            </div>
-            
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '20px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px'
-            }}>
-              {chatMessages.map((msg, idx) => (
-                <div key={idx} style={{
-                  padding: '12px 16px',
-                  backgroundColor: msg.sender === 'jan' ? theme.bgTertiary : theme.primary,
-                  color: msg.sender === 'jan' ? theme.text : 'white',
-                  borderRadius: '12px',
-                  maxWidth: '85%',
-                  alignSelf: msg.sender === 'jan' ? 'flex-start' : 'flex-end',
-                  whiteSpace: 'pre-wrap',
-                  fontSize: '14px',
-                  lineHeight: '1.5'
-                }}>
-                  <strong>{msg.sender === 'jan' ? 'Jan:' : 'You:'}</strong> {msg.message}
+              {samples.map(sample => (
+                <div
+                  key={sample.id}
+                  onClick={() => {
+                    setCurrentSample(sample);
+                    setShowViewSample(true);
+                  }}
+                  style={{
+                    padding: '12px',
+                    backgroundColor: theme.bg,
+                    borderRadius: '6px',
+                    marginBottom: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    border: `1px solid ${theme.border}`
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <div style={{ fontWeight: '600', marginBottom: '4px', fontSize: '14px', color: theme.text }}>
+                    {sample.title}
+                  </div>
+                  <div style={{ fontSize: '12px', color: theme.textMuted }}>
+                    {sample.character && `${sample.character} • `}
+                    {new Date(sample.createdAt).toLocaleDateString()}
+                  </div>
                 </div>
               ))}
             </div>
+          )}
+        </div>
 
-            <div style={{
-              padding: '20px',
-              borderTop: `1px solid ${theme.border}`,
-              backgroundColor: theme.bg
-            }}>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input
-                  type="text"
-                  placeholder="Ask Jan anything..."
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    backgroundColor: theme.bgSecondary,
-                    color: theme.text,
-                    border: `2px solid ${theme.border}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                />
-                <button
-                  onClick={handleSendMessage}
-                  style={{
-                    padding: '12px 20px',
-                    background: theme.primaryGradient,
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '14px'
-                  }}
-                >
-                  Send
-                </button>
+        {/* Chat Area - Full Width at Bottom */}
+        <div style={{
+          backgroundColor: theme.bgSecondary,
+          borderRadius: '8px',
+          boxShadow: theme.shadow,
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            padding: '16px 20px',
+            background: theme.primaryGradient,
+            borderBottom: `2px solid ${theme.border}`
+          }}>
+            <h3 style={{ margin: 0, color: 'white', fontSize: '18px', fontWeight: '600' }}>
+              💬 Chat with Jan
+            </h3>
+          </div>
+          
+          <div style={{
+            height: '350px',
+            overflowY: 'auto',
+            padding: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}>
+            {chatMessages.map((msg, idx) => (
+              <div key={idx} style={{
+                padding: '12px 16px',
+                backgroundColor: msg.sender === 'jan' ? theme.bgTertiary : theme.primary,
+                color: msg.sender === 'jan' ? theme.text : 'white',
+                borderRadius: '12px',
+                maxWidth: '75%',
+                alignSelf: msg.sender === 'jan' ? 'flex-start' : 'flex-end',
+                whiteSpace: 'pre-wrap',
+                fontSize: '14px',
+                lineHeight: '1.5'
+              }}>
+                <strong>{msg.sender === 'jan' ? 'Jan:' : 'You:'}</strong> {msg.message}
               </div>
+            ))}
+          </div>
+
+          <div style={{
+            padding: '16px 20px',
+            borderTop: `2px solid ${theme.border}`,
+            backgroundColor: theme.bg
+          }}>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <input
+                type="text"
+                placeholder="Ask Jan anything..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  backgroundColor: theme.bgSecondary,
+                  color: theme.text,
+                  border: `2px solid ${theme.border}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              />
+              <button
+                onClick={handleSendMessage}
+                style={{
+                  padding: '12px 24px',
+                  background: theme.primaryGradient,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px'
+                }}
+              >
+                Send
+              </button>
             </div>
-          </aside>
+          </div>
         </div>
 
         {/* Add Sample Modal */}
