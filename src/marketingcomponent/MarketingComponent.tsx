@@ -648,9 +648,28 @@ const MarketingComponent: React.FC = () => {
           fontSize: '32px', 
           fontWeight: '700', 
           color: theme.text, 
-          margin: '0 0 8px 0' 
+          margin: '0 0 8px 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
         }}>
           Marketing Intelligence Center
+          <a 
+            href="https://anica-blip.github.io/Content-Schedule-Planner/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={{
+              fontSize: '28px',
+              textDecoration: 'none',
+              transition: 'transform 0.2s ease',
+              cursor: 'pointer'
+            }}
+            title="Open Content Schedule Planner"
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            🌍
+          </a>
         </h1>
         <p style={{ 
           fontSize: '16px', 

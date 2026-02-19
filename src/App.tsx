@@ -6,6 +6,7 @@ import ScheduleComponent from './schedulecomponent';
 import MarketingComponent from './marketingcomponent/MarketingComponent';
 import SettingsComponent from './settingscomponent';
 import AdminComponents from './admincomponents';
+import AIChatComponent from './aichatcomponent';
 import { useI18n } from './i18n.tsx';
 
 // Theme Context
@@ -1373,7 +1374,7 @@ function App() {
           )}
 
           {/* NEW: AI Chat Manager section */}
-          {activeSection === 'ai-chat-manager' && <AiChatManagerComponent />}
+          {activeSection === 'ai-chat-manager' && <AIChatComponent />}
         </div>
       </div>
     </ThemeContext.Provider>
