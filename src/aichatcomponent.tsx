@@ -154,6 +154,13 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     };
 
     setChatMessages(prev => [...prev, userMessage]);
+    
+    // Extract title from chat message if present
+    const extractedTitle = extractTitleFromMessage(chatInput);
+    if (extractedTitle && !currentDocument.title) {
+      setCurrentDocument(prev => ({...prev, title: extractedTitle}));
+    }
+    
     setChatInput('');
 
     setTimeout(() => {
@@ -166,12 +173,40 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     }, 1000);
   };
 
+  const extractTitleFromMessage = (message: string): string | null => {
+    // Pattern 1: "title: Something" or "Title: Something"
+    const titlePattern1 = /title:\s*(.+?)(?:\n|$)/i;
+    const match1 = message.match(titlePattern1);
+    if (match1) return match1[1].trim();
+
+    // Pattern 2: "Issue #X - Title" or "**Issue #X - Title**"
+    const issuePattern = /\*?\*?Issue\s*#?\d+\s*[-–—]\s*(.+?)(?:\*\*|\n|$)/i;
+    const match2 = message.match(issuePattern);
+    if (match2) return match2[0].replace(/\*\*/g, '').trim();
+
+    // Pattern 3: Text in quotes "Title Here"
+    const quotePattern = /"([^"]+)"/;
+    const match3 = message.match(quotePattern);
+    if (match3) return match3[1].trim();
+
+    // Pattern 4: Text in **bold**
+    const boldPattern = /\*\*([^*]+)\*\*/;
+    const match4 = message.match(boldPattern);
+    if (match4) return match4[1].trim();
+
+    return null;
+  };
+
   const generateJanResponse = (userMsg: string, doc: JanDocument): string => {
     const lowerMsg = userMsg.toLowerCase();
     const persona = doc.character;
     const contentPrompt = doc.contentPrompt;
     const casualGreetings = ['Hello Chef!', 'Hi Chef!', 'Good to see you, Chef!', 'Hey there, Chef!', 'Alright Chef!'];
     const randomGreeting = casualGreetings[Math.floor(Math.random() * casualGreetings.length)];
+
+    // Check if title was extracted from message
+    const extractedTitle = extractTitleFromMessage(userMsg);
+    const titleNote = extractedTitle ? `\n\n✅ I've added the title: "${extractedTitle}"` : '';
 
     // Detect iteration requests (expand/refine existing) vs recreation (start over)
     const isIterationRequest = lowerMsg.includes('add more') || lowerMsg.includes('expand') || 
@@ -186,32 +221,32 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
 
     // Handle iteration vs recreation
     if (isIterationRequest) {
-      return `${randomGreeting} Got it! I'll expand on what we have without recreating everything. I'll add more depth to the existing content whilst keeping the structure we've built. Which specific area should I focus on?`;
+      return `${randomGreeting} Got it! I'll expand on what we have without recreating everything. I'll add more depth to the existing content whilst keeping the structure we've built. Which specific area should I focus on?${titleNote}`;
     }
 
     if (isRecreationRequest) {
-      return `${randomGreeting} Understood! I'll start fresh with a completely new approach. Let me know which direction you'd like to take this time, and I'll create something different from scratch.`;
+      return `${randomGreeting} Understood! I'll start fresh with a completely new approach. Let me know which direction you'd like to take this time, and I'll create something different from scratch.${titleNote}`;
     }
 
     if (lowerMsg.includes('rise and shine') || lowerMsg.includes('wake up')) {
       const sampleCount = samples.length;
       const sampleInfo = sampleCount > 0 ? ` I've got ${sampleCount} sample${sampleCount > 1 ? 's' : ''} saved for reference.` : '';
-      return `${randomGreeting} ☕ I'm up! Ready to tackle whatever you've got cooking today.${sampleInfo} What are we working on?`;
+      return `${randomGreeting} ☕ I'm up! Ready to tackle whatever you've got cooking today.${sampleInfo} What are we working on?${titleNote}`;
     }
 
     if (lowerMsg.includes('help') || lowerMsg.includes('assist')) {
-      return `${randomGreeting} I've got your back! I can help with:\n\n📝 Document creation & writing drafts\n🎯 Brainstorming ideas\n📚 Training course development\n✨ Deep research & analysis\n💡 Strategy planning\n\nThis is where we create the document. Once it's ready, you can use Content-Schedule-Planner for the public sharing details. What do you need?`;
+      return `${randomGreeting} I've got your back! I can help with:\n\n📝 Document creation & writing drafts\n🎯 Brainstorming ideas\n📚 Training course development\n✨ Deep research & analysis\n💡 Strategy planning\n\nThis is where we create the document. Once it's ready, you can use Content-Schedule-Planner for the public sharing details. What do you need?${titleNote}`;
     }
 
     // Read Content Prompt for style/structure instructions
     if ((lowerMsg.includes('create') || lowerMsg.includes('write') || lowerMsg.includes('content')) && contentPrompt) {
       const sampleContext = samples.length > 0 ? ` I can reference ${samples.length} saved sample${samples.length > 1 ? 's' : ''} to match your style.` : '';
-      return `Perfect! I've read your Content Prompt instructions:\n\n"${contentPrompt}"\n\n${persona ? `Creating content for ${persona}'s voice` : 'Please select a persona'} with ${doc.brandVoice || 'the brand voice'} tone.${sampleContext}\n\nI'll follow these guidelines exactly. Ready when you are - share your content and I'll structure it accordingly!\n\n💡 Remember: This is for document creation. Once finished, use Content-Schedule-Planner for the public sharing details.`;
+      return `Perfect! I've read your Content Prompt instructions:\n\n"${contentPrompt}"\n\n${persona ? `Creating content for ${persona}'s voice` : 'Please select a persona'} with ${doc.brandVoice || 'the brand voice'} tone.${sampleContext}\n\nI'll follow these guidelines exactly. Ready when you are - share your content and I'll structure it accordingly!${titleNote}\n\n💡 Remember: This is for document creation. Once finished, use Content-Schedule-Planner for the public sharing details.`;
     }
 
     if (lowerMsg.includes('create') || lowerMsg.includes('write') || lowerMsg.includes('content')) {
       const sampleContext = samples.length > 0 ? ` I can reference ${samples.length} saved sample${samples.length > 1 ? 's' : ''} to match your style.` : '';
-      return `Let's create something brilliant! ${persona ? `Creating content for ${persona}'s voice` : 'Please select a persona from the sidebar'} - what's the topic and who's the audience?${sampleContext}\n\nTip: Add your style preferences in the Content Prompt field above (length, format, what to avoid, etc.) and I'll follow them exactly!\n\n💡 This is for drafting the document. Once complete, you can use Content-Schedule-Planner for public sharing details.`;
+      return `Let's create something brilliant! ${persona ? `Creating content for ${persona}'s voice` : 'Please select a persona from the sidebar'} - what's the topic and who's the audience?${sampleContext}\n\nTip: Add your style preferences in the Content Prompt field above (length, format, what to avoid, etc.) and I'll follow them exactly!${titleNote}\n\n💡 This is for drafting the document. Once complete, you can use Content-Schedule-Planner for public sharing details.`;
     }
 
     if (lowerMsg.includes('sample') || lowerMsg.includes('example') || lowerMsg.includes('last time')) {
