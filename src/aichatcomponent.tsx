@@ -170,7 +170,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     const lowerMsg = userMsg.toLowerCase();
     const persona = doc.character;
     const contentPrompt = doc.contentPrompt;
-    const casualGreetings = ['Hey Chef!', 'Yo Chef!', 'What\'s up Chef!', 'Hey there!', 'Alright Chef!'];
+    const casualGreetings = ['Hello Chef!', 'Hi Chef!', 'Good to see you, Chef!', 'Hey there, Chef!', 'Alright Chef!'];
     const randomGreeting = casualGreetings[Math.floor(Math.random() * casualGreetings.length)];
 
     // Detect iteration requests (expand/refine existing) vs recreation (start over)
@@ -186,11 +186,11 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
 
     // Handle iteration vs recreation
     if (isIterationRequest) {
-      return `${randomGreeting} Got it! I'll expand on what we have without recreating everything. I'll add more depth to the existing content while keeping the structure we've built. What specific area should I focus on?`;
+      return `${randomGreeting} Got it! I'll expand on what we have without recreating everything. I'll add more depth to the existing content whilst keeping the structure we've built. Which specific area should I focus on?`;
     }
 
     if (isRecreationRequest) {
-      return `${randomGreeting} Understood! I'll start fresh with a completely new approach. Let me know what direction you want to take this time, and I'll create something different from scratch.`;
+      return `${randomGreeting} Understood! I'll start fresh with a completely new approach. Let me know which direction you'd like to take this time, and I'll create something different from scratch.`;
     }
 
     if (lowerMsg.includes('rise and shine') || lowerMsg.includes('wake up')) {
@@ -200,18 +200,18 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     }
 
     if (lowerMsg.includes('help') || lowerMsg.includes('assist')) {
-      return `${randomGreeting} I've got your back! I can help with:\n\n📝 Content creation & writing\n🎯 Brainstorming ideas\n📚 Training course development\n✨ Deep research & analysis\n💡 Strategy planning\n\nWhat do you need? Let's dive in!`;
+      return `${randomGreeting} I've got your back! I can help with:\n\n📝 Document creation & writing drafts\n🎯 Brainstorming ideas\n📚 Training course development\n✨ Deep research & analysis\n💡 Strategy planning\n\nThis is where we create the document. Once it's ready, you can use Content-Schedule-Planner for the public sharing details. What do you need?`;
     }
 
     // Read Content Prompt for style/structure instructions
     if ((lowerMsg.includes('create') || lowerMsg.includes('write') || lowerMsg.includes('content')) && contentPrompt) {
       const sampleContext = samples.length > 0 ? ` I can reference ${samples.length} saved sample${samples.length > 1 ? 's' : ''} to match your style.` : '';
-      return `Perfect! I've read your Content Prompt instructions:\n\n"${contentPrompt}"\n\n${persona ? `Writing as ${persona}` : 'Pick a persona'} with ${doc.brandVoice || 'the brand voice'} tone.${sampleContext}\n\nI'll follow these guidelines exactly. Ready when you are - share your content and I'll structure it accordingly!`;
+      return `Perfect! I've read your Content Prompt instructions:\n\n"${contentPrompt}"\n\n${persona ? `Creating content for ${persona}'s voice` : 'Please select a persona'} with ${doc.brandVoice || 'the brand voice'} tone.${sampleContext}\n\nI'll follow these guidelines exactly. Ready when you are - share your content and I'll structure it accordingly!\n\n💡 Remember: This is for document creation. Once finished, use Content-Schedule-Planner for the public sharing details.`;
     }
 
     if (lowerMsg.includes('create') || lowerMsg.includes('write') || lowerMsg.includes('content')) {
       const sampleContext = samples.length > 0 ? ` I can reference ${samples.length} saved sample${samples.length > 1 ? 's' : ''} to match your style.` : '';
-      return `Let's create something awesome! ${persona ? `Writing as ${persona}` : 'Pick a persona from the sidebar'} - what's the topic and who's the audience?${sampleContext}\n\nTip: Add your style preferences in the Content Prompt field above (length, format, what to avoid, etc.) and I'll follow them exactly!`;
+      return `Let's create something brilliant! ${persona ? `Creating content for ${persona}'s voice` : 'Please select a persona from the sidebar'} - what's the topic and who's the audience?${sampleContext}\n\nTip: Add your style preferences in the Content Prompt field above (length, format, what to avoid, etc.) and I'll follow them exactly!\n\n💡 This is for drafting the document. Once complete, you can use Content-Schedule-Planner for public sharing details.`;
     }
 
     if (lowerMsg.includes('sample') || lowerMsg.includes('example') || lowerMsg.includes('last time')) {
@@ -226,14 +226,15 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     const casualResponses = [
       `${randomGreeting} What's on your mind?`,
       `I'm here, Chef! What do you need?`,
-      `${randomGreeting} Let's make it happen. What are we tackling?`,
+      `${randomGreeting} Let's make it happen. What are we working on?`,
       `Alright, I'm listening. What's the plan?`,
-      `${randomGreeting} Ready when you are. What's up?`
+      `${randomGreeting} Ready when you are. How can I help?`
     ];
 
-    const contextNote = persona ? ` (Working with ${persona}'s voice btw)` : '';
+    const contextNote = persona ? ` (Creating content for ${persona}'s voice)` : '';
     const promptReminder = !contentPrompt ? '\n\n💡 Tip: Fill in the Content Prompt field with your style preferences (length, format, what to avoid) and I\'ll follow them exactly!' : '';
-    return casualResponses[Math.floor(Math.random() * casualResponses.length)] + contextNote + promptReminder;
+    const workflowNote = '\n\n📝 This is where we draft your document. Once ready, use Content-Schedule-Planner for public sharing details.';
+    return casualResponses[Math.floor(Math.random() * casualResponses.length)] + contextNote + promptReminder + workflowNote;
   };
 
   const handleNewDocument = () => {
@@ -517,7 +518,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
               </h3>
               <input
                 type="text"
-                placeholder="Describe what you want to create..."
+                placeholder="Describe what you'd like to create..."
                 value={currentDocument.contentPrompt}
                 onChange={(e) => setCurrentDocument({...currentDocument, contentPrompt: e.target.value})}
                 style={{
