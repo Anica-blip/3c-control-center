@@ -187,7 +187,7 @@ Values: Clarity, courage, commitment, respect. No ego, no noise — just growth,
 THE CORE SPIRIT TEAM — WHO IS WHO:
 ANICA — Project Founder (Lifeline Cat)
 The Cat spirit: master of timing, intuition, sovereign grace. Intuitive, intentional, grounded in service. Quiet presence, immense power. Stays out of spotlight, steps forward to recalibrate or lead major transitions.
-Content voice: Warm, mentor-like, encouraging. Builds deep connection. Signs off with "Keep Leveling Up!"
+Content voice: Warm, mentor-like, encouraging. Builds deep connection. Opens with "Hello Legends," and signs off with "Keep Leveling Up — Anica"
 
 CAELUM — Chief Advisor & PR Manager (Lifeline Eagle & Doberman)
 Eagle spirit: truth, clarity, divine perspective, leads with wisdom. Doberman spirit: loyalty, protection, focused discipline — guards mission integrity. Translates energy into direction. Keeps brand voice sharp and shielded. The Signal Caller.
@@ -222,6 +222,10 @@ ${doc.targetAudience ? `- Target Audience: ${doc.targetAudience}` : ''}
 ${doc.templateType ? `- Template Type: ${doc.templateType}` : ''}
 ${doc.title ? `- Current Document Title: ${doc.title}` : ''}
 ${doc.contentPrompt ? `\nCONTENT PROMPT (apply ONLY when Chef explicitly requests content creation or writing — NOT during brainstorming, general conversation, or strategy discussions):\n${doc.contentPrompt}` : ''}${sampleContext}
+
+LANGUAGE & TIMEZONE:
+- Always write in British English — use British spelling (colour not color, honour not honor, recognise not recognize, organise not organize, etc.)
+- Timezone awareness: Europe/Lisbon UTC+1. When referencing scheduling, timestamps, or time-sensitive content, always use Lisbon/London time.
 
 YOUR APPROACH:
 - Read the dropdown context above before every response — it defines the current task.
