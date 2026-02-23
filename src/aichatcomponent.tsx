@@ -32,6 +32,10 @@ interface AIChatComponentProps {
 const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false }) => {
   const [isOnline, setIsOnline] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionTokens, setSessionTokens] = useState({ input: 0, output: 0 });
+  const COST_PER_INPUT_TOKEN = 0.000003;  // Sonnet 4.6 input rate
+  const COST_PER_OUTPUT_TOKEN = 0.000015; // Sonnet 4.6 output rate
+  const WARNING_THRESHOLD = 3.00;         // Alert when $3 spent this session
   const [currentDocument, setCurrentDocument] = useState<JanDocument>({
     title: '',
     character: '',
@@ -261,6 +265,14 @@ YOUR APPROACH:
     // Extract text response from Claude API format
     const janReply = data.content?.[0]?.text || 'Sorry Chef, I had trouble processing that. Please try again.';
 
+    // Track token usage from API response
+    if (data.usage) {
+      setSessionTokens(prev => ({
+        input: prev.input + (data.usage.input_tokens || 0),
+        output: prev.output + (data.usage.output_tokens || 0)
+      }));
+    }
+
     // Add Jan's response to API history for next turn memory
     apiMessages.current.push({
       role: 'assistant',
@@ -456,21 +468,67 @@ YOUR APPROACH:
                 </p>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                backgroundColor: isOnline ? '#10b981' : '#ef4444',
-                animation: isOnline ? 'pulse 2s infinite' : 'none'
-              }} />
-              <span style={{ 
-                fontSize: '12px', 
-                color: isDarkMode ? '#94a3b8' : '#6b7280',
-                fontWeight: '600'
-              }}>
-                {isOnline ? 'Online' : 'Offline'}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {/* Token Cost Tracker + Billing Link */}
+              {(() => {
+                const sessionCost = (sessionTokens.input * COST_PER_INPUT_TOKEN) + (sessionTokens.output * COST_PER_OUTPUT_TOKEN);
+                const isWarning = sessionCost >= WARNING_THRESHOLD;
+                const isCritical = sessionCost >= WARNING_THRESHOLD + 1.00;
+                const pillColor = isCritical ? '#ef4444' : isWarning ? '#f59e0b' : '#10b981';
+                const pillBg = isCritical ? 'rgba(239,68,68,0.15)' : isWarning ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)';
+                const totalTokens = sessionTokens.input + sessionTokens.output;
+                return (
+                  <a
+                    href="https://console.anthropic.com/settings/billing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={isWarning ? '⚠️ Credits running low — click to top up!' : 'Session token usage — click to manage billing'}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '5px 10px',
+                      backgroundColor: pillBg,
+                      border: `1px solid ${pillColor}`,
+                      borderRadius: '20px',
+                      textDecoration: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: pillColor,
+                      animation: isWarning ? 'pulse 1s infinite' : 'none',
+                      flexShrink: 0
+                    }} />
+                    <span style={{ fontSize: '11px', fontWeight: '600', color: pillColor, whiteSpace: 'nowrap' }}>
+                      {totalTokens > 0 ? `$${sessionCost.toFixed(4)}` : '$0.00'}
+                      {isWarning && ' ⚠️'}
+                    </span>
+                  </a>
+                );
+              })()}
+
+              {/* Online indicator */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  backgroundColor: isOnline ? '#10b981' : '#ef4444',
+                  animation: isOnline ? 'pulse 2s infinite' : 'none'
+                }} />
+                <span style={{
+                  fontSize: '12px',
+                  color: isDarkMode ? '#94a3b8' : '#6b7280',
+                  fontWeight: '600'
+                }}>
+                  {isOnline ? 'Online' : 'Offline'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
