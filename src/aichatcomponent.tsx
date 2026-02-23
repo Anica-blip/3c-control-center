@@ -66,6 +66,8 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [showAddSample, setShowAddSample] = useState(false);
   const [showViewSample, setShowViewSample] = useState(false);
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [templateSaveData, setTemplateSaveData] = useState({ structure: '', guidelines: '' });
   const [currentSample, setCurrentSample] = useState<ProjectReference | null>(null);
   const [newSample, setNewSample] = useState({ title: '', content: '', tags: '', notes: '' });
 
@@ -228,6 +230,11 @@ ${doc.contentPrompt ? `\nCONTENT PROMPT (apply ONLY when Chef explicitly request
 LANGUAGE & TIMEZONE:
 - Always write in British English — use British spelling (colour not color, honour not honor, recognise not recognize, organise not organize, etc.)
 - Timezone awareness: Europe/Lisbon UTC+1. When referencing scheduling, timestamps, or time-sensitive content, always use Lisbon/London time.
+
+TEMPLATE SAVING:
+- When Chef says "save this as a template" or "save the structure" — confirm what you understood as the document structure and guidelines, then tell Chef to click the "Save Template" button in the chat footer to store it in D1.
+- When a saved template is loaded (you will see SAVED TEMPLATE FOUND in your context) — follow that structure precisely without asking Chef to re-explain it.
+- When content is finished and approved — remind Chef they can click "Library" in the Actions panel to save it to the content library.
 
 YOUR APPROACH:
 - Read the dropdown context above before every response — it defines the current task.
@@ -411,6 +418,82 @@ YOUR APPROACH:
     savedDocs.push(docToSave);
     localStorage.setItem('janSavedDocuments', JSON.stringify(savedDocs));
     alert('Document saved successfully!');
+  };
+
+  // ============================================================
+  // SAVE TEMPLATE TO D1 — Jan's structural blueprint
+  // ============================================================
+  const saveTemplateToD1 = async () => {
+    if (!templateSaveData.structure.trim()) {
+      alert('Please describe the document structure before saving.');
+      return;
+    }
+    try {
+      const response = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save-template',
+          character: currentDocument.character,
+          brandVoice: currentDocument.brandVoice,
+          templateType: currentDocument.templateType,
+          themeLabel: currentDocument.themeLabel,
+          targetAudience: currentDocument.targetAudience,
+          platform: currentDocument.platform,
+          structure: templateSaveData.structure,
+          guidelines: templateSaveData.guidelines
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setShowSaveTemplate(false);
+        setTemplateSaveData({ structure: '', guidelines: '' });
+        setChatMessages(prev => [...prev, {
+          sender: 'jan',
+          message: `✅ Template saved to D1, Chef! Next time we work with ${currentDocument.character || 'this persona'} on ${currentDocument.templateType || 'this type'}, I'll load this structure automatically. No explaining needed — I've got it. 🐬`,
+          timestamp: new Date().toISOString()
+        }]);
+      }
+    } catch (error) {
+      alert('Failed to save template. Check Worker is deployed.');
+    }
+  };
+
+  // ============================================================
+  // SAVE CONTENT TO D1 LIBRARY — approved finished content
+  // ============================================================
+  const saveContentToLibrary = async () => {
+    if (!currentDocument.content.trim()) {
+      alert('No content to save. Write or generate something first.');
+      return;
+    }
+    try {
+      const response = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save-content',
+          title: currentDocument.title || 'Untitled',
+          character: currentDocument.character,
+          themeLabel: currentDocument.themeLabel,
+          templateType: currentDocument.templateType,
+          targetAudience: currentDocument.targetAudience,
+          platform: currentDocument.platform,
+          content: currentDocument.content,
+          status: currentDocument.status
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setChatMessages(prev => [...prev, {
+          sender: 'jan',
+          message: `✅ Content saved to library, Chef! "${currentDocument.title || 'Untitled'}" is now in the D1 content library with status: ${currentDocument.status}. 🐬`,
+          timestamp: new Date().toISOString()
+        }]);
+      }
+    } catch (error) {
+      alert('Failed to save content. Check Worker is deployed.');
+    }
   };
 
   return (
@@ -886,6 +969,23 @@ YOUR APPROACH:
                 >
                   💾 Save
                 </button>
+                <button
+                  onClick={saveContentToLibrary}
+                  title="Save content to D1 library"
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '13px'
+                  }}
+                >
+                  📚 Library
+                </button>
               </div>
             </div>
           </div>
@@ -1114,6 +1214,23 @@ YOUR APPROACH:
                 }}
               />
               <button
+                onClick={() => setShowSaveTemplate(true)}
+                title="Save current session structure as a reusable template"
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: theme.bgTertiary,
+                  color: theme.text,
+                  border: `2px solid ${theme.border}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '13px',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                🗂️ Save Template
+              </button>
+              <button
                 onClick={handleSendMessage}
                 disabled={isLoading}
                 style={{
@@ -1318,6 +1435,99 @@ YOUR APPROACH:
                   }}
                 >
                   Save Sample
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Save Template Modal */}
+        {showSaveTemplate && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          }}>
+            <div style={{
+              backgroundColor: theme.bg, borderRadius: '12px', padding: '24px',
+              maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            }}>
+              <h2 style={{ margin: '0 0 8px 0', color: theme.text, fontSize: '20px' }}>
+                🗂️ Save as Template
+              </h2>
+              <p style={{ margin: '0 0 16px 0', color: theme.textMuted, fontSize: '14px' }}>
+                Describe the document structure Jan should use every time for this type.
+                Next session she loads this automatically — no explaining needed.
+              </p>
+
+              {/* Current context summary */}
+              <div style={{
+                padding: '10px 14px', backgroundColor: theme.bgTertiary,
+                borderRadius: '6px', marginBottom: '16px', fontSize: '13px', color: theme.textMuted
+              }}>
+                <strong style={{ color: theme.text }}>Saving for: </strong>
+                {[currentDocument.character, currentDocument.templateType, currentDocument.themeLabel, currentDocument.targetAudience]
+                  .filter(Boolean).join(' · ') || 'No dropdowns selected — template will be general'}
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: theme.text }}>
+                  Document Structure *
+                </label>
+                <textarea
+                  placeholder="e.g. Title → Subtitle → Opening paragraph → 3 main sections with headers → Key takeaways → Closing CTA → Disclaimer"
+                  value={templateSaveData.structure}
+                  onChange={(e) => setTemplateSaveData({...templateSaveData, structure: e.target.value})}
+                  rows={6}
+                  style={{
+                    width: '100%', padding: '12px', backgroundColor: theme.bgSecondary,
+                    color: theme.text, border: `2px solid ${theme.border}`,
+                    borderRadius: '6px', fontSize: '14px', resize: 'vertical', fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: theme.text }}>
+                  Guidelines (optional)
+                </label>
+                <textarea
+                  placeholder="e.g. Always use British English. Keep sections under 200 words. Lead with a story. End with a question to the community."
+                  value={templateSaveData.guidelines}
+                  onChange={(e) => setTemplateSaveData({...templateSaveData, guidelines: e.target.value})}
+                  rows={4}
+                  style={{
+                    width: '100%', padding: '12px', backgroundColor: theme.bgSecondary,
+                    color: theme.text, border: `2px solid ${theme.border}`,
+                    borderRadius: '6px', fontSize: '14px', resize: 'vertical', fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => { setShowSaveTemplate(false); setTemplateSaveData({ structure: '', guidelines: '' }); }}
+                  style={{
+                    padding: '10px 20px', backgroundColor: theme.bgTertiary, color: theme.text,
+                    border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '600'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveTemplateToD1}
+                  disabled={!templateSaveData.structure.trim()}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: templateSaveData.structure.trim() ? theme.primary : theme.bgTertiary,
+                    color: templateSaveData.structure.trim() ? 'white' : theme.textMuted,
+                    border: 'none', borderRadius: '6px',
+                    cursor: templateSaveData.structure.trim() ? 'pointer' : 'not-allowed',
+                    fontSize: '14px', fontWeight: '600'
+                  }}
+                >
+                  Save to D1
                 </button>
               </div>
             </div>
