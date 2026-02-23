@@ -17,6 +17,7 @@ interface JanDocument {
   templateType: string;
   themeLabel: string;
   targetAudience: string;
+  platform: string;
   contentPrompt: string;
   content: string;
   status: string;
@@ -43,6 +44,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     templateType: '',
     themeLabel: '',
     targetAudience: '',
+    platform: '',
     contentPrompt: '',
     content: '',
     status: 'Not started',
@@ -256,7 +258,11 @@ YOUR APPROACH:
       },
       body: JSON.stringify({
         system: buildSystemPrompt(doc),
-        messages: apiMessages.current
+        messages: apiMessages.current,
+        templateType: doc.templateType,
+        platform: doc.platform,
+        themeLabel: doc.themeLabel,
+        character: doc.character
       })
     });
 
@@ -385,6 +391,7 @@ YOUR APPROACH:
         templateType: '',
         themeLabel: '',
         targetAudience: '',
+        platform: '',
         contentPrompt: '',
         content: '',
         status: 'Not started',
@@ -700,6 +707,39 @@ YOUR APPROACH:
                 <option value="Newsletter">Newsletter</option>
                 <option value="Email Templates">Email Templates</option>
                 <option value="Custom Templates">Custom Templates</option>
+              </select>
+            </div>
+
+            {/* Platform */}
+            <div style={{ flex: '1 1 250px', minWidth: '200px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
+                📱 Platform
+              </h3>
+              <select
+                value={currentDocument.platform}
+                onChange={(e) => setCurrentDocument({...currentDocument, platform: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  backgroundColor: theme.bg,
+                  color: theme.text,
+                  border: `2px solid ${theme.border}`,
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: '500'
+                }}
+              >
+                <option value="">Select platform...</option>
+                <option value="Instagram">Instagram</option>
+                <option value="Facebook">Facebook</option>
+                <option value="LinkedIn">LinkedIn</option>
+                <option value="Twitter/X">Twitter/X</option>
+                <option value="YouTube">YouTube</option>
+                <option value="TikTok">TikTok</option>
+                <option value="Telegram">Telegram</option>
+                <option value="Pinterest">Pinterest</option>
+                <option value="WhatsApp Business">WhatsApp Business</option>
+                <option value="Discord">Discord</option>
               </select>
             </div>
 
