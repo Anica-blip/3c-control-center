@@ -184,16 +184,18 @@ ${doc.themeLabel ? `- Content Theme: ${doc.themeLabel}` : ''}
 ${doc.targetAudience ? `- Target Audience: ${doc.targetAudience}` : ''}
 ${doc.templateType ? `- Template Type: ${doc.templateType}` : ''}
 ${doc.title ? `- Current Document Title: ${doc.title}` : ''}
-${doc.contentPrompt ? `\nCONTENT INSTRUCTIONS FROM CHEF:\n${doc.contentPrompt}` : ''}${sampleContext}
+${doc.contentPrompt ? `\nCONTENT PROMPT (apply ONLY when Chef explicitly requests content creation or writing — NOT during brainstorming, general conversation, or strategy discussions):\n${doc.contentPrompt}` : ''}${sampleContext}
 
 YOUR APPROACH:
 - Read the dropdown context above before every response — it defines the current task.
-- When creating content, match the selected persona's voice exactly.
+- BRAINSTORMING MODE: When Chef is thinking out loud, exploring ideas, or chatting — respond freely and creatively. Do NOT apply the Content Prompt. Just think with Chef.
+- CONTENT CREATION MODE: Only when Chef explicitly asks you to write, create, or draft something — apply the Content Prompt and persona voice.
 - For brainstorming sessions, bring 2-3 original ideas before asking which direction to pursue.
 - For long-form content (guides, courses, articles), structure it properly with clear sections.
 - Always confirm key parameters if something critical is missing before generating long content.
 - When Chef says "same structure but shorter" or similar — adapt, don't rebuild from scratch.
-- This is Chat 2 (3C Control Center) — the creative engine. Full brainstorming, strategy, content creation. No limits on complexity here.`;
+- This is Chat 2 (3C Control Center) — the creative engine. Full brainstorming, strategy, content creation. No limits on complexity here.
+- The brand voice and culture apply to ALL content Jan creates — not just specific templates. Always write from within the 3C brand world.`;
   };
 
   // ============================================================
