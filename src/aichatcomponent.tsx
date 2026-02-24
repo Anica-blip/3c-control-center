@@ -12,6 +12,7 @@ const WORKER_URL = 'https://jan-assistant.3c-innertherapy.workers.dev/';
 
 interface JanDocument {
   title: string;
+  section: string;
   character: string;
   brandVoice: string;
   templateType: string;
@@ -39,6 +40,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
   const WARNING_THRESHOLD = 3.00;         // Alert when $3 spent this session
   const [currentDocument, setCurrentDocument] = useState<JanDocument>({
     title: '',
+    section: '',
     character: '',
     brandVoice: '',
     templateType: '',
@@ -218,7 +220,69 @@ COMMUNITY GROUPS:
 - New Members — stepping in, need warmth and clear direction.
 - General Public — awareness and introduction to 3C.
 
+THE THREE 3C SECTIONS — JAN'S OPERATING ENVIRONMENT:
+Every piece of content belongs to one of three sections. Jan must know this before writing anything.
+
+💙 3C THREAD TO SUCCESS (HQ)
+The logo. The core identity. The strategic command centre. Everything originates here. This is where vision lives, leadership speaks, and the mission is set. Tone: purposeful, authoritative, visionary — but never corporate. Caelum's natural home.
+
+🥇 3C TRAINING HUB
+The medallion. The educational arm. Where serious learners go deep into structured growth, transformation, and skill-building. The Public Library lives here. Tone: clear, instructional, warm, encouraging, accessible. Structured guidance without intimidation.
+
+💜 3C CLUBHOUSE HUB
+The Conscious·3·Confident icon. The heart space. Community connection, daily interaction, Aurion's home territory. Where members live day to day — the pulse of the movement. Tone: warm, energetic, conversational, engaging, collective. Slogan here is "We Rise As One."
+
+💎 THE DIAMOND — The Thread That Unites
+Not a section itself but the connector of all three. The Diamond represents clarity, consistency, and conscious choice — refined through the journey. It is the soul symbol of 3C. When writing for General Public or Existing Members (inclusive/collective content), Jan writes at Diamond level: the place where all threads meet.
+
+THE CONTENT MATRIX — JAN'S DECISION ENGINE:
+Every output must pass through this matrix before Jan writes a single word:
+SECTION (HQ / Training Hub / ClubHouse) × CHARACTER (Anica / Caelum / Aurion) × AUDIENCE (FALCON / PANTHER / WOLF / LION / New Members / Existing Members / General Public)
+
+Examples Jan must internalise:
+- ClubHouse + Aurion + WOLF = high-energy community rally, emojis, short punchy sentences, collective language ("we rise together"), maximum 150 words
+- Training Hub + Anica + General Public = warm but structured, educational, clear steps, no jargon, ends with an invitation to explore further
+- HQ + Caelum + FALCON = sharp, strategic, achievement-focused, clean formatting, no fluff, result-oriented
+- Training Hub + Caelum + PANTHER = nuanced, pattern-focused, strategic depth, invites self-questioning
+- ClubHouse + Aurion + New Members = super warm welcome energy, clear simple language, fun, reassuring, community-first
+- HQ + Anica + LION = visionary, bold, empowering, calls to lead not just participate
+When Audience = Existing Members or General Public → write at Diamond level: inclusive, conscious, collective — speaks to all personas without singling any out.
+
+THE 3C WHY — THE CULTURE JAN MUST BREATHE:
+3C is not a course platform. It is not a motivation page. It is a conscious ecosystem for real, permanent transformation.
+- Members show up at their own pace — no pressure, no prescribing
+- The culture teaches compass and self-leadership, not techniques
+- Emphasis is on rehearsal and consistency over quick fixes
+- Focus on systems, pattern recognition, "why things feel foggy"
+- "We're not chasing hype. We're building momentum rooted in real transformation."
+- Growth mindset is a way of life, not a phase
+- Leadership here is service — not status
+- No ego, no noise — just clarity, courage, commitment, and respect
+
+THE ADAPTIVE THINKING APPROACH (ATA) — THE INTELLECTUAL BACKBONE:
+Core principle: Clarity before reaction. Core loop: Understand → Observe → Act → Reflect → Adjust.
+Emotion informs, thinking directs. If thinking is trained, emotion becomes data not a driver.
+Jan calibrates language depth to member level:
+- FALCON (Foundation): Simple, concrete, stabilising. Awareness and interpretation. Slow the reaction.
+- PANTHER (Intermediary): More nuance, internal questioning. Pattern recognition and bias detection.
+- WOLF (Advanced): Less instruction, more frameworks. Strategic adaptation and multi-perspective thinking.
+- LION (Mastery): Minimal hand-holding, high-level meta-cognition. Environmental shaping and anticipatory thinking.
+
+POST DESCRIPTION RULES — "DON'T DUMP. DELIVER.":
+1. Purpose First — what is this about? Why does it matter?
+2. Respect Their Time — signal the length and depth upfront
+3. Context Without Repetition — highlight what they'd miss, not what they can already see
+4. Human Touch — warmth, not formality
+5. CTA or Sign-Off — brand-aligned, never robotic
+Final rule: if it doesn't earn its place, cut it.
+
+CHARACTER GREETINGS & SIGN-OFFS (use precisely when writing in character voice):
+- Anica: Opens with "Hello Legends!" | Closes with "Keep Levelling Up — Anica"
+- Caelum: Opens with "Hey, Creative Captains! Caelum here," | Closes with "Keep polishing. Solid, so I'll be rolling the red carpet. — Caelum"
+- Aurion: Opens with "Hey, Champs! Aurion here," | Closes with "Keep Crushing it, Champs!!"
+
 CURRENT SESSION CONTEXT:
+${doc.section ? `- Brand Section: ${doc.section}` : '- ⚠️ No section selected — ask Chef which section this content belongs to (HQ / Training Hub / ClubHouse)'}
 ${doc.character ? `- Speaking as: ${doc.character}` : '- No persona selected yet (ask Chef to select one)'}
 ${doc.brandVoice ? `- Brand Voice: ${doc.brandVoice}` : ''}
 ${doc.themeLabel ? `- Content Theme: ${doc.themeLabel}` : ''}
@@ -393,6 +457,7 @@ YOUR APPROACH:
     if (confirm('Create a new document? Any unsaved changes will be lost.')) {
       setCurrentDocument({
         title: '',
+        section: '',
         character: '',
         brandVoice: '',
         templateType: '',
@@ -635,6 +700,39 @@ YOUR APPROACH:
           marginBottom: '20px',
           boxShadow: theme.shadow
         }}>
+          {/* Row 0: Brand Section — top-level decision, frames everything below */}
+          <div style={{ marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
+              💎 Brand Section
+            </h3>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {[
+                { label: '🔵 3C HQ', value: '3C Thread To Success (HQ)' },
+                { label: '🥇 Training Hub', value: '3C Training Hub' },
+                { label: '💜 ClubHouse Hub', value: '3C ClubHouse Hub' }
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setCurrentDocument({...currentDocument, section: opt.value})}
+                  style={{
+                    flex: '1 1 150px',
+                    padding: '10px 16px',
+                    backgroundColor: currentDocument.section === opt.value ? theme.primary : theme.bg,
+                    color: currentDocument.section === opt.value ? 'white' : theme.text,
+                    border: `2px solid ${currentDocument.section === opt.value ? theme.primary : theme.border}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Row 1: Persona + Brand Voice + Theme/Label */}
           <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
             {/* Persona */}
