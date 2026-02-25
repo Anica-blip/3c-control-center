@@ -69,6 +69,8 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
   const [showAddSample, setShowAddSample] = useState(false);
   const [showViewSample, setShowViewSample] = useState(false);
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [titleConfirmed, setTitleConfirmed] = useState(false);
+  const [postContextSaved, setPostContextSaved] = useState(false);
   const [templateSaveData, setTemplateSaveData] = useState({ structure: '', guidelines: '' });
   const [currentSample, setCurrentSample] = useState<ProjectReference | null>(null);
   const [newSample, setNewSample] = useState({ title: '', content: '', tags: '', notes: '' });
@@ -324,6 +326,20 @@ LANGUAGE & TIMEZONE:
 - Always write in British English — use British spelling (colour not color, honour not honor, recognise not recognize, organise not organize, etc.)
 - Timezone awareness: Europe/Lisbon UTC+1. When referencing scheduling, timestamps, or time-sensitive content, always use Lisbon/London time.
 
+POST DESCRIPTION MODE — STRUCTURED OUTPUT:
+When you receive "POST DESCRIPTION MODE ACTIVATED" — stop all other modes. Output ONLY the structured package in this exact order, no preamble, no chat, no sign-off:
+
+TITLE: [the confirmed title]
+POST DESCRIPTION: [persona-voiced, platform-aware, archetype-aligned paragraph. Sage + Hero + Caregiver blend. NLP forward-motion language. Calm confidence not loud excitement. Short sentences. Strong verbs. "Don't Dump. Deliver." Every word earns its place. Respect their time — make it count.]
+HASHTAGS: [platform-appropriate mix — broad reach + niche 3C community tags. No padding.]
+SEO KEYWORDS: [5–8 precise keywords. Relevant to content + 3C brand. No fluff.]
+CTA: [One clear, brand-aligned call to action in the persona's voice. Invites — never pushes. Archetype-true.]
+
+Apply the confirmed character voice, platform, audience, and brand voice from the session context above. Do not deviate from this format. Do not add anything outside these five sections.
+
+TITLE CONFIRMATION SYSTEM:
+When content exists in a session and a title is present, you may gently ask once: "Chef, is this title confirmed?" — but only once per session, and only if not already confirmed. Do not repeat this question. When the title is confirmed via button, acknowledge it briefly and move on.
+
 TEMPLATE SAVING:
 - When Chef says "save this as a template" or "save the structure" — confirm what you understood as the document structure and guidelines, then tell Chef to click the "Save Template" button in the chat footer to store it in D1.
 - When a saved template is loaded (you will see SAVED TEMPLATE FOUND in your context) — follow that structure precisely without asking Chef to re-explain it.
@@ -500,6 +516,8 @@ YOUR APPROACH:
         readingTime: 0,
         lastModified: new Date().toISOString()
       });
+      setTitleConfirmed(false);
+      setPostContextSaved(false);
       // Clear API message history for new document session
       apiMessages.current = [];
     }
@@ -587,6 +605,140 @@ YOUR APPROACH:
       }
     } catch (error) {
       alert('Failed to save content. Check Worker is deployed.');
+    }
+  };
+
+  // ============================================================
+  // CONFIRM TITLE — saves title + synopsis to D1
+  // ============================================================
+  const savePostContextToD1 = async () => {
+    if (!currentDocument.title.trim()) {
+      setChatMessages(prev => [...prev, {
+        sender: 'jan',
+        message: `Chef, the title field is empty. Add your title in the editor first, then confirm it and I'll lock it in. 🐬`,
+        timestamp: new Date().toISOString()
+      }]);
+      return;
+    }
+
+    const synopsisPrompt = currentDocument.content
+      ? `Write a 2-sentence internal synopsis of this content for memory purposes only. Be factual and concise — this is not published content:\n\n${currentDocument.content.substring(0, 1500)}`
+      : `The document title is "${currentDocument.title}". Write a 1-sentence placeholder synopsis noting content is still in progress.`;
+
+    try {
+      const synopsisResponse = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system: `You are Jan. Write only the synopsis as requested — no greeting, no preamble, no sign-off. Plain text only.`,
+          messages: [{ role: 'user', content: synopsisPrompt }]
+        })
+      });
+      const synopsisData = await synopsisResponse.json();
+      const synopsis = synopsisData.content?.[0]?.text || `Content about: ${currentDocument.title}`;
+
+      const response = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save-post-context',
+          title: currentDocument.title,
+          synopsis,
+          section: currentDocument.section,
+          character: currentDocument.character,
+          brandVoice: currentDocument.brandVoice,
+          targetAudience: currentDocument.targetAudience,
+          platform: currentDocument.platform,
+          themeLabel: currentDocument.themeLabel,
+          templateType: currentDocument.templateType,
+          savedAt: new Date().toISOString()
+        })
+      });
+
+      setTitleConfirmed(true);
+      setPostContextSaved(true);
+      setChatMessages(prev => [...prev, {
+        sender: 'jan',
+        message: `✅ Title confirmed and locked in, Chef! "${currentDocument.title}" — context saved to memory. Whenever you're ready, hit Post Description and I'll have everything I need. 🐬`,
+        timestamp: new Date().toISOString()
+      }]);
+    } catch (error) {
+      setTitleConfirmed(true);
+      setPostContextSaved(true);
+      setChatMessages(prev => [...prev, {
+        sender: 'jan',
+        message: `✅ Title confirmed, Chef! "${currentDocument.title}" is locked in for this session. (D1 save had a hiccup — context held in memory for now.) 🐬`,
+        timestamp: new Date().toISOString()
+      }]);
+    }
+  };
+
+  // ============================================================
+  // POST DESCRIPTION — structured output trigger
+  // ============================================================
+  const handlePostDescription = async () => {
+    if (isLoading) return;
+
+    const title = currentDocument.title.trim();
+
+    if (!title) {
+      setChatMessages(prev => [...prev, {
+        sender: 'jan',
+        message: `Chef, I need a title before I can write the post description. Add it to the editor title field or type it here in the chat. 🐬`,
+        timestamp: new Date().toISOString()
+      }]);
+      return;
+    }
+
+    if (!titleConfirmed) {
+      setChatMessages(prev => [...prev, {
+        sender: 'jan',
+        message: `Chef, the title "${title}" isn't confirmed yet. Hit ✅ Confirm Title first so I can lock in the context — then Post Description will fire with everything it needs. 🐬`,
+        timestamp: new Date().toISOString()
+      }]);
+      return;
+    }
+
+    const postDescPrompt = `POST DESCRIPTION MODE ACTIVATED.
+
+You have full context from this session. Generate the post description package now in this exact order with these exact labels:
+
+**TITLE:** ${title}
+
+**POST DESCRIPTION:**
+[Write in the voice of ${currentDocument.character || 'the selected persona'}, for ${currentDocument.platform || 'the selected platform'}, targeting ${currentDocument.targetAudience || 'the selected audience'}. Apply the 3C Brand Archetype (Sage + Hero + Caregiver). NLP forward-motion language, calm confidence, short sentences, strong verbs. Brand voice: ${currentDocument.brandVoice || 'brand-aligned'}. "Don't Dump. Deliver."]
+
+**HASHTAGS:**
+[Platform-appropriate for ${currentDocument.platform || 'the platform'} — mix of broad reach and niche 3C community tags]
+
+**SEO KEYWORDS:**
+[5–8 targeted keywords relevant to the content and 3C brand]
+
+**CTA:**
+[One clear, brand-aligned call to action in ${currentDocument.character || 'persona'} voice — invites, does not push]`;
+
+    setIsLoading(true);
+    setChatMessages(prev => [...prev, {
+      sender: 'user',
+      message: `📝 Post Description requested for: "${title}"`,
+      timestamp: new Date().toISOString()
+    }]);
+
+    try {
+      const janReply = await callJanAPI(postDescPrompt, currentDocument);
+      setChatMessages(prev => [...prev, {
+        sender: 'jan',
+        message: janReply,
+        timestamp: new Date().toISOString()
+      }]);
+    } catch (error) {
+      setChatMessages(prev => [...prev, {
+        sender: 'jan',
+        message: `Chef, I hit a connection issue. Check the Worker and try again! 🔧`,
+        timestamp: new Date().toISOString()
+      }]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -1320,6 +1472,40 @@ YOUR APPROACH:
             borderTop: `2px solid ${theme.border}`,
             backgroundColor: theme.bg
           }}>
+            {/* Confirm Title nudge — appears when title exists but not yet confirmed */}
+            {currentDocument.title && !titleConfirmed && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                marginBottom: '10px',
+                padding: '8px 12px',
+                backgroundColor: isDarkMode ? 'rgba(245,158,11,0.1)' : 'rgba(245,158,11,0.08)',
+                border: '1px solid rgba(245,158,11,0.4)',
+                borderRadius: '6px'
+              }}>
+                <span style={{ fontSize: '13px', color: isDarkMode ? '#fbbf24' : '#92400e', flex: 1 }}>
+                  📌 Title detected — confirm it so Jan can lock in the context for Post Description.
+                </span>
+                <button
+                  onClick={savePostContextToD1}
+                  style={{
+                    padding: '6px 14px',
+                    backgroundColor: '#f59e0b',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: '700',
+                    fontSize: '12px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  ✅ Confirm Title
+                </button>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '12px' }}>
               <input
                 type="text"
@@ -1356,6 +1542,25 @@ YOUR APPROACH:
                 }}
               >
                 🗂️ Save Template
+              </button>
+              <button
+                onClick={handlePostDescription}
+                disabled={isLoading}
+                title="Generate post description package for this content"
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: titleConfirmed ? '#7c3aed' : theme.bgTertiary,
+                  color: titleConfirmed ? 'white' : theme.textMuted,
+                  border: titleConfirmed ? 'none' : `2px solid ${theme.border}`,
+                  borderRadius: '8px',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: '600',
+                  fontSize: '13px',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s'
+                }}
+              >
+                📝 Post Description
               </button>
               <button
                 onClick={handleSendMessage}
