@@ -117,7 +117,36 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     initStorage();
   }, []);
 
-  // Load samples when template is selected — unchanged
+  // Auto-load samples when templateType changes or templates list loads
+  // This means Jan always sees the right samples without manual dropdown selection
+  useEffect(() => {
+    const autoLoadSamples = async () => {
+      if (!currentDocument.templateType || templates.length === 0) return;
+
+      // Find template matching current document's templateType
+      const matchingTemplate = templates.find(t =>
+        t.name.toLowerCase().includes(currentDocument.templateType.toLowerCase()) ||
+        currentDocument.templateType.toLowerCase().includes(t.name.toLowerCase())
+      );
+
+      if (matchingTemplate) {
+        // Auto-set the selectedTemplate dropdown to match
+        setSelectedTemplate(matchingTemplate.id);
+        const templateSamples = await janProjectStorage.getReferencesByTemplate(matchingTemplate.id, 10);
+        setSamples(templateSamples);
+      } else {
+        // No exact match — load samples from all templates so Jan still has context
+        const allSamples = await Promise.all(
+          templates.map(t => janProjectStorage.getReferencesByTemplate(t.id, 3))
+        );
+        const flatSamples = allSamples.flat().slice(0, 10);
+        setSamples(flatSamples);
+      }
+    };
+    autoLoadSamples();
+  }, [currentDocument.templateType, templates]);
+
+  // Keep manual dropdown selection working too
   useEffect(() => {
     const loadSamples = async () => {
       if (selectedTemplate) {
