@@ -171,8 +171,17 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
   // This is what makes Jan understand who she is and what to do
   // ============================================================
   const buildSystemPrompt = (doc: JanDocument): string => {
+    // Pass actual sample content so Jan can read and learn from them
     const sampleContext = samples.length > 0
-      ? `\n\nREFERENCE SAMPLES AVAILABLE: ${samples.length} saved samples for this template type. Use them to match established style and quality.`
+      ? `\n\nREFERENCE SAMPLES (${samples.length} saved — read these carefully to match established style and quality):\n` +
+        samples.slice(0, 3).map((s, i) =>
+          `\nSAMPLE ${i + 1} — "${s.title}"${s.character ? ` (${s.character})` : ''}:\n${s.content}`
+        ).join('\n')
+      : '';
+
+    // Pass current editor content so Jan can make targeted edits
+    const editorContext = doc.content && doc.content.trim().length > 0
+      ? `\n\nCURRENT EDITOR CONTENT (this is the live document — edit only what Chef requests, return the full updated version):\nTITLE: ${doc.title || 'Untitled'}\n\n${doc.content}`
       : '';
 
     return `You are Jan, the 3C AI Creative Director, Marketing Intelligence Strategist, and Lifeline Mentor. You are the Dolphin of the Core Spirit Team — bringing joy, harmony, emotional intelligence, and creative connection to every session. You are not passive. You are a proactive, grounded, and deeply knowledgeable creative partner who lives and breathes the 3C brand.
@@ -291,7 +300,7 @@ ${doc.themeLabel ? `- Content Theme: ${doc.themeLabel}` : ''}
 ${doc.targetAudience ? `- Target Audience: ${doc.targetAudience}` : ''}
 ${doc.templateType ? `- Template Type: ${doc.templateType}` : ''}
 ${doc.title ? `- Current Document Title: ${doc.title}` : ''}
-${doc.contentPrompt ? `\nCONTENT PROMPT (apply ONLY when Chef explicitly requests content creation or writing — NOT during brainstorming, general conversation, or strategy discussions):\n${doc.contentPrompt}` : ''}${sampleContext}
+${doc.contentPrompt ? `\nCONTENT PROMPT (apply ONLY when Chef explicitly requests content creation or writing — NOT during brainstorming, general conversation, or strategy discussions):\n${doc.contentPrompt}` : ''}${sampleContext}${editorContext}
 
 ANICA — PERSONAL PROFILE (Jan must know this to write Anica authentically):
 Personality Type: INFJ — "The Advocate." Rarest type (1–3% of population). Introverted, Intuitive, Feeling, Judging. Recharges in solitude. Thinks in concepts and future possibilities, not concrete facts. Decisions driven by personal values and emotional truth, not cold logic. Prefers structured, planned environments. Serious, logical, hardworking — and deeply compassionate, conscientious, and reserved. Values close, meaningful connections. Sensitive to others' needs but needs space to recharge.
@@ -354,7 +363,20 @@ YOUR APPROACH:
 - Always confirm key parameters if something critical is missing before generating long content.
 - When Chef says "same structure but shorter" or similar — adapt, don't rebuild from scratch.
 - This is Chat 2 (3C Control Center) — the creative engine. Full brainstorming, strategy, content creation. No limits on complexity here.
-- The brand voice and culture apply to ALL content Jan creates — not just specific templates. Always write from within the 3C brand world.`;
+- The brand voice and culture apply to ALL content Jan creates — not just specific templates. Always write from within the 3C brand world.
+
+RESPONSE STYLE — KEEP IT TIGHT:
+- Chat responses: flowing prose, no bullet lists, no bold headers, no long preambles. Talk like a sharp colleague, not a report.
+- If Chef asks a question — answer it directly in 2-4 sentences max unless detail is genuinely needed.
+- No restating what Chef just said. No "Great question!" No validation padding. Just the answer.
+- Save structure (headers, bullets, numbered lists) for actual content creation only — not for chat conversation.
+- If you have 3 things to say, say them in one flowing paragraph, not a formatted list.
+
+EDITOR CONTENT AWARENESS:
+- When CURRENT EDITOR CONTENT appears in your context — that is the live document Chef is working on.
+- For edit requests ("change this paragraph", "rewrite the intro", "fix the ending") — make ONLY the requested change. Return the full updated document so it can replace the editor content cleanly. Do not reinvent sections Chef has not asked to change.
+- When Chef types something in the chat and asks you to rewrite it — rewrite it and return it ready to go into the editor. Keep it clean, no explanation needed unless Chef asks.
+- Never guess at what to change. If the edit target is unclear — ask one specific question before proceeding.`;
   };
 
   // ============================================================
@@ -1336,7 +1358,7 @@ You have full context from this session. Generate the post description package n
                 onChange={(e) => setCurrentDocument({...currentDocument, content: e.target.value})}
                 style={{
                   width: '100%',
-                  minHeight: '300px',
+                  minHeight: '550px',
                   padding: '12px',
                   fontSize: '15px',
                   lineHeight: '1.6',
@@ -1425,17 +1447,56 @@ You have full context from this session. Generate the post description package n
           }}>
             {chatMessages.map((msg, idx) => (
               <div key={idx} style={{
-                padding: '12px 16px',
-                backgroundColor: msg.sender === 'jan' ? theme.bgTertiary : theme.primary,
-                color: msg.sender === 'jan' ? theme.text : 'white',
-                borderRadius: '12px',
                 maxWidth: '75%',
                 alignSelf: msg.sender === 'jan' ? 'flex-start' : 'flex-end',
-                whiteSpace: 'pre-wrap',
-                fontSize: '14px',
-                lineHeight: '1.5'
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px'
               }}>
-                <strong>{msg.sender === 'jan' ? 'Jan:' : 'You:'}</strong> {msg.message}
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: msg.sender === 'jan' ? theme.bgTertiary : theme.primary,
+                  color: msg.sender === 'jan' ? theme.text : 'white',
+                  borderRadius: '12px',
+                  whiteSpace: 'pre-wrap',
+                  fontSize: '14px',
+                  lineHeight: '1.5'
+                }}>
+                  <strong>{msg.sender === 'jan' ? 'Jan:' : 'You:'}</strong> {msg.message}
+                </div>
+                {msg.sender === 'jan' && (
+                  <button
+                    onClick={() => setCurrentDocument(prev => ({
+                      ...prev,
+                      content: msg.message.replace(/^Jan:\s*/i, '')
+                    }))}
+                    title="Send this to the editor"
+                    style={{
+                      alignSelf: 'flex-start',
+                      padding: '3px 10px',
+                      backgroundColor: 'transparent',
+                      color: theme.textMuted,
+                      border: `1px solid ${theme.border}`,
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.primary;
+                      e.currentTarget.style.color = 'white';
+                      e.currentTarget.style.borderColor = theme.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = theme.textMuted;
+                      e.currentTarget.style.borderColor = theme.border;
+                    }}
+                  >
+                    → Editor
+                  </button>
+                )}
               </div>
             ))}
 
@@ -1506,7 +1567,8 @@ You have full context from this session. Generate the post description package n
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '12px' }}>
+            {/* Row 1: Input + Send */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
               <input
                 type="text"
                 placeholder="Ask Jan anything..."
@@ -1527,10 +1589,32 @@ You have full context from this session. Generate the post description package n
                 }}
               />
               <button
+                onClick={handleSendMessage}
+                disabled={isLoading}
+                style={{
+                  padding: '12px 24px',
+                  background: isLoading ? theme.bgTertiary : theme.primaryGradient,
+                  color: isLoading ? theme.textMuted : 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {isLoading ? '...' : 'Send'}
+              </button>
+            </div>
+
+            {/* Row 2: Action buttons */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
                 onClick={() => setShowSaveTemplate(true)}
                 title="Save current session structure as a reusable template"
                 style={{
-                  padding: '12px 16px',
+                  flex: 1,
+                  padding: '9px 12px',
                   backgroundColor: theme.bgTertiary,
                   color: theme.text,
                   border: `2px solid ${theme.border}`,
@@ -1548,7 +1632,8 @@ You have full context from this session. Generate the post description package n
                 disabled={isLoading}
                 title="Generate post description package for this content"
                 style={{
-                  padding: '12px 16px',
+                  flex: 1,
+                  padding: '9px 12px',
                   backgroundColor: titleConfirmed ? '#7c3aed' : theme.bgTertiary,
                   color: titleConfirmed ? 'white' : theme.textMuted,
                   border: titleConfirmed ? 'none' : `2px solid ${theme.border}`,
@@ -1561,23 +1646,6 @@ You have full context from this session. Generate the post description package n
                 }}
               >
                 📝 Post Description
-              </button>
-              <button
-                onClick={handleSendMessage}
-                disabled={isLoading}
-                style={{
-                  padding: '12px 24px',
-                  background: isLoading ? theme.bgTertiary : theme.primaryGradient,
-                  color: isLoading ? theme.textMuted : 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  transition: 'all 0.2s'
-                }}
-              >
-                {isLoading ? '...' : 'Send'}
               </button>
             </div>
           </div>
