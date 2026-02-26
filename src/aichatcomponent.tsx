@@ -1877,37 +1877,70 @@ You have full context from this session. Generate the post description package n
                   <strong>{msg.sender === 'jan' ? 'Jan:' : 'You:'}</strong> {msg.message}
                 </div>
                 {msg.sender === 'jan' && (
-                  <button
-                    onClick={() => setCurrentDocument(prev => ({
-                      ...prev,
-                      content: msg.message.replace(/^Jan:\s*/i, '')
-                    }))}
-                    title="Send this to the editor"
-                    style={{
-                      alignSelf: 'flex-start',
-                      padding: '3px 10px',
-                      backgroundColor: 'transparent',
-                      color: theme.textMuted,
-                      border: `1px solid ${theme.border}`,
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      fontWeight: '600',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.primary;
-                      e.currentTarget.style.color = 'white';
-                      e.currentTarget.style.borderColor = theme.primary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = theme.textMuted;
-                      e.currentTarget.style.borderColor = theme.border;
-                    }}
-                  >
-                    → Editor
-                  </button>
+                  <div style={{ display: 'flex', gap: '6px', alignSelf: 'flex-start' }}>
+                    <button
+                      onClick={() => setCurrentDocument(prev => ({
+                        ...prev,
+                        content: msg.message.replace(/^Jan:\s*/i, '')
+                      }))}
+                      title="Replace editor content with this"
+                      style={{
+                        padding: '3px 10px',
+                        backgroundColor: 'transparent',
+                        color: theme.textMuted,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = theme.primary;
+                        e.currentTarget.style.color = 'white';
+                        e.currentTarget.style.borderColor = theme.primary;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = theme.textMuted;
+                        e.currentTarget.style.borderColor = theme.border;
+                      }}
+                    >
+                      → Editor
+                    </button>
+                    <button
+                      onClick={() => setCurrentDocument(prev => ({
+                        ...prev,
+                        content: prev.content
+                          ? prev.content + '\n\n' + msg.message.replace(/^Jan:\s*/i, '')
+                          : msg.message.replace(/^Jan:\s*/i, '')
+                      }))}
+                      title="Append this to existing editor content"
+                      style={{
+                        padding: '3px 10px',
+                        backgroundColor: 'transparent',
+                        color: theme.textMuted,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#10b981';
+                        e.currentTarget.style.color = 'white';
+                        e.currentTarget.style.borderColor = '#10b981';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = theme.textMuted;
+                        e.currentTarget.style.borderColor = theme.border;
+                      }}
+                    >
+                      ➕ Append
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
@@ -1981,13 +2014,18 @@ You have full context from this session. Generate the post description package n
 
             {/* Row 1: Input + Send */}
             <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
-              <input
-                type="text"
-                placeholder="Ask Jan anything..."
+              <textarea
+                placeholder="Ask Jan anything... (paste text here for Jan to work on)"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
                 disabled={isLoading}
+                rows={3}
                 style={{
                   flex: 1,
                   padding: '12px 16px',
@@ -1997,7 +2035,11 @@ You have full context from this session. Generate the post description package n
                   borderRadius: '8px',
                   fontSize: '14px',
                   outline: 'none',
-                  opacity: isLoading ? 0.6 : 1
+                  opacity: isLoading ? 0.6 : 1,
+                  resize: 'vertical',
+                  fontFamily: 'inherit',
+                  lineHeight: '1.5',
+                  minHeight: '48px'
                 }}
               />
               <button
