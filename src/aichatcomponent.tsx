@@ -72,6 +72,16 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
   const [titleConfirmed, setTitleConfirmed] = useState(false);
   const [postContextSaved, setPostContextSaved] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
+  const [toast, setToast] = useState<{message: string, type: 'success'|'error'} | null>(null);
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [libraryDocs, setLibraryDocs] = useState<any[]>([]);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+
+  // Show toast for 2.5 seconds then auto-dismiss
+  const showToast = (message: string, type: 'success'|'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 2500);
+  };
 
   // ============================================================
   // DOWNLOAD PDF — opens a clean print window from editor content
@@ -750,7 +760,7 @@ EDITOR CONTENT AWARENESS:
   // ============================================================
   const saveContentToLibrary = async () => {
     if (!currentDocument.content.trim()) {
-      alert('No content to save. Write or generate something first.');
+      showToast('No content to save. Write something first.', 'error');
       return;
     }
     try {
@@ -771,14 +781,73 @@ EDITOR CONTENT AWARENESS:
       });
       const data = await response.json();
       if (data.success) {
-        setChatMessages(prev => [...prev, {
-          sender: 'jan',
-          message: `✅ Content saved to library, Chef! "${currentDocument.title || 'Untitled'}" is now in the D1 content library with status: ${currentDocument.status}. 🐬`,
-          timestamp: new Date().toISOString()
-        }]);
+        showToast(data.updated
+          ? `"${currentDocument.title || 'Untitled'}" updated in library ✅`
+          : `"${currentDocument.title || 'Untitled'}" saved to library ✅`
+        );
       }
     } catch (error) {
-      alert('Failed to save content. Check Worker is deployed.');
+      showToast('Save failed — check Worker is deployed.', 'error');
+    }
+  };
+
+  // ============================================================
+  // LOAD DOCUMENT LIBRARY — fetches all saved docs from D1
+  // ============================================================
+  const loadLibrary = async () => {
+    setLibraryLoading(true);
+    try {
+      const response = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'list-documents' })
+      });
+      const data = await response.json();
+      setLibraryDocs(data.documents || []);
+    } catch (error) {
+      showToast('Could not load library — check Worker.', 'error');
+    } finally {
+      setLibraryLoading(false);
+    }
+  };
+
+  // ============================================================
+  // LOAD DOCUMENT INTO EDITOR — pulls full doc from D1 by id
+  // ============================================================
+  const loadDocumentById = async (id: string, title: string) => {
+    try {
+      const response = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'load-document', id })
+      });
+      const data = await response.json();
+      if (data.success && data.document) {
+        const doc = data.document;
+        setCurrentDocument({
+          title: doc.title || '',
+          section: currentDocument.section,
+          character: doc.character || '',
+          brandVoice: currentDocument.brandVoice,
+          templateType: doc.template_type || '',
+          themeLabel: doc.theme_label || '',
+          targetAudience: doc.target_audience || '',
+          platform: doc.platform || '',
+          contentPrompt: currentDocument.contentPrompt,
+          content: doc.content || '',
+          status: doc.status || 'Not started',
+          wordCount: doc.word_count || 0,
+          readingTime: Math.ceil((doc.word_count || 0) / 200),
+          lastModified: doc.created_at || new Date().toISOString()
+        });
+        setShowLibrary(false);
+        setTitleConfirmed(false);
+        setPostContextSaved(false);
+        apiMessages.current = [];
+        showToast(`"${title}" loaded into editor ✅`);
+      }
+    } catch (error) {
+      showToast('Could not load document.', 'error');
     }
   };
 
@@ -935,6 +1004,118 @@ You have full context from this session. Generate the post description package n
           }
         `}
       </style>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '32px',
+          right: '32px',
+          zIndex: 9999,
+          padding: '14px 22px',
+          backgroundColor: toast.type === 'success' ? '#10b981' : '#dc2626',
+          color: 'white',
+          borderRadius: '8px',
+          fontWeight: '600',
+          fontSize: '14px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+          animation: 'pulse 0.3s ease'
+        }}>
+          {toast.message}
+        </div>
+      )}
+
+      {/* My Documents Modal */}
+      {showLibrary && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            backgroundColor: isDarkMode ? '#1e293b' : 'white',
+            borderRadius: '12px',
+            padding: '28px',
+            width: '90%',
+            maxWidth: '680px',
+            maxHeight: '80vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.35)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: isDarkMode ? '#f1f5f9' : '#1e293b' }}>
+                📚 My Documents
+              </h2>
+              <button
+                onClick={() => setShowLibrary(false)}
+                style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: isDarkMode ? '#94a3b8' : '#64748b' }}
+              >✕</button>
+            </div>
+
+            {libraryLoading ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
+                Loading your documents...
+              </div>
+            ) : libraryDocs.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
+                No documents saved yet. Use 📚 Library to save your first document.
+              </div>
+            ) : (
+              <div style={{ overflowY: 'auto', flex: 1 }}>
+                {libraryDocs.map(doc => (
+                  <div
+                    key={doc.id}
+                    onClick={() => loadDocumentById(doc.id, doc.title)}
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: '8px',
+                      marginBottom: '8px',
+                      cursor: 'pointer',
+                      border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
+                      backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+                      transition: 'all 0.15s'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = isDarkMode ? '#1e293b' : '#e0f2fe';
+                      e.currentTarget.style.borderColor = '#3b82f6';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = isDarkMode ? '#0f172a' : '#f8fafc';
+                      e.currentTarget.style.borderColor = isDarkMode ? '#334155' : '#e2e8f0';
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <div style={{ fontWeight: '700', fontSize: '15px', color: isDarkMode ? '#f1f5f9' : '#1e293b', marginBottom: '4px' }}>
+                          {doc.title}
+                        </div>
+                        <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
+                          {doc.character && `${doc.character} · `}
+                          {doc.platform && `${doc.platform} · `}
+                          {doc.word_count ? `${doc.word_count} words` : ''}
+                        </div>
+                      </div>
+                      <div style={{
+                        fontSize: '11px', fontWeight: '600', padding: '3px 10px',
+                        borderRadius: '20px', whiteSpace: 'nowrap',
+                        backgroundColor: doc.status === 'Published' ? '#d1fae5' : doc.status === 'Complete' ? '#dbeafe' : '#fef3c7',
+                        color: doc.status === 'Published' ? '#065f46' : doc.status === 'Complete' ? '#1e40af' : '#92400e'
+                      }}>
+                        {doc.status}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '11px', color: isDarkMode ? '#64748b' : '#94a3b8', marginTop: '6px' }}>
+                      {new Date(doc.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       
       <div style={{
         maxWidth: '1400px',
@@ -1438,6 +1619,23 @@ You have full context from this session. Generate the post description package n
                   }}
                 >
                   📚 Library
+                </button>
+                <button
+                  onClick={() => { setShowLibrary(true); loadLibrary(); }}
+                  title="Browse and load saved documents"
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    backgroundColor: '#6366f1',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '13px'
+                  }}
+                >
+                  📂 My Docs
                 </button>
               </div>
             </div>
