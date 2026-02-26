@@ -71,6 +71,62 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [titleConfirmed, setTitleConfirmed] = useState(false);
   const [postContextSaved, setPostContextSaved] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+
+  // ============================================================
+  // DOWNLOAD PDF — opens a clean print window from editor content
+  // ============================================================
+  const handleDownloadPDF = () => {
+    const title = currentDocument.title || 'Document';
+    const content = currentDocument.content || '';
+
+    // Convert basic markdown to HTML for clean PDF output
+    const htmlContent = content
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/^---$/gm, '<hr/>')
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n/g, '<br/>');
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>${title}</title>
+        <style>
+          body { font-family: Georgia, serif; max-width: 750px; margin: 60px auto; padding: 0 40px; color: #1a1a1a; line-height: 1.8; font-size: 16px; }
+          h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; }
+          h2 { font-size: 22px; font-weight: 600; margin-top: 32px; color: #111; }
+          h3 { font-size: 18px; font-weight: 600; margin-top: 24px; color: #333; }
+          p { margin: 16px 0; }
+          ul { margin: 12px 0; padding-left: 24px; }
+          li { margin: 6px 0; }
+          hr { border: none; border-top: 1px solid #e5e7eb; margin: 32px 0; }
+          strong { font-weight: 700; }
+          em { font-style: italic; }
+          .meta { font-size: 13px; color: #6b7280; margin-bottom: 32px; }
+          @media print { body { margin: 0; } }
+        </style>
+      </head>
+      <body>
+        <h1>${title}</h1>
+        <div class="meta">3C Thread To Success · ${currentDocument.character || ''} ${currentDocument.platform ? '· ' + currentDocument.platform : ''}</div>
+        <p>${htmlContent}</p>
+        <script>window.onload = () => { window.print(); }</script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
   const [templateSaveData, setTemplateSaveData] = useState({ structure: '', guidelines: '' });
   const [currentSample, setCurrentSample] = useState<ProjectReference | null>(null);
   const [newSample, setNewSample] = useState({ title: '', content: '', tags: '', notes: '' });
@@ -471,7 +527,8 @@ EDITOR CONTENT AWARENESS:
 - When CURRENT EDITOR CONTENT appears in your context — that is the live document Chef is working on.
 - For edit requests ("change this paragraph", "rewrite the intro", "fix the ending") — make ONLY the requested change. Return the full updated document so it can replace the editor content cleanly. Do not reinvent sections Chef has not asked to change.
 - When Chef types something in the chat and asks you to rewrite it — rewrite it and return it ready to go into the editor. Keep it clean, no explanation needed unless Chef asks.
-- Never guess at what to change. If the edit target is unclear — ask one specific question before proceeding.`;
+- Never guess at what to change. If the edit target is unclear — ask one specific question before proceeding.
+- IMPORTANT: The document title is displayed separately above the editor. Never repeat the title as the first line of the content body. Start the content directly — no title repetition.`;
   };
 
   // ============================================================
@@ -1404,29 +1461,66 @@ You have full context from this session. Generate the post description package n
               borderBottom: `2px solid ${theme.border}`,
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center'
+              alignItems: 'center',
+              gap: '10px'
             }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: theme.text }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: theme.text, whiteSpace: 'nowrap' }}>
                 ✍️ Content Editor
               </h3>
-              <select
-                value={currentDocument.status}
-                onChange={(e) => setCurrentDocument({...currentDocument, status: e.target.value})}
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: theme.bgSecondary,
-                  color: theme.text,
-                  border: `2px solid ${theme.border}`,
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '600'
-                }}
-              >
-                <option value="Not started">Not started</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Complete">Complete</option>
-                <option value="Published">Published</option>
-              </select>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  onClick={() => setPreviewMode(!previewMode)}
+                  title={previewMode ? 'Switch to edit mode' : 'Preview formatted content'}
+                  style={{
+                    padding: '6px 14px',
+                    backgroundColor: previewMode ? theme.primary : theme.bgTertiary,
+                    color: previewMode ? 'white' : theme.text,
+                    border: `2px solid ${previewMode ? theme.primary : theme.border}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '12px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {previewMode ? '✏️ Edit' : '👁️ Preview'}
+                </button>
+                <button
+                  onClick={handleDownloadPDF}
+                  title="Download as PDF"
+                  style={{
+                    padding: '6px 14px',
+                    backgroundColor: '#dc2626',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '12px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  📄 PDF
+                </button>
+                <select
+                  value={currentDocument.status}
+                  onChange={(e) => setCurrentDocument({...currentDocument, status: e.target.value})}
+                  style={{
+                    padding: '8px 12px',
+                    backgroundColor: theme.bgSecondary,
+                    color: theme.text,
+                    border: `2px solid ${theme.border}`,
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: '600'
+                  }}
+                >
+                  <option value="Not started">Not started</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Complete">Complete</option>
+                  <option value="Published">Published</option>
+                </select>
+              </div>
             </div>
             <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
               <input
@@ -1447,24 +1541,49 @@ You have full context from this session. Generate the post description package n
                   outline: 'none'
                 }}
               />
-              <textarea
-                placeholder="Start writing your content here..."
-                value={currentDocument.content}
-                onChange={(e) => setCurrentDocument({...currentDocument, content: e.target.value})}
-                style={{
-                  width: '100%',
-                  minHeight: '550px',
-                  padding: '12px',
-                  fontSize: '15px',
-                  lineHeight: '1.6',
-                  backgroundColor: 'transparent',
-                  color: theme.text,
-                  border: 'none',
-                  outline: 'none',
-                  resize: 'vertical',
-                  fontFamily: 'inherit'
-                }}
-              />
+              {previewMode ? (
+                <div
+                  style={{
+                    minHeight: '550px',
+                    padding: '12px',
+                    fontSize: '15px',
+                    lineHeight: '1.8',
+                    color: theme.text,
+                    fontFamily: 'inherit'
+                  }}
+                  dangerouslySetInnerHTML={{
+                    __html: (currentDocument.content || '')
+                      .replace(/^### (.+)$/gm, `<h3 style="font-size:17px;font-weight:700;margin:20px 0 8px;color:${theme.text}">$1</h3>`)
+                      .replace(/^## (.+)$/gm, `<h2 style="font-size:20px;font-weight:700;margin:24px 0 10px;color:${theme.text}">$1</h2>`)
+                      .replace(/^# (.+)$/gm, `<h1 style="font-size:24px;font-weight:700;margin:28px 0 12px;color:${theme.text}">$1</h1>`)
+                      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                      .replace(/^---$/gm, `<hr style="border:none;border-top:1px solid ${theme.border};margin:20px 0"/>`)
+                      .replace(/^- (.+)$/gm, `<li style="margin:4px 0;padding-left:4px">$1</li>`)
+                      .replace(/\n\n/g, '</p><p style="margin:12px 0">')
+                      .replace(/\n/g, '<br/>')
+                  }}
+                />
+              ) : (
+                <textarea
+                  placeholder="Start writing your content here... (use **bold**, *italic*, ## headers, - lists)"
+                  value={currentDocument.content}
+                  onChange={(e) => setCurrentDocument({...currentDocument, content: e.target.value})}
+                  style={{
+                    width: '100%',
+                    minHeight: '550px',
+                    padding: '12px',
+                    fontSize: '15px',
+                    lineHeight: '1.6',
+                    backgroundColor: 'transparent',
+                    color: theme.text,
+                    border: 'none',
+                    outline: 'none',
+                    resize: 'vertical',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              )}
             </div>
           </div>
 
