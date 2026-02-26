@@ -113,7 +113,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
         <meta charset="utf-8">
         <title>${title}</title>
         <style>
-          body { font-family: Georgia, serif; max-width: 750px; margin: 60px auto; padding: 0 40px; color: #1a1a1a; line-height: 1.8; font-size: 16px; }
+          body { font-family: 'Canva Sans', Arial, sans-serif; max-width: 750px; margin: 60px auto; padding: 0 40px; color: #1a1a1a; line-height: 1.8; font-size: 16px; }
           h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; }
           h2 { font-size: 22px; font-weight: 600; margin-top: 32px; color: #111; }
           h3 { font-size: 18px; font-weight: 600; margin-top: 24px; color: #333; }
