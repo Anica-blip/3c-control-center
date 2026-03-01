@@ -183,30 +183,53 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     initStorage();
   }, []);
 
+  // ============================================================
+  // LOAD SAMPLES FROM D1 via Worker — replaces IndexedDB
+  // ============================================================
+  const loadSamplesFromD1 = async (templateId: string) => {
+    try {
+      const response = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get-references-by-template', templateId, limit: 10 })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSamples(data.references || []);
+      }
+    } catch (error) {
+      console.error('Failed to load samples from D1:', error);
+    }
+  };
+
   // Auto-load samples when templateType changes or templates list loads
-  // This means Jan always sees the right samples without manual dropdown selection
   useEffect(() => {
     const autoLoadSamples = async () => {
       if (!currentDocument.templateType || templates.length === 0) return;
 
-      // Find template matching current document's templateType
       const matchingTemplate = templates.find(t =>
         t.name.toLowerCase().includes(currentDocument.templateType.toLowerCase()) ||
         currentDocument.templateType.toLowerCase().includes(t.name.toLowerCase())
       );
 
       if (matchingTemplate) {
-        // Auto-set the selectedTemplate dropdown to match
         setSelectedTemplate(matchingTemplate.id);
-        const templateSamples = await janProjectStorage.getReferencesByTemplate(matchingTemplate.id, 10);
-        setSamples(templateSamples);
+        await loadSamplesFromD1(matchingTemplate.id);
       } else {
-        // No exact match — load samples from all templates so Jan still has context
-        const allSamples = await Promise.all(
-          templates.map(t => janProjectStorage.getReferencesByTemplate(t.id, 3))
-        );
-        const flatSamples = allSamples.flat().slice(0, 10);
-        setSamples(flatSamples);
+        // No exact match — load from all templates as fallback
+        const allRefs: any[] = [];
+        for (const t of templates) {
+          try {
+            const response = await fetch(WORKER_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'get-references-by-template', templateId: t.id, limit: 3 })
+            });
+            const data = await response.json();
+            if (data.success) allRefs.push(...(data.references || []));
+          } catch {}
+        }
+        setSamples(allRefs.slice(0, 10));
       }
     };
     autoLoadSamples();
@@ -216,8 +239,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
   useEffect(() => {
     const loadSamples = async () => {
       if (selectedTemplate) {
-        const templateSamples = await janProjectStorage.getReferencesByTemplate(selectedTemplate, 10);
-        setSamples(templateSamples);
+        await loadSamplesFromD1(selectedTemplate);
       }
     };
     loadSamples();
@@ -2246,35 +2268,37 @@ You have full context from this session. Generate the post description package n
                 <button
                   onClick={async () => {
                     if (newSample.title && newSample.content && selectedTemplate) {
-                      const reference: ProjectReference = {
-                        id: `ref_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                        templateId: selectedTemplate,
-                        title: newSample.title,
-                        content: newSample.content,
-                        character: currentDocument.character,
-                        createdAt: new Date().toISOString(),
-                        tags: newSample.tags.split(',').map(t => t.trim()).filter(t => t)
-                      };
-                      if (newSample.notes) {
-                        reference.performance = { notes: newSample.notes };
+                      const refId = `ref_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                      try {
+                        const response = await fetch(WORKER_URL, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            action: 'save-reference',
+                            id: refId,
+                            templateId: selectedTemplate,
+                            title: newSample.title,
+                            content: newSample.content,
+                            character: currentDocument.character || '',
+                            tags: newSample.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t),
+                            engagementNotes: newSample.notes || ''
+                          })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                          await janProjectStorage.updateTemplateUsage(selectedTemplate);
+                          await loadSamplesFromD1(selectedTemplate);
+                          const updatedTemplates = await janProjectStorage.getAllTemplates();
+                          setTemplates(updatedTemplates);
+                          setShowAddSample(false);
+                          setNewSample({ title: '', content: '', tags: '', notes: '' });
+                          showToast(`"${newSample.title}" saved to D1 library ✅`);
+                        } else {
+                          showToast('Save failed — check Worker.', 'error');
+                        }
+                      } catch (error) {
+                        showToast('Save failed — check Worker.', 'error');
                       }
-                      await janProjectStorage.saveReference(reference);
-                      await janProjectStorage.updateTemplateUsage(selectedTemplate);
-                      
-                      const updatedSamples = await janProjectStorage.getReferencesByTemplate(selectedTemplate, 10);
-                      setSamples(updatedSamples);
-                      
-                      const updatedTemplates = await janProjectStorage.getAllTemplates();
-                      setTemplates(updatedTemplates);
-                      
-                      setShowAddSample(false);
-                      setNewSample({ title: '', content: '', tags: '', notes: '' });
-                      
-                      setChatMessages(prev => [...prev, {
-                        sender: 'jan',
-                        message: `✅ Sample saved! I've got ${updatedSamples.length} example${updatedSamples.length > 1 ? 's' : ''} for this template now. I can reference "${newSample.title}" next time we work on similar content!`,
-                        timestamp: new Date().toISOString()
-                      }]);
                     }
                   }}
                   disabled={!newSample.title || !newSample.content}
