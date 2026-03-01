@@ -90,19 +90,41 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     const title = currentDocument.title || 'Document';
     const content = currentDocument.content || '';
 
-    // Convert basic markdown to HTML for clean PDF output
-    const htmlContent = content
-      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/^---$/gm, '<hr/>')
-      .replace(/^- (.+)$/gm, '<li>$1</li>')
-      .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/\n/g, '<br/>');
+    // Convert markdown to clean HTML with proper block elements for copy-friendly output
+    const lines = content.split('\n');
+    let htmlLines: string[] = [];
+    let inList = false;
 
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        if (inList) { htmlLines.push('</ul>'); inList = false; }
+        htmlLines.push('<p style="margin:0;min-height:1em"> </p>');
+      } else if (trimmed.startsWith('### ')) {
+        if (inList) { htmlLines.push('</ul>'); inList = false; }
+        htmlLines.push(`<h3>${trimmed.replace(/^### /, '')}</h3>`);
+      } else if (trimmed.startsWith('## ')) {
+        if (inList) { htmlLines.push('</ul>'); inList = false; }
+        htmlLines.push(`<h2>${trimmed.replace(/^## /, '')}</h2>`);
+      } else if (trimmed.startsWith('# ')) {
+        if (inList) { htmlLines.push('</ul>'); inList = false; }
+        htmlLines.push(`<h1 style="font-size:22px;margin:24px 0 8px">${trimmed.replace(/^# /, '')}</h1>`);
+      } else if (trimmed.startsWith('- ')) {
+        if (!inList) { htmlLines.push('<ul>'); inList = true; }
+        htmlLines.push(`<li>${trimmed.replace(/^- /, '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>')}</li>`);
+      } else if (trimmed === '---') {
+        if (inList) { htmlLines.push('</ul>'); inList = false; }
+        htmlLines.push('<hr/>');
+      } else {
+        if (inList) { htmlLines.push('</ul>'); inList = false; }
+        const formatted = trimmed
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.+?)\*/g, '<em>$1</em>');
+        htmlLines.push(`<p>${formatted}</p>`);
+      }
+    }
+    if (inList) htmlLines.push('</ul>');
+    const htmlContent = htmlLines.join('\n');
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -665,7 +687,27 @@ EDITOR CONTENT AWARENESS:
     }
 
     try {
-      const janReply = await callJanAPI(userMessage, currentDocument);
+      // Detect URL in message — fetch content and inject into prompt
+      const urlMatch = userMessage.match(/https?:\/\/[^\s]+/);
+      let enrichedMessage = userMessage;
+
+      if (urlMatch) {
+        try {
+          const urlResponse = await fetch(WORKER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'fetch-url', url: urlMatch[0] })
+          });
+          const urlData = await urlResponse.json();
+          if (urlData.success && urlData.content) {
+            enrichedMessage = `${userMessage}\n\n[URL CONTENT FROM ${urlMatch[0]}]:\n${urlData.content}`;
+          }
+        } catch {
+          // URL fetch failed — continue with original message
+        }
+      }
+
+      const janReply = await callJanAPI(enrichedMessage, currentDocument);
       setChatMessages(prev => [...prev, {
         sender: 'jan',
         message: janReply,
@@ -1749,6 +1791,8 @@ You have full context from this session. Generate the post description package n
                 placeholder="Document Title..."
                 value={currentDocument.title}
                 onChange={(e) => setCurrentDocument({...currentDocument, title: e.target.value})}
+                lang="en-GB"
+                spellCheck={true}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -1790,6 +1834,8 @@ You have full context from this session. Generate the post description package n
                   placeholder="Start writing your content here... (use **bold**, *italic*, ## headers, - lists)"
                   value={currentDocument.content}
                   onChange={(e) => setCurrentDocument({...currentDocument, content: e.target.value})}
+                  lang="en-GB"
+                  spellCheck={true}
                   style={{
                     width: '100%',
                     minHeight: '550px',
@@ -2049,6 +2095,8 @@ You have full context from this session. Generate the post description package n
                 }}
                 disabled={isLoading}
                 rows={3}
+                lang="en-GB"
+                spellCheck={true}
                 style={{
                   flex: 1,
                   padding: '12px 16px',
