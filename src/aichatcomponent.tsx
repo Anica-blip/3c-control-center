@@ -35,9 +35,9 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
   const [isOnline, setIsOnline] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionTokens, setSessionTokens] = useState({ input: 0, output: 0 });
-  const COST_PER_INPUT_TOKEN = 0.000003;  // Sonnet 4.6 input rate
-  const COST_PER_OUTPUT_TOKEN = 0.000015; // Sonnet 4.6 output rate
-  const WARNING_THRESHOLD = 3.00;         // Alert when $3 spent this session
+  const COST_PER_INPUT_TOKEN = 0.000003;
+  const COST_PER_OUTPUT_TOKEN = 0.000015;
+  const WARNING_THRESHOLD = 3.00;
   const [currentDocument, setCurrentDocument] = useState<JanDocument>({
     title: '',
     section: '',
@@ -66,6 +66,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
   const [templates, setTemplates] = useState<ContentTemplate[]>([]);
   const [samples, setSamples] = useState<ProjectReference[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [activeSampleId, setActiveSampleId] = useState<string | null>(null);
   const [showAddSample, setShowAddSample] = useState(false);
   const [showViewSample, setShowViewSample] = useState(false);
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
@@ -77,20 +78,15 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
   const [libraryDocs, setLibraryDocs] = useState<any[]>([]);
   const [libraryLoading, setLibraryLoading] = useState(false);
 
-  // Show toast for 2.5 seconds then auto-dismiss
   const showToast = (message: string, type: 'success'|'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 2500);
   };
 
-  // ============================================================
-  // DOWNLOAD PDF — opens a clean print window from editor content
-  // ============================================================
   const handleDownloadPDF = () => {
     const title = currentDocument.title || 'Document';
     const content = currentDocument.content || '';
 
-    // Convert markdown to clean HTML with proper block elements for copy-friendly output
     const lines = content.split('\n');
     let htmlLines: string[] = [];
     let inList = false;
@@ -159,14 +155,13 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     `);
     printWindow.document.close();
   };
+
   const [templateSaveData, setTemplateSaveData] = useState({ structure: '', guidelines: '' });
   const [currentSample, setCurrentSample] = useState<ProjectReference | null>(null);
   const [newSample, setNewSample] = useState({ title: '', content: '', tags: '', notes: '' });
 
-  // API messages array — full conversation history passed to Claude each call
   const apiMessages = useRef<Array<{role: 'user' | 'assistant', content: string}>>([]);
 
-  // Theme colors — unchanged
   const theme = {
     bg: isDarkMode ? '#1a202c' : '#ffffff',
     bgSecondary: isDarkMode ? '#2d3748' : '#f8f9fa',
@@ -181,7 +176,6 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     shadow: isDarkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 4px 6px rgba(0, 0, 0, 0.1)'
   };
 
-  // Calculate word count and reading time — unchanged
   useEffect(() => {
     const words = currentDocument.content.trim().split(/\s+/).filter(w => w.length > 0).length;
     const readingTime = Math.ceil(words / 200);
@@ -193,7 +187,6 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     }));
   }, [currentDocument.content]);
 
-  // Initialize storage and load templates — unchanged + connect janChatStorage
   useEffect(() => {
     const initStorage = async () => {
       await initJanProjectStorage();
@@ -205,9 +198,6 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     initStorage();
   }, []);
 
-  // ============================================================
-  // LOAD SAMPLES FROM D1 via Worker — replaces IndexedDB
-  // ============================================================
   const loadSamplesFromD1 = async (templateId: string) => {
     try {
       const response = await fetch(WORKER_URL, {
@@ -224,7 +214,6 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     }
   };
 
-  // Auto-load samples when templateType changes or templates list loads
   useEffect(() => {
     const autoLoadSamples = async () => {
       if (!currentDocument.templateType || templates.length === 0) return;
@@ -236,9 +225,9 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
 
       if (matchingTemplate) {
         setSelectedTemplate(matchingTemplate.id);
+        setActiveSampleId(null);
         await loadSamplesFromD1(matchingTemplate.id);
       } else {
-        // No exact match — load from all templates as fallback
         const allRefs: any[] = [];
         for (const t of templates) {
           try {
@@ -257,17 +246,16 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     autoLoadSamples();
   }, [currentDocument.templateType, templates]);
 
-  // Keep manual dropdown selection working too
   useEffect(() => {
     const loadSamples = async () => {
       if (selectedTemplate) {
+        setActiveSampleId(null);
         await loadSamplesFromD1(selectedTemplate);
       }
     };
     loadSamples();
   }, [selectedTemplate]);
 
-  // Auto-save draft — unchanged
   useEffect(() => {
     const timer = setTimeout(() => {
       if (currentDocument.content || currentDocument.title) {
@@ -277,7 +265,6 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     return () => clearTimeout(timer);
   }, [currentDocument]);
 
-  // Load draft on mount — unchanged
   useEffect(() => {
     const draft = localStorage.getItem('janDocumentDraft');
     if (draft) {
@@ -298,19 +285,13 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     }
   }, []);
 
-  // Save Content Prompt to memory when it changes — unchanged
   useEffect(() => {
     if (currentDocument.contentPrompt) {
       localStorage.setItem('janLastContentPrompt', currentDocument.contentPrompt);
     }
   }, [currentDocument.contentPrompt]);
 
-  // ============================================================
-  // BUILD JAN'S SYSTEM PROMPT from dropdown context
-  // This is what makes Jan understand who she is and what to do
-  // ============================================================
   const buildSystemPrompt = (doc: JanDocument): string => {
-    // Pass actual sample content so Jan can read and learn from them
     const sampleContext = samples.length > 0
       ? `\n\nREFERENCE SAMPLES (${samples.length} saved — read these carefully to match established style and quality):\n` +
         samples.slice(0, 3).map((s, i) =>
@@ -318,7 +299,6 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
         ).join('\n')
       : '';
 
-    // Pass current editor content so Jan can make targeted edits
     const editorContext = doc.content && doc.content.trim().length > 0
       ? `\n\nCURRENT EDITOR CONTENT (this is the live document — edit only what Chef requests, return the full updated version):\nTITLE: ${doc.title || 'Untitled'}\n\n${doc.content}`
       : '';
@@ -586,21 +566,12 @@ EDITOR CONTENT AWARENESS:
 - IMPORTANT: The document title is displayed separately above the editor. Never repeat the title as the first line of the content body. Start the content directly — no title repetition.`;
   };
 
-  // ============================================================
-  // CALL JAN VIA CLOUDFLARE WORKER — real Claude API
-  // ============================================================
   const callJanAPI = async (userMessage: string, doc: JanDocument): Promise<string> => {
-    // Add user message to API history
-    apiMessages.current.push({
-      role: 'user',
-      content: userMessage
-    });
+    apiMessages.current.push({ role: 'user', content: userMessage });
 
     const response = await fetch(WORKER_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         system: buildSystemPrompt(doc),
         messages: apiMessages.current,
@@ -611,16 +582,11 @@ EDITOR CONTENT AWARENESS:
       })
     });
 
-    if (!response.ok) {
-      throw new Error(`Worker error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`Worker error: ${response.status}`);
 
     const data = await response.json();
-
-    // Extract text response from Claude API format
     const janReply = data.content?.[0]?.text || 'Sorry Chef, I had trouble processing that. Please try again.';
 
-    // Track token usage from API response
     if (data.usage) {
       setSessionTokens(prev => ({
         input: prev.input + (data.usage.input_tokens || 0),
@@ -628,13 +594,8 @@ EDITOR CONTENT AWARENESS:
       }));
     }
 
-    // Add Jan's response to API history for next turn memory
-    apiMessages.current.push({
-      role: 'assistant',
-      content: janReply
-    });
+    apiMessages.current.push({ role: 'assistant', content: janReply });
 
-    // Persist to janChatStorage so session survives page refresh
     try {
       const sessionId = janChatStorage.getCurrentSessionId();
       await janChatStorage.saveMessage({
@@ -662,32 +623,22 @@ EDITOR CONTENT AWARENESS:
     return janReply;
   };
 
-  // ============================================================
-  // HANDLE SEND — now async with real API call
-  // ============================================================
   const handleSendMessage = async () => {
     if (!chatInput.trim() || isLoading) return;
 
     const userMessage = chatInput;
-
-    const userChatMessage = {
-      sender: 'user' as const,
-      message: userMessage,
-      timestamp: new Date().toISOString()
-    };
+    const userChatMessage = { sender: 'user' as const, message: userMessage, timestamp: new Date().toISOString() };
 
     setChatMessages(prev => [...prev, userChatMessage]);
     setChatInput('');
     setIsLoading(true);
 
-    // Extract title from message if present — unchanged logic
     const extractedTitle = extractTitleFromMessage(userMessage);
     if (extractedTitle && !currentDocument.title) {
       setCurrentDocument(prev => ({...prev, title: extractedTitle}));
     }
 
     try {
-      // Detect URL in message — fetch content and inject into prompt
       const urlMatch = userMessage.match(/https?:\/\/[^\s]+/);
       let enrichedMessage = userMessage;
 
@@ -702,17 +653,11 @@ EDITOR CONTENT AWARENESS:
           if (urlData.success && urlData.content) {
             enrichedMessage = `${userMessage}\n\n[URL CONTENT FROM ${urlMatch[0]}]:\n${urlData.content}`;
           }
-        } catch {
-          // URL fetch failed — continue with original message
-        }
+        } catch {}
       }
 
       const janReply = await callJanAPI(enrichedMessage, currentDocument);
-      setChatMessages(prev => [...prev, {
-        sender: 'jan',
-        message: janReply,
-        timestamp: new Date().toISOString()
-      }]);
+      setChatMessages(prev => [...prev, { sender: 'jan', message: janReply, timestamp: new Date().toISOString() }]);
     } catch (error) {
       console.error('Jan API error:', error);
       setChatMessages(prev => [...prev, {
@@ -725,54 +670,31 @@ EDITOR CONTENT AWARENESS:
     }
   };
 
-  // Extract title from message — unchanged
   const extractTitleFromMessage = (message: string): string | null => {
-    const titlePattern1 = /title:\s*(.+?)(?:\n|$)/i;
-    const match1 = message.match(titlePattern1);
+    const match1 = message.match(/title:\s*(.+?)(?:\n|$)/i);
     if (match1) return match1[1].trim();
-
-    const issuePattern = /\*?\*?Issue\s*#?\d+\s*[-–—]\s*(.+?)(?:\*\*|\n|$)/i;
-    const match2 = message.match(issuePattern);
+    const match2 = message.match(/\*?\*?Issue\s*#?\d+\s*[-–—]\s*(.+?)(?:\*\*|\n|$)/i);
     if (match2) return match2[0].replace(/\*\*/g, '').trim();
-
-    const quotePattern = /"([^"]+)"/;
-    const match3 = message.match(quotePattern);
+    const match3 = message.match(/"([^"]+)"/);
     if (match3) return match3[1].trim();
-
-    const boldPattern = /\*\*([^*]+)\*\*/;
-    const match4 = message.match(boldPattern);
+    const match4 = message.match(/\*\*([^*]+)\*\*/);
     if (match4) return match4[1].trim();
-
     return null;
   };
 
-  // Handle new document — unchanged
   const handleNewDocument = () => {
     if (confirm('Create a new document? Any unsaved changes will be lost.')) {
       setCurrentDocument({
-        title: '',
-        section: '',
-        character: '',
-        brandVoice: '',
-        templateType: '',
-        themeLabel: '',
-        targetAudience: '',
-        platform: '',
-        contentPrompt: '',
-        content: '',
-        status: 'Not started',
-        wordCount: 0,
-        readingTime: 0,
-        lastModified: new Date().toISOString()
+        title: '', section: '', character: '', brandVoice: '', templateType: '',
+        themeLabel: '', targetAudience: '', platform: '', contentPrompt: '', content: '',
+        status: 'Not started', wordCount: 0, readingTime: 0, lastModified: new Date().toISOString()
       });
       setTitleConfirmed(false);
       setPostContextSaved(false);
-      // Clear API message history for new document session
       apiMessages.current = [];
     }
   };
 
-  // Handle save document — unchanged
   const handleSaveDocument = () => {
     const savedDocs = JSON.parse(localStorage.getItem('janSavedDocuments') || '[]');
     const docToSave = { ...currentDocument, id: Date.now().toString() };
@@ -781,9 +703,6 @@ EDITOR CONTENT AWARENESS:
     alert('Document saved successfully!');
   };
 
-  // ============================================================
-  // SAVE TEMPLATE TO D1 — Jan's structural blueprint
-  // ============================================================
   const saveTemplateToD1 = async () => {
     if (!templateSaveData.structure.trim()) {
       alert('Please describe the document structure before saving.');
@@ -820,9 +739,6 @@ EDITOR CONTENT AWARENESS:
     }
   };
 
-  // ============================================================
-  // SAVE CONTENT TO D1 LIBRARY — approved finished content
-  // ============================================================
   const saveContentToLibrary = async () => {
     if (!currentDocument.content.trim()) {
       showToast('No content to save. Write something first.', 'error');
@@ -856,9 +772,6 @@ EDITOR CONTENT AWARENESS:
     }
   };
 
-  // ============================================================
-  // LOAD DOCUMENT LIBRARY — fetches all saved docs from D1
-  // ============================================================
   const loadLibrary = async () => {
     setLibraryLoading(true);
     try {
@@ -876,9 +789,6 @@ EDITOR CONTENT AWARENESS:
     }
   };
 
-  // ============================================================
-  // LOAD DOCUMENT INTO EDITOR — pulls full doc from D1 by id
-  // ============================================================
   const loadDocumentById = async (id: string, title: string) => {
     try {
       const response = await fetch(WORKER_URL, {
@@ -916,9 +826,6 @@ EDITOR CONTENT AWARENESS:
     }
   };
 
-  // ============================================================
-  // CONFIRM TITLE — saves title + synopsis to D1
-  // ============================================================
   const savePostContextToD1 = async () => {
     if (!currentDocument.title.trim()) {
       setChatMessages(prev => [...prev, {
@@ -981,12 +888,8 @@ EDITOR CONTENT AWARENESS:
     }
   };
 
-  // ============================================================
-  // POST DESCRIPTION — structured output trigger
-  // ============================================================
   const handlePostDescription = async () => {
     if (isLoading) return;
-
     const title = currentDocument.title.trim();
 
     if (!title) {
@@ -1034,11 +937,7 @@ You have full context from this session. Generate the post description package n
 
     try {
       const janReply = await callJanAPI(postDescPrompt, currentDocument);
-      setChatMessages(prev => [...prev, {
-        sender: 'jan',
-        message: janReply,
-        timestamp: new Date().toISOString()
-      }]);
+      setChatMessages(prev => [...prev, { sender: 'jan', message: janReply, timestamp: new Date().toISOString() }]);
     } catch (error) {
       setChatMessages(prev => [...prev, {
         sender: 'jan',
@@ -1073,18 +972,11 @@ You have full context from this session. Generate the post description package n
       {/* Toast Notification */}
       {toast && (
         <div style={{
-          position: 'fixed',
-          bottom: '32px',
-          right: '32px',
-          zIndex: 9999,
+          position: 'fixed', bottom: '32px', right: '32px', zIndex: 9999,
           padding: '14px 22px',
           backgroundColor: toast.type === 'success' ? '#10b981' : '#dc2626',
-          color: 'white',
-          borderRadius: '8px',
-          fontWeight: '600',
-          fontSize: '14px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-          animation: 'pulse 0.3s ease'
+          color: 'white', borderRadius: '8px', fontWeight: '600', fontSize: '14px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.25)', animation: 'pulse 0.3s ease'
         }}>
           {toast.message}
         </div>
@@ -1095,30 +987,23 @@ You have full context from this session. Generate the post description package n
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(0,0,0,0.7)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 2000
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000
         }}>
           <div style={{
             backgroundColor: isDarkMode ? '#1e293b' : 'white',
-            borderRadius: '12px',
-            padding: '28px',
-            width: '90%',
-            maxWidth: '680px',
-            maxHeight: '80vh',
-            display: 'flex',
-            flexDirection: 'column',
+            borderRadius: '12px', padding: '28px', width: '90%', maxWidth: '680px',
+            maxHeight: '80vh', display: 'flex', flexDirection: 'column',
             boxShadow: '0 20px 60px rgba(0,0,0,0.35)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: isDarkMode ? '#f1f5f9' : '#1e293b' }}>
                 📚 My Documents
               </h2>
-              <button
-                onClick={() => setShowLibrary(false)}
-                style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: isDarkMode ? '#94a3b8' : '#64748b' }}
-              >✕</button>
+              <button onClick={() => setShowLibrary(false)}
+                style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
+                ✕
+              </button>
             </div>
-
             {libraryLoading ? (
               <div style={{ textAlign: 'center', padding: '40px', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
                 Loading your documents...
@@ -1130,26 +1015,14 @@ You have full context from this session. Generate the post description package n
             ) : (
               <div style={{ overflowY: 'auto', flex: 1 }}>
                 {libraryDocs.map(doc => (
-                  <div
-                    key={doc.id}
-                    onClick={() => loadDocumentById(doc.id, doc.title)}
+                  <div key={doc.id} onClick={() => loadDocumentById(doc.id, doc.title)}
                     style={{
-                      padding: '14px 16px',
-                      borderRadius: '8px',
-                      marginBottom: '8px',
-                      cursor: 'pointer',
+                      padding: '14px 16px', borderRadius: '8px', marginBottom: '8px', cursor: 'pointer',
                       border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
-                      backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-                      transition: 'all 0.15s'
+                      backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc', transition: 'all 0.15s'
                     }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? '#1e293b' : '#e0f2fe';
-                      e.currentTarget.style.borderColor = '#3b82f6';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? '#0f172a' : '#f8fafc';
-                      e.currentTarget.style.borderColor = isDarkMode ? '#334155' : '#e2e8f0';
-                    }}
+                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = isDarkMode ? '#1e293b' : '#e0f2fe'; e.currentTarget.style.borderColor = '#3b82f6'; }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = isDarkMode ? '#0f172a' : '#f8fafc'; e.currentTarget.style.borderColor = isDarkMode ? '#334155' : '#e2e8f0'; }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
@@ -1157,14 +1030,11 @@ You have full context from this session. Generate the post description package n
                           {doc.title}
                         </div>
                         <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
-                          {doc.character && `${doc.character} · `}
-                          {doc.platform && `${doc.platform} · `}
-                          {doc.word_count ? `${doc.word_count} words` : ''}
+                          {doc.character && `${doc.character} · `}{doc.platform && `${doc.platform} · `}{doc.word_count ? `${doc.word_count} words` : ''}
                         </div>
                       </div>
                       <div style={{
-                        fontSize: '11px', fontWeight: '600', padding: '3px 10px',
-                        borderRadius: '20px', whiteSpace: 'nowrap',
+                        fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', whiteSpace: 'nowrap',
                         backgroundColor: doc.status === 'Published' ? '#d1fae5' : doc.status === 'Complete' ? '#dbeafe' : '#fef3c7',
                         color: doc.status === 'Published' ? '#065f46' : doc.status === 'Complete' ? '#1e40af' : '#92400e'
                       }}>
@@ -1182,54 +1052,31 @@ You have full context from this session. Generate the post description package n
         </div>
       )}
       
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto'
-      }}>
-        {/* Dashboard Header with Jan's Profile Image — unchanged */}
+      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+
+        {/* Dashboard Header */}
         <div style={{
           backgroundColor: isDarkMode ? '#1e293b' : 'white',
-          boxShadow: isDarkMode 
-            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          borderRadius: '8px',
-          padding: '20px',
-          marginBottom: '20px',
+          boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0,0,0,0.3)' : '0 4px 6px -1px rgba(0,0,0,0.1)',
+          borderRadius: '8px', padding: '20px', marginBottom: '20px',
           border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <img 
-                src={janProfile} 
-                alt="Jan Profile" 
-                style={{
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
-                }}
-              />
+              <img src={janProfile} alt="Jan Profile" style={{
+                width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover',
+                border: `2px solid ${isDarkMode ? '#60a5fa' : '#3b82f6'}`
+              }} />
               <div>
-                <h1 style={{
-                  fontSize: '20px',
-                  fontWeight: 'bold',
-                  color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                  margin: '0 0 4px 0'
-                }}>
+                <h1 style={{ fontSize: '20px', fontWeight: 'bold', color: isDarkMode ? '#60a5fa' : '#3b82f6', margin: '0 0 4px 0' }}>
                   Jan - AI Assistant
                 </h1>
-                <p style={{
-                  color: isDarkMode ? '#94a3b8' : '#6b7280',
-                  fontSize: '14px',
-                  margin: '0'
-                }}>
+                <p style={{ color: isDarkMode ? '#94a3b8' : '#6b7280', fontSize: '14px', margin: '0' }}>
                   Your Right-Hand for Content Creation & Strategy
                 </p>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {/* Token Cost Tracker + Billing Link */}
               {(() => {
                 const sessionCost = (sessionTokens.input * COST_PER_INPUT_TOKEN) + (sessionTokens.output * COST_PER_OUTPUT_TOKEN);
                 const isWarning = sessionCost >= WARNING_THRESHOLD;
@@ -1238,54 +1085,24 @@ You have full context from this session. Generate the post description package n
                 const pillBg = isCritical ? 'rgba(239,68,68,0.15)' : isWarning ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)';
                 const totalTokens = sessionTokens.input + sessionTokens.output;
                 return (
-                  <a
-                    href="https://console.anthropic.com/settings/billing"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <a href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener noreferrer"
                     title={isWarning ? '⚠️ Credits running low — click to top up!' : 'Session token usage — click to manage billing'}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '5px 10px',
-                      backgroundColor: pillBg,
-                      border: `1px solid ${pillColor}`,
-                      borderRadius: '20px',
-                      textDecoration: 'none',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
+                      display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 10px',
+                      backgroundColor: pillBg, border: `1px solid ${pillColor}`, borderRadius: '20px',
+                      textDecoration: 'none', cursor: 'pointer', transition: 'all 0.2s'
                     }}
                   >
-                    <div style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: pillColor,
-                      animation: isWarning ? 'pulse 1s infinite' : 'none',
-                      flexShrink: 0
-                    }} />
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: pillColor, animation: isWarning ? 'pulse 1s infinite' : 'none', flexShrink: 0 }} />
                     <span style={{ fontSize: '11px', fontWeight: '600', color: pillColor, whiteSpace: 'nowrap' }}>
-                      {totalTokens > 0 ? `$${sessionCost.toFixed(4)}` : '$0.00'}
-                      {isWarning && ' ⚠️'}
+                      {totalTokens > 0 ? `$${sessionCost.toFixed(4)}` : '$0.00'}{isWarning && ' ⚠️'}
                     </span>
                   </a>
                 );
               })()}
-
-              {/* Online indicator */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{
-                  width: '10px',
-                  height: '10px',
-                  borderRadius: '50%',
-                  backgroundColor: isOnline ? '#10b981' : '#ef4444',
-                  animation: isOnline ? 'pulse 2s infinite' : 'none'
-                }} />
-                <span style={{
-                  fontSize: '12px',
-                  color: isDarkMode ? '#94a3b8' : '#6b7280',
-                  fontWeight: '600'
-                }}>
+                <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: isOnline ? '#10b981' : '#ef4444', animation: isOnline ? 'pulse 2s infinite' : 'none' }} />
+                <span style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#6b7280', fontWeight: '600' }}>
                   {isOnline ? 'Online' : 'Offline'}
                 </span>
               </div>
@@ -1293,39 +1110,25 @@ You have full context from this session. Generate the post description package n
           </div>
         </div>
 
-        {/* Control Panel - Dropdowns in Horizontal Rows — unchanged */}
-        <div style={{
-          backgroundColor: theme.bgSecondary,
-          borderRadius: '8px',
-          padding: '20px',
-          marginBottom: '20px',
-          boxShadow: theme.shadow
-        }}>
-          {/* Row 0: Brand Section — top-level decision, frames everything below */}
+        {/* Control Panel */}
+        <div style={{ backgroundColor: theme.bgSecondary, borderRadius: '8px', padding: '20px', marginBottom: '20px', boxShadow: theme.shadow }}>
+
+          {/* Row 0: Brand Section */}
           <div style={{ marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
-              💎 Brand Section
-            </h3>
+            <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>💎 Brand Section</h3>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {[
                 { label: '🔵 3C HQ', value: '3C Thread To Success (HQ)' },
                 { label: '🥇 Training Hub', value: '3C Training Hub' },
                 { label: '💜 ClubHouse Hub', value: '3C ClubHouse Hub' }
               ].map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setCurrentDocument({...currentDocument, section: opt.value})}
+                <button key={opt.value} onClick={() => setCurrentDocument({...currentDocument, section: opt.value})}
                   style={{
-                    flex: '1 1 150px',
-                    padding: '10px 16px',
+                    flex: '1 1 150px', padding: '10px 16px',
                     backgroundColor: currentDocument.section === opt.value ? theme.primary : theme.bg,
                     color: currentDocument.section === opt.value ? 'white' : theme.text,
                     border: `2px solid ${currentDocument.section === opt.value ? theme.primary : theme.border}`,
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    transition: 'all 0.2s'
+                    borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s'
                   }}
                 >
                   {opt.label}
@@ -1336,27 +1139,17 @@ You have full context from this session. Generate the post description package n
 
           {/* Row 1: Persona + Brand Voice + Theme/Label */}
           <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            {/* Persona */}
             <div style={{ flex: '1 1 300px', minWidth: '250px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
-                👤 Persona
-              </h3>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>👤 Persona</h3>
               <div style={{ display: 'flex', gap: '6px' }}>
                 {['Anica', 'Caelum', 'Aurion'].map(char => (
-                  <button
-                    key={char}
-                    onClick={() => setCurrentDocument({...currentDocument, character: char})}
+                  <button key={char} onClick={() => setCurrentDocument({...currentDocument, character: char})}
                     style={{
-                      flex: 1,
-                      padding: '10px 8px',
+                      flex: 1, padding: '10px 8px',
                       backgroundColor: currentDocument.character === char ? theme.primary : theme.bg,
                       color: currentDocument.character === char ? 'white' : theme.text,
                       border: `2px solid ${currentDocument.character === char ? theme.primary : theme.border}`,
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: '600',
-                      transition: 'all 0.2s'
+                      borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s'
                     }}
                   >
                     {char}
@@ -1365,25 +1158,10 @@ You have full context from this session. Generate the post description package n
               </div>
             </div>
 
-            {/* Brand Voice */}
             <div style={{ flex: '1 1 250px', minWidth: '200px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
-                🎨 Brand Voice
-              </h3>
-              <select
-                value={currentDocument.brandVoice}
-                onChange={(e) => setCurrentDocument({...currentDocument, brandVoice: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  backgroundColor: theme.bg,
-                  color: theme.text,
-                  border: `2px solid ${theme.border}`,
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '500'
-                }}
-              >
+              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>🎨 Brand Voice</h3>
+              <select value={currentDocument.brandVoice} onChange={(e) => setCurrentDocument({...currentDocument, brandVoice: e.target.value})}
+                style={{ width: '100%', padding: '10px', backgroundColor: theme.bg, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '6px', fontSize: '13px', fontWeight: '500' }}>
                 <option value="">Select brand voice...</option>
                 <option value="Casual">Casual</option>
                 <option value="Friendly">Friendly</option>
@@ -1392,25 +1170,10 @@ You have full context from this session. Generate the post description package n
               </select>
             </div>
 
-            {/* Theme/Label */}
             <div style={{ flex: '1 1 250px', minWidth: '200px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
-                🏷️ Theme/Label
-              </h3>
-              <select
-                value={currentDocument.themeLabel}
-                onChange={(e) => setCurrentDocument({...currentDocument, themeLabel: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  backgroundColor: theme.bg,
-                  color: theme.text,
-                  border: `2px solid ${theme.border}`,
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '500'
-                }}
-              >
+              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>🏷️ Theme/Label</h3>
+              <select value={currentDocument.themeLabel} onChange={(e) => setCurrentDocument({...currentDocument, themeLabel: e.target.value})}
+                style={{ width: '100%', padding: '10px', backgroundColor: theme.bg, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '6px', fontSize: '13px', fontWeight: '500' }}>
                 <option value="">Select theme...</option>
                 <option value="News Alert">News Alert</option>
                 <option value="Promotion">Promotion</option>
@@ -1428,27 +1191,12 @@ You have full context from this session. Generate the post description package n
             </div>
           </div>
 
-          {/* Row 2: Target Audience + Template Type + Content Prompt */}
+          {/* Row 2: Target Audience + Template Type + Platform + Content Prompt */}
           <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            {/* Target Audience */}
             <div style={{ flex: '1 1 250px', minWidth: '200px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
-                🎯 Target Audience
-              </h3>
-              <select
-                value={currentDocument.targetAudience}
-                onChange={(e) => setCurrentDocument({...currentDocument, targetAudience: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  backgroundColor: theme.bg,
-                  color: theme.text,
-                  border: `2px solid ${theme.border}`,
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '500'
-                }}
-              >
+              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>🎯 Target Audience</h3>
+              <select value={currentDocument.targetAudience} onChange={(e) => setCurrentDocument({...currentDocument, targetAudience: e.target.value})}
+                style={{ width: '100%', padding: '10px', backgroundColor: theme.bg, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '6px', fontSize: '13px', fontWeight: '500' }}>
                 <option value="">Select audience...</option>
                 <option value="Existing Members">Existing Members</option>
                 <option value="New Members">New Members</option>
@@ -1460,25 +1208,10 @@ You have full context from this session. Generate the post description package n
               </select>
             </div>
 
-            {/* Template Type */}
             <div style={{ flex: '1 1 250px', minWidth: '200px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
-                📄 Template Type
-              </h3>
-              <select
-                value={currentDocument.templateType}
-                onChange={(e) => setCurrentDocument({...currentDocument, templateType: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  backgroundColor: theme.bg,
-                  color: theme.text,
-                  border: `2px solid ${theme.border}`,
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '500'
-                }}
-              >
+              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>📄 Template Type</h3>
+              <select value={currentDocument.templateType} onChange={(e) => setCurrentDocument({...currentDocument, templateType: e.target.value})}
+                style={{ width: '100%', padding: '10px', backgroundColor: theme.bg, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '6px', fontSize: '13px', fontWeight: '500' }}>
                 <option value="">Select template...</option>
                 <option value="Social Media">Social Media</option>
                 <option value="Presentation">Presentation</option>
@@ -1492,25 +1225,10 @@ You have full context from this session. Generate the post description package n
               </select>
             </div>
 
-            {/* Platform */}
             <div style={{ flex: '1 1 250px', minWidth: '200px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
-                📱 Platform
-              </h3>
-              <select
-                value={currentDocument.platform}
-                onChange={(e) => setCurrentDocument({...currentDocument, platform: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  backgroundColor: theme.bg,
-                  color: theme.text,
-                  border: `2px solid ${theme.border}`,
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '500'
-                }}
-              >
+              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>📱 Platform</h3>
+              <select value={currentDocument.platform} onChange={(e) => setCurrentDocument({...currentDocument, platform: e.target.value})}
+                style={{ width: '100%', padding: '10px', backgroundColor: theme.bg, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '6px', fontSize: '13px', fontWeight: '500' }}>
                 <option value="">Select platform...</option>
                 <option value="Instagram">Instagram</option>
                 <option value="Facebook">Facebook</option>
@@ -1525,181 +1243,137 @@ You have full context from this session. Generate the post description package n
               </select>
             </div>
 
-            {/* Content Prompt */}
             <div style={{ flex: '2 1 400px', minWidth: '300px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
-                💭 Content Prompt
-              </h3>
-              <input
-                type="text"
-                placeholder="Describe what you'd like to create..."
+              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>💭 Content Prompt</h3>
+              <input type="text" placeholder="Describe what you'd like to create..."
                 value={currentDocument.contentPrompt}
                 onChange={(e) => setCurrentDocument({...currentDocument, contentPrompt: e.target.value})}
-                style={{
-                  width: '85%',
-                  padding: '10px',
-                  backgroundColor: theme.bg,
-                  color: theme.text,
-                  border: `2px solid ${theme.border}`,
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '500'
-                }}
+                style={{ width: '85%', padding: '10px', backgroundColor: theme.bg, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '6px', fontSize: '13px', fontWeight: '500' }}
               />
             </div>
           </div>
 
-          {/* Row 3: Reference Samples + Stats + Actions — unchanged */}
+          {/* Row 3: Reference Samples + Stats + Actions */}
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            {/* Reference Samples */}
+
+            {/* ── Reference Samples ── */}
             <div style={{ flex: '2 1 400px', minWidth: '300px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
-                📚 Reference Samples
-              </h3>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>📚 Reference Samples</h3>
+
+              {/* Template selector + Add button */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
                 <select
                   value={selectedTemplate}
-                  onChange={(e) => setSelectedTemplate(e.target.value)}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    backgroundColor: theme.bg,
-                    color: theme.text,
-                    border: `2px solid ${theme.border}`,
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: '500'
+                  onChange={(e) => {
+                    setSelectedTemplate(e.target.value);
+                    setActiveSampleId(null);
                   }}
+                  style={{ flex: 1, padding: '10px', backgroundColor: theme.bg, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '6px', fontSize: '13px', fontWeight: '500' }}
                 >
                   <option value="">Select template...</option>
                   {templates.map(t => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.timesUsed} saved)
-                    </option>
+                    <option key={t.id} value={t.id}>{t.name} ({t.timesUsed} saved)</option>
                   ))}
                 </select>
                 <button
-                  onClick={() => {
-                    if (selectedTemplate) {
-                      setShowAddSample(true);
-                    }
-                  }}
+                  onClick={() => { if (selectedTemplate) setShowAddSample(true); }}
                   disabled={!selectedTemplate}
                   style={{
                     padding: '10px 20px',
                     backgroundColor: selectedTemplate ? theme.primary : theme.bgTertiary,
                     color: selectedTemplate ? 'white' : theme.textMuted,
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    cursor: selectedTemplate ? 'pointer' : 'not-allowed',
-                    transition: 'all 0.2s',
-                    whiteSpace: 'nowrap'
+                    border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600',
+                    cursor: selectedTemplate ? 'pointer' : 'not-allowed', transition: 'all 0.2s', whiteSpace: 'nowrap'
                   }}
                 >
                   + Add Sample
                 </button>
               </div>
+
+              {/* ── Clickable sample title list ── */}
               {selectedTemplate && samples.length > 0 && (
-                <div style={{ marginTop: '8px', fontSize: '12px', color: theme.textMuted }}>
-                  {samples.length} sample{samples.length > 1 ? 's' : ''} available - click to view
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {samples.map(sample => {
+                    const isActive = activeSampleId === sample.id;
+                    return (
+                      <button
+                        key={sample.id}
+                        onClick={() => {
+                          setActiveSampleId(isActive ? null : sample.id);
+                          setCurrentSample(sample);
+                          setShowViewSample(true);
+                        }}
+                        title={`View: ${sample.title}`}
+                        style={{
+                          padding: '5px 14px',
+                          backgroundColor: isActive ? theme.primary : theme.bg,
+                          color: isActive ? 'white' : theme.text,
+                          border: `1.5px solid ${isActive ? theme.primary : theme.border}`,
+                          borderRadius: '20px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: isActive ? '700' : '500',
+                          transition: 'all 0.18s',
+                          whiteSpace: 'nowrap',
+                          maxWidth: '220px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                        onMouseEnter={e => {
+                          if (!isActive) {
+                            e.currentTarget.style.backgroundColor = theme.bgTertiary;
+                            e.currentTarget.style.borderColor = theme.primary;
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (!isActive) {
+                            e.currentTarget.style.backgroundColor = theme.bg;
+                            e.currentTarget.style.borderColor = theme.border;
+                          }
+                        }}
+                      >
+                        {sample.character ? `${sample.character} · ` : ''}{sample.title}
+                      </button>
+                    );
+                  })}
                 </div>
+              )}
+
+              {/* Empty state */}
+              {selectedTemplate && samples.length === 0 && (
+                <p style={{ fontSize: '12px', color: theme.textMuted, margin: '4px 0 0 0' }}>
+                  No samples saved for this template yet — click + Add Sample to get started.
+                </p>
               )}
             </div>
 
             {/* Stats */}
             <div style={{ flex: '1 1 200px', minWidth: '150px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
-                📊 Stats
-              </h3>
-              <div style={{
-                padding: '10px',
-                backgroundColor: theme.bgTertiary,
-                borderRadius: '6px',
-                fontSize: '12px',
-                display: 'flex',
-                gap: '16px'
-              }}>
-                <div>
-                  <strong>Words:</strong> {currentDocument.wordCount}
-                </div>
-                <div>
-                  <strong>Reading:</strong> {currentDocument.readingTime} min
-                </div>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>📊 Stats</h3>
+              <div style={{ padding: '10px', backgroundColor: theme.bgTertiary, borderRadius: '6px', fontSize: '12px', display: 'flex', gap: '16px' }}>
+                <div><strong>Words:</strong> {currentDocument.wordCount}</div>
+                <div><strong>Reading:</strong> {currentDocument.readingTime} min</div>
               </div>
             </div>
 
-            {/* Action Buttons */}
+            {/* Actions */}
             <div style={{ flex: '1 1 250px', minWidth: '200px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>
-                ⚡ Actions
-              </h3>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: theme.text }}>⚡ Actions</h3>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={handleNewDocument}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    backgroundColor: theme.bg,
-                    color: theme.text,
-                    border: `2px solid ${theme.border}`,
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '13px'
-                  }}
-                >
+                <button onClick={handleNewDocument}
+                  style={{ flex: 1, padding: '10px', backgroundColor: theme.bg, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
                   📄 New
                 </button>
-                <button
-                  onClick={handleSaveDocument}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    background: theme.primaryGradient,
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '13px'
-                  }}
-                >
+                <button onClick={handleSaveDocument}
+                  style={{ flex: 1, padding: '10px', background: theme.primaryGradient, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
                   💾 Save
                 </button>
-                <button
-                  onClick={saveContentToLibrary}
-                  title="Save content to D1 library"
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '13px'
-                  }}
-                >
+                <button onClick={saveContentToLibrary} title="Save content to D1 library"
+                  style={{ flex: 1, padding: '10px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
                   📚 Library
                 </button>
-                <button
-                  onClick={() => { setShowLibrary(true); loadLibrary(); }}
-                  title="Browse and load saved documents"
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    backgroundColor: '#6366f1',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '13px'
-                  }}
-                >
+                <button onClick={() => { setShowLibrary(true); loadLibrary(); }} title="Browse and load saved documents"
+                  style={{ flex: 1, padding: '10px', backgroundColor: '#6366f1', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
                   📂 My Docs
                 </button>
               </div>
@@ -1707,77 +1381,23 @@ You have full context from this session. Generate the post description package n
           </div>
         </div>
 
-        {/* Main Content Area - Editor + Chat Side by Side — unchanged */}
+        {/* Main Content Area - Editor + Samples side panel */}
         <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap' }}>
           {/* Editor */}
-          <div style={{ 
-            flex: '1 1 500px', 
-            minWidth: '400px',
-            backgroundColor: theme.bg,
-            borderRadius: '8px',
-            boxShadow: theme.shadow,
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            <div style={{
-              padding: '16px 20px',
-              borderBottom: `2px solid ${theme.border}`,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: '10px'
-            }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: theme.text, whiteSpace: 'nowrap' }}>
-                ✍️ Content Editor
-              </h3>
+          <div style={{ flex: '1 1 500px', minWidth: '400px', backgroundColor: theme.bg, borderRadius: '8px', boxShadow: theme.shadow, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '16px 20px', borderBottom: `2px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: theme.text, whiteSpace: 'nowrap' }}>✍️ Content Editor</h3>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <button
-                  onClick={() => setPreviewMode(!previewMode)}
-                  title={previewMode ? 'Switch to edit mode' : 'Preview formatted content'}
-                  style={{
-                    padding: '6px 14px',
-                    backgroundColor: previewMode ? theme.primary : theme.bgTertiary,
-                    color: previewMode ? 'white' : theme.text,
-                    border: `2px solid ${previewMode ? theme.primary : theme.border}`,
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '12px',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
+                <button onClick={() => setPreviewMode(!previewMode)}
+                  style={{ padding: '6px 14px', backgroundColor: previewMode ? theme.primary : theme.bgTertiary, color: previewMode ? 'white' : theme.text, border: `2px solid ${previewMode ? theme.primary : theme.border}`, borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', whiteSpace: 'nowrap' }}>
                   {previewMode ? '✏️ Edit' : '👁️ Preview'}
                 </button>
-                <button
-                  onClick={handleDownloadPDF}
-                  title="Download as PDF"
-                  style={{
-                    padding: '6px 14px',
-                    backgroundColor: '#dc2626',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '12px',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
+                <button onClick={handleDownloadPDF}
+                  style={{ padding: '6px 14px', backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', whiteSpace: 'nowrap' }}>
                   📄 PDF
                 </button>
-                <select
-                  value={currentDocument.status}
-                  onChange={(e) => setCurrentDocument({...currentDocument, status: e.target.value})}
-                  style={{
-                    padding: '8px 12px',
-                    backgroundColor: theme.bgSecondary,
-                    color: theme.text,
-                    border: `2px solid ${theme.border}`,
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: '600'
-                  }}
-                >
+                <select value={currentDocument.status} onChange={(e) => setCurrentDocument({...currentDocument, status: e.target.value})}
+                  style={{ padding: '8px 12px', backgroundColor: theme.bgSecondary, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '6px', fontSize: '13px', fontWeight: '600' }}>
                   <option value="Not started">Not started</option>
                   <option value="In Progress">In Progress</option>
                   <option value="Complete">Complete</option>
@@ -1786,36 +1406,14 @@ You have full context from this session. Generate the post description package n
               </div>
             </div>
             <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
-              <input
-                type="text"
-                placeholder="Document Title..."
+              <input type="text" placeholder="Document Title..."
                 value={currentDocument.title}
                 onChange={(e) => setCurrentDocument({...currentDocument, title: e.target.value})}
-                lang="en-GB"
-                spellCheck={true}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  fontSize: '24px',
-                  fontWeight: '700',
-                  backgroundColor: 'transparent',
-                  color: theme.text,
-                  border: 'none',
-                  borderBottom: `2px solid ${theme.border}`,
-                  marginBottom: '20px',
-                  outline: 'none'
-                }}
+                lang="en-GB" spellCheck={true}
+                style={{ width: '100%', padding: '12px', fontSize: '24px', fontWeight: '700', backgroundColor: 'transparent', color: theme.text, border: 'none', borderBottom: `2px solid ${theme.border}`, marginBottom: '20px', outline: 'none' }}
               />
               {previewMode ? (
-                <div
-                  style={{
-                    minHeight: '550px',
-                    padding: '12px',
-                    fontSize: '15px',
-                    lineHeight: '1.8',
-                    color: theme.text,
-                    fontFamily: 'inherit'
-                  }}
+                <div style={{ minHeight: '550px', padding: '12px', fontSize: '15px', lineHeight: '1.8', color: theme.text, fontFamily: 'inherit' }}
                   dangerouslySetInnerHTML={{
                     __html: (currentDocument.content || '')
                       .replace(/^### (.+)$/gm, `<h3 style="font-size:17px;font-weight:700;margin:20px 0 8px;color:${theme.text}">$1</h3>`)
@@ -1830,182 +1428,64 @@ You have full context from this session. Generate the post description package n
                   }}
                 />
               ) : (
-                <textarea
-                  placeholder="Start writing your content here... (use **bold**, *italic*, ## headers, - lists)"
+                <textarea placeholder="Start writing your content here... (use **bold**, *italic*, ## headers, - lists)"
                   value={currentDocument.content}
                   onChange={(e) => setCurrentDocument({...currentDocument, content: e.target.value})}
-                  lang="en-GB"
-                  spellCheck={true}
-                  style={{
-                    width: '100%',
-                    minHeight: '550px',
-                    padding: '12px',
-                    fontSize: '15px',
-                    lineHeight: '1.6',
-                    backgroundColor: 'transparent',
-                    color: theme.text,
-                    border: 'none',
-                    outline: 'none',
-                    resize: 'vertical',
-                    fontFamily: 'inherit'
-                  }}
+                  lang="en-GB" spellCheck={true}
+                  style={{ width: '100%', minHeight: '550px', padding: '12px', fontSize: '15px', lineHeight: '1.6', backgroundColor: 'transparent', color: theme.text, border: 'none', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
                 />
               )}
             </div>
           </div>
 
-          {/* Samples Viewer — unchanged */}
+          {/* Samples side panel — only shown when a template with samples is active */}
           {selectedTemplate && samples.length > 0 && (
-            <div style={{ 
-              flex: '0 1 350px',
-              minWidth: '300px',
-              backgroundColor: theme.bgSecondary,
-              borderRadius: '8px',
-              boxShadow: theme.shadow,
-              padding: '20px',
-              maxHeight: '500px',
-              overflowY: 'auto'
-            }}>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: theme.text }}>
-                📚 Saved Samples
-              </h3>
+            <div style={{ flex: '0 1 350px', minWidth: '300px', backgroundColor: theme.bgSecondary, borderRadius: '8px', boxShadow: theme.shadow, padding: '20px', maxHeight: '500px', overflowY: 'auto' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: theme.text }}>📚 Saved Samples</h3>
               {samples.map(sample => (
-                <div
-                  key={sample.id}
-                  onClick={() => {
-                    setCurrentSample(sample);
-                    setShowViewSample(true);
-                  }}
-                  style={{
-                    padding: '12px',
-                    backgroundColor: theme.bg,
-                    borderRadius: '6px',
-                    marginBottom: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    border: `1px solid ${theme.border}`
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                <div key={sample.id}
+                  onClick={() => { setCurrentSample(sample); setShowViewSample(true); }}
+                  style={{ padding: '12px', backgroundColor: theme.bg, borderRadius: '6px', marginBottom: '8px', cursor: 'pointer', transition: 'all 0.2s', border: `1px solid ${theme.border}` }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
                 >
-                  <div style={{ fontWeight: '600', marginBottom: '4px', fontSize: '14px', color: theme.text }}>
-                    {sample.title}
-                  </div>
-                  <div style={{ fontSize: '12px', color: theme.textMuted }}>
-                    {sample.character && `${sample.character} • `}
-                    {new Date(sample.createdAt).toLocaleDateString()}
-                  </div>
+                  <div style={{ fontWeight: '600', marginBottom: '4px', fontSize: '14px', color: theme.text }}>{sample.title}</div>
+                  <div style={{ fontSize: '12px', color: theme.textMuted }}>{sample.character && `${sample.character} • `}{new Date(sample.createdAt).toLocaleDateString()}</div>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Chat Area - Full Width at Bottom */}
-        <div style={{
-          backgroundColor: theme.bgSecondary,
-          borderRadius: '8px',
-          boxShadow: theme.shadow,
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            padding: '16px 20px',
-            background: theme.primaryGradient,
-            borderBottom: `2px solid ${theme.border}`
-          }}>
-            <h3 style={{ margin: 0, color: 'white', fontSize: '18px', fontWeight: '600' }}>
-              💬 Chat with Jan
-            </h3>
+        {/* Chat Area */}
+        <div style={{ backgroundColor: theme.bgSecondary, borderRadius: '8px', boxShadow: theme.shadow, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', background: theme.primaryGradient, borderBottom: `2px solid ${theme.border}` }}>
+            <h3 style={{ margin: 0, color: 'white', fontSize: '18px', fontWeight: '600' }}>💬 Chat with Jan</h3>
           </div>
           
-          <div style={{
-            height: '350px',
-            overflowY: 'auto',
-            padding: '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px'
-          }}>
+          <div style={{ height: '350px', overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {chatMessages.map((msg, idx) => (
-              <div key={idx} style={{
-                maxWidth: '75%',
-                alignSelf: msg.sender === 'jan' ? 'flex-start' : 'flex-end',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px'
-              }}>
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: msg.sender === 'jan' ? theme.bgTertiary : theme.primary,
-                  color: msg.sender === 'jan' ? theme.text : 'white',
-                  borderRadius: '12px',
-                  whiteSpace: 'pre-wrap',
-                  fontSize: '14px',
-                  lineHeight: '1.5'
-                }}>
+              <div key={idx} style={{ maxWidth: '75%', alignSelf: msg.sender === 'jan' ? 'flex-start' : 'flex-end', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ padding: '12px 16px', backgroundColor: msg.sender === 'jan' ? theme.bgTertiary : theme.primary, color: msg.sender === 'jan' ? theme.text : 'white', borderRadius: '12px', whiteSpace: 'pre-wrap', fontSize: '14px', lineHeight: '1.5' }}>
                   <strong>{msg.sender === 'jan' ? 'Jan:' : 'You:'}</strong> {msg.message}
                 </div>
                 {msg.sender === 'jan' && (
                   <div style={{ display: 'flex', gap: '6px', alignSelf: 'flex-start' }}>
                     <button
-                      onClick={() => setCurrentDocument(prev => ({
-                        ...prev,
-                        content: msg.message.replace(/^Jan:\s*/i, '')
-                      }))}
+                      onClick={() => setCurrentDocument(prev => ({ ...prev, content: msg.message.replace(/^Jan:\s*/i, '') }))}
                       title="Replace editor content with this"
-                      style={{
-                        padding: '3px 10px',
-                        backgroundColor: 'transparent',
-                        color: theme.textMuted,
-                        border: `1px solid ${theme.border}`,
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = theme.primary;
-                        e.currentTarget.style.color = 'white';
-                        e.currentTarget.style.borderColor = theme.primary;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = theme.textMuted;
-                        e.currentTarget.style.borderColor = theme.border;
-                      }}
+                      style={{ padding: '3px 10px', backgroundColor: 'transparent', color: theme.textMuted, border: `1px solid ${theme.border}`, borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', transition: 'all 0.2s' }}
+                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = theme.primary; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = theme.primary; }}
+                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = theme.textMuted; e.currentTarget.style.borderColor = theme.border; }}
                     >
                       → Editor
                     </button>
                     <button
-                      onClick={() => setCurrentDocument(prev => ({
-                        ...prev,
-                        content: prev.content
-                          ? prev.content + '\n\n' + msg.message.replace(/^Jan:\s*/i, '')
-                          : msg.message.replace(/^Jan:\s*/i, '')
-                      }))}
+                      onClick={() => setCurrentDocument(prev => ({ ...prev, content: prev.content ? prev.content + '\n\n' + msg.message.replace(/^Jan:\s*/i, '') : msg.message.replace(/^Jan:\s*/i, '') }))}
                       title="Append this to existing editor content"
-                      style={{
-                        padding: '3px 10px',
-                        backgroundColor: 'transparent',
-                        color: theme.textMuted,
-                        border: `1px solid ${theme.border}`,
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#10b981';
-                        e.currentTarget.style.color = 'white';
-                        e.currentTarget.style.borderColor = '#10b981';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = theme.textMuted;
-                        e.currentTarget.style.borderColor = theme.border;
-                      }}
+                      style={{ padding: '3px 10px', backgroundColor: 'transparent', color: theme.textMuted, border: `1px solid ${theme.border}`, borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', transition: 'all 0.2s' }}
+                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#10b981'; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = '#10b981'; }}
+                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = theme.textMuted; e.currentTarget.style.borderColor = theme.border; }}
                     >
                       ➕ Append
                     </button>
@@ -2014,303 +1494,103 @@ You have full context from this session. Generate the post description package n
               </div>
             ))}
 
-            {/* Loading indicator — Jan is thinking */}
             {isLoading && (
-              <div style={{
-                padding: '12px 16px',
-                backgroundColor: theme.bgTertiary,
-                borderRadius: '12px',
-                maxWidth: '75%',
-                alignSelf: 'flex-start',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '14px',
-                color: theme.textMuted
-              }}>
+              <div style={{ padding: '12px 16px', backgroundColor: theme.bgTertiary, borderRadius: '12px', maxWidth: '75%', alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: theme.textMuted }}>
                 <span>Jan is thinking</span>
                 {[0, 1, 2].map(i => (
-                  <div key={i} style={{
-                    width: '6px',
-                    height: '6px',
-                    borderRadius: '50%',
-                    backgroundColor: theme.primary,
-                    animation: `thinking 1.4s ease-in-out ${i * 0.16}s infinite`
-                  }} />
+                  <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: theme.primary, animation: `thinking 1.4s ease-in-out ${i * 0.16}s infinite` }} />
                 ))}
               </div>
             )}
           </div>
 
-          <div style={{
-            padding: '16px 20px',
-            borderTop: `2px solid ${theme.border}`,
-            backgroundColor: theme.bg
-          }}>
-            {/* Confirm Title nudge — appears when title exists but not yet confirmed */}
+          <div style={{ padding: '16px 20px', borderTop: `2px solid ${theme.border}`, backgroundColor: theme.bg }}>
             {currentDocument.title && !titleConfirmed && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                marginBottom: '10px',
-                padding: '8px 12px',
-                backgroundColor: isDarkMode ? 'rgba(245,158,11,0.1)' : 'rgba(245,158,11,0.08)',
-                border: '1px solid rgba(245,158,11,0.4)',
-                borderRadius: '6px'
-              }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', padding: '8px 12px', backgroundColor: isDarkMode ? 'rgba(245,158,11,0.1)' : 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.4)', borderRadius: '6px' }}>
                 <span style={{ fontSize: '13px', color: isDarkMode ? '#fbbf24' : '#92400e', flex: 1 }}>
                   📌 Title detected — confirm it so Jan can lock in the context for Post Description.
                 </span>
-                <button
-                  onClick={savePostContextToD1}
-                  style={{
-                    padding: '6px 14px',
-                    backgroundColor: '#f59e0b',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '700',
-                    fontSize: '12px',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
+                <button onClick={savePostContextToD1}
+                  style={{ padding: '6px 14px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '700', fontSize: '12px', whiteSpace: 'nowrap' }}>
                   ✅ Confirm Title
                 </button>
               </div>
             )}
 
-            {/* Row 1: Input + Send */}
             <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
               <textarea
                 placeholder="Ask Jan anything... (paste text here for Jan to work on)"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !isLoading) { e.preventDefault(); handleSendMessage(); } }}
                 disabled={isLoading}
                 rows={3}
-                lang="en-GB"
-                spellCheck={true}
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  backgroundColor: theme.bgSecondary,
-                  color: theme.text,
-                  border: `2px solid ${theme.border}`,
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  outline: 'none',
-                  opacity: isLoading ? 0.6 : 1,
-                  resize: 'vertical',
-                  fontFamily: 'inherit',
-                  lineHeight: '1.5',
-                  minHeight: '48px'
-                }}
+                lang="en-GB" spellCheck={true}
+                style={{ flex: 1, padding: '12px 16px', backgroundColor: theme.bgSecondary, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '8px', fontSize: '14px', outline: 'none', opacity: isLoading ? 0.6 : 1, resize: 'vertical', fontFamily: 'inherit', lineHeight: '1.5', minHeight: '48px' }}
               />
-              <button
-                onClick={handleSendMessage}
-                disabled={isLoading}
-                style={{
-                  padding: '12px 24px',
-                  background: isLoading ? theme.bgTertiary : theme.primaryGradient,
-                  color: isLoading ? theme.textMuted : 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  transition: 'all 0.2s'
-                }}
-              >
+              <button onClick={handleSendMessage} disabled={isLoading}
+                style={{ padding: '12px 24px', background: isLoading ? theme.bgTertiary : theme.primaryGradient, color: isLoading ? theme.textMuted : 'white', border: 'none', borderRadius: '8px', cursor: isLoading ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '14px', transition: 'all 0.2s' }}>
                 {isLoading ? '...' : 'Send'}
               </button>
             </div>
 
-            {/* Row 2: Action buttons */}
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                onClick={() => setShowSaveTemplate(true)}
-                title="Save current session structure as a reusable template"
-                style={{
-                  flex: 1,
-                  padding: '9px 12px',
-                  backgroundColor: theme.bgTertiary,
-                  color: theme.text,
-                  border: `2px solid ${theme.border}`,
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  fontSize: '13px',
-                  whiteSpace: 'nowrap'
-                }}
-              >
+              <button onClick={() => setShowSaveTemplate(true)}
+                style={{ flex: 1, padding: '9px 12px', backgroundColor: theme.bgTertiary, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', whiteSpace: 'nowrap' }}>
                 🗂️ Save Template
               </button>
-              <button
-                onClick={handlePostDescription}
-                disabled={isLoading}
-                title="Generate post description package for this content"
-                style={{
-                  flex: 1,
-                  padding: '9px 12px',
-                  backgroundColor: titleConfirmed ? '#7c3aed' : theme.bgTertiary,
-                  color: titleConfirmed ? 'white' : theme.textMuted,
-                  border: titleConfirmed ? 'none' : `2px solid ${theme.border}`,
-                  borderRadius: '8px',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  fontWeight: '600',
-                  fontSize: '13px',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.2s'
-                }}
-              >
+              <button onClick={handlePostDescription} disabled={isLoading}
+                style={{ flex: 1, padding: '9px 12px', backgroundColor: titleConfirmed ? '#7c3aed' : theme.bgTertiary, color: titleConfirmed ? 'white' : theme.textMuted, border: titleConfirmed ? 'none' : `2px solid ${theme.border}`, borderRadius: '8px', cursor: isLoading ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '13px', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>
                 📝 Post Description
               </button>
             </div>
           </div>
         </div>
 
-        {/* Add Sample Modal — unchanged */}
+        {/* Add Sample Modal */}
         {showAddSample && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}>
-            <div style={{
-              backgroundColor: theme.bg,
-              borderRadius: '12px',
-              padding: '24px',
-              maxWidth: '600px',
-              width: '90%',
-              maxHeight: '80vh',
-              overflowY: 'auto',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-            }}>
-              <h2 style={{ margin: '0 0 8px 0', color: theme.text, fontSize: '20px' }}>
-                Add Reference Sample
-              </h2>
-              <p style={{ margin: '0 0 20px 0', color: theme.textMuted, fontSize: '14px' }}>
-                Paste your final published content to save as a reference example
-              </p>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ backgroundColor: theme.bg, borderRadius: '12px', padding: '24px', maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <h2 style={{ margin: '0 0 8px 0', color: theme.text, fontSize: '20px' }}>Add Reference Sample</h2>
+              <p style={{ margin: '0 0 20px 0', color: theme.textMuted, fontSize: '14px' }}>Paste your final published content to save as a reference example</p>
 
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: theme.text }}>
-                  Title
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., Productivity Tips Coffee Chat"
-                  value={newSample.title}
-                  onChange={(e) => setNewSample({...newSample, title: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    backgroundColor: theme.bgSecondary,
-                    color: theme.text,
-                    border: `2px solid ${theme.border}`,
-                    borderRadius: '6px',
-                    fontSize: '14px'
-                  }}
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: theme.text }}>Title</label>
+                <input type="text" placeholder="e.g., Productivity Tips Coffee Chat"
+                  value={newSample.title} onChange={(e) => setNewSample({...newSample, title: e.target.value})}
+                  style={{ width: '100%', padding: '10px', backgroundColor: theme.bgSecondary, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '6px', fontSize: '14px' }}
                 />
               </div>
 
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: theme.text }}>
-                  Final Content
-                </label>
-                <textarea
-                  placeholder="Paste your final published content here..."
-                  value={newSample.content}
-                  onChange={(e) => setNewSample({...newSample, content: e.target.value})}
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: theme.text }}>Final Content</label>
+                <textarea placeholder="Paste your final published content here..."
+                  value={newSample.content} onChange={(e) => setNewSample({...newSample, content: e.target.value})}
                   rows={12}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    backgroundColor: theme.bgSecondary,
-                    color: theme.text,
-                    border: `2px solid ${theme.border}`,
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    resize: 'vertical',
-                    fontFamily: 'inherit'
-                  }}
+                  style={{ width: '100%', padding: '12px', backgroundColor: theme.bgSecondary, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '6px', fontSize: '14px', resize: 'vertical', fontFamily: 'inherit' }}
                 />
               </div>
 
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: theme.text }}>
-                  Tags (optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., productivity, mindset, motivation"
-                  value={newSample.tags}
-                  onChange={(e) => setNewSample({...newSample, tags: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    backgroundColor: theme.bgSecondary,
-                    color: theme.text,
-                    border: `2px solid ${theme.border}`,
-                    borderRadius: '6px',
-                    fontSize: '14px'
-                  }}
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: theme.text }}>Tags (optional)</label>
+                <input type="text" placeholder="e.g., productivity, mindset, motivation"
+                  value={newSample.tags} onChange={(e) => setNewSample({...newSample, tags: e.target.value})}
+                  style={{ width: '100%', padding: '10px', backgroundColor: theme.bgSecondary, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '6px', fontSize: '14px' }}
                 />
               </div>
 
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: theme.text }}>
-                  Notes (optional)
-                </label>
-                <textarea
-                  placeholder="Any notes about this sample..."
-                  value={newSample.notes}
-                  onChange={(e) => setNewSample({...newSample, notes: e.target.value})}
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: theme.text }}>Notes (optional)</label>
+                <textarea placeholder="Any notes about this sample..."
+                  value={newSample.notes} onChange={(e) => setNewSample({...newSample, notes: e.target.value})}
                   rows={3}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    backgroundColor: theme.bgSecondary,
-                    color: theme.text,
-                    border: `2px solid ${theme.border}`,
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    resize: 'vertical'
-                  }}
+                  style={{ width: '100%', padding: '10px', backgroundColor: theme.bgSecondary, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '6px', fontSize: '14px', resize: 'vertical' }}
                 />
               </div>
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => {
-                    setShowAddSample(false);
-                    setNewSample({ title: '', content: '', tags: '', notes: '' });
-                  }}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: theme.bgTertiary,
-                    color: theme.text,
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }}
-                >
+                <button onClick={() => { setShowAddSample(false); setNewSample({ title: '', content: '', tags: '', notes: '' }); }}
+                  style={{ padding: '10px 20px', backgroundColor: theme.bgTertiary, color: theme.text, border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
                   Cancel
                 </button>
                 <button
@@ -2322,11 +1602,8 @@ You have full context from this session. Generate the post description package n
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
-                            action: 'save-reference',
-                            id: refId,
-                            templateId: selectedTemplate,
-                            title: newSample.title,
-                            content: newSample.content,
+                            action: 'save-reference', id: refId, templateId: selectedTemplate,
+                            title: newSample.title, content: newSample.content,
                             character: currentDocument.character || '',
                             tags: newSample.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t),
                             engagementNotes: newSample.notes || ''
@@ -2350,17 +1627,7 @@ You have full context from this session. Generate the post description package n
                     }
                   }}
                   disabled={!newSample.title || !newSample.content}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: (newSample.title && newSample.content) ? theme.primary : theme.bgTertiary,
-                    color: (newSample.title && newSample.content) ? 'white' : theme.textMuted,
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: (newSample.title && newSample.content) ? 'pointer' : 'not-allowed',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }}
-                >
+                  style={{ padding: '10px 20px', backgroundColor: (newSample.title && newSample.content) ? theme.primary : theme.bgTertiary, color: (newSample.title && newSample.content) ? 'white' : theme.textMuted, border: 'none', borderRadius: '6px', cursor: (newSample.title && newSample.content) ? 'pointer' : 'not-allowed', fontSize: '14px', fontWeight: '600' }}>
                   Save Sample
                 </button>
               </div>
@@ -2370,90 +1637,39 @@ You have full context from this session. Generate the post description package n
 
         {/* Save Template Modal */}
         {showSaveTemplate && (
-          <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-          }}>
-            <div style={{
-              backgroundColor: theme.bg, borderRadius: '12px', padding: '24px',
-              maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-            }}>
-              <h2 style={{ margin: '0 0 8px 0', color: theme.text, fontSize: '20px' }}>
-                🗂️ Save as Template
-              </h2>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ backgroundColor: theme.bg, borderRadius: '12px', padding: '24px', maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <h2 style={{ margin: '0 0 8px 0', color: theme.text, fontSize: '20px' }}>🗂️ Save as Template</h2>
               <p style={{ margin: '0 0 16px 0', color: theme.textMuted, fontSize: '14px' }}>
-                Describe the document structure Jan should use every time for this type.
-                Next session she loads this automatically — no explaining needed.
+                Describe the document structure Jan should use every time for this type. Next session she loads this automatically — no explaining needed.
               </p>
-
-              {/* Current context summary */}
-              <div style={{
-                padding: '10px 14px', backgroundColor: theme.bgTertiary,
-                borderRadius: '6px', marginBottom: '16px', fontSize: '13px', color: theme.textMuted
-              }}>
+              <div style={{ padding: '10px 14px', backgroundColor: theme.bgTertiary, borderRadius: '6px', marginBottom: '16px', fontSize: '13px', color: theme.textMuted }}>
                 <strong style={{ color: theme.text }}>Saving for: </strong>
-                {[currentDocument.character, currentDocument.templateType, currentDocument.themeLabel, currentDocument.targetAudience]
-                  .filter(Boolean).join(' · ') || 'No dropdowns selected — template will be general'}
+                {[currentDocument.character, currentDocument.templateType, currentDocument.themeLabel, currentDocument.targetAudience].filter(Boolean).join(' · ') || 'No dropdowns selected — template will be general'}
               </div>
-
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: theme.text }}>
-                  Document Structure *
-                </label>
-                <textarea
-                  placeholder="e.g. Title → Subtitle → Opening paragraph → 3 main sections with headers → Key takeaways → Closing CTA → Disclaimer"
-                  value={templateSaveData.structure}
-                  onChange={(e) => setTemplateSaveData({...templateSaveData, structure: e.target.value})}
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: theme.text }}>Document Structure *</label>
+                <textarea placeholder="e.g. Title → Subtitle → Opening paragraph → 3 main sections with headers → Key takeaways → Closing CTA → Disclaimer"
+                  value={templateSaveData.structure} onChange={(e) => setTemplateSaveData({...templateSaveData, structure: e.target.value})}
                   rows={6}
-                  style={{
-                    width: '100%', padding: '12px', backgroundColor: theme.bgSecondary,
-                    color: theme.text, border: `2px solid ${theme.border}`,
-                    borderRadius: '6px', fontSize: '14px', resize: 'vertical', fontFamily: 'inherit'
-                  }}
+                  style={{ width: '100%', padding: '12px', backgroundColor: theme.bgSecondary, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '6px', fontSize: '14px', resize: 'vertical', fontFamily: 'inherit' }}
                 />
               </div>
-
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: theme.text }}>
-                  Guidelines (optional)
-                </label>
-                <textarea
-                  placeholder="e.g. Always use British English. Keep sections under 200 words. Lead with a story. End with a question to the community."
-                  value={templateSaveData.guidelines}
-                  onChange={(e) => setTemplateSaveData({...templateSaveData, guidelines: e.target.value})}
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: theme.text }}>Guidelines (optional)</label>
+                <textarea placeholder="e.g. Always use British English. Keep sections under 200 words. Lead with a story. End with a question to the community."
+                  value={templateSaveData.guidelines} onChange={(e) => setTemplateSaveData({...templateSaveData, guidelines: e.target.value})}
                   rows={4}
-                  style={{
-                    width: '100%', padding: '12px', backgroundColor: theme.bgSecondary,
-                    color: theme.text, border: `2px solid ${theme.border}`,
-                    borderRadius: '6px', fontSize: '14px', resize: 'vertical', fontFamily: 'inherit'
-                  }}
+                  style={{ width: '100%', padding: '12px', backgroundColor: theme.bgSecondary, color: theme.text, border: `2px solid ${theme.border}`, borderRadius: '6px', fontSize: '14px', resize: 'vertical', fontFamily: 'inherit' }}
                 />
               </div>
-
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => { setShowSaveTemplate(false); setTemplateSaveData({ structure: '', guidelines: '' }); }}
-                  style={{
-                    padding: '10px 20px', backgroundColor: theme.bgTertiary, color: theme.text,
-                    border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '600'
-                  }}
-                >
+                <button onClick={() => { setShowSaveTemplate(false); setTemplateSaveData({ structure: '', guidelines: '' }); }}
+                  style={{ padding: '10px 20px', backgroundColor: theme.bgTertiary, color: theme.text, border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
                   Cancel
                 </button>
-                <button
-                  onClick={saveTemplateToD1}
-                  disabled={!templateSaveData.structure.trim()}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: templateSaveData.structure.trim() ? theme.primary : theme.bgTertiary,
-                    color: templateSaveData.structure.trim() ? 'white' : theme.textMuted,
-                    border: 'none', borderRadius: '6px',
-                    cursor: templateSaveData.structure.trim() ? 'pointer' : 'not-allowed',
-                    fontSize: '14px', fontWeight: '600'
-                  }}
-                >
+                <button onClick={saveTemplateToD1} disabled={!templateSaveData.structure.trim()}
+                  style={{ padding: '10px 20px', backgroundColor: templateSaveData.structure.trim() ? theme.primary : theme.bgTertiary, color: templateSaveData.structure.trim() ? 'white' : theme.textMuted, border: 'none', borderRadius: '6px', cursor: templateSaveData.structure.trim() ? 'pointer' : 'not-allowed', fontSize: '14px', fontWeight: '600' }}>
                   Save to D1
                 </button>
               </div>
@@ -2461,128 +1677,47 @@ You have full context from this session. Generate the post description package n
           </div>
         )}
 
-        {/* View Sample Modal — unchanged */}
+        {/* View Sample Modal */}
         {showViewSample && currentSample && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}>
-            <div style={{
-              backgroundColor: theme.bg,
-              borderRadius: '12px',
-              padding: '24px',
-              maxWidth: '700px',
-              width: '90%',
-              maxHeight: '80vh',
-              overflowY: 'auto',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-            }}>
-              <h2 style={{ margin: '0 0 4px 0', color: theme.text, fontSize: '20px' }}>
-                {currentSample.title}
-              </h2>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ backgroundColor: theme.bg, borderRadius: '12px', padding: '24px', maxWidth: '700px', width: '90%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <h2 style={{ margin: '0 0 4px 0', color: theme.text, fontSize: '20px' }}>{currentSample.title}</h2>
               <div style={{ marginBottom: '16px', fontSize: '13px', color: theme.textMuted }}>
                 {currentSample.character && <span>Character: {currentSample.character} • </span>}
                 {new Date(currentSample.createdAt).toLocaleDateString()}
               </div>
-
-              <div style={{
-                padding: '16px',
-                backgroundColor: theme.bgSecondary,
-                borderRadius: '8px',
-                marginBottom: '16px',
-                whiteSpace: 'pre-wrap',
-                fontSize: '14px',
-                lineHeight: '1.6',
-                color: theme.text,
-                maxHeight: '400px',
-                overflowY: 'auto'
-              }}>
+              <div style={{ padding: '16px', backgroundColor: theme.bgSecondary, borderRadius: '8px', marginBottom: '16px', whiteSpace: 'pre-wrap', fontSize: '14px', lineHeight: '1.6', color: theme.text, maxHeight: '400px', overflowY: 'auto' }}>
                 {currentSample.content}
               </div>
-
               {currentSample.tags && currentSample.tags.length > 0 && (
                 <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: theme.textMuted }}>
-                    Tags:
-                  </div>
+                  <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: theme.textMuted }}>Tags:</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                     {currentSample.tags.map((tag, i) => (
-                      <span key={i} style={{
-                        padding: '4px 10px',
-                        backgroundColor: theme.bgTertiary,
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        color: theme.text
-                      }}>
-                        {tag}
-                      </span>
+                      <span key={i} style={{ padding: '4px 10px', backgroundColor: theme.bgTertiary, borderRadius: '12px', fontSize: '12px', color: theme.text }}>{tag}</span>
                     ))}
                   </div>
                 </div>
               )}
-
               {currentSample.performance?.notes && (
-                <div style={{
-                  padding: '12px',
-                  backgroundColor: theme.bgTertiary,
-                  borderRadius: '6px',
-                  marginBottom: '16px',
-                  fontSize: '13px',
-                  color: theme.text
-                }}>
+                <div style={{ padding: '12px', backgroundColor: theme.bgTertiary, borderRadius: '6px', marginBottom: '16px', fontSize: '13px', color: theme.text }}>
                   <strong>Notes:</strong> {currentSample.performance.notes}
                 </div>
               )}
-
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(currentSample.content);
-                    alert('Content copied to clipboard!');
-                  }}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: theme.bgTertiary,
-                    color: theme.text,
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }}
-                >
+                <button onClick={() => { navigator.clipboard.writeText(currentSample.content); alert('Content copied to clipboard!'); }}
+                  style={{ padding: '10px 20px', backgroundColor: theme.bgTertiary, color: theme.text, border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
                   📋 Copy Content
                 </button>
-                <button
-                  onClick={() => {
-                    setShowViewSample(false);
-                    setCurrentSample(null);
-                  }}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: theme.primary,
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }}
-                >
+                <button onClick={() => { setShowViewSample(false); setCurrentSample(null); setActiveSampleId(null); }}
+                  style={{ padding: '10px 20px', backgroundColor: theme.primary, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
                   Close
                 </button>
               </div>
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
