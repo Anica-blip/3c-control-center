@@ -65,6 +65,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
   const [showPreview, setShowPreview] = useState(false);
   const [templates, setTemplates] = useState<ContentTemplate[]>([]);
   const [samples, setSamples] = useState<ProjectReference[]>([]);
+  const [sampleCounts, setSampleCounts] = useState<Record<string, number>>({});
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [activeSampleId, setActiveSampleId] = useState<string | null>(null);
   const [showAddSample, setShowAddSample] = useState(false);
@@ -194,6 +195,8 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
       await initializeDefaultTemplates(janProjectStorage);
       const loadedTemplates = await janProjectStorage.getAllTemplates();
       setTemplates(loadedTemplates);
+      // Fetch real D1 sample counts for all templates on mount
+      await loadAllSampleCountsOnInit(loadedTemplates);
     };
     initStorage();
   }, []);
@@ -203,14 +206,50 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
       const response = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'get-references-by-template', templateId, limit: 10 })
+        body: JSON.stringify({ action: 'get-references-by-template', templateId, limit: 50 })
       });
       const data = await response.json();
       if (data.success) {
-        setSamples(data.references || []);
+        const refs = data.references || [];
+        setSamples(refs);
+        setSampleCounts(prev => ({ ...prev, [templateId]: refs.length }));
       }
     } catch (error) {
       console.error('Failed to load samples from D1:', error);
+    }
+  };
+
+  // Fetch real D1 counts for all templates at mount — populates counts map
+  // and auto-selects the first template that has saved samples
+  const loadAllSampleCountsOnInit = async (templateList: ContentTemplate[]) => {
+    const counts: Record<string, number> = {};
+    let firstId = '';
+    let firstRefs: ProjectReference[] = [];
+
+    for (const t of templateList) {
+      try {
+        const response = await fetch(WORKER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get-references-by-template', templateId: t.id, limit: 50 })
+        });
+        const data = await response.json();
+        if (data.success) {
+          const refs = data.references || [];
+          counts[t.id] = refs.length;
+          if (!firstId && refs.length > 0) {
+            firstId = t.id;
+            firstRefs = refs;
+          }
+        }
+      } catch {}
+    }
+
+    setSampleCounts(counts);
+    // Auto-select first template that has samples so list is immediately visible
+    if (firstId) {
+      setSelectedTemplate(firstId);
+      setSamples(firstRefs);
     }
   };
 
@@ -1272,7 +1311,7 @@ You have full context from this session. Generate the post description package n
                 >
                   <option value="">Select template...</option>
                   {templates.map(t => (
-                    <option key={t.id} value={t.id}>{t.name} ({t.timesUsed} saved)</option>
+                    <option key={t.id} value={t.id}>{t.name} ({sampleCounts[t.id] ?? 0} samples)</option>
                   ))}
                 </select>
                 <button
