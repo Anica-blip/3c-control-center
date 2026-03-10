@@ -608,6 +608,15 @@ EDITOR CONTENT AWARENESS:
   const callJanAPI = async (userMessage: string, doc: JanDocument): Promise<string> => {
     apiMessages.current.push({ role: 'user', content: userMessage });
 
+    // ============================================================
+    // SMART MAX TOKENS — detect full-document generation intent
+    // 8192 for full/complete document requests
+    // Worker handles the rest: 4096 long-form sections, 2048 chat
+    // ============================================================
+    const fullDocKeywords = /\b(full document|full article|full post|entire document|complete document|write it all|all sections|all in one|don't split|no sections|one response|full draft|full version|write the whole|complete article|complete post)\b/i;
+    const isFullDocRequest = fullDocKeywords.test(userMessage);
+    const maxTokensOverride = isFullDocRequest ? { maxTokens: 8192 } : {};
+
     const response = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -617,7 +626,8 @@ EDITOR CONTENT AWARENESS:
         templateType: doc.templateType,
         platform: doc.platform,
         themeLabel: doc.themeLabel,
-        character: doc.character
+        character: doc.character,
+        ...maxTokensOverride
       })
     });
 
