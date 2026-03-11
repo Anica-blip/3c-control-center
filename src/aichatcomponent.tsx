@@ -605,7 +605,11 @@ EDITOR CONTENT AWARENESS:
 - IMPORTANT: The document title is displayed separately above the editor. Never repeat the title as the first line of the content body. Start the content directly — no title repetition.`;
   };
 
-  const callJanAPI = async (userMessage: string, doc: JanDocument): Promise<string> => {
+  const callJanAPI = async (
+    userMessage: string,
+    doc: JanDocument,
+    onChunk: (chunk: string) => void
+  ): Promise<string> => {
     apiMessages.current.push({ role: 'user', content: userMessage });
 
     // ============================================================
@@ -633,13 +637,64 @@ EDITOR CONTENT AWARENESS:
 
     if (!response.ok) throw new Error(`Worker error: ${response.status}`);
 
-    const data = await response.json();
-    const janReply = data.content?.[0]?.text || 'Sorry Chef, I had trouble processing that. Please try again.';
+    // ============================================================
+    // READ SSE STREAM — parse Anthropic event chunks in real-time
+    // Each chunk arrives as: "data: {...}\n\n"
+    // ============================================================
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let fullReply = '';
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let buffer = '';
 
-    if (data.usage) {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      // Keep the last incomplete line in the buffer
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === '[DONE]') continue;
+
+        try {
+          const event = JSON.parse(jsonStr);
+
+          // Extract text delta — this is Jan typing in real-time
+          if (
+            event.type === 'content_block_delta' &&
+            event.delta?.type === 'text_delta' &&
+            event.delta?.text
+          ) {
+            fullReply += event.delta.text;
+            onChunk(fullReply);
+          }
+
+          // Extract token usage for cost tracking
+          if (event.type === 'message_start' && event.message?.usage) {
+            inputTokens = event.message.usage.input_tokens || 0;
+          }
+          if (event.type === 'message_delta' && event.usage) {
+            outputTokens = event.usage.output_tokens || 0;
+          }
+        } catch {
+          // Malformed chunk — skip silently
+        }
+      }
+    }
+
+    const janReply = fullReply || 'Sorry Chef, I had trouble processing that. Please try again.';
+
+    // Update session token cost tracker
+    if (inputTokens || outputTokens) {
       setSessionTokens(prev => ({
-        input: prev.input + (data.usage.input_tokens || 0),
-        output: prev.output + (data.usage.output_tokens || 0)
+        input: prev.input + inputTokens,
+        output: prev.output + outputTokens
       }));
     }
 
@@ -678,7 +733,13 @@ EDITOR CONTENT AWARENESS:
     const userMessage = chatInput;
     const userChatMessage = { sender: 'user' as const, message: userMessage, timestamp: new Date().toISOString() };
 
-    setChatMessages(prev => [...prev, userChatMessage]);
+    // Add user message + empty Jan placeholder immediately
+    const janTimestamp = new Date().toISOString();
+    setChatMessages(prev => [
+      ...prev,
+      userChatMessage,
+      { sender: 'jan' as const, message: '...', timestamp: janTimestamp }
+    ]);
     setChatInput('');
     setIsLoading(true);
 
@@ -705,15 +766,30 @@ EDITOR CONTENT AWARENESS:
         } catch {}
       }
 
-      const janReply = await callJanAPI(enrichedMessage, currentDocument);
-      setChatMessages(prev => [...prev, { sender: 'jan', message: janReply, timestamp: new Date().toISOString() }]);
+      // onChunk updates the last message (Jan's placeholder) in real-time
+      await callJanAPI(enrichedMessage, currentDocument, (streamedText) => {
+        setChatMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            sender: 'jan',
+            message: streamedText,
+            timestamp: janTimestamp
+          };
+          return updated;
+        });
+      });
+
     } catch (error) {
       console.error('Jan API error:', error);
-      setChatMessages(prev => [...prev, {
-        sender: 'jan',
-        message: 'Chef, I\'m having trouble connecting right now. Check the Worker is deployed and try again! 🔧',
-        timestamp: new Date().toISOString()
-      }]);
+      setChatMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          sender: 'jan',
+          message: 'Chef, I\'m having trouble connecting right now. Check the Worker is deployed and try again! 🔧',
+          timestamp: janTimestamp
+        };
+        return updated;
+      });
     } finally {
       setIsLoading(false);
     }
