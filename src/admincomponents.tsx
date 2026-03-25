@@ -1016,14 +1016,9 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                     url: 'https://anica-blip.github.io/3c-quiz-admin/'
                   },
                   {
-                    name: 'Quiz Landing Page & App Loader',
-                    desc: 'Quiz application landing interface',
-                    url: 'https://anica-blip.github.io/3c-quiz-admin/landing.html?quiz=quiz.01'
-                  },
-                  {
-                    name: 'Game Generator',
-                    desc: 'Games, puzzles, challenges',
-                    url: 'https://anica-blip.github.io/3c-game-loader/'
+                    name: 'Card Game Generator',
+                    desc: 'Card Game Deck',
+                    url: 'https://anica-blip.github.io/3c-card-games/admin/index.html'
                   }
                 ].map((tool, index) => (
                   <a 
