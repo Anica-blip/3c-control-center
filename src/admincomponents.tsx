@@ -1019,6 +1019,11 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                     name: 'Card Game Generator',
                     desc: 'Card Decks',
                     url: 'https://anica-blip.github.io/3c-card-games/admin/index.html'
+                  },
+                  {
+                    name: 'Puzzle Generator',
+                    desc: 'Puzzle Word Search',
+                    url: 'https://anica-blip.github.io/3c-word-search/admin/index.html'
                   }
                 ].map((tool, index) => (
                   <a 
