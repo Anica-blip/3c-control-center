@@ -1024,6 +1024,11 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                     name: 'Puzzle Generator',
                     desc: 'Puzzle Word Search',
                     url: 'https://anica-blip.github.io/3c-word-search/admin/index.html'
+                  },
+                  {
+                    name: 'Card Showcase Generator',
+                    desc: 'Solo Card Showcase',
+                    url: 'https://anica-blip.github.io/3C-Solo-Card-Showcase/admin/index.html'
                   }
                 ].map((tool, index) => (
                   <a 
