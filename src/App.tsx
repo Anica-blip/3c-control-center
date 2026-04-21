@@ -7,6 +7,7 @@ import MarketingComponent from './marketingcomponent/MarketingComponent';
 import SettingsComponent from './settingscomponent';
 import AdminComponents from './admincomponents';
 import AIChatComponent from './aichatcomponent';
+import VoiceStudioComponent from './VoiceStudioComponent';
 import { useI18n } from './i18n.tsx';
 
 // Theme Context
@@ -711,7 +712,7 @@ function App() {
   const [activeSection, setActiveSection] = useState('overview');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const [currentLanguage, setCurrentLanguage] = useState('en-GB');
   const [githubUser, setGitHubUser] = useState<AuthenticatedUser | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -817,7 +818,8 @@ function App() {
     { id: 'schedule-manager', icon: '📅', label: t('nav.schedule'), available: true },
     { id: 'marketing-center', icon: '🧠', label: t('nav.marketing'), available: true },
     { id: 'dashboard-settings', icon: '⚙️', label: t('nav.settings'), available: true },
-    { id: 'admin-center', icon: '🔧', label: t('nav.admin'), available: true }
+    { id: 'admin-center', icon: '🔧', label: t('nav.admin'), available: true },
+    { id: 'voice-studio', icon: '🎙️', label: 'Voice Studio', available: true }
   ];
 
   const bottomNavItem = { 
@@ -862,6 +864,23 @@ function App() {
         backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
         fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}>
+        {/* Watermark */}
+        {isAuthenticated && (
+          <div style={{
+            position: 'absolute',
+            top: '5px',
+            right: '20px',
+            zIndex: 999,
+            fontSize: '10px',
+            color: isDarkMode ? 'rgba(148, 163, 184, 0.6)' : 'rgba(107, 114, 128, 0.6)',
+            fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+            letterSpacing: '0.3px',
+            pointerEvents: 'none'
+          }}>
+            Built with ❤️ by Claude (Anthropic) × Chef Anica · 3C Thread To Success Cooking Lab 🧪
+          </div>
+        )}
+
         {/* FIXED Header Controls - Working Pattern from Older Version */}
         {isAuthenticated && (
           <div style={{
@@ -1375,6 +1394,9 @@ function App() {
 
           {/* NEW: AI Chat Manager section */}
           {activeSection === 'ai-chat-manager' && <AIChatComponent isDarkMode={isDarkMode} />}
+
+          {/* Voice Studio section */}
+          {activeSection === 'voice-studio' && <VoiceStudioComponent isDarkMode={isDarkMode} />}
         </div>
       </div>
     </ThemeContext.Provider>
@@ -1532,4 +1554,3 @@ const AiChatManagerComponent = () => {
 };
 
 export default App;
-
