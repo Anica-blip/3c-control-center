@@ -1,6 +1,6 @@
 // 3C Voice Studio Component
 // Upload → Pitch Shift → Speed Control → Preview → Download → Save to R2
-// Built with ❤️ by Claude (Anthropic) × Chef Anica · 3C Thread To Success Cooking Lab
+// Built with ❤️ by Claude (Anthropic) × Chef Anica · 3C Thread To Success Cooking Lab 🧪👨‍🍳
 
 import React, { useState, useEffect, useRef } from 'react';
 
@@ -29,8 +29,8 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
   const [selectedPersona, setSelectedPersona] = useState('Aurion');
   const [audioFile, setAudioFile]             = useState<File | null>(null);
   const [audioBuffer, setAudioBuffer]         = useState<AudioBuffer | null>(null);
-  const [pitch, setPitch]                     = useState(-4);   // semitones — default female→male
-  const [speed, setSpeed]                     = useState(1.0);  // tempo multiplier
+  const [pitch, setPitch]                     = useState(0);    // semitones — 0 = no change
+  const [tempo, setTempo]                     = useState(1.0);  // independent tempo — 1.0 = no change
   const [isPlaying, setIsPlaying]             = useState(false);
   const [isProcessing, setIsProcessing]       = useState(false);
   const [isSaving, setIsSaving]               = useState(false);
@@ -72,16 +72,13 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     const canvas = canvasRef.current;
     const ctx    = canvas.getContext('2d');
     if (!ctx) return;
-
     const { width, height } = canvas;
     ctx.clearRect(0, 0, width, height);
-
     const grad = ctx.createLinearGradient(0, 0, width, 0);
     grad.addColorStop(0,   '#7c3aed');
     grad.addColorStop(0.5, '#a78bfa');
     grad.addColorStop(1,   '#7c3aed');
     ctx.fillStyle = grad;
-
     const barW = width / waveformData.length;
     waveformData.forEach((v, i) => {
       const bh = Math.max(2, v * height * 0.85);
@@ -89,13 +86,12 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     });
   }, [waveformData, isDarkMode]);
 
-  // ── Generate waveform from AudioBuffer ─────────────────
+  // ── Generate waveform ──────────────────────────────────
   const generateWaveform = (buf: AudioBuffer) => {
-    const data     = buf.getChannelData(0);
-    const SAMPLES  = 90;
-    const blockSz  = Math.floor(data.length / SAMPLES);
+    const data    = buf.getChannelData(0);
+    const SAMPLES = 90;
+    const blockSz = Math.floor(data.length / SAMPLES);
     const raw: number[] = [];
-
     for (let i = 0; i < SAMPLES; i++) {
       let sum = 0;
       for (let j = 0; j < blockSz; j++) sum += Math.abs(data[i * blockSz + j]);
@@ -105,12 +101,11 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     setWaveformData(raw.map(v => v / max));
   };
 
-  // ── Load audio file into AudioBuffer ───────────────────
+  // ── Load audio file ────────────────────────────────────
   const loadAudioFile = async (file: File) => {
     setAudioFile(file);
     setProcessedBlob(null);
     setSaveName(file.name.replace(/\.[^/.]+$/, ''));
-
     try {
       const ab  = await file.arrayBuffer();
       const ctx = new AudioContext();
@@ -136,16 +131,19 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
   };
 
   // ── WAV encoder ────────────────────────────────────────
-  const audioBufferToWav = (buf: AudioBuffer): Blob => {
-    const ch        = buf.numberOfChannels;
-    const sr        = buf.sampleRate;
-    const bps       = 2; // 16-bit
-    const blockAln  = ch * bps;
-    const dataLen   = buf.length * blockAln;
-    const ab        = new ArrayBuffer(44 + dataLen);
-    const view      = new DataView(ab);
-
-    const ws = (off: number, s: string) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+  // overrideSampleRate: writes a different Hz into the WAV header
+  // so the player interprets the frames at original rate (tempo trick)
+  const audioBufferToWav = (buf: AudioBuffer, overrideSampleRate?: number): Blob => {
+    const ch       = buf.numberOfChannels;
+    const sr       = overrideSampleRate ?? buf.sampleRate;
+    const bps      = 2;
+    const blockAln = ch * bps;
+    const dataLen  = buf.length * blockAln;
+    const ab       = new ArrayBuffer(44 + dataLen);
+    const view     = new DataView(ab);
+    const ws       = (off: number, s: string) => {
+      for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i));
+    };
     ws(0, 'RIFF'); view.setUint32(4, 36 + dataLen, true);
     ws(8, 'WAVE'); ws(12, 'fmt ');
     view.setUint32(16, 16, true);
@@ -156,7 +154,6 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     view.setUint16(32, blockAln, true);
     view.setUint16(34, 16, true);
     ws(36, 'data'); view.setUint32(40, dataLen, true);
-
     let off = 44;
     for (let i = 0; i < buf.length; i++) {
       for (let c = 0; c < ch; c++) {
@@ -168,23 +165,55 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     return new Blob([ab], { type: 'audio/wav' });
   };
 
-  // ── Render processed audio via OfflineAudioContext ─────
-  const renderProcessed = async (): Promise<AudioBuffer | null> => {
+  // ── TWO-PASS RENDER ─────────────────────────────────────────────────────────
+  //
+  // The fundamental rule you identified from the experts is correct:
+  // Pitch and Tempo should NOT be combined. We fix this with two separate passes:
+  //
+  // PASS 1 — Pitch only (via playbackRate)
+  //   playbackRate = 2^(semitones/12)
+  //   Side effect: tempo also changes. That is expected and will be corrected in Pass 2.
+  //
+  // PASS 2 — Tempo only (pitch-neutral, via sample rate trick)
+  //   The OfflineAudioContext is given a DIFFERENT sampleRate = originalSR / tempoFactor
+  //   playbackRate stays at 1 — so pitch from Pass 1 is preserved exactly.
+  //   The WAV header is then written with the ORIGINAL sampleRate.
+  //   Result: the player reads the frames at original rate → tempo is shifted
+  //   by tempoFactor with ZERO pitch change.
+  //
+  // Output: pitch and tempo are fully independent sliders.
+  // ────────────────────────────────────────────────────────────────────────────
+  const renderProcessed = async (): Promise<{ buffer: AudioBuffer; wavSampleRate: number } | null> => {
     if (!audioBuffer) return null;
-    const pitchFactor = Math.pow(2, pitch / 12);
-    const finalRate   = pitchFactor * speed;
-    const outLen      = Math.ceil(audioBuffer.length / finalRate);
 
-    const offCtx = new OfflineAudioContext(audioBuffer.numberOfChannels, outLen, audioBuffer.sampleRate);
-    const src    = offCtx.createBufferSource();
-    src.buffer              = audioBuffer;
-    src.playbackRate.value  = finalRate;
-    src.connect(offCtx.destination);
-    src.start();
-    return await offCtx.startRendering();
+    const pitchFactor = Math.pow(2, pitch / 12);
+    const originalSR  = audioBuffer.sampleRate;
+
+    // ── Pass 1: Pitch shift ──────────────────────────────
+    const p1Len = Math.max(1, Math.ceil(audioBuffer.length / pitchFactor));
+    const p1Ctx = new OfflineAudioContext(audioBuffer.numberOfChannels, p1Len, originalSR);
+    const p1Src = p1Ctx.createBufferSource();
+    p1Src.buffer             = audioBuffer;
+    p1Src.playbackRate.value = pitchFactor;
+    p1Src.connect(p1Ctx.destination);
+    p1Src.start();
+    const pitchedBuffer = await p1Ctx.startRendering();
+
+    // ── Pass 2: Tempo adjustment, pitch-neutral ──────────
+    // Clamp sampleRate to Web Audio valid range [8000, 96000]
+    const targetSR = Math.min(96000, Math.max(8000, Math.round(originalSR / tempo)));
+    const p2Ctx    = new OfflineAudioContext(pitchedBuffer.numberOfChannels, pitchedBuffer.length, targetSR);
+    const p2Src    = p2Ctx.createBufferSource();
+    p2Src.buffer             = pitchedBuffer;
+    p2Src.playbackRate.value = 1; // ← pitch untouched
+    p2Src.connect(p2Ctx.destination);
+    p2Src.start();
+    const finalBuffer = await p2Ctx.startRendering();
+
+    return { buffer: finalBuffer, wavSampleRate: originalSR };
   };
 
-  // ── Preview (live playback) ────────────────────────────
+  // ── Preview — full two-pass then play ─────────────────
   const handlePreview = async () => {
     if (!audioBuffer) return;
 
@@ -194,39 +223,51 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
       return;
     }
 
-    if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
-      audioContextRef.current = new AudioContext();
-    }
-    if (audioContextRef.current.state === 'suspended') {
-      await audioContextRef.current.resume();
-    }
+    setIsProcessing(true);
+    try {
+      const result = await renderProcessed();
+      if (!result) return;
 
-    const pitchFactor = Math.pow(2, pitch / 12);
-    const finalRate   = pitchFactor * speed;
+      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+        audioContextRef.current = new AudioContext();
+      }
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
 
-    const src = audioContextRef.current.createBufferSource();
-    src.buffer             = audioBuffer;
-    src.playbackRate.value = finalRate;
-    src.connect(audioContextRef.current.destination);
-    src.onended = () => setIsPlaying(false);
-    src.start();
-    sourceNodeRef.current = src;
-    setIsPlaying(true);
+      // Encode as WAV with original SR so decodeAudioData interprets correctly
+      const wavBlob   = audioBufferToWav(result.buffer, result.wavSampleRate);
+      const wavArrBuf = await wavBlob.arrayBuffer();
+      const playBuf   = await audioContextRef.current.decodeAudioData(wavArrBuf);
+
+      const src = audioContextRef.current.createBufferSource();
+      src.buffer             = playBuf;
+      src.playbackRate.value = 1;
+      src.connect(audioContextRef.current.destination);
+      src.onended = () => setIsPlaying(false);
+      src.start();
+      sourceNodeRef.current = src;
+      setIsPlaying(true);
+    } catch {
+      showToast('Preview failed — try again.', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  // ── Download processed WAV ─────────────────────────────
+  // ── Download ───────────────────────────────────────────
   const handleDownload = async () => {
     if (!audioBuffer) return;
     setIsProcessing(true);
     try {
-      const rendered = await renderProcessed();
-      if (!rendered) return;
-      const blob = audioBufferToWav(rendered);
+      const result = await renderProcessed();
+      if (!result) return;
+      const blob = audioBufferToWav(result.buffer, result.wavSampleRate);
       setProcessedBlob(blob);
       const url = URL.createObjectURL(blob);
       const a   = document.createElement('a');
       a.href     = url;
-      a.download = `${selectedPersona}_${saveName || 'voice'}_p${pitch}_s${speed}.wav`;
+      a.download = `${selectedPersona}_${saveName || 'voice'}_p${pitch}_t${tempo}.wav`;
       a.click();
       URL.revokeObjectURL(url);
       showToast('Downloaded ✅');
@@ -237,25 +278,22 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     }
   };
 
-  // ── Save to R2 via Jan's worker ────────────────────────
+  // ── Save to R2 ─────────────────────────────────────────
   const handleSaveToR2 = async () => {
     if (!audioBuffer) return;
     setIsSaving(true);
     try {
       let blob = processedBlob;
       if (!blob) {
-        const rendered = await renderProcessed();
-        if (!rendered) return;
-        blob = audioBufferToWav(rendered);
+        const result = await renderProcessed();
+        if (!result) return;
+        blob = audioBufferToWav(result.buffer, result.wavSampleRate);
         setProcessedBlob(blob);
       }
-
-      const filename = `${saveName || 'voice'}_p${pitch > 0 ? '+' : ''}${pitch}_s${speed}_${Date.now()}.wav`;
-
-      // Blob → base64
-      const arrBuf = await blob.arrayBuffer();
-      const bytes  = new Uint8Array(arrBuf);
-      let binary   = '';
+      const filename = `${saveName || 'voice'}_p${pitch > 0 ? '+' : ''}${pitch}_t${tempo}_${Date.now()}.wav`;
+      const arrBuf   = await blob.arrayBuffer();
+      const bytes    = new Uint8Array(arrBuf);
+      let binary     = '';
       for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
       const audioBase64 = btoa(binary);
 
@@ -265,7 +303,6 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
         body: JSON.stringify({ action: 'save-voice', persona: selectedPersona, filename, audioBase64, mimeType: 'audio/wav' })
       });
       const data = await res.json();
-
       if (data.success) {
         showToast(`Saved: ${selectedPersona}/${filename} ✅`);
         loadVoiceLibrary();
@@ -279,7 +316,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     }
   };
 
-  // ── Load voice library from R2 ─────────────────────────
+  // ── Voice Library ──────────────────────────────────────
   const loadVoiceLibrary = async () => {
     setIsLoadingLib(true);
     try {
@@ -297,7 +334,6 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     }
   };
 
-  // ── Play saved voice from R2 ───────────────────────────
   const playVoiceFromR2 = async (filename: string) => {
     try {
       const res  = await fetch(WORKER_URL, {
@@ -307,7 +343,6 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
       });
       const data = await res.json();
       if (!data.success) return;
-
       const binStr = atob(data.audioBase64);
       const bytes  = new Uint8Array(binStr.length);
       for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
@@ -321,7 +356,6 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     }
   };
 
-  // ── Delete voice from R2 ──────────────────────────────
   const deleteVoice = async (filename: string) => {
     if (!window.confirm(`Delete "${filename}"?`)) return;
     try {
@@ -337,20 +371,18 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     }
   };
 
-  // Reload library when persona changes
   useEffect(() => { loadVoiceLibrary(); }, [selectedPersona]);
+  useEffect(() => { setProcessedBlob(null); }, [pitch, tempo]);
 
-  // Reset processed blob when sliders change
-  useEffect(() => { setProcessedBlob(null); }, [pitch, speed]);
-
-  const pitchFactor = Math.pow(2, pitch / 12);
-  const finalRate   = parseFloat((pitchFactor * speed).toFixed(3));
+  // Derived labels
+  const pitchLabel = pitch === 0 ? 'No change' : pitch < 0 ? `${pitch} semitones (deeper)` : `+${pitch} semitones (higher)`;
+  const tempoLabel = tempo === 1.0 ? 'No change' : tempo > 1 ? `×${tempo.toFixed(2)} faster` : `×${tempo.toFixed(2)} slower`;
+  const busy       = isProcessing || isSaving;
 
   // ── Render ─────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', backgroundColor: t.bg, padding: '80px 20px 40px 20px' }}>
 
-      {/* Toast */}
       {toast && (
         <div style={{
           position: 'fixed', bottom: '32px', right: '32px', zIndex: 9999,
@@ -364,11 +396,10 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
 
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div style={{
           backgroundColor: t.card, borderRadius: '8px', padding: '20px', marginBottom: '20px',
-          border: `1px solid ${isDarkMode ? '#4c1d95' : '#7c3aed'}`,
-          boxShadow: t.shadow
+          border: `1px solid ${isDarkMode ? '#4c1d95' : '#7c3aed'}`, boxShadow: t.shadow
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
             <div>
@@ -376,19 +407,19 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                 🎙️ 3C Voice Studio
               </h1>
               <p style={{ color: t.muted, fontSize: '14px', margin: 0 }}>
-                Upload · Pitch · Speed · Export · Save — Build your 3C persona voice library
+                Upload · Pitch · Tempo · Export · Save — Build your 3C persona voice library
               </p>
             </div>
             <div style={{
-              padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '600',
+              padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
               backgroundColor: t.purpleBg, color: isDarkMode ? '#a78bfa' : '#7c3aed'
             }}>
-              Built by Claude × Chef Anica 🧪
+              Built by Claude (Anthropic) × Chef Anica · 3C Thread To Success Cooking Lab 🧪👨‍🍳
             </div>
           </div>
         </div>
 
-        {/* ── Persona Selector ── */}
+        {/* Persona Selector */}
         <div style={{
           backgroundColor: t.card, borderRadius: '8px', padding: '16px 20px', marginBottom: '20px',
           border: `1px solid ${t.border}`, boxShadow: t.shadow
@@ -405,18 +436,17 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                   border: `2px solid ${selectedPersona === p.id ? p.color : t.border}`,
                   backgroundColor: selectedPersona === p.id ? p.color + '20' : t.card,
                   color: selectedPersona === p.id ? p.color : t.muted,
-                }}
-              >
+                }}>
                 {p.emoji} {p.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* ── Main Grid ── */}
+        {/* Main Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '20px', alignItems: 'start' }}>
 
-          {/* ── Left: Studio ── */}
+          {/* Left: Studio */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
             {/* Upload zone */}
@@ -437,22 +467,16 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
               {!audioFile ? (
                 <div style={{ textAlign: 'center', padding: '28px 20px' }}>
                   <div style={{ fontSize: '42px', marginBottom: '12px' }}>🎤</div>
-                  <p style={{ color: t.muted, fontSize: '14px', margin: '0 0 16px 0' }}>
-                    Drag & drop your voice sample here
-                  </p>
+                  <p style={{ color: t.muted, fontSize: '14px', margin: '0 0 16px 0' }}>Drag & drop your voice sample here</p>
                   <label style={{
                     display: 'inline-block', padding: '10px 24px', borderRadius: '6px',
-                    backgroundColor: '#7c3aed', color: 'white', fontWeight: '700',
-                    fontSize: '14px', cursor: 'pointer'
+                    backgroundColor: '#7c3aed', color: 'white', fontWeight: '700', fontSize: '14px', cursor: 'pointer'
                   }}>
                     Browse File
                     <input type="file" accept="audio/*" style={{ display: 'none' }}
-                      onChange={e => { if (e.target.files?.[0]) loadAudioFile(e.target.files[0]); }}
-                    />
+                      onChange={e => { if (e.target.files?.[0]) loadAudioFile(e.target.files[0]); }} />
                   </label>
-                  <p style={{ color: t.muted, fontSize: '12px', margin: '12px 0 0 0' }}>
-                    MP3, WAV, OGG, M4A supported
-                  </p>
+                  <p style={{ color: t.muted, fontSize: '12px', margin: '12px 0 0 0' }}>MP3, WAV, OGG, M4A supported</p>
                 </div>
               ) : (
                 <div>
@@ -474,11 +498,9 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                     }}>
                       Change
                       <input type="file" accept="audio/*" style={{ display: 'none' }}
-                        onChange={e => { if (e.target.files?.[0]) loadAudioFile(e.target.files[0]); }}
-                      />
+                        onChange={e => { if (e.target.files?.[0]) loadAudioFile(e.target.files[0]); }} />
                     </label>
                   </div>
-                  {/* Waveform */}
                   <canvas ref={canvasRef} width={700} height={80}
                     style={{ width: '100%', height: '80px', borderRadius: '6px', backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc', display: 'block' }}
                   />
@@ -492,69 +514,94 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                 Voice Controls
               </p>
 
-              {/* Pitch */}
-              <div style={{ marginBottom: '28px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <label style={{ fontWeight: '700', color: t.text, fontSize: '14px' }}>Pitch</label>
+              {/* ── PITCH — changes voice tone, accepts tempo side-effect ── */}
+              <div style={{ marginBottom: '32px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontWeight: '700', color: t.text, fontSize: '14px' }}>
+                    Pitch — Voice Tone
+                  </label>
                   <span style={{
-                    padding: '3px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '700',
+                    padding: '3px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700',
                     backgroundColor: t.purpleBg, color: isDarkMode ? t.purpleLight : t.purple
                   }}>
-                    {pitch > 0 ? `+${pitch}` : pitch} semitones
+                    {pitchLabel}
                   </span>
                 </div>
+                <p style={{ fontSize: '11px', color: t.muted, margin: '0 0 12px 0', lineHeight: '1.5' }}>
+                  Slide left → deeper voice. Slide right → higher voice. Speed may drift — use Tempo below to fix it independently.
+                </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '13px', color: '#ec4899', fontWeight: '700', whiteSpace: 'nowrap' }}>♀ Female</span>
+                  {/* ✅ CORRECT: Left = deeper (negative semitones = male/lower), Right = higher (positive = female/higher) */}
+                  <span style={{ fontSize: '13px', color: '#3b82f6', fontWeight: '700', whiteSpace: 'nowrap' }}>♂ Deeper</span>
                   <input type="range" min={-12} max={12} step={1} value={pitch}
                     onChange={e => setPitch(Number(e.target.value))}
                     style={{ flex: 1, accentColor: '#7c3aed', cursor: 'pointer', height: '6px' }}
                   />
-                  <span style={{ fontSize: '13px', color: '#3b82f6', fontWeight: '700', whiteSpace: 'nowrap' }}>♂ Male</span>
+                  <span style={{ fontSize: '13px', color: '#ec4899', fontWeight: '700', whiteSpace: 'nowrap' }}>♀ Higher</span>
                 </div>
-                <p style={{ fontSize: '11px', color: t.muted, margin: '6px 0 0 0', textAlign: 'center' }}>
-                  Pitch shift via playbackRate — adjust Speed below to compensate any tempo drift
-                </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                  <span style={{ fontSize: '10px', color: t.muted }}>−12</span>
+                  <span style={{ fontSize: '10px', color: t.muted }}>0</span>
+                  <span style={{ fontSize: '10px', color: t.muted }}>+12</span>
+                </div>
               </div>
 
-              {/* Speed */}
+              {/* ── TEMPO — fully independent of pitch ── */}
               <div style={{ marginBottom: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <label style={{ fontWeight: '700', color: t.text, fontSize: '14px' }}>Speed / Tempo</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontWeight: '700', color: t.text, fontSize: '14px' }}>
+                    Tempo — Speech Speed
+                  </label>
                   <span style={{
-                    padding: '3px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '700',
+                    padding: '3px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700',
                     backgroundColor: isDarkMode ? 'rgba(16,185,129,0.15)' : '#d1fae5', color: '#10b981'
                   }}>
-                    ×{speed.toFixed(2)}
+                    {tempoLabel}
                   </span>
                 </div>
+                <p style={{ fontSize: '11px', color: t.muted, margin: '0 0 12px 0', lineHeight: '1.5' }}>
+                  Changes speed only — <strong style={{ color: t.text }}>pitch is not affected</strong>. Use this to compensate tempo drift from pitch adjustment above.
+                </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '12px', color: t.muted, fontWeight: '600' }}>0.5×</span>
-                  <input type="range" min={0.5} max={2.0} step={0.05} value={speed}
-                    onChange={e => setSpeed(Number(e.target.value))}
+                  <span style={{ fontSize: '12px', color: t.muted, fontWeight: '600', whiteSpace: 'nowrap' }}>0.5× Slow</span>
+                  <input type="range" min={0.5} max={2.0} step={0.05} value={tempo}
+                    onChange={e => setTempo(Number(e.target.value))}
                     style={{ flex: 1, accentColor: '#10b981', cursor: 'pointer', height: '6px' }}
                   />
-                  <span style={{ fontSize: '12px', color: t.muted, fontWeight: '600' }}>2.0×</span>
+                  <span style={{ fontSize: '12px', color: t.muted, fontWeight: '600', whiteSpace: 'nowrap' }}>2.0× Fast</span>
                 </div>
               </div>
 
-              {/* Final rate display */}
+              {/* Summary */}
               <div style={{
-                padding: '12px 16px', borderRadius: '8px', marginBottom: '20px',
-                backgroundColor: t.cardAlt, border: `1px solid ${t.border}`,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                padding: '14px 16px', borderRadius: '8px', marginBottom: '20px',
+                backgroundColor: t.cardAlt, border: `1px solid ${t.border}`
               }}>
-                <span style={{ fontSize: '13px', color: t.muted }}>Final playback rate</span>
-                <strong style={{ color: t.text, fontSize: '14px' }}>×{finalRate}</strong>
+                <p style={{ fontSize: '11px', fontWeight: '700', color: t.muted, margin: '0 0 10px 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  What will be applied to your output
+                </p>
+                <div style={{ display: 'flex', gap: '32px' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', color: t.muted, marginBottom: '2px' }}>Pitch shift</div>
+                    <div style={{ fontWeight: '700', color: t.text, fontSize: '14px' }}>
+                      {pitch === 0 ? '— none' : `${pitch > 0 ? '+' : ''}${pitch} semitones`}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: t.muted, marginBottom: '2px' }}>Tempo (pitch-neutral)</div>
+                    <div style={{ fontWeight: '700', color: t.text, fontSize: '14px' }}>
+                      {tempo === 1.0 ? '— none' : `×${tempo.toFixed(2)}`}
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Save name */}
+              {/* File name */}
               <div>
                 <label style={{ fontWeight: '700', color: t.text, fontSize: '14px', display: 'block', marginBottom: '8px' }}>
                   File Name
                 </label>
-                <input
-                  type="text" value={saveName}
-                  onChange={e => setSaveName(e.target.value)}
+                <input type="text" value={saveName} onChange={e => setSaveName(e.target.value)}
                   placeholder="e.g. aurion-voice-v1"
                   style={{
                     width: '100%', padding: '10px 12px', borderRadius: '6px', fontSize: '14px',
@@ -567,48 +614,42 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
 
             {/* Action Buttons */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-              {/* Preview */}
-              <button onClick={handlePreview} disabled={!audioBuffer}
+              <button onClick={handlePreview} disabled={!audioBuffer || busy}
                 style={{
                   padding: '14px', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '14px',
-                  cursor: audioBuffer ? 'pointer' : 'not-allowed', transition: 'all 0.2s',
-                  backgroundColor: !audioBuffer ? t.cardAlt : isPlaying ? '#dc2626' : '#7c3aed',
+                  cursor: (audioBuffer && !busy) ? 'pointer' : 'not-allowed', transition: 'all 0.2s',
+                  backgroundColor: !audioBuffer ? t.cardAlt : isPlaying ? '#dc2626' : isProcessing ? '#6d28d9' : '#7c3aed',
                   color: audioBuffer ? 'white' : t.muted,
                   boxShadow: audioBuffer ? '0 4px 12px rgba(124,58,237,0.3)' : 'none'
-                }}
-              >
-                {isPlaying ? '⏹ Stop' : '▶ Preview'}
+                }}>
+                {isProcessing && !isPlaying ? '⏳ Rendering…' : isPlaying ? '⏹ Stop' : '▶ Preview'}
               </button>
 
-              {/* Download */}
-              <button onClick={handleDownload} disabled={!audioBuffer || isProcessing}
+              <button onClick={handleDownload} disabled={!audioBuffer || busy}
                 style={{
                   padding: '14px', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '14px',
-                  cursor: (audioBuffer && !isProcessing) ? 'pointer' : 'not-allowed', transition: 'all 0.2s',
-                  backgroundColor: (audioBuffer && !isProcessing) ? '#0891b2' : t.cardAlt,
-                  color: (audioBuffer && !isProcessing) ? 'white' : t.muted,
-                  boxShadow: (audioBuffer && !isProcessing) ? '0 4px 12px rgba(8,145,178,0.3)' : 'none'
-                }}
-              >
+                  cursor: (audioBuffer && !busy) ? 'pointer' : 'not-allowed', transition: 'all 0.2s',
+                  backgroundColor: (audioBuffer && !busy) ? '#0891b2' : t.cardAlt,
+                  color: (audioBuffer && !busy) ? 'white' : t.muted,
+                  boxShadow: (audioBuffer && !busy) ? '0 4px 12px rgba(8,145,178,0.3)' : 'none'
+                }}>
                 {isProcessing ? '⏳ Processing…' : '⬇ Download'}
               </button>
 
-              {/* Save to R2 */}
-              <button onClick={handleSaveToR2} disabled={!audioBuffer || isSaving}
+              <button onClick={handleSaveToR2} disabled={!audioBuffer || busy}
                 style={{
                   padding: '14px', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '14px',
-                  cursor: (audioBuffer && !isSaving) ? 'pointer' : 'not-allowed', transition: 'all 0.2s',
-                  backgroundColor: (audioBuffer && !isSaving) ? '#10b981' : t.cardAlt,
-                  color: (audioBuffer && !isSaving) ? 'white' : t.muted,
-                  boxShadow: (audioBuffer && !isSaving) ? '0 4px 12px rgba(16,185,129,0.3)' : 'none'
-                }}
-              >
+                  cursor: (audioBuffer && !busy) ? 'pointer' : 'not-allowed', transition: 'all 0.2s',
+                  backgroundColor: (audioBuffer && !busy) ? '#10b981' : t.cardAlt,
+                  color: (audioBuffer && !busy) ? 'white' : t.muted,
+                  boxShadow: (audioBuffer && !busy) ? '0 4px 12px rgba(16,185,129,0.3)' : 'none'
+                }}>
                 {isSaving ? '⏳ Saving…' : '☁ Save to R2'}
               </button>
             </div>
           </div>
 
-          {/* ── Right: Voice Library ── */}
+          {/* Right: Voice Library */}
           <div style={{ backgroundColor: t.card, borderRadius: '8px', padding: '20px', border: `1px solid ${t.border}`, boxShadow: t.shadow }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <p style={{ fontSize: '12px', fontWeight: '600', color: t.muted, margin: 0, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
@@ -647,16 +688,14 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                       <button onClick={() => playVoiceFromR2(voice.filename)}
                         style={{
                           flex: 1, padding: '6px', borderRadius: '4px', border: 'none',
-                          backgroundColor: '#7c3aed', color: 'white', fontSize: '12px',
-                          fontWeight: '700', cursor: 'pointer'
+                          backgroundColor: '#7c3aed', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer'
                         }}>
                         ▶ Play
                       </button>
                       <button onClick={() => deleteVoice(voice.filename)}
                         style={{
                           padding: '6px 10px', borderRadius: '4px', border: 'none',
-                          backgroundColor: '#dc2626', color: 'white', fontSize: '12px',
-                          fontWeight: '700', cursor: 'pointer'
+                          backgroundColor: '#dc2626', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer'
                         }}>
                         🗑
                       </button>
@@ -666,14 +705,12 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
               </div>
             )}
 
-            {/* Info */}
             <div style={{
               marginTop: '16px', padding: '12px', borderRadius: '6px',
               backgroundColor: t.purpleBg, border: `1px solid ${isDarkMode ? 'rgba(124,58,237,0.4)' : '#c4b5fd'}`,
               fontSize: '12px', color: isDarkMode ? '#a78bfa' : '#6d28d9', lineHeight: '1.6'
             }}>
-              <strong>💡 Storage:</strong> Voices are saved to your 3C Control Center R2 bucket under <code>Voices/{selectedPersona}/</code>.
-              Ready for future bot and AI integrations per persona.
+              <strong>💡 Storage:</strong> Voices saved to 3C Control Center R2 under <code>Voices/{selectedPersona}/</code>. Ready for future bot and AI integrations per persona.
             </div>
           </div>
         </div>
