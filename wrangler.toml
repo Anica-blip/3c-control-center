@@ -4,7 +4,7 @@
 # Built by Claude (Anthropic) × Chef Anica · 3C Thread To Success Cooking Lab 🧪👨‍🍳
 # ============================================================
 
-name = "jan-assistant"
+name = "3c-control-center"
 main = "worker.js"
 compatibility_date = "2024-12-09"
 
