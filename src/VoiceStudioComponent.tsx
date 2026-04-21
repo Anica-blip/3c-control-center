@@ -1,6 +1,6 @@
 // 3C Voice Studio Component
 // Upload → Pitch Shift → Speed Control → Preview → Download → Save to R2
-// Built by Claude (Anthropic) × Chef Anica · 3C Thread To Success Cooking Lab 🧪👨‍🍳
+// Built with ❤️ by Claude (Anthropic) × Chef Anica · 3C Thread To Success Cooking Lab
 
 import React, { useState, useEffect, useRef } from 'react';
 
