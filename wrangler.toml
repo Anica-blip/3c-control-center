@@ -1,40 +1,32 @@
-# ============================================================
-# Jan Assistant — Cloudflare Worker Configuration
-# For deployment via Windsurf / wrangler CLI
-# Built by Claude (Anthropic) × Chef Anica · 3C Thread To Success Cooking Lab 🧪👨‍🍳
-# ============================================================
+# Cloudflare Worker Configuration for 3C Control Center Screenshot Service
+# This file tells Cloudflare how to deploy your worker from GitHub
 
-name = "jan-assistant"
-main = "worker.js"
+name = "3c-control-center"
+main = "screenshot-worker.js"
 compatibility_date = "2024-12-09"
 
-workers_dev = true
-
-# ============================================================
-# D1 DATABASE BINDING
-# Get your Database ID from:
-# Cloudflare Dashboard → D1 → your Jan database → copy ID
-# ============================================================
-[[d1_databases]]
-binding = "DB"
-database_name = "jan-db"
-database_id = "79757bd7-35c2-4a7d-a028-d72a3df901fd"
-
-# ============================================================
-# R2 BUCKET BINDINGS
-# ============================================================
-
-# Control Center bucket — voices + project-specific assets
+# R2 Bucket Binding
+# This connects your worker to your R2 storage bucket
 [[r2_buckets]]
-binding = "VOICE_BUCKET"
+binding = "SCREENSHOTS"
 bucket_name = "3c-control-center"
 
-# ============================================================
-# SECRETS — set via dashboard or wrangler CLI, NOT here
-# These are already configured in your Cloudflare dashboard:
-#   CLAUDE_API_KEY → set via Dashboard or: wrangler secret put CLAUDE_API_KEY
-# ============================================================
+# Environment Variables
+# These will be set in Cloudflare Dashboard → Worker Settings → Variables
+[vars]
+R2_BUCKET_NAME = "3c-control-center"
 
-# ============================================================
-# CORS & ROUTES — handled inside worker.js
-# ============================================================
+# Worker Settings
+workers_dev = true
+route = ""
+zone_id = ""
+
+# Build Configuration
+[build]
+command = ""
+
+# CORS will be configured manually in Cloudflare Dashboard
+# Secrets (R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ACCOUNT_ID,
+#          SUPABASE_URL, SUPABASE_SERVICE_KEY)
+# are set in Cloudflare Worker Settings → Variables
+
