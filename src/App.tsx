@@ -12,8 +12,7 @@ import { useI18n } from './i18n.tsx';
 
 // Theme Context
 const ThemeContext = createContext({
-  isDarkMode: false,
-  toggleDarkMode: () => {}
+  isDarkMode: true
 });
 
 const useTheme = () => useContext(ThemeContext);
@@ -354,7 +353,7 @@ const OverviewComponent = () => {
   }, []);
 
   const quickActions = [
-    { icon: '📄', label: t('nav.content'), section: 'content-manager', color: '#3b82f6' },
+    { icon: '📄', label: t('nav.content'), section: 'content-manager', color: '#8b5cf6' },
     { icon: '📅', label: t('nav.schedule'), section: 'schedule-manager', color: '#10b981' },
     { icon: '💬', label: t('nav.webchat'), section: 'webchat-public', color: '#8b5cf6' },
     { icon: '📊', label: t('nav.marketing'), section: 'marketing-center', color: '#f59e0b' },
@@ -372,7 +371,7 @@ const OverviewComponent = () => {
 
   const metrics = [
     { label: 'Active Posts', value: '24', change: '+12%', color: '#10b981' },
-    { label: 'Scheduled', value: '8', change: '+5%', color: '#3b82f6' },
+    { label: 'Scheduled', value: '8', change: '+5%', color: '#8b5cf6' },
     { label: 'Chat Messages', value: '156', change: '+23%', color: '#8b5cf6' },
     { label: 'Engagement', value: '89%', change: '+8%', color: '#f59e0b' }
   ];
@@ -394,14 +393,14 @@ const OverviewComponent = () => {
           borderRadius: '8px',
           padding: '20px',
           marginBottom: '24px',
-          border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+          border: `1px solid ${isDarkMode ? '#334155' : '#8b5cf6'}`
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h1 style={{
                 fontSize: '20px',
                 fontWeight: 'bold',
-                color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                color: isDarkMode ? '#60a5fa' : '#8b5cf6',
                 margin: '0 0 8px 0'
               }}>
                 💎 {t('nav.overview')}
@@ -712,7 +711,7 @@ function App() {
   const [activeSection, setActiveSection] = useState('overview');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode] = useState(true);
   const [currentLanguage, setCurrentLanguage] = useState('en-GB');
   const [githubUser, setGitHubUser] = useState<AuthenticatedUser | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -752,7 +751,6 @@ function App() {
     const checkAuth = () => {
       const authStatus = localStorage.getItem('3c-github-auth');
       const userData = localStorage.getItem('3c-github-user');
-      const darkMode = localStorage.getItem('3c-dark-mode') === 'true';
       const language = localStorage.getItem('3c-language') || 'en-GB';
       
       setIsAuthenticated(authStatus === 'true');
@@ -763,7 +761,6 @@ function App() {
           console.error('Failed to parse user data');
         }
       }
-      setIsDarkMode(darkMode);
       setCurrentLanguage(language);
       setI18nLanguage(language);
       setIsLoading(false);
@@ -790,12 +787,6 @@ function App() {
       setActiveSection('overview');
       window.location.hash = '';
     }
-  };
-
-  const toggleDarkMode = () => {
-    const newDarkMode = !isDarkMode;
-    setIsDarkMode(newDarkMode);
-    localStorage.setItem('3c-dark-mode', newDarkMode.toString());
   };
 
   const changeLanguage = (lang: string) => {
@@ -857,7 +848,7 @@ function App() {
 
   // Main authenticated app
   return (
-    <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
+    <ThemeContext.Provider value={{ isDarkMode }}>
       <div style={{ 
         display: 'flex', 
         minHeight: '100vh', 
@@ -877,7 +868,7 @@ function App() {
             letterSpacing: '0.3px',
             pointerEvents: 'none'
           }}>
-            Built with ❤️ by Claude (Anthropic) × Chef Anica · 3C Thread To Success Cooking Lab 🧪
+            Designed and Built with ❤️ by Claude (Anthropic) × Chef Anica · 3C Thread To Success™ Cooking Lab 🧪👨‍🍳
           </div>
         )}
 
@@ -991,26 +982,36 @@ function App() {
               )}
             </div>
 
+            {/* Logout - SVG icon */}
             <button
               onClick={handleLogout}
               style={{
                 background: 'transparent',
                 border: 'none',
-                fontSize: '20px',
                 cursor: 'pointer',
                 padding: '8px',
                 borderRadius: '8px',
-                transition: 'background-color 0.2s'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'background-color 0.2s',
+                color: isDarkMode ? '#f8fafc' : '#374151'
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+                e.currentTarget.style.color = '#ef4444';
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = isDarkMode ? '#f8fafc' : '#374151';
               }}
               title="Logout"
             >
-              ↪️
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
             </button>
           </div>
         )}
@@ -1071,7 +1072,7 @@ function App() {
                   padding: '12px 15px',
                   marginBottom: '5px',
                   backgroundColor: activeSection === item.id 
-                    ? '#3b82f6' 
+                    ? (isDarkMode ? '#3b82f6' : '#8b5cf6') 
                     : 'transparent',
                   color: activeSection === item.id 
                     ? '#ffffff' 
@@ -1154,7 +1155,7 @@ function App() {
                   <h1 style={{
                     fontSize: '20px',
                     fontWeight: 'bold',
-                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                    color: isDarkMode ? '#60a5fa' : '#8b5cf6',
                     margin: '0 0 8px 0'
                   }}>
                     📄 {t('nav.content')}
@@ -1193,7 +1194,7 @@ function App() {
                   <h1 style={{
                     fontSize: '20px',
                     fontWeight: 'bold',
-                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                    color: isDarkMode ? '#60a5fa' : '#8b5cf6',
                     margin: '0 0 8px 0'
                   }}>
                     💬 {t('nav.webchat')}
@@ -1232,7 +1233,7 @@ function App() {
                   <h1 style={{
                     fontSize: '20px',
                     fontWeight: 'bold',
-                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                    color: isDarkMode ? '#60a5fa' : '#8b5cf6',
                     margin: '0 0 8px 0'
                   }}>
                     📅 {t('nav.schedule')}
@@ -1271,7 +1272,7 @@ function App() {
                   <h1 style={{
                     fontSize: '20px',
                     fontWeight: 'bold',
-                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                    color: isDarkMode ? '#60a5fa' : '#8b5cf6',
                     margin: '0 0 8px 0'
                   }}>
                     🧠 {t('nav.marketing')}
@@ -1310,7 +1311,7 @@ function App() {
                   <h1 style={{
                     fontSize: '20px',
                     fontWeight: 'bold',
-                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                    color: isDarkMode ? '#60a5fa' : '#8b5cf6',
                     margin: '0 0 8px 0'
                   }}>
                     ⚙️ {t('nav.settings')}
@@ -1349,7 +1350,7 @@ function App() {
                   <h1 style={{
                     fontSize: '20px',
                     fontWeight: 'bold',
-                    color: isDarkMode ? '#60a5fa' : '#3b82f6',
+                    color: isDarkMode ? '#60a5fa' : '#8b5cf6',
                     margin: '0 0 8px 0'
                   }}>
                     🔧 {t('nav.admin')}
@@ -1403,12 +1404,12 @@ const AiChatManagerComponent = () => {
           borderRadius: '8px',
           padding: '20px',
           marginBottom: '20px',
-          border: `1px solid ${isDarkMode ? '#334155' : '#3b82f6'}`
+          border: `1px solid ${isDarkMode ? '#334155' : '#8b5cf6'}`
         }}>
           <h1 style={{
             fontSize: '20px',
             fontWeight: 'bold',
-            color: isDarkMode ? '#60a5fa' : '#3b82f6',
+            color: isDarkMode ? '#60a5fa' : '#8b5cf6',
             margin: '0 0 8px 0'
           }}>
             🤖 AI Chat Manager
@@ -1442,7 +1443,7 @@ const AiChatManagerComponent = () => {
           <h2 style={{
             fontSize: '32px',
             fontWeight: 'bold',
-            color: isDarkMode ? '#60a5fa' : '#3b82f6',
+            color: isDarkMode ? '#60a5fa' : '#8b5cf6',
             marginBottom: '16px',
             margin: '0 0 16px 0'
           }}>
