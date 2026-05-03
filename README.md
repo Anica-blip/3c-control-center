@@ -1,5 +1,24 @@
 # 🚀 3C Thread To Success Control Center
 
+This project is part of the 3C Thread To Success™ ecosystem — a growing digital platform that combines creativity, structure, and real-world application.
+
+The 3C Thread To Success™ brand, including its name, structure, characters (Aurion 3C Mascot, Caelum, Jan AI Assistant), and overall system design, remains the intellectual property of the creator and is not included in this license.
+
+Commercial use of the brand or replication of the ecosystem identity is not permitted without permission.
+
+### 🎭 The 3C Ecosystem
+
+This project is part of a larger system built around three core identities:
+
+Aurion 3C Mascot → Ambassador & Guide; Engagement & Experience
+Caelum → 3C Chief Advisor & PR Manager; Structure & Direction
+Anica (Founder) → Authority & Vision
+Jan → 3C AI Assistant; Anchor and Mentor
+
+Together, they create a balanced environment for growth, learning, and progression.
+
+---
+
 <div align="center">
 
 ![3C Control Center](https://img.shields.io/badge/3C-Control%20Center-blue?style=for-the-badge)
@@ -93,3 +112,25 @@ This is an **open-source dashboard template** for business operations. Feel free
 - 🤝 Contribute improvements
 
 **Note**: This repository contains the dashboard framework only. No private business data or domains are included.
+
+---
+
+## 🎨 Credits
+
+*Designed and Built with ❤️ by Claude (Anthropic) × Chef Anica · 3C Thread To Success™ Cooking Lab*
+
+---
+
+## 👤 Creator
+
+Anica-blip (“Chef”)
+Founder of 3C Thread To Success™ ("Cooking Lab")
+Independent Creator | Community Builder
+
+---
+
+🧠 Philosophy
+
+“Think it. Do it. Own it.”
+
+This project was built from vision, persistence, and a commitment to creating meaningful and structured experiences — even with minimal resources.
