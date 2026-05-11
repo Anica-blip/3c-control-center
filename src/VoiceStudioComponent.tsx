@@ -490,7 +490,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
               padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
               backgroundColor: t.purpleBg, color: isDarkMode ? '#a78bfa' : '#7c3aed'
             }}>
-              Built by Claude (Anthropic) × Chef Anica · 3C Thread To Success Cooking Lab 🧪👨‍🍳
+              Designed and Built with ❤️ by Claude (Anthropic) × Chef Anica · 3C Thread To Success™
             </div>
           </div>
         </div>
@@ -616,7 +616,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                       </label>
                     </div>
                   </div>
-                  <canvas ref={canvasRef} width={700} height={80}
+                  <canvas ref={canvasRef} width={1200} height={80}
                     style={{ width: '100%', height: '80px', borderRadius: '6px', backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc', display: 'block' }}
                   />
                 </div>
@@ -674,7 +674,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ fontSize: '12px', color: t.muted, fontWeight: '600', whiteSpace: 'nowrap' }}>0.5× Slow</span>
-                  <input type="range" min={0.5} max={2.0} step={0.05} value={tempo}
+                  <input type="range" min={0.5} max={2.0} step={0.01} value={tempo}
                     onChange={e => setTempo(Number(e.target.value))}
                     style={{ flex: 1, accentColor: '#10b981', cursor: 'pointer', height: '6px' }}
                   />
