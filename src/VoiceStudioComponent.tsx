@@ -1,11 +1,15 @@
-// 3C Voice Studio Component
-// Upload → Pitch Shift → Speed Control → Preview → Download → Save to R2
+// 3C Voice Studio Component — Enhanced
+// Upload/Record → Pitch Shift → Tempo (SoundTouchJS) → Preview → Download → Save Local
 // Built with ❤️ by Claude (Anthropic) × Chef Anica · 3C Thread To Success Cooking Lab 🧪👨‍🍳
+//
+// REQUIRES: npm install soundtouchjs
+//
 
 import React, { useState, useEffect, useRef } from 'react';
+// @ts-ignore — soundtouchjs has no bundled types
+import { SoundTouch, SimpleFilter, WebAudioBufferSource } from 'soundtouchjs';
 
-const WORKER_URL = 'https://jan-assistant.3c-innertherapy.workers.dev/';
-
+// ── Constants ──────────────────────────────────────────
 const PERSONAS = [
   { id: 'Aurion', label: 'Aurion', emoji: '⚡', color: '#f59e0b' },
   { id: 'Jan',    label: 'Jan',    emoji: '🐬', color: '#3b82f6' },
@@ -13,40 +17,185 @@ const PERSONAS = [
   { id: 'Anica',  label: 'Anica',  emoji: '🐱', color: '#10b981' },
 ];
 
-interface VoiceRecord {
-  key: string;
-  filename: string;
+const DB_NAME    = '3c-voice-studio';
+const DB_VERSION = 1;
+const DB_STORE   = 'voices';
+
+// ── Types ──────────────────────────────────────────────
+interface LocalVoice {
+  id?: number;
   persona: string;
+  filename: string;
+  blob: Blob;
   size: number;
-  uploaded: string;
+  saved: string;
 }
 
 interface VoiceStudioComponentProps {
   isDarkMode?: boolean;
 }
 
+// ── IndexedDB helpers ──────────────────────────────────
+const openVoiceDB = (): Promise<IDBDatabase> =>
+  new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(DB_STORE))
+        db.createObjectStore(DB_STORE, { keyPath: 'id', autoIncrement: true });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror  = () => reject(req.error);
+  });
+
+const dbSaveVoice = async (record: LocalVoice): Promise<void> => {
+  const db = await openVoiceDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    tx.objectStore(DB_STORE).add(record);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror    = () => { db.close(); reject(tx.error); };
+  });
+};
+
+const dbLoadVoices = async (persona: string): Promise<LocalVoice[]> => {
+  const db = await openVoiceDB();
+  return new Promise((resolve, reject) => {
+    const tx  = db.transaction(DB_STORE, 'readonly');
+    const req = tx.objectStore(DB_STORE).getAll();
+    req.onsuccess = () => {
+      db.close();
+      resolve((req.result as LocalVoice[]).filter(v => v.persona === persona).reverse());
+    };
+    req.onerror = () => { db.close(); reject(req.error); };
+  });
+};
+
+const dbDeleteVoice = async (id: number): Promise<void> => {
+  const db = await openVoiceDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    tx.objectStore(DB_STORE).delete(id);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror    = () => { db.close(); reject(tx.error); };
+  });
+};
+
+// ── SoundTouch processing ──────────────────────────────
+// Uses WSOLA algorithm — same quality as audioalter.com
+const applySoundTouch = async (
+  audioBuffer: AudioBuffer,
+  tempoFactor: number,
+  pitchSemitones: number
+): Promise<AudioBuffer> => {
+  // Ensure stereo — SoundTouch requires 2 channels
+  let srcBuffer = audioBuffer;
+  if (audioBuffer.numberOfChannels === 1) {
+    const tmpCtx = new OfflineAudioContext(2, audioBuffer.length, audioBuffer.sampleRate);
+    const tmpBuf = tmpCtx.createBuffer(2, audioBuffer.length, audioBuffer.sampleRate);
+    tmpBuf.copyToChannel(audioBuffer.getChannelData(0), 0);
+    tmpBuf.copyToChannel(audioBuffer.getChannelData(0), 1);
+    srcBuffer = tmpBuf;
+  }
+
+  const st = new SoundTouch(srcBuffer.sampleRate);
+  st.tempo = tempoFactor;
+  st.pitch = Math.pow(2, pitchSemitones / 12); // semitones → ratio
+
+  const source = new WebAudioBufferSource(srcBuffer);
+  const filter = new SimpleFilter(source, st);
+
+  const BLOCK  = 4096;
+  const chunk  = new Float32Array(BLOCK * 2); // interleaved stereo
+  const left:  number[] = [];
+  const right: number[] = [];
+
+  let extracted: number;
+  do {
+    extracted = filter.extract(chunk, BLOCK);
+    for (let i = 0; i < extracted; i++) {
+      left.push(chunk[i * 2]);
+      right.push(chunk[i * 2 + 1]);
+    }
+  } while (extracted > 0);
+
+  const outLen = left.length;
+  const outCtx = new OfflineAudioContext(
+    audioBuffer.numberOfChannels,
+    outLen,
+    audioBuffer.sampleRate
+  );
+  const outBuf = outCtx.createBuffer(audioBuffer.numberOfChannels, outLen, audioBuffer.sampleRate);
+  outBuf.copyToChannel(new Float32Array(left), 0);
+  if (audioBuffer.numberOfChannels > 1)
+    outBuf.copyToChannel(new Float32Array(right), 1);
+
+  return outBuf;
+};
+
+// ── WAV encoder ────────────────────────────────────────
+const audioBufferToWav = (buf: AudioBuffer): Blob => {
+  const ch      = buf.numberOfChannels;
+  const sr      = buf.sampleRate;
+  const bps     = 2;
+  const blkAln  = ch * bps;
+  const dataLen = buf.length * blkAln;
+  const ab      = new ArrayBuffer(44 + dataLen);
+  const view    = new DataView(ab);
+  const ws      = (off: number, s: string) => {
+    for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i));
+  };
+  ws(0, 'RIFF'); view.setUint32(4, 36 + dataLen, true);
+  ws(8, 'WAVE'); ws(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1,  true);
+  view.setUint16(22, ch, true);
+  view.setUint32(24, sr, true);
+  view.setUint32(28, sr * blkAln, true);
+  view.setUint16(32, blkAln, true);
+  view.setUint16(34, 16, true);
+  ws(36, 'data'); view.setUint32(40, dataLen, true);
+  let off = 44;
+  for (let i = 0; i < buf.length; i++) {
+    for (let c = 0; c < ch; c++) {
+      const s = Math.max(-1, Math.min(1, buf.getChannelData(c)[i]));
+      view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      off += 2;
+    }
+  }
+  return new Blob([ab], { type: 'audio/wav' });
+};
+
+// ── Component ──────────────────────────────────────────
 const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode = false }) => {
   const [selectedPersona, setSelectedPersona] = useState('Aurion');
   const [audioFile, setAudioFile]             = useState<File | null>(null);
   const [audioBuffer, setAudioBuffer]         = useState<AudioBuffer | null>(null);
-  const [pitch, setPitch]                     = useState(0);    // semitones — 0 = no change
-  const [tempo, setTempo]                     = useState(1.0);  // independent tempo — 1.0 = no change
+  const [pitch, setPitch]                     = useState(0);
+  const [tempo, setTempo]                     = useState(1.0);
   const [isPlaying, setIsPlaying]             = useState(false);
   const [isProcessing, setIsProcessing]       = useState(false);
   const [isSaving, setIsSaving]               = useState(false);
-  const [savedVoices, setSavedVoices]         = useState<VoiceRecord[]>([]);
-  const [isLoadingLib, setIsLoadingLib]       = useState(false);
   const [isDragging, setIsDragging]           = useState(false);
   const [saveName, setSaveName]               = useState('');
-  const [processedBlob, setProcessedBlob]     = useState<Blob | null>(null);
   const [waveformData, setWaveformData]       = useState<number[]>([]);
   const [toast, setToast]                     = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const sourceNodeRef   = useRef<AudioBufferSourceNode | null>(null);
-  const canvasRef       = useRef<HTMLCanvasElement>(null);
+  // Recorder state
+  const [isRecording, setIsRecording]         = useState(false);
+  const [recordingTime, setRecordingTime]     = useState(0);
 
-  // ── Theme ──────────────────────────────────────────────
+  // Local library
+  const [localVoices, setLocalVoices]         = useState<LocalVoice[]>([]);
+  const [isLoadingLib, setIsLoadingLib]       = useState(false);
+
+  const audioContextRef    = useRef<AudioContext | null>(null);
+  const sourceNodeRef      = useRef<AudioBufferSourceNode | null>(null);
+  const canvasRef          = useRef<HTMLCanvasElement>(null);
+  const mediaRecorderRef   = useRef<MediaRecorder | null>(null);
+  const recordingTimerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Theme ──────────────────────────────────────────
   const t = {
     bg:          isDarkMode ? '#0f172a'  : '#f8fafc',
     card:        isDarkMode ? '#1e293b'  : '#ffffff',
@@ -60,13 +209,13 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     shadow:      isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.08)',
   };
 
-  // ── Toast ──────────────────────────────────────────────
+  // ── Toast ──────────────────────────────────────────
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  // ── Waveform canvas ────────────────────────────────────
+  // ── Waveform ───────────────────────────────────────
   useEffect(() => {
     if (!canvasRef.current || waveformData.length === 0) return;
     const canvas = canvasRef.current;
@@ -86,7 +235,6 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     });
   }, [waveformData, isDarkMode]);
 
-  // ── Generate waveform ──────────────────────────────────
   const generateWaveform = (buf: AudioBuffer) => {
     const data    = buf.getChannelData(0);
     const SAMPLES = 90;
@@ -101,10 +249,9 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     setWaveformData(raw.map(v => v / max));
   };
 
-  // ── Load audio file ────────────────────────────────────
+  // ── Load audio file ────────────────────────────────
   const loadAudioFile = async (file: File) => {
     setAudioFile(file);
-    setProcessedBlob(null);
     setSaveName(file.name.replace(/\.[^/.]+$/, ''));
     try {
       const ab  = await file.arrayBuffer();
@@ -114,134 +261,94 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
       setAudioBuffer(buf);
       generateWaveform(buf);
     } catch {
-      showToast('Could not decode audio — try WAV or MP3.', 'error');
+      showToast('Could not decode audio — try WAV, MP3, or WebM.', 'error');
     }
   };
 
-  // ── Drag and drop ──────────────────────────────────────
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file?.type.startsWith('audio/')) {
-      loadAudioFile(file);
-    } else {
-      showToast('Please drop an audio file (MP3, WAV, OGG, M4A)', 'error');
+    if (file?.type.startsWith('audio/')) loadAudioFile(file);
+    else showToast('Please drop an audio file (MP3, WAV, OGG, M4A)', 'error');
+  };
+
+  // ── Voice Recorder ─────────────────────────────────
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 48000,
+          channelCount: 2,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      });
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+
+      const mr     = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 128000 });
+      const chunks: Blob[] = [];
+
+      mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      mr.onstop = async () => {
+        const blob = new Blob(chunks, { type: mimeType });
+        const file = new File([blob], `recording_${Date.now()}.webm`, { type: mimeType });
+        await loadAudioFile(file);
+        stream.getTracks().forEach(t => t.stop());
+      };
+
+      mediaRecorderRef.current = mr;
+      mr.start(100);
+      setIsRecording(true);
+
+      let secs = 0;
+      recordingTimerRef.current = setInterval(() => {
+        secs++;
+        setRecordingTime(secs);
+      }, 1000);
+    } catch {
+      showToast('Microphone access denied — check browser permissions.', 'error');
     }
   };
 
-  // ── WAV encoder ────────────────────────────────────────
-  // overrideSampleRate: writes a different Hz into the WAV header
-  // so the player interprets the frames at original rate (tempo trick)
-  const audioBufferToWav = (buf: AudioBuffer, overrideSampleRate?: number): Blob => {
-    const ch       = buf.numberOfChannels;
-    const sr       = overrideSampleRate ?? buf.sampleRate;
-    const bps      = 2;
-    const blockAln = ch * bps;
-    const dataLen  = buf.length * blockAln;
-    const ab       = new ArrayBuffer(44 + dataLen);
-    const view     = new DataView(ab);
-    const ws       = (off: number, s: string) => {
-      for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i));
-    };
-    ws(0, 'RIFF'); view.setUint32(4, 36 + dataLen, true);
-    ws(8, 'WAVE'); ws(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1,  true);
-    view.setUint16(22, ch, true);
-    view.setUint32(24, sr, true);
-    view.setUint32(28, sr * blockAln, true);
-    view.setUint16(32, blockAln, true);
-    view.setUint16(34, 16, true);
-    ws(36, 'data'); view.setUint32(40, dataLen, true);
-    let off = 44;
-    for (let i = 0; i < buf.length; i++) {
-      for (let c = 0; c < ch; c++) {
-        const s = Math.max(-1, Math.min(1, buf.getChannelData(c)[i]));
-        view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-        off += 2;
-      }
-    }
-    return new Blob([ab], { type: 'audio/wav' });
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    setIsRecording(false);
+    setRecordingTime(0);
   };
 
-  // ── TWO-PASS RENDER ─────────────────────────────────────────────────────────
-  //
-  // The fundamental rule you identified from the experts is correct:
-  // Pitch and Tempo should NOT be combined. We fix this with two separate passes:
-  //
-  // PASS 1 — Pitch only (via playbackRate)
-  //   playbackRate = 2^(semitones/12)
-  //   Side effect: tempo also changes. That is expected and will be corrected in Pass 2.
-  //
-  // PASS 2 — Tempo only (pitch-neutral, via sample rate trick)
-  //   The OfflineAudioContext is given a DIFFERENT sampleRate = originalSR / tempoFactor
-  //   playbackRate stays at 1 — so pitch from Pass 1 is preserved exactly.
-  //   The WAV header is then written with the ORIGINAL sampleRate.
-  //   Result: the player reads the frames at original rate → tempo is shifted
-  //   by tempoFactor with ZERO pitch change.
-  //
-  // Output: pitch and tempo are fully independent sliders.
-  // ────────────────────────────────────────────────────────────────────────────
-  const renderProcessed = async (): Promise<{ buffer: AudioBuffer; wavSampleRate: number } | null> => {
+  const formatRecTime = (s: number) =>
+    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+
+  // ── SoundTouch render ──────────────────────────────
+  const renderProcessed = async (): Promise<AudioBuffer | null> => {
     if (!audioBuffer) return null;
-
-    const pitchFactor = Math.pow(2, pitch / 12);
-    const originalSR  = audioBuffer.sampleRate;
-
-    // ── Pass 1: Pitch shift ──────────────────────────────
-    const p1Len = Math.max(1, Math.ceil(audioBuffer.length / pitchFactor));
-    const p1Ctx = new OfflineAudioContext(audioBuffer.numberOfChannels, p1Len, originalSR);
-    const p1Src = p1Ctx.createBufferSource();
-    p1Src.buffer             = audioBuffer;
-    p1Src.playbackRate.value = pitchFactor;
-    p1Src.connect(p1Ctx.destination);
-    p1Src.start();
-    const pitchedBuffer = await p1Ctx.startRendering();
-
-    // ── Pass 2: Tempo adjustment, pitch-neutral ──────────
-    // Clamp sampleRate to Web Audio valid range [8000, 96000]
-    const targetSR = Math.min(96000, Math.max(8000, Math.round(originalSR / tempo)));
-    const p2Ctx    = new OfflineAudioContext(pitchedBuffer.numberOfChannels, pitchedBuffer.length, targetSR);
-    const p2Src    = p2Ctx.createBufferSource();
-    p2Src.buffer             = pitchedBuffer;
-    p2Src.playbackRate.value = 1; // ← pitch untouched
-    p2Src.connect(p2Ctx.destination);
-    p2Src.start();
-    const finalBuffer = await p2Ctx.startRendering();
-
-    return { buffer: finalBuffer, wavSampleRate: originalSR };
+    return applySoundTouch(audioBuffer, tempo, pitch);
   };
 
-  // ── Preview — full two-pass then play ─────────────────
+  // ── Preview ────────────────────────────────────────
   const handlePreview = async () => {
     if (!audioBuffer) return;
-
     if (isPlaying) {
       sourceNodeRef.current?.stop();
       setIsPlaying(false);
       return;
     }
-
     setIsProcessing(true);
     try {
       const result = await renderProcessed();
       if (!result) return;
-
-      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+      if (!audioContextRef.current || audioContextRef.current.state === 'closed')
         audioContextRef.current = new AudioContext();
-      }
-      if (audioContextRef.current.state === 'suspended') {
+      if (audioContextRef.current.state === 'suspended')
         await audioContextRef.current.resume();
-      }
-
-      // Encode as WAV with original SR so decodeAudioData interprets correctly
-      const wavBlob   = audioBufferToWav(result.buffer, result.wavSampleRate);
-      const wavArrBuf = await wavBlob.arrayBuffer();
-      const playBuf   = await audioContextRef.current.decodeAudioData(wavArrBuf);
-
       const src = audioContextRef.current.createBufferSource();
-      src.buffer             = playBuf;
+      src.buffer             = result;
       src.playbackRate.value = 1;
       src.connect(audioContextRef.current.destination);
       src.onended = () => setIsPlaying(false);
@@ -255,19 +362,18 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     }
   };
 
-  // ── Download ───────────────────────────────────────────
+  // ── Download ───────────────────────────────────────
   const handleDownload = async () => {
     if (!audioBuffer) return;
     setIsProcessing(true);
     try {
       const result = await renderProcessed();
       if (!result) return;
-      const blob = audioBufferToWav(result.buffer, result.wavSampleRate);
-      setProcessedBlob(blob);
-      const url = URL.createObjectURL(blob);
-      const a   = document.createElement('a');
+      const blob = audioBufferToWav(result);
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
       a.href     = url;
-      a.download = `${selectedPersona}_${saveName || 'voice'}_p${pitch}_t${tempo}.wav`;
+      a.download = `${selectedPersona}_${saveName || 'voice'}_p${pitch}_t${tempo.toFixed(2)}.wav`;
       a.click();
       URL.revokeObjectURL(url);
       showToast('Downloaded ✅');
@@ -278,77 +384,42 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     }
   };
 
-  // ── Save to R2 ─────────────────────────────────────────
-  const handleSaveToR2 = async () => {
+  // ── Save to Local Library (IndexedDB) ─────────────
+  const handleSaveLocal = async () => {
     if (!audioBuffer) return;
     setIsSaving(true);
     try {
-      let blob = processedBlob;
-      if (!blob) {
-        const result = await renderProcessed();
-        if (!result) return;
-        blob = audioBufferToWav(result.buffer, result.wavSampleRate);
-        setProcessedBlob(blob);
-      }
-      const filename = `${saveName || 'voice'}_p${pitch > 0 ? '+' : ''}${pitch}_t${tempo}_${Date.now()}.wav`;
-      const arrBuf   = await blob.arrayBuffer();
-      const bytes    = new Uint8Array(arrBuf);
-      let binary     = '';
-      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-      const audioBase64 = btoa(binary);
-
-      const res  = await fetch(WORKER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save-voice', persona: selectedPersona, filename, audioBase64, mimeType: 'audio/wav' })
-      });
-      const data = await res.json();
-      if (data.success) {
-        showToast(`Saved: ${selectedPersona}/${filename} ✅`);
-        loadVoiceLibrary();
-      } else {
-        showToast('Save failed — check Worker is deployed.', 'error');
-      }
+      const result = await renderProcessed();
+      if (!result) return;
+      const blob     = audioBufferToWav(result);
+      const filename = `${saveName || 'voice'}_p${pitch > 0 ? '+' : ''}${pitch}_t${tempo.toFixed(2)}_${Date.now()}.wav`;
+      await dbSaveVoice({ persona: selectedPersona, filename, blob, size: blob.size, saved: new Date().toISOString() });
+      showToast(`Saved: ${filename} ✅`);
+      loadLocalLibrary();
     } catch {
-      showToast('Save failed — check Worker.', 'error');
+      showToast('Save failed — try again.', 'error');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // ── Voice Library ──────────────────────────────────────
-  const loadVoiceLibrary = async () => {
+  // ── Local Library ──────────────────────────────────
+  const loadLocalLibrary = async () => {
     setIsLoadingLib(true);
     try {
-      const res  = await fetch(WORKER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'list-voices', persona: selectedPersona })
-      });
-      const data = await res.json();
-      if (data.success) setSavedVoices(data.voices || []);
+      const voices = await dbLoadVoices(selectedPersona);
+      setLocalVoices(voices);
     } catch {
-      console.error('Failed to load voice library');
+      console.error('Failed to load local library');
     } finally {
       setIsLoadingLib(false);
     }
   };
 
-  const playVoiceFromR2 = async (filename: string) => {
+  const playLocalVoice = async (voice: LocalVoice) => {
     try {
-      const res  = await fetch(WORKER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'get-voice', persona: selectedPersona, filename })
-      });
-      const data = await res.json();
-      if (!data.success) return;
-      const binStr = atob(data.audioBase64);
-      const bytes  = new Uint8Array(binStr.length);
-      for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
-      const blob   = new Blob([bytes], { type: data.mimeType });
-      const url    = URL.createObjectURL(blob);
-      const audio  = new Audio(url);
+      const url   = URL.createObjectURL(voice.blob);
+      const audio = new Audio(url);
       audio.play();
       audio.onended = () => URL.revokeObjectURL(url);
     } catch {
@@ -356,30 +427,35 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     }
   };
 
-  const deleteVoice = async (filename: string) => {
-    if (!window.confirm(`Delete "${filename}"?`)) return;
+  const downloadLocalVoice = (voice: LocalVoice) => {
+    const url = URL.createObjectURL(voice.blob);
+    const a   = document.createElement('a');
+    a.href     = url;
+    a.download = voice.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const deleteLocalVoice = async (voice: LocalVoice) => {
+    if (!voice.id) return;
+    if (!window.confirm(`Delete "${voice.filename}"?`)) return;
     try {
-      await fetch(WORKER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete-voice', persona: selectedPersona, filename })
-      });
+      await dbDeleteVoice(voice.id);
       showToast('Deleted ✅');
-      loadVoiceLibrary();
+      loadLocalLibrary();
     } catch {
       showToast('Delete failed', 'error');
     }
   };
 
-  useEffect(() => { loadVoiceLibrary(); }, [selectedPersona]);
-  useEffect(() => { setProcessedBlob(null); }, [pitch, tempo]);
+  useEffect(() => { loadLocalLibrary(); }, [selectedPersona]);
+  useEffect(() => { /* reset on slider change — no blob cache needed with SoundTouch */ }, [pitch, tempo]);
 
-  // Derived labels
-  const pitchLabel = pitch === 0 ? 'No change' : pitch < 0 ? `${pitch} semitones (deeper)` : `+${pitch} semitones (higher)`;
+  const pitchLabel = pitch === 0 ? 'No change' : pitch < 0 ? `${pitch} st (deeper)` : `+${pitch} st (higher)`;
   const tempoLabel = tempo === 1.0 ? 'No change' : tempo > 1 ? `×${tempo.toFixed(2)} faster` : `×${tempo.toFixed(2)} slower`;
   const busy       = isProcessing || isSaving;
 
-  // ── Render ─────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', backgroundColor: t.bg, padding: '80px 20px 40px 20px' }}>
 
@@ -407,7 +483,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                 🎙️ 3C Voice Studio
               </h1>
               <p style={{ color: t.muted, fontSize: '14px', margin: 0 }}>
-                Upload · Pitch · Tempo · Export · Save — Build your 3C persona voice library
+                Upload · Record · Pitch · Tempo · Download · Save — Build your 3C persona voice library
               </p>
             </div>
             <div style={{
@@ -449,7 +525,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
           {/* Left: Studio */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-            {/* Upload zone */}
+            {/* Upload + Record zone */}
             <div
               style={{
                 backgroundColor: t.card, borderRadius: '8px', padding: '20px',
@@ -467,16 +543,38 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
               {!audioFile ? (
                 <div style={{ textAlign: 'center', padding: '28px 20px' }}>
                   <div style={{ fontSize: '42px', marginBottom: '12px' }}>🎤</div>
-                  <p style={{ color: t.muted, fontSize: '14px', margin: '0 0 16px 0' }}>Drag & drop your voice sample here</p>
-                  <label style={{
-                    display: 'inline-block', padding: '10px 24px', borderRadius: '6px',
-                    backgroundColor: '#7c3aed', color: 'white', fontWeight: '700', fontSize: '14px', cursor: 'pointer'
-                  }}>
-                    Browse File
-                    <input type="file" accept="audio/*" style={{ display: 'none' }}
-                      onChange={e => { if (e.target.files?.[0]) loadAudioFile(e.target.files[0]); }} />
-                  </label>
-                  <p style={{ color: t.muted, fontSize: '12px', margin: '12px 0 0 0' }}>MP3, WAV, OGG, M4A supported</p>
+                  <p style={{ color: t.muted, fontSize: '14px', margin: '0 0 16px 0' }}>
+                    Drag & drop your voice sample, browse a file, or record directly
+                  </p>
+                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <label style={{
+                      display: 'inline-block', padding: '10px 24px', borderRadius: '6px',
+                      backgroundColor: '#7c3aed', color: 'white', fontWeight: '700', fontSize: '14px', cursor: 'pointer'
+                    }}>
+                      Browse File
+                      <input type="file" accept="audio/*" style={{ display: 'none' }}
+                        onChange={e => { if (e.target.files?.[0]) loadAudioFile(e.target.files[0]); }} />
+                    </label>
+                    {!isRecording ? (
+                      <button onClick={startRecording} style={{
+                        padding: '10px 24px', borderRadius: '6px', border: 'none',
+                        backgroundColor: '#dc2626', color: 'white', fontWeight: '700', fontSize: '14px', cursor: 'pointer'
+                      }}>
+                        🔴 Record
+                      </button>
+                    ) : (
+                      <button onClick={stopRecording} style={{
+                        padding: '10px 24px', borderRadius: '6px', border: 'none',
+                        backgroundColor: '#991b1b', color: 'white', fontWeight: '700', fontSize: '14px', cursor: 'pointer',
+                        animation: 'pulse 1s infinite'
+                      }}>
+                        ⏹ Stop — {formatRecTime(recordingTime)}
+                      </button>
+                    )}
+                  </div>
+                  <p style={{ color: t.muted, fontSize: '12px', margin: '12px 0 0 0' }}>
+                    MP3, WAV, OGG, M4A · High-quality 48kHz recording
+                  </p>
                 </div>
               ) : (
                 <div>
@@ -492,14 +590,31 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                         </div>
                       </div>
                     </div>
-                    <label style={{
-                      padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px',
-                      color: t.muted, fontWeight: '600', border: `1px solid ${t.border}`, backgroundColor: t.card
-                    }}>
-                      Change
-                      <input type="file" accept="audio/*" style={{ display: 'none' }}
-                        onChange={e => { if (e.target.files?.[0]) loadAudioFile(e.target.files[0]); }} />
-                    </label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {!isRecording ? (
+                        <button onClick={startRecording} style={{
+                          padding: '6px 12px', borderRadius: '6px', border: 'none',
+                          backgroundColor: '#dc2626', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer'
+                        }}>
+                          🔴 Record
+                        </button>
+                      ) : (
+                        <button onClick={stopRecording} style={{
+                          padding: '6px 12px', borderRadius: '6px', border: 'none',
+                          backgroundColor: '#991b1b', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer'
+                        }}>
+                          ⏹ {formatRecTime(recordingTime)}
+                        </button>
+                      )}
+                      <label style={{
+                        padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px',
+                        color: t.muted, fontWeight: '600', border: `1px solid ${t.border}`, backgroundColor: t.card
+                      }}>
+                        Change
+                        <input type="file" accept="audio/*" style={{ display: 'none' }}
+                          onChange={e => { if (e.target.files?.[0]) loadAudioFile(e.target.files[0]); }} />
+                      </label>
+                    </div>
                   </div>
                   <canvas ref={canvasRef} width={700} height={80}
                     style={{ width: '100%', height: '80px', borderRadius: '6px', backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc', display: 'block' }}
@@ -511,15 +626,13 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
             {/* Controls */}
             <div style={{ backgroundColor: t.card, borderRadius: '8px', padding: '24px', border: `1px solid ${t.border}`, boxShadow: t.shadow }}>
               <p style={{ fontSize: '12px', fontWeight: '600', color: t.muted, margin: '0 0 20px 0', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                Voice Controls
+                Voice Controls — SoundTouch Engine
               </p>
 
-              {/* ── PITCH — changes voice tone, accepts tempo side-effect ── */}
+              {/* Pitch */}
               <div style={{ marginBottom: '32px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontWeight: '700', color: t.text, fontSize: '14px' }}>
-                    Pitch — Voice Tone
-                  </label>
+                  <label style={{ fontWeight: '700', color: t.text, fontSize: '14px' }}>Pitch — Voice Tone</label>
                   <span style={{
                     padding: '3px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700',
                     backgroundColor: t.purpleBg, color: isDarkMode ? t.purpleLight : t.purple
@@ -528,10 +641,9 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                   </span>
                 </div>
                 <p style={{ fontSize: '11px', color: t.muted, margin: '0 0 12px 0', lineHeight: '1.5' }}>
-                  Slide left → deeper voice. Slide right → higher voice. Speed may drift — use Tempo below to fix it independently.
+                  Slide left → deeper voice. Slide right → higher voice. Tempo is not affected.
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  {/* ✅ CORRECT: Left = deeper (negative semitones = male/lower), Right = higher (positive = female/higher) */}
                   <span style={{ fontSize: '13px', color: '#3b82f6', fontWeight: '700', whiteSpace: 'nowrap' }}>♂ Deeper</span>
                   <input type="range" min={-12} max={12} step={1} value={pitch}
                     onChange={e => setPitch(Number(e.target.value))}
@@ -546,12 +658,10 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                 </div>
               </div>
 
-              {/* ── TEMPO — fully independent of pitch ── */}
+              {/* Tempo */}
               <div style={{ marginBottom: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontWeight: '700', color: t.text, fontSize: '14px' }}>
-                    Tempo — Speech Speed
-                  </label>
+                  <label style={{ fontWeight: '700', color: t.text, fontSize: '14px' }}>Tempo — Speech Speed</label>
                   <span style={{
                     padding: '3px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700',
                     backgroundColor: isDarkMode ? 'rgba(16,185,129,0.15)' : '#d1fae5', color: '#10b981'
@@ -560,7 +670,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                   </span>
                 </div>
                 <p style={{ fontSize: '11px', color: t.muted, margin: '0 0 12px 0', lineHeight: '1.5' }}>
-                  Changes speed only — <strong style={{ color: t.text }}>pitch is not affected</strong>. Use this to compensate tempo drift from pitch adjustment above.
+                  Changes speed only — <strong style={{ color: t.text }}>pitch is not affected</strong>. WSOLA algorithm — audioalter quality.
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ fontSize: '12px', color: t.muted, fontWeight: '600', whiteSpace: 'nowrap' }}>0.5× Slow</span>
@@ -578,7 +688,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                 backgroundColor: t.cardAlt, border: `1px solid ${t.border}`
               }}>
                 <p style={{ fontSize: '11px', fontWeight: '700', color: t.muted, margin: '0 0 10px 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  What will be applied to your output
+                  Applied to output
                 </p>
                 <div style={{ display: 'flex', gap: '32px' }}>
                   <div>
@@ -588,7 +698,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '11px', color: t.muted, marginBottom: '2px' }}>Tempo (pitch-neutral)</div>
+                    <div style={{ fontSize: '11px', color: t.muted, marginBottom: '2px' }}>Tempo</div>
                     <div style={{ fontWeight: '700', color: t.text, fontSize: '14px' }}>
                       {tempo === 1.0 ? '— none' : `×${tempo.toFixed(2)}`}
                     </div>
@@ -597,7 +707,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
               </div>
 
               {/* File name */}
-              <div>
+              <div style={{ marginBottom: '20px' }}>
                 <label style={{ fontWeight: '700', color: t.text, fontSize: '14px', display: 'block', marginBottom: '8px' }}>
                   File Name
                 </label>
@@ -610,52 +720,52 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                   }}
                 />
               </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-              <button onClick={handlePreview} disabled={!audioBuffer || busy}
-                style={{
-                  padding: '14px', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '14px',
-                  cursor: (audioBuffer && !busy) ? 'pointer' : 'not-allowed', transition: 'all 0.2s',
-                  backgroundColor: !audioBuffer ? t.cardAlt : isPlaying ? '#dc2626' : isProcessing ? '#6d28d9' : '#7c3aed',
-                  color: audioBuffer ? 'white' : t.muted,
-                  boxShadow: audioBuffer ? '0 4px 12px rgba(124,58,237,0.3)' : 'none'
-                }}>
-                {isProcessing && !isPlaying ? '⏳ Rendering…' : isPlaying ? '⏹ Stop' : '▶ Preview'}
-              </button>
+              {/* Action Buttons */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                <button onClick={handlePreview} disabled={!audioBuffer || busy}
+                  style={{
+                    padding: '14px', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '14px',
+                    cursor: (audioBuffer && !busy) ? 'pointer' : 'not-allowed', transition: 'all 0.2s',
+                    backgroundColor: !audioBuffer ? t.cardAlt : isPlaying ? '#dc2626' : isProcessing ? '#6d28d9' : '#7c3aed',
+                    color: audioBuffer ? 'white' : t.muted,
+                    boxShadow: audioBuffer ? '0 4px 12px rgba(124,58,237,0.3)' : 'none'
+                  }}>
+                  {isProcessing && !isPlaying ? '⏳ Rendering…' : isPlaying ? '⏹ Stop' : '▶ Preview'}
+                </button>
 
-              <button onClick={handleDownload} disabled={!audioBuffer || busy}
-                style={{
-                  padding: '14px', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '14px',
-                  cursor: (audioBuffer && !busy) ? 'pointer' : 'not-allowed', transition: 'all 0.2s',
-                  backgroundColor: (audioBuffer && !busy) ? '#0891b2' : t.cardAlt,
-                  color: (audioBuffer && !busy) ? 'white' : t.muted,
-                  boxShadow: (audioBuffer && !busy) ? '0 4px 12px rgba(8,145,178,0.3)' : 'none'
-                }}>
-                {isProcessing ? '⏳ Processing…' : '⬇ Download'}
-              </button>
+                <button onClick={handleDownload} disabled={!audioBuffer || busy}
+                  style={{
+                    padding: '14px', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '14px',
+                    cursor: (audioBuffer && !busy) ? 'pointer' : 'not-allowed', transition: 'all 0.2s',
+                    backgroundColor: (audioBuffer && !busy) ? '#0891b2' : t.cardAlt,
+                    color: (audioBuffer && !busy) ? 'white' : t.muted,
+                    boxShadow: (audioBuffer && !busy) ? '0 4px 12px rgba(8,145,178,0.3)' : 'none'
+                  }}>
+                  {isProcessing ? '⏳ Processing…' : '⬇ Download'}
+                </button>
 
-              <button onClick={handleSaveToR2} disabled={!audioBuffer || busy}
-                style={{
-                  padding: '14px', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '14px',
-                  cursor: (audioBuffer && !busy) ? 'pointer' : 'not-allowed', transition: 'all 0.2s',
-                  backgroundColor: (audioBuffer && !busy) ? '#10b981' : t.cardAlt,
-                  color: (audioBuffer && !busy) ? 'white' : t.muted,
-                  boxShadow: (audioBuffer && !busy) ? '0 4px 12px rgba(16,185,129,0.3)' : 'none'
-                }}>
-                {isSaving ? '⏳ Saving…' : '☁ Save to R2'}
-              </button>
+                <button onClick={handleSaveLocal} disabled={!audioBuffer || busy}
+                  style={{
+                    padding: '14px', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '14px',
+                    cursor: (audioBuffer && !busy) ? 'pointer' : 'not-allowed', transition: 'all 0.2s',
+                    backgroundColor: (audioBuffer && !busy) ? '#10b981' : t.cardAlt,
+                    color: (audioBuffer && !busy) ? 'white' : t.muted,
+                    boxShadow: (audioBuffer && !busy) ? '0 4px 12px rgba(16,185,129,0.3)' : 'none'
+                  }}>
+                  {isSaving ? '⏳ Saving…' : '💾 Save'}
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Right: Voice Library */}
+          {/* Right: Local Voice Library */}
           <div style={{ backgroundColor: t.card, borderRadius: '8px', padding: '20px', border: `1px solid ${t.border}`, boxShadow: t.shadow }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <p style={{ fontSize: '12px', fontWeight: '600', color: t.muted, margin: 0, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
                 {selectedPersona} · Voice Library
               </p>
-              <button onClick={loadVoiceLibrary} title="Refresh"
+              <button onClick={loadLocalLibrary} title="Refresh"
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.muted, fontSize: '16px', padding: '4px' }}>
                 🔄
               </button>
@@ -663,18 +773,18 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
 
             {isLoadingLib ? (
               <p style={{ color: t.muted, fontSize: '14px', textAlign: 'center', padding: '24px' }}>Loading…</p>
-            ) : savedVoices.length === 0 ? (
+            ) : localVoices.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 16px' }}>
                 <div style={{ fontSize: '36px', marginBottom: '10px' }}>🎙️</div>
                 <p style={{ color: t.muted, fontSize: '13px', margin: 0, lineHeight: 1.6 }}>
                   No voices saved for {selectedPersona} yet.<br />
-                  Process a sample and hit <strong>Save to R2</strong>.
+                  Process a sample and hit <strong>Save</strong>.
                 </p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '520px', overflowY: 'auto' }}>
-                {savedVoices.map(voice => (
-                  <div key={voice.key} style={{
+                {localVoices.map(voice => (
+                  <div key={voice.id} style={{
                     padding: '12px', borderRadius: '6px',
                     backgroundColor: t.cardAlt, border: `1px solid ${t.border}`
                   }}>
@@ -682,17 +792,24 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                       🎵 {voice.filename}
                     </div>
                     <div style={{ fontSize: '11px', color: t.muted, marginBottom: '10px' }}>
-                      {(voice.size / 1024).toFixed(0)} KB · {new Date(voice.uploaded).toLocaleDateString('en-GB')}
+                      {(voice.size / 1024).toFixed(0)} KB · {new Date(voice.saved).toLocaleDateString('en-GB')}
                     </div>
                     <div style={{ display: 'flex', gap: '6px' }}>
-                      <button onClick={() => playVoiceFromR2(voice.filename)}
+                      <button onClick={() => playLocalVoice(voice)}
                         style={{
                           flex: 1, padding: '6px', borderRadius: '4px', border: 'none',
                           backgroundColor: '#7c3aed', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer'
                         }}>
                         ▶ Play
                       </button>
-                      <button onClick={() => deleteVoice(voice.filename)}
+                      <button onClick={() => downloadLocalVoice(voice)}
+                        style={{
+                          flex: 1, padding: '6px', borderRadius: '4px', border: 'none',
+                          backgroundColor: '#0891b2', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer'
+                        }}>
+                        ⬇
+                      </button>
+                      <button onClick={() => deleteLocalVoice(voice)}
                         style={{
                           padding: '6px 10px', borderRadius: '4px', border: 'none',
                           backgroundColor: '#dc2626', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer'
@@ -710,9 +827,10 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
               backgroundColor: t.purpleBg, border: `1px solid ${isDarkMode ? 'rgba(124,58,237,0.4)' : '#c4b5fd'}`,
               fontSize: '12px', color: isDarkMode ? '#a78bfa' : '#6d28d9', lineHeight: '1.6'
             }}>
-              <strong>💡 Storage:</strong> Voices saved to 3C Control Center R2 under <code>Voices/{selectedPersona}/</code>. Ready for future bot and AI integrations per persona.
+              <strong>💡 Storage:</strong> Voices saved locally in this browser per persona. Hit ⬇ on any saved voice to download it to your device.
             </div>
           </div>
+
         </div>
       </div>
     </div>
