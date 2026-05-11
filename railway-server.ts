@@ -4,6 +4,7 @@
 
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
+import ws from 'ws';
 
 const app = express();
 app.use(express.json());
@@ -72,6 +73,9 @@ const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
     persistSession: false,
     autoRefreshToken: false,
     detectSessionInUrl: false
+  },
+  realtime: {
+    transport: ws
   },
   global: {
     headers: {
