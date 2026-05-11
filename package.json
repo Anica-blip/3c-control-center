@@ -30,7 +30,7 @@
     "capture-website": "^3.1.0",
     "cors": "^2.8.5",
     "form-data": "^4.0.0",
-    "soundtouchjs": "^1.0.0"
+    "soundtouchjs": "^0.3.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react-swc": "^3.7.1",
