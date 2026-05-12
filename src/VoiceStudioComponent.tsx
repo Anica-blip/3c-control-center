@@ -267,6 +267,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
   const [playheadTime, setPlayheadTime] = useState(0);
   const [mergeClips, setMergeClips]     = useState<MergeClip[]>([]);
   const [saveFormat, setSaveFormat]     = useState<'wav' | 'mp3'>('mp3'); // default MP3 for Canva
+  const [isRegionPlaying, setIsRegionPlaying] = useState(false); // mini transport — raw playback only
 
   // ── Existing refs ──────────────────────────────────
   const audioContextRef   = useRef<AudioContext | null>(null);
@@ -280,6 +281,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
   const animFrameRef       = useRef<number>(0);
   const playStartAcTimeRef = useRef<number>(0);
   const playStartOffsetRef = useRef<number>(0);
+  const regionSourceRef    = useRef<AudioBufferSourceNode | null>(null);
 
   // ── Theme ──────────────────────────────────────────
   const t = {
@@ -373,9 +375,9 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     return () => ro.disconnect();
   }, []);
 
-  // ── NEW: Animated playhead during playback ─────────
+  // ── Animated playhead during playback (full preview OR region play) ──
   useEffect(() => {
-    if (!isPlaying) {
+    if (!isPlaying && !isRegionPlaying) {
       cancelAnimationFrame(animFrameRef.current);
       return;
     }
@@ -392,7 +394,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     raf = requestAnimationFrame(animate);
     animFrameRef.current = raf;
     return () => cancelAnimationFrame(raf);
-  }, [isPlaying, audioBuffer, trimEnd]);
+  }, [isPlaying, isRegionPlaying, audioBuffer, trimEnd]);
 
   // ── Waveform generator ─────────────────────────────
   const generateWaveform = (buf: AudioBuffer) => {
@@ -474,7 +476,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
   const formatRecTime = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
-  // ── NEW: Click on waveform to seek ────────────────
+  // ── Click on waveform to seek ─────────────────────
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!audioBuffer) return;
     const canvas = canvasRef.current;
@@ -482,6 +484,46 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     const rect = canvas.getBoundingClientRect();
     const t    = ((e.clientX - rect.left) / rect.width) * audioBuffer.duration;
     setPlayheadTime(clamp(t, 0, audioBuffer.duration));
+  };
+
+  // ── Mini transport: raw playback — zero SoundTouch ─
+  // stopRegion: safely stop any active region playback
+  const stopRegion = () => {
+    try { regionSourceRef.current?.stop(); } catch {}
+    regionSourceRef.current = null;
+    setIsRegionPlaying(false);
+  };
+
+  // playRegion: plays startSec→endSec on the raw AudioBuffer (no pitch/tempo)
+  const playRegion = async (startSec: number, endSec: number) => {
+    if (!audioBuffer) return;
+    stopRegion(); // always clean up before starting
+    try {
+      if (!audioContextRef.current || audioContextRef.current.state === 'closed')
+        audioContextRef.current = new AudioContext();
+      if (audioContextRef.current.state === 'suspended')
+        await audioContextRef.current.resume();
+
+      const src = audioContextRef.current.createBufferSource();
+      src.buffer = audioBuffer; // raw — exactly what was loaded/merged
+      src.connect(audioContextRef.current.destination);
+
+      playStartAcTimeRef.current = audioContextRef.current.currentTime;
+      playStartOffsetRef.current = startSec;
+
+      const regionDuration = endSec - startSec;
+      src.start(0, startSec, regionDuration);
+      src.onended = () => {
+        setIsRegionPlaying(false);
+        setPlayheadTime(startSec); // snap playhead back to region start
+        regionSourceRef.current = null;
+      };
+      regionSourceRef.current = src;
+      setIsRegionPlaying(true);
+    } catch {
+      showToast('Playback failed — try again.', 'error');
+      setIsRegionPlaying(false);
+    }
   };
 
   // ── MODIFIED: renderProcessed — skip SoundTouch if no changes ──
@@ -868,7 +910,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                   </div>
 
                   {/* Playhead time row */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
                     <span style={{ fontSize: '12px', color: '#a78bfa', fontWeight: '700', fontFamily: 'monospace' }}>
                       ▶ {formatTime(playheadTime)}
                     </span>
@@ -878,58 +920,171 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                     </span>
                   </div>
 
+                  {/* ── Mini Transport — raw playback, no SoundTouch ── */}
+                  <div style={{
+                    display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '12px',
+                    padding: '10px', borderRadius: '8px',
+                    backgroundColor: isDarkMode ? 'rgba(124,58,237,0.08)' : 'rgba(124,58,237,0.06)',
+                    border: `1px solid ${isDarkMode ? 'rgba(124,58,237,0.3)' : '#c4b5fd'}`
+                  }}>
+                    {/* From here — plays from current playhead position to trim end */}
+                    <button
+                      onClick={() => {
+                        if (isRegionPlaying) { stopRegion(); return; }
+                        playRegion(playheadTime, trimEnd ?? duration);
+                      }}
+                      disabled={!audioBuffer}
+                      title="Play from playhead position to cut point"
+                      style={{
+                        padding: '8px 4px', borderRadius: '6px', border: 'none', cursor: audioBuffer ? 'pointer' : 'not-allowed',
+                        fontWeight: '700', fontSize: '11px', transition: 'all 0.15s',
+                        backgroundColor: isRegionPlaying ? '#f59e0b' : (audioBuffer ? '#7c3aed' : t.cardAlt),
+                        color: audioBuffer ? 'white' : t.muted,
+                      }}>
+                      {isRegionPlaying ? '⏹ Stop' : '▶ From here'}
+                    </button>
+
+                    {/* Play Cut — plays the full defined trim region start→end */}
+                    <button
+                      onClick={() => {
+                        if (isRegionPlaying) { stopRegion(); return; }
+                        playRegion(trimStart, trimEnd ?? duration);
+                      }}
+                      disabled={!audioBuffer}
+                      title="Play the full cut region (trim start → trim end)"
+                      style={{
+                        padding: '8px 4px', borderRadius: '6px', border: 'none', cursor: audioBuffer ? 'pointer' : 'not-allowed',
+                        fontWeight: '700', fontSize: '11px', transition: 'all 0.15s',
+                        backgroundColor: audioBuffer ? '#10b981' : t.cardAlt,
+                        color: audioBuffer ? 'white' : t.muted,
+                        boxShadow: audioBuffer ? '0 2px 8px rgba(16,185,129,0.3)' : 'none',
+                      }}>
+                      ▶ Play Cut
+                    </button>
+
+                    {/* Stop */}
+                    <button
+                      onClick={stopRegion}
+                      disabled={!isRegionPlaying}
+                      title="Stop playback"
+                      style={{
+                        padding: '8px 4px', borderRadius: '6px', border: 'none',
+                        cursor: isRegionPlaying ? 'pointer' : 'not-allowed',
+                        fontWeight: '700', fontSize: '11px', transition: 'all 0.15s',
+                        backgroundColor: isRegionPlaying ? '#dc2626' : t.cardAlt,
+                        color: isRegionPlaying ? 'white' : t.muted,
+                      }}>
+                      ⏹ Stop
+                    </button>
+                  </div>
+
+                  {/* Hint label */}
+                  <p style={{ fontSize: '10px', color: t.muted, margin: '0 0 10px 0', lineHeight: '1.5' }}>
+                    🎧 <strong style={{ color: t.text }}>Raw listen only</strong> — no pitch/tempo applied. Use the <strong style={{ color: t.text }}>Preview</strong> button below when you're ready for final production output.
+                  </p>
+
                   {/* Trim controls */}
                   <div style={{
-                    display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '8px', alignItems: 'end',
                     padding: '12px', borderRadius: '8px', backgroundColor: t.cardAlt, border: `1px solid ${t.border}`
                   }}>
-                    {/* Start */}
-                    <div>
-                      <div style={{ fontSize: '10px', color: '#10b981', fontWeight: '700', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        ◀ Start (s)
+                    {/* Row 1 — Start / Reset / End inputs */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '8px', alignItems: 'end', marginBottom: '10px' }}>
+                      {/* Start */}
+                      <div>
+                        <div style={{ fontSize: '10px', color: '#10b981', fontWeight: '700', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          ◀ Start (s)
+                        </div>
+                        <input
+                          type="number" min={0} step={0.1}
+                          max={parseFloat(((trimEnd ?? duration) - 0.1).toFixed(1))}
+                          value={trimStart.toFixed(1)}
+                          onChange={e => setTrimStart(clamp(Number(e.target.value), 0, (trimEnd ?? duration) - 0.1))}
+                          style={{
+                            width: '100%', padding: '7px 10px', borderRadius: '6px', fontSize: '14px', fontWeight: '700',
+                            border: `2px solid #10b981`, backgroundColor: t.card, color: t.text,
+                            boxSizing: 'border-box' as const, outline: 'none'
+                          }}
+                        />
                       </div>
-                      <input
-                        type="number" min={0} step={0.1}
-                        max={parseFloat(((trimEnd ?? duration) - 0.1).toFixed(1))}
-                        value={trimStart.toFixed(1)}
-                        onChange={e => setTrimStart(clamp(Number(e.target.value), 0, (trimEnd ?? duration) - 0.1))}
+                      {/* Reset */}
+                      <button
+                        onClick={() => { setTrimStart(0); setTrimEnd(null); setPlayheadTime(0); stopRegion(); }}
+                        title="Reset trim"
                         style={{
-                          width: '100%', padding: '7px 10px', borderRadius: '6px', fontSize: '14px', fontWeight: '700',
-                          border: `2px solid #10b981`, backgroundColor: t.card, color: t.text,
-                          boxSizing: 'border-box' as const, outline: 'none'
+                          padding: '7px 12px', borderRadius: '6px', border: `1px solid ${t.border}`,
+                          backgroundColor: t.card, color: t.muted, fontSize: '12px', fontWeight: '700',
+                          cursor: 'pointer', whiteSpace: 'nowrap'
                         }}
-                      />
-                    </div>
-                    {/* Reset */}
-                    <button
-                      onClick={() => { setTrimStart(0); setTrimEnd(null); setPlayheadTime(0); }}
-                      title="Reset trim"
-                      style={{
-                        padding: '7px 12px', borderRadius: '6px', border: `1px solid ${t.border}`,
-                        backgroundColor: t.card, color: t.muted, fontSize: '12px', fontWeight: '700',
-                        cursor: 'pointer', whiteSpace: 'nowrap'
-                      }}
-                    >
-                      ↺ Reset
-                    </button>
-                    {/* End */}
-                    <div>
-                      <div style={{ fontSize: '10px', color: '#f59e0b', fontWeight: '700', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>
-                        End (s) ▶
+                      >
+                        ↺ Reset
+                      </button>
+                      {/* End */}
+                      <div>
+                        <div style={{ fontSize: '10px', color: '#f59e0b', fontWeight: '700', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>
+                          End (s) ▶
+                        </div>
+                        <input
+                          type="number" step={0.1}
+                          min={parseFloat((trimStart + 0.1).toFixed(1))}
+                          max={parseFloat(duration.toFixed(1))}
+                          value={(trimEnd ?? duration).toFixed(1)}
+                          onChange={e => setTrimEnd(clamp(Number(e.target.value), trimStart + 0.1, duration))}
+                          style={{
+                            width: '100%', padding: '7px 10px', borderRadius: '6px', fontSize: '14px', fontWeight: '700',
+                            border: `2px solid #f59e0b`, backgroundColor: t.card, color: t.text,
+                            boxSizing: 'border-box' as const, outline: 'none', textAlign: 'right'
+                          }}
+                        />
                       </div>
-                      <input
-                        type="number" step={0.1}
-                        min={parseFloat((trimStart + 0.1).toFixed(1))}
-                        max={parseFloat(duration.toFixed(1))}
-                        value={(trimEnd ?? duration).toFixed(1)}
-                        onChange={e => setTrimEnd(clamp(Number(e.target.value), trimStart + 0.1, duration))}
-                        style={{
-                          width: '100%', padding: '7px 10px', borderRadius: '6px', fontSize: '14px', fontWeight: '700',
-                          border: `2px solid #f59e0b`, backgroundColor: t.card, color: t.text,
-                          boxSizing: 'border-box' as const, outline: 'none', textAlign: 'right'
-                        }}
-                      />
                     </div>
+
+                    {/* Row 2 — Precision cut tools */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                      {/* Play from line → End */}
+                      <button
+                        onClick={() => {
+                          if (isRegionPlaying) { stopRegion(); return; }
+                          playRegion(playheadTime, trimEnd ?? duration);
+                        }}
+                        disabled={!audioBuffer}
+                        title={`Play from line (${formatTime(playheadTime)}) to End — hear the cut in context`}
+                        style={{
+                          padding: '8px 6px', borderRadius: '6px', border: 'none',
+                          cursor: audioBuffer ? 'pointer' : 'not-allowed',
+                          fontWeight: '700', fontSize: '11px', transition: 'all 0.15s',
+                          backgroundColor: isRegionPlaying ? '#f59e0b' : (audioBuffer ? '#7c3aed' : t.cardAlt),
+                          color: audioBuffer ? 'white' : t.muted,
+                          boxShadow: audioBuffer && !isRegionPlaying ? '0 2px 8px rgba(124,58,237,0.3)' : 'none',
+                        }}>
+                        {isRegionPlaying ? '⏹ Stop' : `▶ Line → End`}
+                      </button>
+
+                      {/* Set cut here — stamps playhead position as trimEnd */}
+                      <button
+                        onClick={() => {
+                          stopRegion();
+                          const newEnd = clamp(playheadTime, trimStart + 0.1, duration);
+                          setTrimEnd(parseFloat(newEnd.toFixed(1)));
+                          setPlayheadTime(newEnd);
+                        }}
+                        disabled={!audioBuffer || playheadTime <= trimStart}
+                        title={`Stamp current line position (${formatTime(playheadTime)}) as the cut end point`}
+                        style={{
+                          padding: '8px 6px', borderRadius: '6px', border: 'none',
+                          cursor: (audioBuffer && playheadTime > trimStart) ? 'pointer' : 'not-allowed',
+                          fontWeight: '700', fontSize: '11px', transition: 'all 0.15s',
+                          backgroundColor: (audioBuffer && playheadTime > trimStart) ? '#f59e0b' : t.cardAlt,
+                          color: (audioBuffer && playheadTime > trimStart) ? 'white' : t.muted,
+                          boxShadow: (audioBuffer && playheadTime > trimStart) ? '0 2px 8px rgba(245,158,11,0.3)' : 'none',
+                        }}>
+                        ✂ Set cut here
+                      </button>
+                    </div>
+
+                    {/* Micro hint */}
+                    <p style={{ margin: '8px 0 0 0', fontSize: '10px', color: t.muted, lineHeight: '1.5' }}>
+                      💡 Click waveform to place line → <strong style={{ color: t.text }}>▶ Line → End</strong> to hear from there · Stop at the right moment → <strong style={{ color: t.text }}>✂ Set cut here</strong> to stamp it
+                    </p>
                   </div>
                 </div>
               )}
