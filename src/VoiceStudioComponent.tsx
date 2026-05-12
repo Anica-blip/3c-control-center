@@ -416,6 +416,8 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     setTrimStart(0);
     setTrimEnd(null);
     setPlayheadTime(0);
+    setPitch(0);
+    setTempo(1.0);
     try {
       const ab  = await file.arrayBuffer();
       const ctx = new AudioContext();
