@@ -1040,23 +1040,23 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
 
                     {/* Row 2 — Precision cut tools */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                      {/* Play from line → End */}
+                      {/* Play Start → Line — hear what will be KEPT */}
                       <button
                         onClick={() => {
                           if (isRegionPlaying) { stopRegion(); return; }
-                          playRegion(playheadTime, trimEnd ?? duration);
+                          playRegion(trimStart, playheadTime);
                         }}
-                        disabled={!audioBuffer}
-                        title={`Play from line (${formatTime(playheadTime)}) to End — hear the cut in context`}
+                        disabled={!audioBuffer || playheadTime <= trimStart}
+                        title={`Play kept audio: Start → line (${formatTime(playheadTime)})`}
                         style={{
                           padding: '8px 6px', borderRadius: '6px', border: 'none',
-                          cursor: audioBuffer ? 'pointer' : 'not-allowed',
+                          cursor: (audioBuffer && playheadTime > trimStart) ? 'pointer' : 'not-allowed',
                           fontWeight: '700', fontSize: '11px', transition: 'all 0.15s',
-                          backgroundColor: isRegionPlaying ? '#f59e0b' : (audioBuffer ? '#7c3aed' : t.cardAlt),
-                          color: audioBuffer ? 'white' : t.muted,
-                          boxShadow: audioBuffer && !isRegionPlaying ? '0 2px 8px rgba(124,58,237,0.3)' : 'none',
+                          backgroundColor: isRegionPlaying ? '#f59e0b' : ((audioBuffer && playheadTime > trimStart) ? '#7c3aed' : t.cardAlt),
+                          color: (audioBuffer && playheadTime > trimStart) ? 'white' : t.muted,
+                          boxShadow: (audioBuffer && playheadTime > trimStart) && !isRegionPlaying ? '0 2px 8px rgba(124,58,237,0.3)' : 'none',
                         }}>
-                        {isRegionPlaying ? '⏹ Stop' : `▶ Line → End`}
+                        {isRegionPlaying ? '⏹ Stop' : `▶ Start → Line`}
                       </button>
 
                       {/* Set cut here — stamps playhead position as trimEnd */}
@@ -1083,7 +1083,7 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
 
                     {/* Micro hint */}
                     <p style={{ margin: '8px 0 0 0', fontSize: '10px', color: t.muted, lineHeight: '1.5' }}>
-                      💡 Click waveform to place line → <strong style={{ color: t.text }}>▶ Line → End</strong> to hear from there · Stop at the right moment → <strong style={{ color: t.text }}>✂ Set cut here</strong> to stamp it
+                      💡 Click waveform to place line → <strong style={{ color: t.text }}>▶ Start → Line</strong> to hear what is kept · happy? → <strong style={{ color: t.text }}>✂ Set cut here</strong> to confirm · everything after the line is discarded
                     </p>
                   </div>
                 </div>
