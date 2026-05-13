@@ -760,11 +760,36 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                 Upload · Record · Trim · Merge · Pitch · Tempo · Download · Save — Build your 3C persona voice library
               </p>
             </div>
-            <div style={{
-              padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
-              backgroundColor: t.purpleBg, color: isDarkMode ? '#a78bfa' : '#7c3aed'
-            }}>
-              Designed and Built with ❤️ by Claude (Anthropic) × Chef Anica · 3C Thread To Success™
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+
+              {/* ── Clock Carousel shortcut ── */}
+              <a
+                href="https://anica-blip.github.io/3c-clock-carousel/"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open 3C Clock Carousel — animate cards + mix audio"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  padding: '8px 16px', borderRadius: '8px',
+                  fontSize: '13px', fontWeight: '700',
+                  backgroundColor: '#1d4ed8', color: 'white',
+                  textDecoration: 'none',
+                  boxShadow: '0 4px 12px rgba(29,78,216,0.35)',
+                  transition: 'opacity 0.2s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+              >
+                🎬 Clock Carousel
+              </a>
+
+              <div style={{
+                padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
+                backgroundColor: t.purpleBg, color: isDarkMode ? '#a78bfa' : '#7c3aed'
+              }}>
+                Designed and Built with ❤️ by Claude (Anthropic) × Chef Anica · 3C Thread To Success™
+              </div>
+
             </div>
           </div>
         </div>
