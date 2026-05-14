@@ -762,27 +762,6 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
 
-              {/* ── Clock Carousel shortcut ── */}
-              <a
-                href="https://anica-blip.github.io/3c-clock-carousel/"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Open 3C Clock Carousel — animate cards + mix audio"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '6px',
-                  padding: '8px 16px', borderRadius: '8px',
-                  fontSize: '13px', fontWeight: '700',
-                  backgroundColor: '#1d4ed8', color: 'white',
-                  textDecoration: 'none',
-                  boxShadow: '0 4px 12px rgba(29,78,216,0.35)',
-                  transition: 'opacity 0.2s',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-              >
-                🎬 Clock Carousel
-              </a>
-
               <div style={{
                 padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
                 backgroundColor: t.purpleBg, color: isDarkMode ? '#a78bfa' : '#7c3aed'
@@ -802,19 +781,46 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
           <p style={{ fontSize: '12px', fontWeight: '600', color: t.muted, margin: '0 0 12px 0', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
             Select Persona
           </p>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            {PERSONAS.map(p => (
-              <button key={p.id} onClick={() => setSelectedPersona(p.id)}
-                style={{
-                  padding: '10px 22px', borderRadius: '8px', fontWeight: '700', fontSize: '14px',
-                  cursor: 'pointer', transition: 'all 0.2s',
-                  border: `2px solid ${selectedPersona === p.id ? p.color : t.border}`,
-                  backgroundColor: selectedPersona === p.id ? p.color + '20' : t.card,
-                  color: selectedPersona === p.id ? p.color : t.muted,
-                }}>
-                {p.emoji} {p.label}
-              </button>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+
+            {/* Persona buttons */}
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {PERSONAS.map(p => (
+                <button key={p.id} onClick={() => setSelectedPersona(p.id)}
+                  style={{
+                    padding: '10px 22px', borderRadius: '8px', fontWeight: '700', fontSize: '14px',
+                    cursor: 'pointer', transition: 'all 0.2s',
+                    border: `2px solid ${selectedPersona === p.id ? p.color : t.border}`,
+                    backgroundColor: selectedPersona === p.id ? p.color + '20' : t.card,
+                    color: selectedPersona === p.id ? p.color : t.muted,
+                  }}>
+                  {p.emoji} {p.label}
+                </button>
+              ))}
+            </div>
+
+            {/* ── Clock Carousel shortcut — right margin ── */}
+            <a
+              href="https://anica-blip.github.io/3c-clock-carousel/"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open 3C Clock Carousel — animate cards + mix audio"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '8px 16px', borderRadius: '8px',
+                fontSize: '13px', fontWeight: '700',
+                backgroundColor: '#1d4ed8', color: 'white',
+                textDecoration: 'none',
+                boxShadow: '0 4px 12px rgba(29,78,216,0.35)',
+                transition: 'opacity 0.2s',
+                flexShrink: 0,
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
+              🎬 Clock Carousel
+            </a>
+
           </div>
         </div>
 
