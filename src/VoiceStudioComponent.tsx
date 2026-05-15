@@ -260,6 +260,9 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
   const [recordingTime, setRecordingTime]     = useState(0);
   const [localVoices, setLocalVoices]         = useState<LocalVoice[]>([]);
   const [isLoadingLib, setIsLoadingLib]       = useState(false);
+  const [playingVoiceId, setPlayingVoiceId]   = useState<number | null>(null);
+
+  const localAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // ── NEW state ──────────────────────────────────────
   const [trimStart, setTrimStart]       = useState(0);
@@ -268,7 +271,6 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
   const [mergeClips, setMergeClips]     = useState<MergeClip[]>([]);
   const [saveFormat, setSaveFormat]     = useState<'wav' | 'mp3'>('mp3'); // default MP3 for Canva
   const [isRegionPlaying, setIsRegionPlaying] = useState(false); // mini transport — raw playback only
-  const [trimKeep, setTrimKeep]               = useState<'start' | 'end'>('start'); // which side to keep after cut
 
   // ── Existing refs ──────────────────────────────────
   const audioContextRef   = useRef<AudioContext | null>(null);
@@ -421,7 +423,6 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     setPlayheadTime(0);
     setPitch(0);
     setTempo(1.0);
-    setTrimKeep('start');
     try {
       const ab  = await file.arrayBuffer();
       const ctx = new AudioContext();
@@ -532,13 +533,9 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
   // When pitch=0 and tempo=1.0 this returns immediately — no processing cost
   const renderProcessed = async (): Promise<AudioBuffer | null> => {
     if (!audioBuffer) return null;
-    const duration = audioBuffer.duration;
-    const cutPoint = trimEnd ?? duration;
-
-    // Decide which region to slice based on Keep Start / Keep End choice
-    const tStart = trimKeep === 'end' ? cutPoint : trimStart;
-    const tEnd   = trimKeep === 'end' ? duration  : cutPoint;
-
+    const duration   = audioBuffer.duration;
+    const tStart     = trimStart;
+    const tEnd       = trimEnd ?? duration;
     const needsSlice = tStart > 0 || tEnd < duration;
     const sliced     = needsSlice ? sliceBuffer(audioBuffer, tStart, tEnd) : audioBuffer;
     // Bypass SoundTouch entirely when no pitch/tempo adjustment is needed
@@ -638,11 +635,29 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
   };
 
   const playLocalVoice = async (voice: LocalVoice) => {
+    // If this voice is already playing — stop it
+    if (playingVoiceId === voice.id) {
+      localAudioRef.current?.pause();
+      localAudioRef.current = null;
+      setPlayingVoiceId(null);
+      return;
+    }
+    // Stop any other voice that's currently playing
+    if (localAudioRef.current) {
+      localAudioRef.current.pause();
+      localAudioRef.current = null;
+    }
     try {
       const url   = URL.createObjectURL(voice.blob);
       const audio = new Audio(url);
+      localAudioRef.current = audio;
+      setPlayingVoiceId(voice.id ?? null);
       audio.play();
-      audio.onended = () => URL.revokeObjectURL(url);
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        setPlayingVoiceId(null);
+        localAudioRef.current = null;
+      };
     } catch { showToast('Playback failed', 'error'); }
   };
 
@@ -1027,71 +1042,36 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                       </div>
                     )}
 
-                    {/* State C — cut is set → show Keep choice, REPLAY and REDO */}
+                    {/* State C — cut is set → show REPLAY and REDO */}
                     {!isRegionPlaying && trimEnd !== null && trimEnd < duration && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-
-                        {/* ── Keep selector ── */}
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button
-                            onClick={() => setTrimKeep('start')}
-                            style={{
-                              flex: 1, padding: '10px', borderRadius: '8px', fontWeight: '700', fontSize: '13px',
-                              cursor: 'pointer', transition: 'all 0.2s',
-                              border: `2px solid ${trimKeep === 'start' ? '#10b981' : t.border}`,
-                              backgroundColor: trimKeep === 'start' ? 'rgba(16,185,129,0.12)' : t.card,
-                              color: trimKeep === 'start' ? '#10b981' : t.muted,
-                            }}>
-                            {trimKeep === 'start' ? '☑' : '☐'} Keep Start
-                          </button>
-                          <button
-                            onClick={() => setTrimKeep('end')}
-                            style={{
-                              flex: 1, padding: '10px', borderRadius: '8px', fontWeight: '700', fontSize: '13px',
-                              cursor: 'pointer', transition: 'all 0.2s',
-                              border: `2px solid ${trimKeep === 'end' ? '#f59e0b' : t.border}`,
-                              backgroundColor: trimKeep === 'end' ? 'rgba(245,158,11,0.12)' : t.card,
-                              color: trimKeep === 'end' ? '#f59e0b' : t.muted,
-                            }}>
-                            {trimKeep === 'end' ? '☑' : '☐'} Keep End
-                          </button>
-                        </div>
-
-                        {/* ── REPLAY + REDO ── */}
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button
-                            onClick={async () => {
-                              cutModeRef.current = 'replay';
-                              const playFrom = trimKeep === 'end' ? trimEnd! : trimStart;
-                              const playTo   = trimKeep === 'end' ? duration  : trimEnd!;
-                              await playRegion(playFrom, playTo);
-                            }}
-                            disabled={!audioBuffer}
-                            style={{
-                              flex: 2, padding: '12px', borderRadius: '8px', border: 'none',
-                              fontWeight: '800', fontSize: '14px', cursor: 'pointer',
-                              backgroundColor: '#7c3aed', color: 'white',
-                              boxShadow: '0 4px 12px rgba(124,58,237,0.35)',
-                            }}>
-                            ▶ REPLAY — hear {trimKeep === 'end'
-                              ? `${formatTime(trimEnd!)} → ${formatTime(duration)}`
-                              : `${formatTime(trimStart)} → ${formatTime(trimEnd!)}`}
-                          </button>
-                          <button
-                            onClick={() => {
-                              stopRegion();
-                              setTrimEnd(null);
-                              setPlayheadTime(0);
-                              setTrimKeep('start');
-                            }}
-                            style={{
-                              flex: 1, padding: '12px', borderRadius: '8px',
-                              border: `1px solid ${t.border}`, fontWeight: '700', fontSize: '13px',
-                              cursor: 'pointer', backgroundColor: t.card, color: t.muted,
-                            }}>
-                            ↺ REDO
-                          </button>
-                        </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={async () => {
+                            cutModeRef.current = 'replay';
+                            await playRegion(trimStart, trimEnd!);
+                          }}
+                          disabled={!audioBuffer}
+                          style={{
+                            flex: 2, padding: '12px', borderRadius: '8px', border: 'none',
+                            fontWeight: '800', fontSize: '14px', cursor: 'pointer',
+                            backgroundColor: '#7c3aed', color: 'white',
+                            boxShadow: '0 4px 12px rgba(124,58,237,0.35)',
+                          }}>
+                          ▶ REPLAY — hear {formatTime(trimStart)} → {formatTime(trimEnd!)}
+                        </button>
+                        <button
+                          onClick={() => {
+                            stopRegion();
+                            setTrimEnd(null);
+                            setPlayheadTime(0);
+                          }}
+                          style={{
+                            flex: 1, padding: '12px', borderRadius: '8px',
+                            border: `1px solid ${t.border}`, fontWeight: '700', fontSize: '13px',
+                            cursor: 'pointer', backgroundColor: t.card, color: t.muted,
+                          }}>
+                          ↺ REDO
+                        </button>
                       </div>
                     )}
 
@@ -1127,10 +1107,8 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                     {/* Hint */}
                     <p style={{ margin: '10px 0 0 0', fontSize: '10px', color: t.muted, lineHeight: '1.6' }}>
                       {trimEnd !== null && trimEnd < duration
-                        ? trimKeep === 'start'
-                          ? `✅ Keeping start: 0 → ${formatTime(trimEnd)} · discarding ${formatTime(trimEnd)} → end`
-                          : `✅ Keeping end: ${formatTime(trimEnd)} → ${formatTime(duration)} · discarding start → ${formatTime(trimEnd)}`
-                        : '▶ PLAY → line moves as audio plays → press ✂ CUT exactly when you want it to stop → pick Keep Start or Keep End → ▶ REPLAY to verify → ↺ REDO if wrong'}
+                        ? `✅ Keeping first ${formatTime(trimEnd)} · discarding ${formatTime(trimEnd)} → ${formatTime(duration)} · happy? go to Clip Merger below`
+                        : '▶ PLAY → line moves as audio plays → press ✂ CUT exactly when you want it to stop → ▶ REPLAY to verify → ↺ REDO if wrong'}
                     </p>
                   </div>
                 </div>
@@ -1463,9 +1441,10 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
                       <button onClick={() => playLocalVoice(voice)}
                         style={{
                           flex: 1, padding: '6px', borderRadius: '4px', border: 'none',
-                          backgroundColor: '#7c3aed', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer'
+                          backgroundColor: playingVoiceId === voice.id ? '#dc2626' : '#7c3aed',
+                          color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer'
                         }}>
-                        ▶ Play
+                        {playingVoiceId === voice.id ? '⏹ Stop' : '▶ Play'}
                       </button>
                       <button onClick={() => downloadLocalVoice(voice)}
                         style={{
