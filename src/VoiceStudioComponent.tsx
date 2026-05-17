@@ -272,7 +272,6 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
   const [saveFormat, setSaveFormat]     = useState<'wav' | 'mp3'>('mp3'); // default MP3 for Canva
   const [isRegionPlaying, setIsRegionPlaying] = useState(false); // mini transport — raw playback only
   const [trimKeep, setTrimKeep]               = useState<'start' | 'end'>('start');
-  const [playingVoiceId, setPlayingVoiceId]   = useState<number | null>(null);
 
   // ── Existing refs ──────────────────────────────────
   const audioContextRef   = useRef<AudioContext | null>(null);
@@ -280,7 +279,6 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
   const canvasRef         = useRef<HTMLCanvasElement>(null);
   const mediaRecorderRef  = useRef<MediaRecorder | null>(null);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const localAudioRef     = useRef<HTMLAudioElement | null>(null);
 
   // ── NEW refs ───────────────────────────────────────
   const canvasWrapRef      = useRef<HTMLDivElement>(null);
@@ -537,11 +535,8 @@ const VoiceStudioComponent: React.FC<VoiceStudioComponentProps> = ({ isDarkMode 
     if (!audioBuffer) return null;
     const duration = audioBuffer.duration;
     const cutPoint = trimEnd ?? duration;
-
-    // Respect Keep Start / Keep End choice
-    const tStart = trimKeep === 'end' ? cutPoint : trimStart;
-    const tEnd   = trimKeep === 'end' ? duration  : cutPoint;
-
+    const tStart   = trimKeep === 'end' ? cutPoint : trimStart;
+    const tEnd     = trimKeep === 'end' ? duration  : cutPoint;
     const needsSlice = tStart > 0 || tEnd < duration;
     const sliced     = needsSlice ? sliceBuffer(audioBuffer, tStart, tEnd) : audioBuffer;
     if (pitch === 0 && tempo === 1.0) return sliced;
