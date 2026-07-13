@@ -952,6 +952,11 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                     url: 'https://anica-blip.github.io/3c-content-record-centre/'
                   },
                   {
+                    name: '3C Notice Board',
+                    desc: 'News page, Announcements, Coming Soon, Special Guests, Worshops, Podcast',
+                    url: 'https://anica-blip.github.io/3c-notice-board/'
+                  },
+                  {
                     name: 'Featured Content Templates',
                     desc: 'Social Media, Blog, News page, Article',
                     url: 'https://anica-blip.github.io/3c-desktop-editor/'
