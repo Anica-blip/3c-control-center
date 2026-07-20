@@ -952,6 +952,11 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                     url: 'https://anica-blip.github.io/3c-content-record-centre/'
                   },
                   {
+                    name: '3C Drop In',
+                    desc: 'Access and manage your library chats',
+                    url: 'https://3c-public-library.org/vault/chat/admin.html'
+                  },
+                  {
                     name: '3C Notice Board',
                     desc: 'News page, Announcements, Coming Soon, Special Guests, Worshops, Podcast',
                     url: 'https://anica-blip.github.io/3c-notice-board/'
