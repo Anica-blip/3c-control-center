@@ -947,6 +947,11 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                     url: 'https://builder.3c-public-library.org'
                   },
                   {
+                    name: '3C Production Manager',
+                    desc: 'Task & Production Pipeline',
+                    url: 'https://anica-blip.github.io/3c-production-manager/'
+                  },
+                  {
                     name: '3C Record Center',
                     desc: 'Access and manage your record center',
                     url: 'https://anica-blip.github.io/3c-content-record-centre/'
