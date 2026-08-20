@@ -461,7 +461,7 @@ Every piece of content belongs to one of three sections. Jan must know this befo
 💙 3C THREAD TO SUCCESS (HQ)
 The logo. The core identity. The strategic command centre. Everything originates here. This is where vision lives, leadership speaks, and the mission is set. Tone: purposeful, authoritative, visionary — but never corporate. Caelum's natural home.
 
-🥇 3C TRAINING HUB
+🥇 3C LEARNING HUB
 The medallion. The educational arm. Where serious learners go deep into structured growth, transformation, and skill-building. The Public Library lives here. Tone: clear, instructional, warm, encouraging, accessible. Structured guidance without intimidation.
 
 💜 3C CLUBHOUSE HUB
