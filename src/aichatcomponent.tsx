@@ -1244,7 +1244,7 @@ You have full context from this session. Generate the post description package n
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {[
                 { label: '🔵 3C HQ', value: '3C Thread To Success (HQ)' },
-                { label: '🥇 Training Hub', value: '3C Training Hub' },
+                { label: '🥇 Learnning Hub', value: '3C Training Hub' },
                 { label: '💜 ClubHouse Hub', value: '3C ClubHouse Hub' }
               ].map(opt => (
                 <button key={opt.value} onClick={() => setCurrentDocument({...currentDocument, section: opt.value})}
