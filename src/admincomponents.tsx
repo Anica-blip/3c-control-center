@@ -1031,6 +1031,11 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                     url: 'https://anica-blip.github.io/3c-word-search/admin/index.html'
                   },
                   {
+                    name: 'Challenges',
+                    desc: 'Interactive Games',
+                    url: 'https://anica-blip.github.io/3c-game-loader/admin-hub.html'
+                  },
+                  {
                     name: 'Card Showcase Generator',
                     desc: 'Solo Card Showcase',
                     url: 'https://anica-blip.github.io/3C-Solo-Card-Showcase/admin/index.html'
