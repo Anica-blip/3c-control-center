@@ -2,7 +2,13 @@ services:
   - type: cron
     name: scheduled-posts
     env: node
-    schedule: "0 6,9,14,17,19 * * *"
+    # FIXED (2026-09-06): was 5 fixed UTC times, which drifted from the intended
+    # Lisbon/London local times whenever DST changed (the actual cause of the
+    # "had to manually redeploy" pattern). Running every 30 minutes instead
+    # means a post always goes out within 30 minutes of its scheduled local
+    # time, year-round, with no seasonal adjustment ever needed again — the
+    # DST-safe local time check now lives inside render-cron.ts itself.
+    schedule: "*/30 * * * *"
     buildCommand: npm install
     startCommand: npx tsx ./src/cron-runners/render-cron.ts
     envVars:
