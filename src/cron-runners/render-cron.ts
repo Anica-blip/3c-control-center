@@ -1,7 +1,16 @@
 // Render Cron Job - Direct Supabase Connection
 // Service Type: Render Cron Job
 // Bot Token: TELEGRAM_BOT_TOKEN (Aurion bot)
-// TIMEZONE: WEST (UTC+1)
+//
+// TIMEZONE (fixed 2026-09-06): local "now" is now computed via Node's built-in
+// Europe/Lisbon time zone data (Intl.DateTimeFormat), not a hardcoded UTC+1
+// offset. Lisbon and London always share the same clock, so this covers both.
+// This automatically follows the DST switch every year — no more manual
+// adjustment needed, and no more drift between what this file says and what's
+// actually deployed. Paired with running this job every 30 minutes (see
+// render.yaml) instead of 5 fixed daily times, so a post still goes out close
+// to its scheduled time regardless of season.
+//
 // ✅ FIXED: Now supports GIF animation via sendAnimation API
 
 import { createClient } from '@supabase/supabase-js';
@@ -15,8 +24,8 @@ const TELEGRAM_BOT_TOKEN = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
 const RUNNER_NAME = 'Render Cron Job';
 const SERVICE_TYPE = 'Render Cron Job';
 
-// ✅ TIMEZONE CONFIGURATION - WEST = UTC+1
-const TIMEZONE_OFFSET_HOURS = 1;
+// ✅ TIMEZONE — real Lisbon/London local time, DST-safe, via Intl
+const LOCAL_TIME_ZONE = 'Europe/Lisbon';
 
 // ✅ VALIDATE CREDENTIALS
 console.log('\n--- ENVIRONMENT VARIABLE CHECK ---');
@@ -36,12 +45,12 @@ const extractSupabaseUrl = (dbUrl: string): string => {
   if (match) {
     return `https://${match[1]}.supabase.co`;
   }
-  
+
   const poolerMatch = dbUrl.match(/postgres\.([^:]+)/);
   if (poolerMatch) {
     return `https://${poolerMatch[1]}.supabase.co`;
   }
-  
+
   throw new Error(`Cannot extract Supabase URL from: ${dbUrl}`);
 };
 
@@ -65,7 +74,7 @@ const supabase = createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY, {
 console.log(`[${new Date().toISOString()}] Render Cron Job initialized`);
 console.log(`Supabase URL: ${supabaseUrl}`);
 console.log(`Service Type Filter: ${SERVICE_TYPE}`);
-console.log(`Timezone: WEST (UTC+${TIMEZONE_OFFSET_HOURS})`);
+console.log(`Timezone: ${LOCAL_TIME_ZONE} (DST-aware)`);
 
 // ============================================
 // TYPE DEFINITIONS
@@ -118,6 +127,38 @@ function getErrorMessage(error: unknown): string {
   return 'Unknown error occurred';
 }
 
+/**
+ * ✅ FIXED (2026-09-06): real Lisbon/London local date+time, DST-safe.
+ * Replaces the old fixed "+1 hour" math, which was wrong for half the year
+ * (Portugal/UK are only UTC+1 during DST — UTC+0 the rest of the year).
+ */
+function getLocalDateTimeParts(date: Date): { dateStr: string; timeStr: string } {
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: LOCAL_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  const parts: Record<string, string> = {};
+  for (const part of formatter.formatToParts(date)) {
+    if (part.type !== 'literal') {
+      parts[part.type] = part.value;
+    }
+  }
+
+  const dateStr = `${parts.year}-${parts.month}-${parts.day}`;
+  // Some locales render midnight as "24:00" — normalize that to "00:00".
+  const hour = parts.hour === '24' ? '00' : parts.hour;
+  const timeStr = `${hour}:${parts.minute}:${parts.second}`;
+
+  return { dateStr, timeStr };
+}
+
 // ============================================
 // MEDIA TYPE DETECTION - NEW!
 // ============================================
@@ -134,28 +175,28 @@ function detectMediaType(firstMedia: any, mediaUrl: string): {
 } {
   const mediaType = (firstMedia.type || '').toLowerCase();
   const fileName = (firstMedia.name || mediaUrl).toLowerCase();
-  
+
   // ✅ CHECK 1: Animated GIF/Animation (MUST BE FIRST!)
-  const isAnimation = 
-    mediaType === 'animation' || 
+  const isAnimation =
+    mediaType === 'animation' ||
     mediaType === 'gif' ||
     fileName.endsWith('.gif') ||
     /\.gif$/i.test(mediaUrl);
-  
+
   // ✅ CHECK 2: Video
-  const isVideo = 
-    mediaType === 'video' || 
+  const isVideo =
+    mediaType === 'video' ||
     /\.(mp4|mov|avi|mkv|webm)$/i.test(mediaUrl);
-  
+
   // ✅ CHECK 3: Document
-  const isDocument = 
-    mediaType === 'document' || 
+  const isDocument =
+    mediaType === 'document' ||
     /\.(pdf|doc|docx|txt|zip)$/i.test(mediaUrl);
-  
+
   // ✅ CHECK 4: Photo (fallback)
-  const isPhoto = 
+  const isPhoto =
     !isAnimation && !isVideo && !isDocument;
-  
+
   console.log(`📎 Media type detection:`);
   console.log(`   Type field: "${mediaType}"`);
   console.log(`   Filename: "${fileName}"`);
@@ -163,7 +204,7 @@ function detectMediaType(firstMedia: any, mediaUrl: string): {
   console.log(`   isVideo: ${isVideo}`);
   console.log(`   isDocument: ${isDocument}`);
   console.log(`   isPhoto: ${isPhoto}`);
-  
+
   return { isVideo, isAnimation, isDocument, isPhoto };
 }
 
@@ -173,16 +214,16 @@ function detectMediaType(firstMedia: any, mediaUrl: string): {
 
 async function parseTelegramResponse(response: Response): Promise<TelegramResponse> {
   const responseText = await response.text();
-  
+
   if (!response.ok) {
     console.error(`❌ Telegram API error response (${response.status}):`);
     console.error('Raw response:', responseText);
-    
+
     try {
       const errorJson = JSON.parse(responseText);
       const description = errorJson.description || errorJson.error || 'Unknown error';
       const errorCode = errorJson.error_code || response.status;
-      
+
       return {
         ok: false,
         description: `HTTP ${errorCode}: ${description}`
@@ -210,7 +251,7 @@ async function parseTelegramResponse(response: Response): Promise<TelegramRespon
 
 function buildCaption(post: ScheduledPost): string {
   const postContent = post.post_content as any;
-  
+
   if (!postContent) {
     let caption = '';
     if (post.title) caption += `${post.title}\n\n`;
@@ -219,13 +260,13 @@ function buildCaption(post: ScheduledPost): string {
     if (post.cta) caption += `\n\n👉 ${post.cta}`;
     return caption.trim();
   }
-  
+
   let caption = '';
-  
+
   const name = postContent.name || post.name;
   const username = postContent.username || post.username;
   const role = postContent.role || post.role;
-  
+
   if (name) {
     caption += `<b>${name}</b>\n`;
     if (username) {
@@ -237,10 +278,10 @@ function buildCaption(post: ScheduledPost): string {
     }
     caption += `\n`;
   }
-  
+
   function formatText(text: string): string {
     if (!text) return '';
-    
+
     text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>');
     text = text.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
     text = text.replace(/(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)/g, '<i>$1</i>');
@@ -248,26 +289,26 @@ function buildCaption(post: ScheduledPost): string {
     text = text.replace(/__(.+?)__/g, '<u>$1</u>');
     text = text.replace(/~~(.+?)~~/g, '<s>$1</s>');
     text = text.replace(/`(.+?)`/g, '<code>$1</code>');
-    
+
     return text;
   }
-  
+
   if (postContent.title) {
     caption += `${formatText(postContent.title)}\n\n`;
   }
-  
+
   if (postContent.description) {
     caption += `${formatText(postContent.description)}\n`;
   }
-  
+
   if (postContent.hashtags && Array.isArray(postContent.hashtags) && postContent.hashtags.length > 0) {
     caption += `\n${postContent.hashtags.map((tag: string) => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`;
   }
-  
+
   if (postContent.cta) {
     caption += `\n\n👉 ${formatText(postContent.cta)}`;
   }
-  
+
   return caption.trim();
 }
 
@@ -278,20 +319,20 @@ async function sendTelegramMessage(
   threadId?: string
 ): Promise<TelegramResponse> {
   const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-  
+
   const body: any = {
     chat_id: chatId,
     text: text,
     parse_mode: 'HTML',
   };
-  
+
   if (threadId) {
     const threadIdMatch = threadId.match(/(\d+)$/);
     if (threadIdMatch) {
       body.message_thread_id = parseInt(threadIdMatch[1]);
     }
   }
-  
+
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -303,17 +344,17 @@ async function sendTelegramMessage(
 
 async function downloadFile(url: string): Promise<{ buffer: Buffer; filename: string }> {
   const response = await fetch(url);
-  
+
   if (!response.ok) {
     throw new Error(`Failed to download file from ${url}: ${response.statusText}`);
   }
-  
+
   const arrayBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
-  
+
   const urlParts = url.split('/');
   const filename = urlParts[urlParts.length - 1];
-  
+
   return { buffer, filename };
 }
 
@@ -326,7 +367,7 @@ async function sendTelegramPhoto(
   filename?: string
 ): Promise<TelegramResponse> {
   const url = `https://api.telegram.org/bot${botToken}/sendPhoto`;
-  
+
   if (typeof photoUrlOrBuffer === 'string') {
     const body: any = {
       chat_id: chatId,
@@ -334,14 +375,14 @@ async function sendTelegramPhoto(
       caption: caption,
       parse_mode: 'HTML',
     };
-    
+
     if (threadId) {
       const threadIdMatch = threadId.match(/(\d+)$/);
       if (threadIdMatch) {
         body.message_thread_id = parseInt(threadIdMatch[1]);
       }
     }
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -350,23 +391,23 @@ async function sendTelegramPhoto(
 
     return await parseTelegramResponse(response);
   }
-  
+
   const blob = new Blob([photoUrlOrBuffer], { type: 'image/jpeg' });
   const file = new File([blob], filename || 'photo.jpg', { type: 'image/jpeg' });
-  
+
   const formData = new FormData();
   formData.append('chat_id', chatId);
   formData.append('photo', file);
   formData.append('caption', caption);
   formData.append('parse_mode', 'HTML');
-  
+
   if (threadId) {
     const threadIdMatch = threadId.match(/(\d+)$/);
     if (threadIdMatch) {
       formData.append('message_thread_id', threadIdMatch[1]);
     }
   }
-  
+
   const response = await fetch(url, {
     method: 'POST',
     body: formData
@@ -387,23 +428,23 @@ async function sendTelegramAnimation(
   filename?: string
 ): Promise<TelegramResponse> {
   const url = `https://api.telegram.org/bot${botToken}/sendAnimation`;
-  
+
   const blob = new Blob([animationBuffer], { type: 'image/gif' });
   const file = new File([blob], filename || 'animation.gif', { type: 'image/gif' });
-  
+
   const formData = new FormData();
   formData.append('chat_id', chatId);
   formData.append('animation', file);
   formData.append('caption', caption);
   formData.append('parse_mode', 'HTML');
-  
+
   if (threadId) {
     const threadIdMatch = threadId.match(/(\d+)$/);
     if (threadIdMatch) {
       formData.append('message_thread_id', threadIdMatch[1]);
     }
   }
-  
+
   const response = await fetch(url, {
     method: 'POST',
     body: formData
@@ -424,23 +465,23 @@ async function sendTelegramVideo(
   filename?: string
 ): Promise<TelegramResponse> {
   const url = `https://api.telegram.org/bot${botToken}/sendVideo`;
-  
+
   const blob = new Blob([videoBuffer], { type: 'video/mp4' });
   const file = new File([blob], filename || 'video.mp4', { type: 'video/mp4' });
-  
+
   const formData = new FormData();
   formData.append('chat_id', chatId);
   formData.append('video', file);
   formData.append('caption', caption);
   formData.append('parse_mode', 'HTML');
-  
+
   if (threadId) {
     const threadIdMatch = threadId.match(/(\d+)$/);
     if (threadIdMatch) {
       formData.append('message_thread_id', threadIdMatch[1]);
     }
   }
-  
+
   const response = await fetch(url, {
     method: 'POST',
     body: formData
@@ -457,13 +498,13 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
     const chatId = post.channel_group_id!;
     const threadId = post.thread_id || undefined;
     const caption = buildCaption(post);
-    
+
     if (caption.length > 1024) {
       throw new Error(`Caption too long (${caption.length} chars). Please shorten content to under 1024 characters.`);
     }
-    
+
     let mediaFiles: any[] = [];
-    
+
     if (post.media_files && Array.isArray(post.media_files) && post.media_files.length > 0) {
       mediaFiles = post.media_files;
     } else {
@@ -472,24 +513,24 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
         mediaFiles = postContent.media_files;
       }
     }
-    
+
     let telegramResult: TelegramResponse;
-    
+
     if (mediaFiles.length > 0) {
       const firstMedia = mediaFiles[0];
       const mediaUrl = firstMedia.url || firstMedia.src || firstMedia.supabaseUrl || firstMedia;
-      
+
       if (typeof mediaUrl !== 'string') {
         throw new Error('Invalid media URL format');
       }
-      
+
       // ✅ DETECT MEDIA TYPE (GIF, VIDEO, PHOTO)
       const { isVideo, isAnimation, isDocument, isPhoto } = detectMediaType(firstMedia, mediaUrl);
-      
+
       const { buffer, filename } = await downloadFile(mediaUrl);
       const sizeMB = (buffer.length / 1024 / 1024).toFixed(2);
       console.log(`⬇️ Downloaded ${sizeMB} MB as ${filename}`);
-      
+
       // ✅ USE CORRECT TELEGRAM API METHOD
       if (isAnimation) {
         console.log(`🎬 Uploading GIF/Animation to Telegram: ${filename}`);
@@ -505,19 +546,19 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
       console.log('💬 Sending text-only message');
       telegramResult = await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, caption, threadId);
     }
-    
+
     if (!telegramResult.ok) {
       throw new Error(`Telegram API error: ${telegramResult.description || 'Unknown error'}`);
     }
-    
+
     const messageId = telegramResult.result?.message_id?.toString();
     console.log(`✅ Telegram upload successful! Message ID: ${messageId}`);
-    
+
     return {
       success: true,
       post_id: messageId
     };
-    
+
   } catch (error) {
     console.error('❌ postToTelegram failed:', getErrorMessage(error));
     return {
@@ -532,20 +573,19 @@ async function postToTelegram(post: ScheduledPost): Promise<{ success: boolean; 
 // ============================================
 
 /**
- * ✅ FIXED: Proper scheduled_date + scheduled_time comparison
+ * ✅ FIXED (2026-09-06): local date/time now computed via getLocalDateTimeParts(),
+ * which is DST-safe. Comparison logic against scheduled_date/scheduled_time is
+ * unchanged.
  */
 async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
   try {
     const nowUTC = new Date();
-    const nowWEST = new Date(nowUTC.getTime() + (TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000));
-    
-    const currentDate = nowWEST.toISOString().split('T')[0]; // YYYY-MM-DD
-    const currentTime = nowWEST.toTimeString().slice(0, 8); // HH:MM:SS
-    
+    const { dateStr: currentDate, timeStr: currentTime } = getLocalDateTimeParts(nowUTC);
+
     console.log(`\n${'='.repeat(60)}`);
     console.log('Querying pending jobs...');
     console.log(`UTC: ${nowUTC.toISOString()}`);
-    console.log(`WEST: ${nowWEST.toISOString()}`);
+    console.log(`Local (${LOCAL_TIME_ZONE}): ${currentDate} ${currentTime}`);
     console.log(`Current Date: ${currentDate}`);
     console.log(`Current Time: ${currentTime}`);
     console.log(`Service Type: '${SERVICE_TYPE}'`);
@@ -575,13 +615,13 @@ async function claimJobs(limit: number = 50): Promise<ScheduledPost[]> {
       const postDateFull = post.scheduled_date;
       const postDate = postDateFull.split('T')[0]; // Extract YYYY-MM-DD
       const postTime = post.scheduled_time; // HH:MM:SS format
-      
+
       const isDue = (postDate < currentDate) || (postDate === currentDate && postTime <= currentTime);
-      
+
       if (isDue) {
         console.log(`✅ DUE: Post ${post.id} - Date: ${postDate}, Time: ${postTime}`);
       }
-      
+
       return isDue;
     });
 
@@ -652,14 +692,14 @@ async function processPost(post: ScheduledPost): Promise<void> {
     }
 
     const postContent = post.post_content as any;
-    
+
     const dashboardPost = {
       scheduled_post_id: post.id,
       social_platform: post.social_platform,
       post_content: post.post_content,
       external_post_id: externalPostId,
       posted_at: now.toISOString(),
-      url: externalPostId !== 'unknown' 
+      url: externalPostId !== 'unknown'
         ? `https://t.me/c/${post.channel_group_id?.replace('-100', '')}/${externalPostId}`
         : post.url,
       channel_group_id: post.channel_group_id,
@@ -730,7 +770,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
       post_status: 'failed',
       attempts: newAttempts
     };
-    
+
     if (!shouldRetry) {
       updateData.posting_status = 'failed';
     }
@@ -744,7 +784,7 @@ async function processPost(post: ScheduledPost): Promise<void> {
     if (failError) {
       console.error(`Failed to update error status: ${getErrorMessage(failError)}`);
     }
-    
+
     throw error;
   }
 }
@@ -802,7 +842,7 @@ async function processJobs(): Promise<ProcessResult> {
 
   } catch (error) {
     console.error('❌ Fatal error in processJobs:', getErrorMessage(error));
-    
+
     return {
       total_claimed: 0,
       succeeded,
@@ -820,17 +860,17 @@ async function processJobs(): Promise<ProcessResult> {
 async function main(): Promise<void> {
   try {
     const result = await processJobs();
-    
+
     console.log('\n=== FINAL RESULT ===');
     console.log(`Total Claimed: ${result.total_claimed}`);
     console.log(`Succeeded: ${result.succeeded}`);
     console.log(`Failed: ${result.failed}`);
-    
+
     if (result.errors.length > 0) {
       console.log('\nErrors:');
       result.errors.forEach(err => console.log(`  - ${err}`));
     }
-    
+
     process.exit(result.failed > 0 ? 1 : 0);
   } catch (error) {
     console.error('Fatal error:', getErrorMessage(error));
