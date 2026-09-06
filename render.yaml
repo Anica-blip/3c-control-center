@@ -8,7 +8,16 @@ services:
     # means a post always goes out within 30 minutes of its scheduled local
     # time, year-round, with no seasonal adjustment ever needed again — the
     # DST-safe local time check now lives inside render-cron.ts itself.
-    schedule: "*/30 * * * *"
+    #
+    # Restricted to roughly 05:00/06:00 through just past midnight local time
+    # (Chef's request — no need to run overnight when nothing is ever
+    # scheduled). UTC hour 23 = 23:00-23:59 local in winter (UTC+0) but
+    # 00:00-00:59 local in summer (UTC+1, one hour past midnight already);
+    # hour 0 is added explicitly so winter gets that same past-midnight
+    # catch-up run summer gets automatically. Gives a safety margin past
+    # Chef's usual ~21:00 last scheduled post, in both seasons, with no
+    # manual adjustment ever needed.
+    schedule: "*/30 0,5-23 * * *"
     buildCommand: npm install
     startCommand: npx tsx ./src/cron-runners/render-cron.ts
     envVars:
