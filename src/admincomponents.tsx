@@ -957,6 +957,11 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
                     url: 'https://anica-blip.github.io/3c-content-record-centre/'
                   },
                   {
+                    name: 'SOURCE Notes',
+                    desc: 'Access and manage your notes',
+                    url: 'https://anica-blip.github.io/3C-Goal-Tracker/source-notes/app.html'
+                  },
+                  {
                     name: '3C Drop In',
                     desc: 'Access and manage your library chats',
                     url: 'https://3c-public-library.org/vault/chat/admin.html'
