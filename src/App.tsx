@@ -9,6 +9,7 @@ import AdminComponents from './admincomponents';
 import AIChatComponent from './aichatcomponent';
 import VoiceStudioComponent from './VoiceStudioComponent';
 import { useI18n } from './i18n.tsx';
+import { createClient } from '@supabase/supabase-js';
 
 // Theme Context
 const ThemeContext = createContext({
@@ -170,6 +171,24 @@ const withThemeWrapper = (WrappedComponent: React.ComponentType<any>) => {
 
 const AUTHORIZED_USER = process.env.REACT_APP_AUTHORIZED_USER || 'Anica-blip';
 
+// Login-only Supabase client.
+// It has its own storage key, so the data clients in the other components keep behaving
+// exactly as before (no user session, system user ID fallback). PKCE flow: only this client
+// claims the sign-in return, because only it holds the matching code verifier.
+const authClient = createClient(
+  import.meta.env.VITE_SUPABASE_URL || '',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+  {
+    auth: {
+      flowType: 'pkce',
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storageKey: 'sb-3c-control-center-owner-login'
+    }
+  }
+);
+
 interface AuthenticatedUser {
   login: string;
   name: string;
@@ -178,59 +197,25 @@ interface AuthenticatedUser {
   lastLogin: string;
 }
 
-// Simple GitHub Login Screen (Hobby Plan Compatible)
-const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) => {
+// GitHub Login Screen - real sign-in through Supabase (owner only)
+const GitHubLoginScreen = ({ notice }: { notice?: string }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const GITHUB_CLIENT_ID = process.env.REACT_APP_GITHUB_CLIENT_ID || 'Iv23lizeirH3ZoENlcig';
-
-  const handleGitHubLogin = () => {
+  const handleGitHubLogin = async () => {
     setIsLoading(true);
-    
-    const state = Math.random().toString(36).substring(7);
-    localStorage.setItem('github_oauth_state', state);
-    
-    // Fixed redirect URI for Hobby plan
-    const redirectUri = 'https://3c-control-center.vercel.app/';
-    
-    const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo user&state=${state}`;
-    
-    window.location.href = githubAuthUrl;
-  };
+    setError('');
 
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const receivedState = urlParams.get('state');
-    
-    if (code && receivedState) {
-      const savedState = localStorage.getItem('github_oauth_state');
-      
-      if (receivedState === savedState) {
-        // Simulate successful auth
-        const userData = {
-          login: AUTHORIZED_USER,
-          avatar_url: `https://github.com/${AUTHORIZED_USER}.png`,
-          name: 'Anica',
-          email: '3c.innertherapy@gmail.com',
-          lastLogin: new Date().toISOString()
-        };
-        
-        localStorage.setItem('3c-github-auth', 'true');
-        localStorage.setItem('3c-github-user', JSON.stringify(userData));
-        localStorage.removeItem('github_oauth_state');
-        
-        // Clear URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        onLogin(userData);
-      } else {
-        setError('Security verification failed');
-      }
+    const { error: signInError } = await authClient.auth.signInWithOAuth({
+      provider: 'github',
+      options: { redirectTo: `${window.location.origin}/` }
+    });
+
+    if (signInError) {
+      setError('Sign-in could not be started. Please try again.');
       setIsLoading(false);
     }
-  }, []);
+  };
 
   return (
     <div style={{
@@ -269,7 +254,7 @@ const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) =>
           </p>
         </div>
 
-        {error && (
+        {(error || notice) && (
           <div style={{
             padding: '12px',
             backgroundColor: '#fee2e2',
@@ -278,7 +263,7 @@ const GitHubLoginScreen = ({ onLogin }: { onLogin: (userData: any) => void }) =>
             marginBottom: '16px'
           }}>
             <p style={{ color: '#dc2626', fontSize: '14px', margin: '0' }}>
-              ⚠️ {error}
+              ⚠️ {error || notice}
             </p>
           </div>
         )}
@@ -714,6 +699,7 @@ function App() {
   const [isDarkMode] = useState(true);
   const [currentLanguage, setCurrentLanguage] = useState('en-GB');
   const [githubUser, setGitHubUser] = useState<AuthenticatedUser | null>(null);
+  const [loginNotice, setLoginNotice] = useState('');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   
@@ -746,27 +732,67 @@ function App() {
     };
   }, []);
 
-  // Check authentication status on load
+  // Check authentication status on load (real Supabase session + owner check)
   useEffect(() => {
-    const checkAuth = () => {
-      const authStatus = localStorage.getItem('3c-github-auth');
-      const userData = localStorage.getItem('3c-github-user');
+    const checkAuth = async () => {
       const language = localStorage.getItem('3c-language') || 'en-GB';
-      
-      setIsAuthenticated(authStatus === 'true');
-      if (userData) {
-        try {
-          setGitHubUser(JSON.parse(userData));
-        } catch (e) {
-          console.error('Failed to parse user data');
-        }
-      }
       setCurrentLanguage(language);
       setI18nLanguage(language);
+
+      // Remove the old browser flags so they can never grant access again
+      localStorage.removeItem('3c-github-auth');
+      localStorage.removeItem('3c-github-user');
+      localStorage.removeItem('github_oauth_state');
+
+      try {
+        // Show a message if GitHub or Supabase sent the sign-in back with an error
+        const urlError = new URLSearchParams(window.location.search).get('error_description');
+        if (urlError) {
+          setLoginNotice('Sign-in was not completed. Please try again.');
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        const { data: { session } } = await authClient.auth.getSession();
+
+        if (session) {
+          const { data: isOwner, error: ownerError } = await authClient.rpc('is_owner');
+          const meta = session.user.user_metadata || {};
+          const githubLogin = meta.user_name || meta.preferred_username || '';
+
+          if (!ownerError && isOwner === true && githubLogin === AUTHORIZED_USER) {
+            handleLogin({
+              login: githubLogin,
+              name: meta.full_name || meta.name || githubLogin,
+              email: session.user.email || '',
+              avatar_url: meta.avatar_url || `https://github.com/${githubLogin}.png`,
+              lastLogin: new Date().toISOString()
+            });
+          } else {
+            await authClient.auth.signOut({ scope: 'local' });
+            setLoginNotice('That account is not the owner account.');
+          }
+        }
+      } catch (e) {
+        console.error('Sign-in check failed');
+        setLoginNotice('Sign-in could not be checked. Please try again.');
+      }
+
       setIsLoading(false);
     };
 
     checkAuth();
+
+    // If the session ends (signed out here, in another tab, or it can no longer refresh)
+    const { data: listener } = authClient.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false);
+        setGitHubUser(null);
+      }
+    });
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, [setI18nLanguage]);
 
   const handleLogin = (userData: AuthenticatedUser) => {
@@ -778,8 +804,13 @@ function App() {
     setGitHubUser(userData);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm('Are you sure you want to logout?')) {
+      try {
+        await authClient.auth.signOut({ scope: 'local' });
+      } catch (e) {
+        console.error('Sign-out failed');
+      }
       localStorage.removeItem('3c-github-auth');
       localStorage.removeItem('3c-github-user');
       setIsAuthenticated(false);
@@ -843,7 +874,7 @@ function App() {
 
   // Show login if not authenticated
   if (!isAuthenticated) {
-    return <GitHubLoginScreen onLogin={handleLogin} />;
+    return <GitHubLoginScreen notice={loginNotice} />;
   }
 
   // Main authenticated app
