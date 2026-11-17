@@ -10,6 +10,7 @@ import AIChatComponent from './aichatcomponent';
 import VoiceStudioComponent from './VoiceStudioComponent';
 import { useI18n } from './i18n.tsx';
 import { createClient } from '@supabase/supabase-js';
+import logo3C from './assets/3C Thread To Success logo.png';
 
 // Theme Context
 const ThemeContext = createContext({
@@ -218,105 +219,140 @@ const GitHubLoginScreen = ({ notice }: { notice?: string }) => {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        padding: '40px',
-        maxWidth: '400px',
-        width: '90%',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        border: '1px solid #e5e7eb'
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🧵</div>
-          <h1 style={{
-            fontSize: '24px',
-            fontWeight: 'bold',
-            color: '#3b82f6',
-            margin: '0 0 8px 0'
-          }}>
-            3C Thread To Success
-          </h1>
-          <p style={{
-            color: '#6b7280',
-            fontSize: '14px',
-            margin: '0'
-          }}>
-            Control Centre Dashboard
-          </p>
-        </div>
+    <div className="cc-login-page">
+      <style>{`
+        .cc-login-page {
+          position: fixed;
+          inset: 0;
+          overflow-y: auto;
+          padding: 20px 0;
+          box-sizing: border-box;
+          background: #3b1f5e;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          font-family: 'Open Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .cc-login-card {
+          box-sizing: border-box;
+          width: min(420px, 90vw);
+          margin-top: auto;
+          padding: 40px 36px 32px;
+          background: #2d1650;
+          border-radius: 18px;
+          box-shadow: 0 8px 40px rgba(0, 0, 0, 0.45);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 14px;
+          text-align: center;
+        }
+        .cc-login-logo {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          border: 2px solid rgba(255, 255, 255, 0.25);
+          overflow: hidden;
+          margin-bottom: 4px;
+          background: #1a0b2e;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .cc-login-logo img { width: 100%; height: 100%; object-fit: cover; }
+        .cc-login-title {
+          font-size: 1.6rem;
+          font-weight: 800;
+          color: #ffffff;
+          letter-spacing: 0.01em;
+        }
+        .cc-login-sub {
+          font-size: 0.95rem;
+          color: rgba(196, 181, 245, 0.65);
+          line-height: 1.5;
+          margin-top: -4px;
+        }
+        .cc-login-btn {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          margin-top: 10px;
+          padding: 15px 20px;
+          background: linear-gradient(135deg, #7c3aed, #a855f7);
+          border: none;
+          border-radius: 50px;
+          color: #ffffff;
+          font-family: inherit;
+          font-size: 0.88rem;
+          font-weight: 700;
+          letter-spacing: 0.06em;
+          cursor: pointer;
+          transition: all 0.18s ease;
+          box-shadow: 0 4px 20px rgba(124, 58, 237, 0.45);
+        }
+        .cc-login-btn:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 28px rgba(124, 58, 237, 0.65);
+        }
+        .cc-login-btn:active:not(:disabled) { transform: scale(0.97); }
+        .cc-login-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+        .cc-login-btn svg { width: 18px; height: 18px; fill: #ffffff; flex-shrink: 0; }
+        .cc-login-status {
+          font-size: 0.73rem;
+          color: rgba(196, 181, 245, 0.5);
+          min-height: 18px;
+          line-height: 1.5;
+        }
+        .cc-login-status.error { color: #f87171; }
+        .cc-login-status.loading {
+          color: rgba(168, 85, 247, 0.9);
+          animation: cc-login-pulse 1.8s ease-in-out infinite;
+        }
+        .cc-login-watermark {
+          margin-top: 20px;
+          margin-bottom: auto;
+          font-size: 0.75rem;
+          color: rgba(255, 255, 255, 0.3);
+          text-align: center;
+          line-height: 1.5;
+          padding: 0 12px;
+        }
+        @keyframes cc-login-pulse {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 1; }
+        }
+      `}</style>
 
-        {(error || notice) && (
-          <div style={{
-            padding: '12px',
-            backgroundColor: '#fee2e2',
-            border: '1px solid #fca5a5',
-            borderRadius: '8px',
-            marginBottom: '16px'
-          }}>
-            <p style={{ color: '#dc2626', fontSize: '14px', margin: '0' }}>
-              ⚠️ {error || notice}
-            </p>
-          </div>
-        )}
+      <div className="cc-login-card">
+        <div className="cc-login-logo">
+          <img src={logo3C} alt="3C Logo" />
+        </div>
+        <div className="cc-login-title">3C Thread To Success</div>
+        <div className="cc-login-sub">Control Centre Dashboard</div>
 
         <button
+          className="cc-login-btn"
           onClick={handleGitHubLogin}
           disabled={isLoading}
-          style={{
-            width: '100%',
-            padding: '12px',
-            backgroundColor: isLoading ? '#6b7280' : '#24292f',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: '600',
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            marginBottom: '16px'
-          }}
         >
-          {isLoading ? (
-            'Connecting to GitHub...'
-          ) : (
-            <>
-              <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
-              </svg>
-              Continue with GitHub
-            </>
-          )}
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+          </svg>
+          Continue with GitHub
         </button>
 
-        <div style={{
-          padding: '16px',
-          backgroundColor: '#f8fafc',
-          borderRadius: '8px',
-          border: '1px solid #e5e7eb'
-        }}>
-          <p style={{
-            fontSize: '12px',
-            color: '#6b7280',
-            margin: '0',
-            textAlign: 'center',
-            lineHeight: '1.5'
-          }}>
-            [3C] <strong>Thread To Success</strong><br />
-            Professional dashboard for content management and analytics.
-          </p>
+        <div
+          className={`cc-login-status${isLoading ? ' loading' : (error || notice) ? ' error' : ''}`}
+          aria-live="polite"
+        >
+          {isLoading ? 'Redirecting to GitHub…' : (error || notice)}
         </div>
+      </div>
+
+      <div className="cc-login-watermark">
+        Designed and Built with ❤️ by Claude (Anthropic) × Chef Anica · 3C Thread To Success™ Cooking Lab 🧪👨‍🍳
       </div>
     </div>
   );
