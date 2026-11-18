@@ -29,9 +29,19 @@ interface JanDocument {
 
 interface AIChatComponentProps {
   isDarkMode?: boolean;
+  // Gives back the owner's Supabase sign-in token. Jan's Worker only answers the owner.
+  getAccessToken?: () => Promise<string | null>;
 }
 
-const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false }) => {
+const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false, getAccessToken }) => {
+  // Headers for every call to Jan's Worker: the owner's sign-in token goes with each request.
+  const workerHeaders = async (): Promise<Record<string, string>> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const token = getAccessToken ? await getAccessToken() : null;
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
+
   const [isOnline, setIsOnline] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionTokens, setSessionTokens] = useState({ input: 0, output: 0 });
@@ -205,7 +215,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
     try {
       const response = await fetch(WORKER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await workerHeaders(),
         body: JSON.stringify({ action: 'get-references-by-template', templateId, limit: 50 })
       });
       const data = await response.json();
@@ -230,7 +240,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
       try {
         const response = await fetch(WORKER_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await workerHeaders(),
           body: JSON.stringify({ action: 'get-references-by-template', templateId: t.id, limit: 50 })
         });
         const data = await response.json();
@@ -272,7 +282,7 @@ const AIChatComponent: React.FC<AIChatComponentProps> = ({ isDarkMode = false })
           try {
             const response = await fetch(WORKER_URL, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: await workerHeaders(),
               body: JSON.stringify({ action: 'get-references-by-template', templateId: t.id, limit: 3 })
             });
             const data = await response.json();
@@ -623,7 +633,7 @@ EDITOR CONTENT AWARENESS:
 
     const response = await fetch(WORKER_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await workerHeaders(),
       body: JSON.stringify({
         system: buildSystemPrompt(doc),
         messages: apiMessages.current,
@@ -756,7 +766,7 @@ EDITOR CONTENT AWARENESS:
         try {
           const urlResponse = await fetch(WORKER_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: await workerHeaders(),
             body: JSON.stringify({ action: 'fetch-url', url: urlMatch[0] })
           });
           const urlData = await urlResponse.json();
@@ -836,7 +846,7 @@ EDITOR CONTENT AWARENESS:
     try {
       const response = await fetch(WORKER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await workerHeaders(),
         body: JSON.stringify({
           action: 'save-template',
           character: currentDocument.character,
@@ -872,7 +882,7 @@ EDITOR CONTENT AWARENESS:
     try {
       const response = await fetch(WORKER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await workerHeaders(),
         body: JSON.stringify({
           action: 'save-content',
           title: currentDocument.title || 'Untitled',
@@ -902,7 +912,7 @@ EDITOR CONTENT AWARENESS:
     try {
       const response = await fetch(WORKER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await workerHeaders(),
         body: JSON.stringify({ action: 'list-documents' })
       });
       const data = await response.json();
@@ -918,7 +928,7 @@ EDITOR CONTENT AWARENESS:
     try {
       const response = await fetch(WORKER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await workerHeaders(),
         body: JSON.stringify({ action: 'load-document', id })
       });
       const data = await response.json();
@@ -968,7 +978,7 @@ EDITOR CONTENT AWARENESS:
     try {
       const synopsisResponse = await fetch(WORKER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await workerHeaders(),
         body: JSON.stringify({
           system: `You are Jan. Write only the synopsis as requested — no greeting, no preamble, no sign-off. Plain text only.`,
           messages: [{ role: 'user', content: synopsisPrompt }]
@@ -979,7 +989,7 @@ EDITOR CONTENT AWARENESS:
 
       const response = await fetch(WORKER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await workerHeaders(),
         body: JSON.stringify({
           action: 'save-post-context',
           title: currentDocument.title,
@@ -1725,7 +1735,7 @@ You have full context from this session. Generate the post description package n
                       try {
                         const response = await fetch(WORKER_URL, {
                           method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
+                          headers: await workerHeaders(),
                           body: JSON.stringify({
                             action: 'save-reference', id: refId, templateId: selectedTemplate,
                             title: newSample.title, content: newSample.content,
