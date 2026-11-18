@@ -31,7 +31,7 @@ Together, they create a balanced environment for growth, learning, and progressi
 
 **Professional content management and marketing automation dashboard for the modern creator**
 
-[🌐 Live Demo](https://your-username.github.io/3c-control-center/) • [📖 Documentation](#features) • [🚀 Quick Start](#quick-start)
+[🌐 Live Demo](https://anica-blip.github.io/3c-control-center/) • [📖 Documentation](#features) • [🚀 Quick Start](#quick-start)
 
 </div>
 
@@ -78,7 +78,7 @@ Together, they create a balanced environment for growth, learning, and progressi
 ### ⚙️ **Admin Center**
 - **Template Management** - Content template library
 - **Brand Assets** - Logo, colors, and style guide management
-- **External Integrations** - Canva, Notion, and tool connections
+- **External Integrations** - Canva and tool connections
 - **System Configuration** - Platform settings and preferences
 
 ## 🛠️ Tech Stack
@@ -89,7 +89,7 @@ Together, they create a balanced environment for growth, learning, and progressi
 | **Backend** | Supabase (PostgreSQL, Real-time, Auth, Storage) |
 | **UI Components** | Radix UI, Lucide Icons, Recharts |
 | **Build Tools** | Vite, PostCSS, Autoprefixer |
-| **Deployment** | GitHub Pages, GitHub Actions |
+| **Deployment** | Vercel, GitHub Pages, GitHub Actions |
 | **State Management** | TanStack Query, React Hooks |
 
 ## 🚀 Quick Start
