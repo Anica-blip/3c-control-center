@@ -1,5 +1,4 @@
 // Shared platform display utilities for Schedule Manager Component
-import { getTheme } from './config';
 
 // Basic platform descriptor used for icons
 interface SimplePlatform {
@@ -36,8 +35,7 @@ function normalizePlatform(input: PlatformInput): SimplePlatform {
 }
 
 export function getPlatformIcon(platformInput: PlatformInput, size: number = 14) {
-  const themeLike = (getTheme as any)?.() ?? { theme: { textSecondary: '#9ca3af', cardBg: '#020617' } };
-  const theme = (themeLike as any).theme || themeLike;
+  const theme = { textSecondary: '#9ca3af', cardBg: '#020617' };
 
   const platform = normalizePlatform(platformInput);
   const rawIcon = (platform.platform_icon || '').toString();
