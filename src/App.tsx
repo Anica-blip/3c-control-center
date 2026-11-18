@@ -1438,7 +1438,13 @@ function App() {
           )}
 
           {/* NEW: AI Chat Manager section */}
-          {activeSection === 'ai-chat-manager' && <AIChatComponent isDarkMode={isDarkMode} />}
+          {activeSection === 'ai-chat-manager' && <AIChatComponent
+              isDarkMode={isDarkMode}
+              getAccessToken={async () => {
+                const { data } = await authClient.auth.getSession();
+                return data.session?.access_token ?? null;
+              }}
+            />}
 
           {/* Voice Studio section */}
           {activeSection === 'voice-studio' && <VoiceStudioComponent isDarkMode={isDarkMode} />}
