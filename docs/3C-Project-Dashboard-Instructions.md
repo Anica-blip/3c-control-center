@@ -7,8 +7,8 @@
 ### **Data Flow Hierarchy:**
 ```
 Admin Center (Master)
-├── Template Management → Wasabi Storage
-├── Configuration Sync → Notion Database  
+├── Template Management → Supabase (dashboard_templates)
+├── File Storage → Supabase Storage + Cloudflare R2
 └── Publishing Pipeline → Supabase
     └── Content Distribution → External APIs
 ```
@@ -30,34 +30,18 @@ supabase.from('posts').insert({
 })
 ```
 
-### **Notion (Configuration Database):**
-- **Tab title functions/metadata**
-- **Component configurations**
-- **User preferences**
-- **Dashboard settings**
-- **Navigation state**
+### **File Storage (Supabase Storage + Cloudflare R2):**
+- **Media assets and uploads** → Supabase Storage (bucket `content-media`)
+- **Brand kit assets** → Supabase Storage
+- **Library files** → Cloudflare R2 bucket `3c-library-files`
 
 **Usage Pattern:**
 ```typescript
-// When component needs configuration
-notion.databases.query({
-  database_id: 'component_config_db',
-  filter: { component: 'content-manager' }
+// When storing media
+supabase.storage.from('content-media').upload(fileName, file, {
+  cacheControl: '3600',
+  upsert: true
 })
-```
-
-### **Wasabi (Internal File Storage):**
-- **Media assets (images, videos)**
-- **Template files**
-- **Brand kit assets**
-- **Backup configurations**
-- **Export/import data**
-
-**Usage Pattern:**
-```typescript
-// When storing media or templates
-wasabi.upload('templates/', templateFile)
-wasabi.getSignedUrl('brand-kit/logo.png')
 ```
 
 ## 🏗️ **Admin Center as Master Hub**
@@ -77,7 +61,7 @@ Admin Center
 │   ├── Chat Response Templates
 │   └── Schedule Templates
 ├── 🎨 Brand Kit Management
-│   ├── Logos & Assets (Wasabi)
+│   ├── Logos & Assets (Supabase Storage)
 │   ├── Color Schemes
 │   ├── Typography Rules
 │   └── Style Guidelines
@@ -85,28 +69,20 @@ Admin Center
 │   ├── Platform API Keys
 │   ├── Service Endpoints
 │   ├── User Permissions
-│   └── Component Settings (Notion)
+│   └── Component Settings
 └── 🔄 Sync Management
     ├── Supabase Connection Status
-    ├── Notion Database Health
-    ├── Wasabi Storage Quota
+    ├── Storage Status (Supabase Storage, Cloudflare R2)
     └── External API Status
 ```
 
 ## 🔄 **Synchronization Flow:**
 
 ### **Template Creation (Admin → Other Components):**
-1. **Admin Center** creates template → **Wasabi storage**
-2. **Template metadata** → **Notion database**
-3. **Other components** fetch available templates from Notion
-4. **Content creation** uses template from Wasabi
-5. **Finished content** → **Supabase for publishing**
-
-### **Configuration Updates:**
-1. **Admin Center** updates settings → **Notion database**
-2. **Components listen** for config changes via Notion API
-3. **Real-time updates** propagate across dashboard
-4. **Backup configurations** → **Wasabi storage**
+1. **Admin Center** creates template → **Supabase** (`dashboard_templates`)
+2. **Other components** fetch available templates from Supabase
+3. **Content creation** uses the template
+4. **Finished content** → **Supabase for publishing**
 
 ## 💾 **Data Models:**
 
@@ -118,7 +94,6 @@ interface Template {
   type: 'social' | 'email' | 'chat' | 'schedule';
   content: string;
   variables: string[];
-  wasabi_url: string;
   created_by: string;
   updated_at: Date;
   metadata: {
@@ -145,15 +120,12 @@ interface ComponentConfig {
 
 ### **Phase 3A: Admin Center Foundation**
 1. **Template Management System**
-2. **Wasabi integration for asset storage**  
-3. **Notion configuration database**
-4. **Basic brand kit structure**
+2. **Basic brand kit structure**
 
 ### **Phase 3B: Service Connections**
 1. **Supabase publishing pipeline**
-2. **Notion API integration**
-3. **Wasabi file management**
-4. **Error handling & fallbacks**
+2. **File management (Supabase Storage, Cloudflare R2)**
+3. **Error handling & fallbacks**
 
 ### **Phase 3C: Component Synchronization**
 1. **Content Manager** connects to templates
@@ -169,27 +141,16 @@ interface ComponentConfig {
 REACT_APP_SUPABASE_URL=
 REACT_APP_SUPABASE_ANON_KEY=
 
-# Notion
-REACT_APP_NOTION_TOKEN=
-REACT_APP_NOTION_DATABASE_ID=
-
-# Wasabi
-REACT_APP_WASABI_ACCESS_KEY=
-REACT_APP_WASABI_SECRET_KEY=
-REACT_APP_WASABI_BUCKET=
-REACT_APP_WASABI_REGION=
 ```
 
 ### **Required Dependencies:**
 ```bash
 npm install @supabase/supabase-js
-npm install @notionhq/client
-npm install aws-sdk  # For Wasabi S3-compatible API
 ```
 
 ## 🎯 **Next Steps:**
 1. Set up Admin Center template management interface
-2. Configure service connections (Supabase, Notion, Wasabi)
+2. Configure service connections (Supabase, Cloudflare R2)
 3. Build template creation/editing tools
 4. Establish synchronization patterns for other components
 
@@ -302,6 +263,9 @@ Styling: Inline styles (NO Tailwind, NO external CSS)
 - ✅ Added static controls with language flags
 - ✅ Fixed webchat auto-scroll issue
 - ✅ Added headers to all navigation sections
+
+### **2026-11-18 - Notion and Wasabi removed:**
+- ✅ Notion and Wasabi are no longer used; references removed from the Admin Center and this document
 
 ### **[DATE] - Next:**
 - 🔄 Begin precision work on individual components
