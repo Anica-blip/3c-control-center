@@ -191,32 +191,6 @@ export function Admin() {
 
         <TabsContent value="libraries" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-3">
-            {/* Wasabi */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Library className="h-5 w-5" />
-                  Wasabi
-                </CardTitle>
-                <CardDescription>
-                  Cloud storage integration
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-center py-8">
-                  <Library className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-sm text-muted-foreground">
-                    Integration for Wasabi cloud storage
-                  </p>
-                </div>
-                <Button variant="outline" className="w-full" disabled>
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Connect Wasabi
-                  <Badge variant="secondary" className="ml-auto">Soon</Badge>
-                </Button>
-              </CardContent>
-            </Card>
-
             {/* Canva */}
             <Card>
               <CardHeader>
@@ -243,31 +217,6 @@ export function Admin() {
               </CardContent>
             </Card>
 
-            {/* Notion */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Notion
-                </CardTitle>
-                <CardDescription>
-                  Content management integration
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-center py-8">
-                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-sm text-muted-foreground">
-                    Import content from Notion pages
-                  </p>
-                </div>
-                <Button variant="outline" className="w-full" disabled>
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Connect Notion
-                  <Badge variant="secondary" className="ml-auto">Soon</Badge>
-                </Button>
-              </CardContent>
-            </Card>
           </div>
         </TabsContent>
 
