@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -232,16 +231,6 @@ export function MediaContentForm({ onSuccess }: { onSuccess?: () => void }) {
               >
                 <Palette className="h-4 w-4" />
                 Import from Canva
-                <Badge variant="secondary" className="ml-auto text-xs">Soon</Badge>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="flex items-center gap-2"
-                disabled
-              >
-                <FileText className="h-4 w-4" />
-                Import from Notion
                 <Badge variant="secondary" className="ml-auto text-xs">Soon</Badge>
               </Button>
             </div>
