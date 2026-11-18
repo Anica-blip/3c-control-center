@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -532,12 +531,6 @@ export function CaelumControlCenter() {
                   <a href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-6 w-6" />
                     Google Search Console
-                  </a>
-                </Button>
-                <Button variant="outline" className="h-20 flex flex-col gap-2" asChild>
-                  <a href="https://www.notion.so/3C-Thread-to-Success-Community-Hub-1866ace1e8398050b2c6c41ea2f73a53" target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-6 w-6" />
-                    Notion Community Hub
                   </a>
                 </Button>
                 <Button variant="outline" className="h-20 flex flex-col gap-2" asChild>
