@@ -1089,7 +1089,6 @@ function AdminTemplatesTab({ theme }: { theme: any }) {
 // =============================================================================
 
 function AdminLibrariesTab({ theme }: { theme: any }) {
-  const [notionConnected, setNotionConnected] = useState(false);
   const [canvaConnected, setCanvaConnected] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
 
@@ -1101,19 +1100,6 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, 3000);
-  };
-
-  const handleNotionToggle = () => {
-    if (notionConnected) {
-      setNotionConnected(false);
-      showNotification('Notion disconnected successfully', 'info');
-    } else {
-      showNotification('Connecting to Notion...', 'info');
-      setTimeout(() => {
-        setNotionConnected(true);
-        showNotification('Notion connected successfully!', 'success');
-      }, 1500);
-    }
   };
 
   const handleCanvaToggle = () => {
@@ -1251,60 +1237,6 @@ function AdminLibrariesTab({ theme }: { theme: any }) {
       
       <div style={{ display: 'grid', gap: '0' }}>
         
-        {/* NOTION INTEGRATION */}
-        <IntegrationCard
-          title="Notion Integration"
-          subtitle="Content management and documentation"
-          emoji=""
-          connected={notionConnected}
-          onToggle={handleNotionToggle}
-          gradientColor={theme.gradientBlue}
-        >
-          {notionConnected ? (
-            <div>
-              <h4 style={{ color: theme.textPrimary, marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' }}>
-                Connected to Internal Hub
-              </h4>
-              <div style={{ fontSize: '14px', color: theme.textSecondary, marginBottom: '20px' }}>
-                Content Calendar • Brand Guidelines • Templates
-              </div>
-              <div style={{
-                padding: '20px', 
-                backgroundColor: 'rgba(255,255,255,0.1)', 
-                borderRadius: '8px',
-                border: `1px solid ${theme.borderColor}`
-              }}>
-                <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold', color: theme.textPrimary }}>
-                  Main Hub Link:
-                </p>
-                <a
-                  href="https://www.notion.so/INTERNAL-HUB-2256ace1e8398087a3c9d25c1cf253e5"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ 
-                    fontSize: '12px', 
-                    color: '#3b82f6', 
-                    textDecoration: 'underline',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  notion.so/INTERNAL-HUB-2256ace1e8398087a3c9d25c1cf253e5
-                </a>
-              </div>
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '40px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
-              <p style={{ color: theme.textPrimary, fontSize: '16px', marginBottom: '8px', fontWeight: 'bold' }}>
-                Connect your Notion workspace
-              </p>
-              <p style={{ color: theme.textSecondary, fontSize: '14px', margin: '0' }}>
-                Access your content calendars, brand guidelines, and documentation
-              </p>
-            </div>
-          )}
-        </IntegrationCard>
-
         {/* CLOUDFLARE R2 BUCKET */}
         <IntegrationCard
           title="Cloudflare R2 Bucket"
