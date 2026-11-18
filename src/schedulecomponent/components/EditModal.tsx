@@ -1036,7 +1036,6 @@ export default function EditModal({
           {/* Social Platforms */}
           <div>
             <label style={{
-              display: 'block',
               fontSize: '14px',
               fontWeight: '600',
               color: theme.text,
@@ -1154,7 +1153,6 @@ export default function EditModal({
           {/* Telegram Configurations */}
           <div>
             <label style={{
-              display: 'block',
               fontSize: '14px',
               fontWeight: '600',
               color: theme.text,
