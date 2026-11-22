@@ -67,7 +67,7 @@ Tables the dashboard touches: `content_posts`, `scheduled_posts`, `dashboard_pos
 
 1. Change the code in the repo and commit to `main`.
 2. Vercel builds and publishes by itself (`vite build`, output `dist`).
-3. Environment variables are set in Vercel → Project → Settings → Environment Variables. Names are listed in `.env.example`: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `REACT_APP_AUTHORIZED_USER`, `REACT_APP_TIMEZONE`. Vercel also holds `VITE_SUPABASE_PROJECT_ID` and `SYSTEM_USER_ID`. The real `.env` is never committed.
+3. Environment variables are set in Vercel → Project → Settings → Environment Variables. Names are listed in `.env.example`: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `REACT_APP_AUTHORIZED_USER`, `REACT_APP_TIMEZONE`. Vercel also holds `VITE_SUPABASE_PROJECT_ID` and `SYSTEM_USER_ID`. **Vercel must hold both public key names, with the same anon key as the value:** `VITE_SUPABASE_ANON_KEY` (the schedule part and the login read it) and `VITE_SUPABASE_PUBLISHABLE_KEY` (the content manager and the settings tab read it). Never put the service role key in any `VITE_` variable. A new or changed variable only applies after a Redeploy. The real `.env` is never committed; the repo's old `.env` used to supply `VITE_SUPABASE_PUBLISHABLE_KEY`, and when it was removed on 22 Nov 2026 the content manager and settings went empty until the variable was added in Vercel.
 4. Live check: open the dashboard in a private window. It must show the sign-in screen and nothing else until the owner signs in.
 5. Local work: copy `.env.example` to `.env`, fill in the values, `npm install`, `npm run dev`.
 
@@ -90,9 +90,11 @@ Chef's live save: schedule one post with service type `aurion-bot` and check it 
 - `package.json` and the `docs/` notes still mention old runners in places; `docs/CRON_SETUP.md` describes the removed runners.
 - Confirm leaked-password protection and Confirm email in the Supabase Auth settings.
 - Clean the unused Vercel variables if Chef wants a minimal list.
+- The code reads the public key under two names (`VITE_SUPABASE_ANON_KEY` and `VITE_SUPABASE_PUBLISHABLE_KEY`). Pick one name in a later dashboard job so only one variable is needed.
 
 ## 10. Change log
 
 | Date | Change | By |
 |---|---|---|
+| 22 Nov 2026 | `VITE_SUPABASE_PUBLISHABLE_KEY` added in Vercel (it had only come from the removed `.env`); noted in section 7 | Champ |
 | 22 Nov 2026 | Old posting runners, Render and Railway files, `api/auth.ts`, the old posting workflow and the committed `.env` removed; `.env.example` added; three unused scripts removed from `package.json`; README.md and SETUP.md written to the Standard | Champ |
