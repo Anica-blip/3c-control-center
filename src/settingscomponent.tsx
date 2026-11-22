@@ -1,9 +1,12 @@
+// Repo path: src/settingscomponent.tsx
 import React, { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+// The client comes from the one shared client (src/lib/supabaseClient.ts),
+// so it carries the owner's sign-in. Do not create a client here.
+import { supabase as sharedClient } from './lib/supabaseClient';
 
-// Initialize Supabase client with debugging
+// Supabase settings check with debugging
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Debug environment variables
 console.log('Environment check:', {
@@ -16,8 +19,8 @@ console.log('Environment check:', {
 
 let supabase = null;
 if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-  console.log('Supabase client created successfully');
+  supabase = sharedClient;
+  console.log('Supabase client ready (shared instance)');
 } else {
   console.error('Missing Supabase environment variables');
 }
