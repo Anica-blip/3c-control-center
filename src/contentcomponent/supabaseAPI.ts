@@ -1,21 +1,18 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+// Repo path: src/contentcomponent/supabaseAPI.ts
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { ContentPost, MediaFile } from './types';
+// The client comes from the one shared client (src/lib/supabaseClient.ts),
+// so it carries the owner's sign-in. Do not create a client here.
+import { supabase as sharedClient } from '../lib/supabaseClient';
 
-// Initialize Supabase client - SINGLE INSTANCE with proper typing
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 let supabase: SupabaseClient | null = null;
 
 if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
-    }
-  });
-  console.log('Supabase client created successfully (centralized instance)');
+  supabase = sharedClient;
+  console.log('Supabase client ready (shared instance)');
 } else {
   console.error('Missing Supabase environment variables:', {
     url: !!supabaseUrl,
