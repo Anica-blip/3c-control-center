@@ -453,7 +453,8 @@ const uploadImageToStorage = async (file, characterName) => {
   }
 
   try {
-    const fileName = `${characterName.replace(/[^a-zA-Z0-9]/g, '_')}_avatar_${Date.now()}.png`;
+    // Fixed name per character: every save replaces the same file (upsert below)
+    const fileName = `${characterName.replace(/[^a-zA-Z0-9]/g, '_')}_avatar.png`;
     
     console.log('Uploading to storage with filename:', fileName);
     const { data, error } = await supabase.storage
@@ -472,8 +473,11 @@ const uploadImageToStorage = async (file, characterName) => {
       .from('avatars')
       .getPublicUrl(fileName);
 
-    console.log('Avatar uploaded successfully:', publicUrl);
-    return publicUrl;
+    // Version tag so browsers show the new picture straight away (same address, new ?v=)
+    const versionedUrl = `${publicUrl}?v=${Date.now()}`;
+
+    console.log('Avatar uploaded successfully:', versionedUrl);
+    return versionedUrl;
   } catch (error) {
     console.error('Upload error:', error);
     throw error;
