@@ -1,3 +1,4 @@
+// Repo path: src/App.tsx
 import React, { useState, useEffect, createContext, useContext } from 'react';
 
 import ContentComponent from './contentcomponent';
@@ -9,7 +10,9 @@ import AdminComponents from './admincomponents';
 import AIChatComponent from './aichatcomponent';
 import VoiceStudioComponent from './VoiceStudioComponent';
 import { useI18n } from './i18n.tsx';
-import { createClient } from '@supabase/supabase-js';
+// The one shared Supabase client (src/lib/supabaseClient.ts): it holds the owner's sign-in
+// and every component uses it, so all saves, reads and uploads carry that sign-in.
+import { supabase as authClient } from './lib/supabaseClient';
 import logo3C from './assets/3C Thread To Success logo.png';
 
 // Theme Context
@@ -172,23 +175,9 @@ const withThemeWrapper = (WrappedComponent: React.ComponentType<any>) => {
 
 const AUTHORIZED_USER = process.env.REACT_APP_AUTHORIZED_USER || 'Anica-blip';
 
-// Login-only Supabase client.
-// It has its own storage key, so the data clients in the other components keep behaving
-// exactly as before (no user session, system user ID fallback). PKCE flow: only this client
-// claims the sign-in return, because only it holds the matching code verifier.
-const authClient = createClient(
-  import.meta.env.VITE_SUPABASE_URL || '',
-  import.meta.env.VITE_SUPABASE_ANON_KEY || '',
-  {
-    auth: {
-      flowType: 'pkce',
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      storageKey: 'sb-3c-control-center-owner-login'
-    }
-  }
-);
+// Sign-in uses the shared client (imported above as authClient). It is the same client the
+// data components use, so after sign-in they all carry the owner's session.
+// PKCE flow and the session name (sb-3c-control-center-owner-login) are set in src/lib/supabaseClient.ts.
 
 interface AuthenticatedUser {
   login: string;
