@@ -1,14 +1,8 @@
+// Repo path: src/admincomponents.tsx
 import React, { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-// =============================================================================
-// PROPER SUPABASE CLIENT SETUP - DOCUMENTATION COMPLIANT
-// =============================================================================
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-
-// Initialize Supabase client - THE OFFICIAL WAY
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// The client comes from the one shared client (src/lib/supabaseClient.ts),
+// so it carries the owner's sign-in. Do not create a client here.
+import { supabase } from './lib/supabaseClient';
 
 // =============================================================================
 // DOCUMENTATION-COMPLIANT SUPABASE API METHODS
