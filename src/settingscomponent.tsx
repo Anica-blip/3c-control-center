@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 // The client comes from the one shared client (src/lib/supabaseClient.ts),
 // so it carries the owner's sign-in. Do not create a client here.
 import { supabase as sharedClient } from './lib/supabaseClient';
+import MediaCleanup from './mediacleanupcomponent';
 
 // Supabase settings check with debugging
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -2521,6 +2522,8 @@ const deleteExternalService = async (id) => {
                     </div>
                   )}
                 </div>
+
+                <MediaCleanup isDarkMode={isDarkMode} />
               </div>
             )}
           </div>
