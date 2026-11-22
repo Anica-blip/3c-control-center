@@ -1,13 +1,13 @@
+// Repo path: src/webchatcomponent/supabaseAPI.ts
 // =============================================================================
 // WEBCHAT COMPONENT - SUPABASE API OPERATIONS
 // =============================================================================
 
-import { createClient } from '@supabase/supabase-js';
-import { SUPABASE_CONFIG, DB_TABLES, detectEmailProvider } from './config';
+import { DB_TABLES, detectEmailProvider } from './config';
 import type { EmailAccount, NotificationCount } from './types';
-
-// Initialize Supabase client
-const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+// The client comes from the one shared client (src/lib/supabaseClient.ts),
+// so it carries the owner's sign-in. Do not create a client here.
+import { supabase } from '../lib/supabaseClient';
 
 // =============================================================================
 // EMAIL ACCOUNTS OPERATIONS
