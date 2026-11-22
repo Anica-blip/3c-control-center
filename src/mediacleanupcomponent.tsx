@@ -88,7 +88,7 @@ export default function MediaCleanup({ isDarkMode }: { isDarkMode: boolean }) {
   };
 
   // Deletes only the files ticked inside the given list (one folder, or the sent-posts list)
-  const deleteTicked = async (group: MediaItem[]) => {
+  const deleteTicked = async (group: MediaItem[], label: string) => {
     const names = group.filter(i => selected.has(i.name)).map(i => i.name);
     if (names.length === 0) return;
 
@@ -112,7 +112,7 @@ export default function MediaCleanup({ isDarkMode }: { isDarkMode: boolean }) {
 
       const totalBytes = toDelete.reduce((sum, n) => sum + (bySafeName.get(n)?.size_bytes || 0), 0);
       const ok = window.confirm(
-        `Delete ${toDelete.length} file(s), ${toMB(totalBytes)} MB, from the ${BUCKET} bucket?\n\nThis cannot be undone.` +
+        `Delete ${toDelete.length} file(s), ${toMB(totalBytes)} MB, from ${label} in the ${BUCKET} bucket?\n\nThis cannot be undone.` +
           (skipped > 0 ? `\n\n(${skipped} ticked file(s) are no longer on the safe list and will be skipped.)` : '')
       );
       if (!ok) {
@@ -241,11 +241,12 @@ export default function MediaCleanup({ isDarkMode }: { isDarkMode: boolean }) {
           {ticked.length} ticked, {sumMB(ticked)} MB
         </span>
         <button
-          onClick={() => deleteTicked(list)}
+          className="mc-delete-btn"
+          onClick={() => deleteTicked(list, label)}
           disabled={busy || none}
           style={{
             marginLeft: 'auto',
-            padding: '12px 22px',
+            padding: '12px 28px',
             backgroundColor: busy || none ? '#9ca3af' : '#dc2626',
             color: '#ffffff',
             border: 'none',
@@ -255,7 +256,7 @@ export default function MediaCleanup({ isDarkMode }: { isDarkMode: boolean }) {
             fontWeight: 'bold'
           }}
         >
-          {busy ? '⏳ Working...' : `🗑️ Delete ticked in ${label}`}
+          {busy ? 'Working...' : 'Delete'}
         </button>
       </div>
     );
@@ -283,6 +284,26 @@ export default function MediaCleanup({ isDarkMode }: { isDarkMode: boolean }) {
         overflowWrap: 'anywhere'
       }}
     >
+      {/* The app has a global rule that turns every button in Settings blue (with !important).
+          These rules are more specific, so the Delete button stays red. */}
+      <style>{`
+        .settings-content button.mc-delete-btn,
+        button.mc-delete-btn {
+          background: #dc2626 !important;
+          border-color: #dc2626 !important;
+          color: #ffffff !important;
+        }
+        .settings-content button.mc-delete-btn:hover:not(:disabled),
+        button.mc-delete-btn:hover:not(:disabled) {
+          background: #b91c1c !important;
+          border-color: #b91c1c !important;
+        }
+        .settings-content button.mc-delete-btn:disabled,
+        button.mc-delete-btn:disabled {
+          background: #9ca3af !important;
+          border-color: #9ca3af !important;
+        }
+      `}</style>
       <h3
         style={{
           fontSize: '22px',
