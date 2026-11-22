@@ -1,6 +1,8 @@
-// /src/marketingcomponent/config.ts - Supabase Configuration for Marketing System
+// Repo path: src/marketingcomponent/config.ts - Supabase Configuration for Marketing System
 
-import { createClient } from '@supabase/supabase-js';
+// The client comes from the one shared client (src/lib/supabaseClient.ts),
+// so it carries the owner's sign-in. Do not create a client here.
+import { supabase } from '../lib/supabaseClient';
 
 /**
  * Supabase Configuration
@@ -50,14 +52,7 @@ if (!supabaseAnonKey) {
  * - Storage operations
  * - Row-level security (RLS)
  */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    flowType: 'pkce'
-  }
-});
+export { supabase };
 
 /**
  * Database Table Names
