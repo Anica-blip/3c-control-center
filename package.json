@@ -13,9 +13,6 @@
     "screenshot-server": "node screenshot-service/server.js",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "start": "tsx railway-server.ts",
-    "railway": "tsx railway-server.ts",
-    "render": "tsx render-cron-runner.ts",
     "postinstall": "patch-package"
   },
   "dependencies": {
