@@ -68,7 +68,7 @@ function SettingsComponent() {
   
   // ✅ FIXED: External Services State (was missing!)
   const [externalServices, setExternalServices] = useState([]);
-  const [newExternalService, setNewExternalService] = useState({ name: '', url: '' });
+  const [newExternalService, setNewExternalService] = useState({ name: '', url: '', serviceType: '' });
   const [editingExternalService, setEditingExternalService] = useState(null);
 
   // =============================================================================
@@ -651,6 +651,7 @@ const addExternalService = async () => {
     const serviceData = {
       name: newExternalService.name.trim(),
       url: newExternalService.url.trim(),
+      service_type: newExternalService.serviceType.trim(),
       is_active: true,
       user_id: null
     };
@@ -664,7 +665,7 @@ const addExternalService = async () => {
     if (error) throw error;
     
     setExternalServices(prev => [data, ...prev]);
-    setNewExternalService({ name: '', url: '' });
+    setNewExternalService({ name: '', url: '', serviceType: '' });
     alert('External service added successfully!');
   } catch (error) {
     console.error('Error adding external service:', error);
@@ -684,6 +685,7 @@ const saveExternalServiceEdit = async () => {
       .update({
         name: editingExternalService.name.trim(),
         url: editingExternalService.url.trim(),
+        service_type: (editingExternalService.service_type || '').trim(),
         updated_at: new Date().toISOString()
       })
       .eq('id', editingExternalService.id)
@@ -2167,9 +2169,9 @@ const deleteExternalService = async (id) => {
                   </h3>
                   <div style={{ 
                     display: 'grid', 
-                    gridTemplateColumns: '1fr 1fr auto', 
-                    gap: '24px', 
-                    alignItems: 'end' 
+                    gridTemplateColumns: '1fr 1fr 1fr auto',
+                    gap: '24px',
+                    alignItems: 'end'
                   }}>
                     <div>
                       <label style={{
@@ -2214,6 +2216,34 @@ const deleteExternalService = async (id) => {
                         value={newExternalService.url}
                         onChange={(e) => setNewExternalService(prev => ({ ...prev, url: e.target.value }))}
                         placeholder="https://analytics.google.com"
+                        disabled={loading}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                          border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          color: isDarkMode ? '#ffffff' : '#111827',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: isDarkMode ? '#6ee7b7' : '#047857',
+                        marginBottom: '8px'
+                      }}>
+                        Service Type
+                      </label>
+                      <input
+                        type="text"
+                        value={newExternalService.serviceType}
+                        onChange={(e) => setNewExternalService(prev => ({ ...prev, serviceType: e.target.value }))}
+                        placeholder="e.g., aurion-bot"
                         disabled={loading}
                         style={{
                           width: '100%',
@@ -2333,6 +2363,22 @@ const deleteExternalService = async (id) => {
                                   color: isDarkMode ? '#ffffff' : '#111827'
                                 }}
                               />
+                              <input
+                                type="text"
+                                value={editingExternalService.service_type || ''}
+                                onChange={(e) => setEditingExternalService(prev => ({ ...prev, service_type: e.target.value }))}
+                                placeholder="Service Type"
+                                disabled={loading}
+                                style={{
+                                  padding: '8px',
+                                  backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+                                  border: isDarkMode ? '1px solid #4b5563' : '1px solid #6ee7b7',
+                                  borderRadius: '4px',
+                                  fontSize: '14px',
+                                  color: isDarkMode ? '#ffffff' : '#111827',
+                                  width: '150px'
+                                }}
+                              />
                               <div style={{ display: 'flex', gap: '8px' }}>
                                 <button
                                   onClick={saveExternalServiceEdit}
@@ -2409,6 +2455,19 @@ const deleteExternalService = async (id) => {
                                     marginBottom: '4px'
                                   }}>
                                     {service.name}
+                                    {service.service_type && (
+                                      <span style={{
+                                        marginLeft: '8px',
+                                        padding: '2px 8px',
+                                        borderRadius: '10px',
+                                        fontSize: '11px',
+                                        fontWeight: 'bold',
+                                        backgroundColor: isDarkMode ? 'rgba(110, 231, 183, 0.15)' : 'rgba(16, 185, 129, 0.12)',
+                                        color: isDarkMode ? '#6ee7b7' : '#047857'
+                                      }}>
+                                        {service.service_type}
+                                      </span>
+                                    )}
                                   </div>
                                   <div style={{
                                     fontSize: '12px',
