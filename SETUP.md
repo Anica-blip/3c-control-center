@@ -1,100 +1,110 @@
-# SETUP — 3c-control-center
+# SETUP — aurion-3cmascot (Aurion Bot)
 
 > Repo path: `SETUP.md`. Names only; never a secret value in this file. Kept to the 3C Cooking Lab Standard, section G.
 
 ## 1. What it is
 
-`3c-control-center` is Chef's private dashboard for the 3C Thread To Success™ community (repo name `3c-control-center`). A React and TypeScript app, built with Vite, that talks to the Supabase project **3C Control Center**. Content, scheduling, characters, chat, Voice Studio, marketing pages and settings live here. Chef is the only user.
+`aurion-3cmascot` is the Aurion Telegram bot for the 3C community. It runs as the Cloudflare Worker **`aurion-bot`**: it answers members from Supabase tables (FAQ, facts, keywords, 3C briefing), uses OpenAI when no stored answer fits, welcomes and says goodbye to members, and, on its own timer, posts the scheduled 3C posts that Chef sets up in the 3C Control Center dashboard. It moved from Render to Cloudflare on 20 Nov 2026 and got its own schedule on 22 Nov 2026.
 
 ## 2. Addresses
 
 | What | Address |
 |---|---|
-| Live dashboard (and admin) | `https://3c-control-center.vercel.app` |
-| Jan (called by the dashboard) | `https://jan-assistant.3c-innertherapy.workers.dev/` |
-| Aurion posting Worker | `aurion-bot` on Cloudflare (repo `aurion-3cmascot`); not called by the dashboard, it reads the schedule from the database |
+| Telegram bot | The 3C Telegram community (bot name is set in BotFather) |
+| Worker | The `workers.dev` address of `aurion-bot`, shown in Cloudflare → Workers & Pages → `aurion-bot`. Telegram's webhook points at `<that address>/telegram`. |
+| Admin address | None. The bot has no web admin. |
+| Where posts are scheduled | `https://3c-control-center.vercel.app` (the dashboard; see the `3c-control-center` repo) |
 
 ## 3. External services
 
 | Service | What for |
 |---|---|
-| **Supabase**, project **3C Control Center** (`uqyqpwhkzlhqxcqajhkn`) | Database, sign-in (Auth), Storage bucket `media`, edge functions (for example `ai-chat`, `check-email-counts`, the brand colour, font, logo and guideline functions). |
-| **Vercel**, project `3c-control-center` | Hosts the dashboard. Builds with `vite build`. |
-| **GitHub** (`Anica-blip/3c-control-center`) | The code. Sign-in provider for the dashboard (through Supabase). GitHub Actions workflows, see below. |
-| **Cloudflare** | Worker `jan-assistant` (Jan; its own repo and register row B-5). A screenshot Worker built from `screenshot-worker.js` and `wrangler.toml` (R2 bucket `3c-control-center`). |
-| **Telegram** | Not called from this repo. Posts are sent by the `aurion-bot` Worker. |
+| **Telegram** (Bot API, BotFather) | Receives and sends messages. Webhook set once with `setWebhook` (secret header and `allowed_updates` = `message`, `callback_query`). The command menu is set in BotFather (`/setcommands`). |
+| **Cloudflare** | Worker `aurion-bot` and its one Cron Trigger. Workers Paid plan (the Worker needs the Paid plan for its CPU and request limits). Observability (stored logs) is **off and stays off**: Cloudflare switched it on for this Worker by itself on 22 Nov 2026 and Chef switched it off in the Worker's Settings, so check Settings, Observability after every deploy. |
+| **Supabase**, project **3C Control Center** (`uqyqpwhkzlhqxcqajhkn`) | All the bot's tables, and `scheduled_posts` / `dashboard_posts` for the schedule. |
+| **OpenAI** | Answers for `/ask` when the FAQ and keyword tables have nothing. |
+| **GitHub** | This repository. No GitHub Actions are used by the bot. |
 
-Removed on 22 Nov 2026 and no longer used: Render (cron job and bot), the Vercel cron gateway (`cron-gateway-auth`), Railway, the old posting runners in this repo (`render-cron.ts`, `railway-server.ts`, and the `process-scheduled-posts` workflow), the unused `api/auth.ts` function, and the committed `.env`.
-
-**GitHub Actions in `.github/workflows/`:**
-
-| Workflow | What it does | Secrets it reads (names only) |
-|---|---|---|
-| `simple-deploy.yml` | Builds on every push to `main` and publishes to GitHub Pages | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` |
-| `check-email-counts.yml` | Runs 3 times a day (00:00, 08:00, 16:00 UTC) to check mailbox counts | `SUPABASE_SERVICE_KEY` and per-mailbox password secrets |
-| `cloudflare-screenshot-worker.yml` | Deploys the screenshot Worker when `screenshot-worker.js` or `wrangler.toml` changes | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` |
-| `screenshot processor.yml` | Takes external-page screenshots into R2 (started by hand or by the screenshot Worker) | `R2_ACCESS_KEY_ID`, `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, `R2_SECRET_ACCESS_KEY`, `SUPABASE_SERVICE_KEY`, `SUPABASE_URL` |
+Removed on 22 Nov 2026 and no longer used: Render (bot and cron job), the Vercel cron gateway (`cron-gateway-auth`), Railway, and the old GitHub Actions posting workflow. The two old Supabase edge functions `telegram-bot` and `telegram-webhook-setup` (project 3C Control Center) were deleted on 23 Nov 2026; the Worker does all of their work.
 
 ## 4. Supabase (project 3C Control Center)
 
-Tables the dashboard touches: `content_posts`, `scheduled_posts`, `dashboard_posts`, `dashboard_platform_assignments`, `post_platforms`, `character_profiles`, `social_platforms`, `telegram_configurations`, `dashboard_templates`, `external_services`, `media_content`, `pending_content_library`, `daily_schedule_prompts`, `brand_colors`, `brand_font`, `brand_guidelines`, `brand_logos`, `public_chat_sessions`, `public_chat_messages`.
+| Table | Used for | Row Level Security and access |
+|---|---|---|
+| `faq` | `/faq` buttons, first answer for `/ask` | On. Closed to everyone except the Worker's service key: its one SELECT policy compares `user_id` with the signed-in account, and every row has no `user_id`, so it matches nothing. |
+| `fact` | `/fact` | On. Closed to everyone except the Worker's service key, same reason as `faq`. |
+| `keyword` | Trigger words and answers | On. Owner-only read; the Worker reads it with its service key. |
+| `greeted_users` | Members already welcomed (`telegram_user_id`) | On, no policy: only the service key can read or write. |
+| `about_3c` | The 3C briefing the AI reads | On, no policy: only the service key can read or write. Written by Chief from the Drive sheet tab `about_3c`. |
+| `scheduled_posts` | Rows with `service_type = 'aurion-bot'` and `posting_status = 'pending'`; the Worker locks, marks and removes them | Written by the Worker with the service key. |
+| `dashboard_posts` | Where a sent post is recorded (`post_status`, `posting_status`, `status` = complete/sent) | Written by the Worker with the service key. |
 
-- Row Level Security is **on** for all of them.
-- `public_chat_sessions` and `public_chat_messages`: visitors may add and read chat (they do not sign in); nothing else is public.
-- `scheduled_posts` and `dashboard_posts`: no policy that allows everyone.
-- **Not yet at the Standard:** the access rules of several of the other tables were written early and are wider than the Standard allows (section B: writes through `is_owner()` only). They are being reviewed and tightened one table at a time, each as a named migration with a rollback. Until then the dashboard's own sign-in guard (below) is what protects the pages.
-- The code also refers to `avatars`, `diagnostic_logs`, `pending_schedule`, `social_platforms_content` and `telegram_channels`, which do not exist as tables in the project today. (`media` is the Storage bucket.)
-- Functions used by the app: `is_owner()` (owner check at sign-in), `increment_template_usage`. Edge function `ai-chat` is called by the AI chat page.
-- Table lists of the bot (`faq`, `fact`, `keyword`, `greeted_users`, `about_3c`) live in the same project and are documented in the `aurion-3cmascot` repo.
-- Database clean-up of 21 Nov 2026 (old cron functions, pg_cron and pg_net, two unused tables) is recorded as migrations in the `aurion-3cmascot` repo (`supabase/migrations/`), because it was done for the bot's schedule.
+Functions: this Worker has no owner routes, so it does not call `is_owner()`. Database changes made for this bot are in `supabase/migrations/`, each with a rollback.
 
 ## 5. Workers
 
-- **`jan-assistant`** — documented in the Workers and Logins register (row B-5): every action owner-only, asks this Supabase project, deploy by Dashboard paste. The dashboard calls it from `src/aichatcomponent.tsx`.
-- **Screenshot Worker** (`screenshot-worker.js`, Worker name `3c-control-center`, R2 binding `SCREENSHOTS`, bucket `3c-control-center`) — routes: `/health` (public check) and `POST /api/screenshot`. Deployed by the GitHub workflow above. Secrets by name: `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ACCOUNT_ID`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`. **Not brought to the Standard (section A)**; the register records it as never having worked. Chef decides whether to remove or rebuild it.
-- Observability (stored logs) is **off and stays off** for every Worker.
+**`aurion-bot`**
+
+| Route | Access |
+|---|---|
+| `POST /telegram` | Private. Telegram only, with the header `X-Telegram-Bot-Api-Secret-Token`. |
+| Any other method on `/telegram` | 405 |
+| Everything else | 404 |
+| Scheduled run (no route) | Started by Cloudflare Cron Triggers; cannot be called from outside. |
+
+- **Deploy method:** Dashboard paste only (never Wrangler). `worker/wrangler.toml` is a record of the settings, not used to deploy.
+- **Secrets (names only):** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `BOT_ADMIN_TELEGRAM_ID`. No plain variables. The Worker truly needs the service key: it reads and writes rows.
+- **Cron Trigger (UTC), one only:** `0,30 * * * *` (every half hour). The slots are in the code, not in Cloudflare: **08:30, 10:30, 12:30, 14:30, 16:30, 18:30, 19:30, 20:30** Lisbon time. The squadron times are 08:30, 12:30, 18:30 and 20:30; the other four are free slots. Lisbon is UTC+0 in winter and UTC+1 in summer (whole hours), so :00 and :30 always line up. On each firing the Worker checks the real Lisbon clock and only runs if that half hour is a slot; otherwise it does nothing and logs nothing. A post goes out at the first slot at or after its scheduled time (a post set for 11:00 goes at 12:30). To change the slot times, edit `SCHED.slots` in `worker/worker.js` and paste again; the trigger stays the same.
+- **Albums:** a post with 2 to 10 files in its media list is sent as one album, in the saved order, with the caption on the first item (caption limit 1,024 visible characters). Pictures and videos can be mixed. A GIF cannot be inside an album: that post fails with a clear reason and Chef is told. More than 10 files, files over 30 MB together, or a file that cannot be downloaded also fail without sending anything. A Telegram outage is retried like any other post. The saved post in `dashboard_posts` uses the first message number of the album.
+- **Formatting:** text is sent as Telegram HTML. The Worker accepts `**bold**` (spaces inside are allowed, as the old Render runner did), `*italic*`, `__underline__`, `~~strike~~`, `` `code` ``, `[text](https://…)`, and Telegram's own `<b>`, `<i>`, `<u>`, `<s>`, `<code>` and `<a href="…">` tags. A link without `https://` that starts with `www.` gets `https://`. Text posts are sent with the link preview switched off, so no preview card (for example of a group invite) appears under the post. Any other `<`, `>` or `&` is made safe. If Telegram still refuses the formatting, the post is sent once as plain text and Chef is told.
+- **What a run does:** takes up to 20 due rows of the lane `aurion-bot`; locks each row before sending (`status = 'processing'`); converts the dashboard symbols to Telegram formatting; sends text, a picture, a video or a GIF (no documents: use a thumbnail and a link); a post with two to ten pictures or videos goes out as one Telegram album; then marks the row sent, saves it in `dashboard_posts` and removes it from `scheduled_posts`.
+- **Failures:** a content problem (text over 4,096 characters, caption over 1,024, file over 45 MB or missing, Telegram refusing, more than 24 hours late) is not retried: the row stays in `scheduled_posts` marked failed with the reason in `failure_reason`, and Chef gets a Telegram message. A network or Telegram outage is retried at the next slots, up to 3 tries in total, then the same message. A row left in `processing` after its 10-minute lock is never sent again blindly: Chef is told to check Telegram first.
+- **Observability:** off. Failures reach Chef by Telegram message and are saved on the row.
 
 ## 6. Login
 
-- **Supabase project:** 3C Control Center. GitHub provider on (an OAuth app registered in GitHub for the dashboard; its callback is the project's Supabase auth address).
-- **Session name (`storageKey`):** `sb-3c-control-center-owner-login`.
-- **Redirect URL to add in Supabase:** `https://3c-control-center.vercel.app/**`.
-- **Owner check:** after sign-in the page calls `is_owner()`; any account that is not the owner is signed out. If the check cannot be made (for example no network), nobody is signed out.
-- **Sessions:** Supabase sessions that refresh themselves; "Time-box user sessions" and "Inactivity timeout" stay empty. Leaked-password protection and Confirm email: to confirm in Authentication settings (open point).
-- The old home-made GitHub token function (`api/auth.ts`) and its client secret were removed on 22 Nov 2026.
+None. Members use Telegram; admin commands and failure messages are tied to the Telegram numeric ID in `BOT_ADMIN_TELEGRAM_ID`, and fail closed if that secret is missing. The dashboard where Chef schedules posts has its own login (see the `3c-control-center` repo).
 
 ## 7. Deploy
 
-1. Change the code in the repo and commit to `main`.
-2. Vercel builds and publishes by itself (`vite build`, output `dist`).
-3. Environment variables are set in Vercel → Project → Settings → Environment Variables. Names are listed in `.env.example`: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `REACT_APP_AUTHORIZED_USER`, `REACT_APP_TIMEZONE`. Vercel also holds `VITE_SUPABASE_PROJECT_ID` and `SYSTEM_USER_ID`. **Vercel must hold both public key names, with the same anon key as the value:** `VITE_SUPABASE_ANON_KEY` (the schedule part and the login read it) and `VITE_SUPABASE_PUBLISHABLE_KEY` (the content manager and the settings tab read it). Never put the service role key in any `VITE_` variable. A new or changed variable only applies after a Redeploy. The real `.env` is never committed; the repo's old `.env` used to supply `VITE_SUPABASE_PUBLISHABLE_KEY`, and when it was removed on 22 Nov 2026 the content manager and settings went empty until the variable was added in Vercel.
-4. Live check: open the dashboard in a private window. It must show the sign-in screen and nothing else until the owner signs in.
-5. Local work: copy `.env.example` to `.env`, fill in the values, `npm install`, `npm run dev`.
+1. Open Cloudflare → Workers & Pages → `aurion-bot` → **Edit code**.
+2. Replace all the code with `worker/worker.js` from this repo. **Deploy.**
+3. Check that the bot answers (`/faq` or `/fact`) in Telegram.
+4. Live check: opening `<worker address>/telegram` in a browser shows "Method not allowed" (405). That is correct.
+5. Cron Trigger: Worker → Settings → Trigger Events → Cron Triggers. One expression only: `0,30 * * * *`. If old triggers are listed (the 8 from 22 Nov), add the new one first, then delete the old ones.
+6. Dashboard → Settings → external services: a row `aurion-bot` with service type `aurion-bot` (the URL there is only a shortcut link). Schedule posts with that service type.
+7. Webhook (once, or if the Worker address changes): Telegram `setWebhook` with the `/telegram` address, the same value as `TELEGRAM_WEBHOOK_SECRET`, and `allowed_updates` = `message`, `callback_query`. Only one thing can receive the bot's updates at a time.
 
 ## 8. Tests
 
+Run on 22 Nov 2026 against a fake Telegram and fake Supabase (not in this repo): 83 checks for the bot and 112 for the scheduled run, all passed. Re-run on 22 Nov 2026 after the change to eight slots, the formatting fix and album sending (139 schedule checks). They cover every half hour of a winter day and a summer day (it sends at exactly the 8 slots), both clock-change days, every day of 2026, Chef's real post of 22 Nov, due-row selection with the real date formats, every formatting symbol, limits, media types, double-run protection, retries, the move to `dashboard_posts`, and failure messages.
+
+The five checks of the Standard, for this Worker:
+
 | Check | Result |
 |---|---|
-| Not signed in: dashboard shows sign-in only | To run after each deploy |
-| Signed in with a non-owner account is signed out | To run when the login is next opened |
-| Owner signs in and the dashboard loads | To run after each deploy |
-| Wrong origin blocked | Not applicable to the dashboard itself |
+| Unsigned call refused | `POST /telegram` without the secret header answers 401 |
+| Wrong account refused (403) | Not applicable: no owner routes |
+| Owner call succeeds | Not applicable: no owner routes |
+| Public read still works | Not applicable: no public routes |
+| Wrong origin blocked | Not applicable: no browser calls |
 
-Chef's live save: schedule one post with service type `aurion-bot` and check it goes out and appears in `dashboard_posts` (this is the 22 Nov 2026 test of the Aurion schedule).
+Live: `/faq` answered after the 22 Nov deploy. First live test of the schedule: a text post at 11:00 on 22 Nov arrived on time and was saved in `dashboard_posts` as sent; its formatting did not come out (stars and link tags shown as text), which led to the formatting fix above. The 14:30 slot and the formatting were checked live and came out right. On 22 to 23 Nov 2026 Chef also tested an album of three pictures (saved as sent, one Telegram message id stored) and a single picture (saved as sent); both looked right in the chat. Still to test live: one GIF and one video, each to a test chat before any real post.
 
 ## 9. Open points
 
-- Tighten the access rules of the dashboard tables to the Standard (section 4).
-- Screenshot Worker: remove or rebuild (section 5).
-- `simple-deploy.yml` still publishes to GitHub Pages on every push, although the live site is on Vercel: keep or remove (Chef's call).
-- `package.json` and the `docs/` notes still mention old runners in places; `docs/CRON_SETUP.md` describes the removed runners.
-- Confirm leaked-password protection and Confirm email in the Supabase Auth settings.
-- Clean the unused Vercel variables if Chef wants a minimal list.
-- The code reads the public key under two names (`VITE_SUPABASE_ANON_KEY` and `VITE_SUPABASE_PUBLISHABLE_KEY`). Pick one name in a later dashboard job so only one variable is needed.
+- Live tests still to do: one GIF and one video (test chat first); results to be added here. A post with pictures and no text stays refused (Chef's decision, 23 Nov 2026: a picture needs text).
+- The dashboard still saves `**` and link tags for the Worker to convert. A separate dashboard job will make it save ready-made Telegram formatting; until then the Worker converts as described in section 5.
+- Editing a sent post: in a Telegram group only the sender, here the bot, can edit a message, so a post in the ClubHouse chatroom cannot be edited by Chef; in a channel, admins can. Chef's way: post to the channel, check it, then forward to the chat. No Worker feature is planned for editing (Chef's decision, 22 Nov 2026).
+- A scheduled row needs a real `user_id`; if it is missing, the post is sent but cannot be saved in `dashboard_posts`, and Chef is messaged. `post_platforms` has a link to `scheduled_posts` without cascade: if a row ever has entries there, the delete step fails and Chef is messaged.
+- The old Python bot files (`main.py`, `Procfile`, `runtime.txt`, `requirements.txt`, `scheduled_posts_runner.py`) were removed on 22 Nov 2026. They stay in the Git history if ever needed.
 
 ## 10. Change log
 
 | Date | Change | By |
 |---|---|---|
-| 22 Nov 2026 | `VITE_SUPABASE_PUBLISHABLE_KEY` added in Vercel (it had only come from the removed `.env`); noted in section 7 | Champ |
-| 22 Nov 2026 | Old posting runners, Render and Railway files, `api/auth.ts`, the old posting workflow and the committed `.env` removed; `.env.example` added; three unused scripts removed from `package.json`; README.md and SETUP.md written to the Standard | Champ |
+| 23 Nov 2026 | Corrected the `faq` and `fact` rows in section 4 (they were wrongly marked public read; they are closed to everyone except the service key); recorded that the two old edge functions were deleted, the Observability note, and the live album and picture results; removed the outdated `wrangler.toml` open point | Champ |
+| 22 Nov 2026 | Albums: two to ten pictures or videos in one post are sent as one Telegram album (caption on the first item; no GIFs inside an album) | Champ |
+| 22 Nov 2026 | Eight posting slots (08:30, 10:30, 12:30, 14:30, 16:30, 18:30, 19:30, 20:30) on one half-hour Cron Trigger; formatting made as tolerant as the old Render runner (spaces inside `**`, hand-typed `<a href>` links and Telegram tags) | Champ |
+| 22 Nov 2026 | Scheduled posting added to `worker/worker.js` (own timer, 8 Cron Triggers, lane `aurion-bot`); Render, the Vercel gateway and the old workflow removed; observability off for all Workers; README.md and SETUP.md written to the Standard; old Python bot files removed; database clean-up migrations of 21 Nov saved in `supabase/migrations/` | Champ |
+| 20 Nov 2026 | Bot moved from Render to the Cloudflare Worker `aurion-bot`; `about_3c` table added | Champ |
