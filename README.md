@@ -47,7 +47,7 @@ What is inside:
 | Part | What it uses |
 |---|---|
 | Front end | React 18 and TypeScript, built with Vite |
-| Database | Supabase, project **3C Control Center** (Postgres, Auth, Storage, edge functions) |
+| Database | Supabase, project **3C Control Center** (Postgres, Auth, Storage) |
 | Files | Supabase Storage (bucket `media`); Cloudflare R2 bucket `3c-control-center` for the screenshot Worker |
 | Workers | `jan-assistant` (Jan, called by the dashboard) and a screenshot Worker (`screenshot-worker.js`). The Aurion Telegram posting runs in the `aurion-bot` Worker (repo `aurion-3cmascot`). |
 | Hosting | Vercel (`3c-control-center`) |
@@ -61,8 +61,8 @@ Addresses, services, settings and deploy steps are in [SETUP.md](SETUP.md).
 
 - **Owner only.** Signing in uses GitHub through Supabase. After sign-in the dashboard asks Supabase whether the account is the owner (`is_owner()`); any other account is signed out. New sign-ups are on, so signing in alone never gives access.
 - **No secrets in the repository.** Only the Supabase address and the public (browser) keys are used in the app. Secret values are never in code, files or chat; `.env` is never committed, and `.env.example` lists the names only.
-- **Public chat.** Visitors of the public web chat do not sign in; the chat tables allow them to add and read chat messages and nothing else.
-- **Review in progress.** The access rules of the dashboard's database tables are being brought to the 3C Cooking Lab Standard, one table at a time.
+- **Public chat.** Visitors of the public web chat do not sign in; the chat tables let them add messages (with size limits) and nothing else. Only the owner can read them.
+- **Owner-only data.** All of the dashboard's database tables and storage buckets are owner-only, to the 3C Cooking Lab Standard. Files in the buckets still open by their address; nobody but the owner can list, add or change them.
 
 ---
 
