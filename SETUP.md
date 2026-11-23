@@ -44,7 +44,7 @@ Tables the dashboard touches: `content_posts`, `scheduled_posts`, `dashboard_pos
 - **Storage:** all 7 buckets are owner-only for writing and listing; files still open by their address.
 - **Functions:** `is_owner()` (owner check at sign-in) and `increment_template_usage` (owner or service key only). 28 functions now have a fixed search path; 9 security-definer functions can no longer be run by visitors or signed-in accounts. There are no edge functions. The folder `supabase/function/ai-chat` stays in the repo as a record only.
 - **Migrations:** the lock-down of 22–23 Nov 2026 is saved in `supabase/migrations/`, one named file per table, bucket and function change, each with a rollback file.
-- Table lists of the bot (`faq`, `fact`, `keyword`, `greeted_users`, `about_3c`) live in the same project and are documented in the `aurion-3cmascot` repo. `faq` and `fact` still carry their older read rule (user id equals the row's `user_id`), which in practice lets only the service key read them; `keyword` has the owner-only rule. Whether to move `faq` and `fact` to the owner-only form is Chef's decision (open point).
+- Table lists of the bot (`faq`, `fact`, `keyword`, `greeted_users`, `about_3c`) live in the same project and are documented in the `aurion-3cmascot` repo. `faq` and `fact` carry an older read rule (user id equals the row's `user_id`); every row has no `user_id`, so it matches nothing and only the bot's service key can read them. `keyword` has the owner-only rule. This is as designed and is explained in the `aurion-3cmascot` SETUP.md (settled with Chef, 23 Nov 2026).
 - Database clean-up of 21 Nov 2026 (old cron functions, pg_cron and pg_net, two unused tables) is recorded as migrations in the `aurion-3cmascot` repo (`supabase/migrations/`), because it was done for the bot's schedule.
 
 ## 5. Workers
@@ -82,7 +82,6 @@ Tables the dashboard touches: `content_posts`, `scheduled_posts`, `dashboard_pos
 
 ## 9. Open points
 
-- Decide whether `faq` and `fact` move to the owner-only read rule (section 4).
 - Screenshot Worker: remove or rebuild (section 5).
 - 11 pending rows in `dashboard_posts` (a code problem, to correct in a later dashboard job).
 - `package.json` and the `docs/` notes still mention old runners in places; `docs/CRON_SETUP.md` describes the removed runners.
